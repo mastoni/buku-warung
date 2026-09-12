@@ -1,0 +1,33 @@
+.gradle/
+.idea/
+build/
+*/build/
+local.properties
+*.iml
+.DS_Store
+docs/*
+*.jks
+*.keystore
+*.p12
+
+# Kotlin compiler & tool state
+.kotlin/
+
+# Temporary / test databases
+*.db
+*.db-shm
+*.db-wal
+
+# Build binaries
+release/*.apk
+release/*.aab
+
+# Temporary root test captures
+app_launched_from_icon.png
+launcher_icon_avd.png
+release_setup.png
+release_welcome.png
+tap_result.png
+
+# Logs
+*.log
