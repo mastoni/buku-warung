@@ -101,6 +101,113 @@ function setupEventListeners() {
       }
     });
   }
+
+  // Copy license code button
+  const copyLicenseCodeBtn = document.getElementById('copyLicenseCodeBtn');
+  if (copyLicenseCodeBtn) {
+    copyLicenseCodeBtn.addEventListener('click', copyCreatedLicenseCode);
+  }
+
+  // Copy WA message button
+  const copyWaMsgBtn = document.getElementById('copyWaMsgBtn');
+  if (copyWaMsgBtn) {
+    copyWaMsgBtn.addEventListener('click', copyWaMessage);
+  }
+
+  // Global event delegation: data-close-modal
+  document.addEventListener('click', (e) => {
+    const closeBtn = e.target.closest('[data-close-modal]');
+    if (closeBtn) {
+      const modalId = closeBtn.getAttribute('data-close-modal');
+      if (modalId) closeModal(modalId);
+      return;
+    }
+
+    // Backdrop click: close modal when clicking on modal-overlay itself
+    if (e.target.classList.contains('modal-overlay')) {
+      closeModal(e.target.id);
+      return;
+    }
+
+    // data-tab-switch
+    const tabSwitchBtn = e.target.closest('[data-tab-switch]');
+    if (tabSwitchBtn) {
+      const tab = tabSwitchBtn.getAttribute('data-tab-switch');
+      if (tab) switchTab(tab);
+      return;
+    }
+
+    // data-action delegation for dynamic buttons
+    const actionBtn = e.target.closest('[data-action]');
+    if (actionBtn) {
+      const action = actionBtn.getAttribute('data-action');
+      const id = actionBtn.getAttribute('data-id');
+      const name = actionBtn.getAttribute('data-name');
+      const email = actionBtn.getAttribute('data-email');
+      const binding = actionBtn.getAttribute('data-binding');
+
+      switch (action) {
+        case 'copy-qris-instruction':
+          copyQrisPaymentInstruction();
+          break;
+        case 'open-order-detail':
+          openOrderDetail(parseInt(id));
+          break;
+        case 'open-verify-payment':
+          openVerifyPaymentModal(parseInt(id));
+          break;
+        case 'generate-license-for-order':
+          handleGenerateLicenseForOrder(parseInt(id), name || '', email || '');
+          break;
+        case 'open-delivery-preparation':
+          openDeliveryPreparationModal(parseInt(id));
+          break;
+        case 'open-license-detail':
+          openLicenseDetail(parseInt(id));
+          break;
+        case 'confirm-revoke-license':
+          confirmRevokeLicense(parseInt(id), email || '');
+          break;
+        case 'confirm-revoke-device':
+          confirmRevokeDevice(parseInt(id));
+          break;
+        case 'confirm-rebind':
+          confirmRebind(parseInt(id), binding || '');
+          break;
+        case 'close-and-verify-payment':
+          closeModal('orderDetailModal');
+          openVerifyPaymentModal(parseInt(id));
+          break;
+        case 'close-and-generate-license':
+          closeModal('orderDetailModal');
+          handleGenerateLicenseForOrder(parseInt(id), name || '', email || '');
+          break;
+        case 'close-and-delivery-preparation':
+          closeModal('orderDetailModal');
+          openDeliveryPreparationModal(parseInt(id));
+          break;
+      }
+      return;
+    }
+  });
+
+  // Escape key closes topmost modal
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      const openModals = document.querySelectorAll('.modal-overlay:not(.hidden)');
+      openModals.forEach((m) => closeModal(m.id));
+    }
+  });
+
+  // QRIS image error handler (replaces inline onerror)
+  document.querySelectorAll('#detailQrisImage, #verifyQrisImage').forEach((img) => {
+    img.addEventListener('error', function () {
+      this.removeEventListener('error', arguments.callee);
+      if (this.parentElement) {
+        this.parentElement.classList.add('qris-image-pending');
+      }
+    });
+  });
 }
 
 // Authentication
@@ -383,20 +490,20 @@ function renderOrdersTable() {
       <td>${formatDate(o.created_at)}</td>
       <td>
         <div style="display: flex; gap: 4px; flex-wrap: wrap;">
-          <button class="btn btn-secondary btn-sm" onclick="openOrderDetail(${o.id})">Detail</button>
+          <button class="btn btn-secondary btn-sm" data-action="open-order-detail" data-id="${o.id}">Detail</button>
           ${
             o.payment_status === 'UNPAID'
-              ? `<button class="btn btn-warning btn-sm" onclick="openVerifyPaymentModal(${o.id})">Verifikasi Bayar</button>`
+              ? `<button class="btn btn-warning btn-sm" data-action="open-verify-payment" data-id="${o.id}">Verifikasi Bayar</button>`
               : ''
           }
           ${
             o.payment_status === 'PAID' && !o.license_id
-              ? `<button class="btn btn-primary btn-sm" onclick="handleGenerateLicenseForOrder(${o.id}, '${escapeHtml(o.customer_name)}', '${escapeHtml(o.owner_email)}')">Buat License</button>`
+              ? `<button class="btn btn-primary btn-sm" data-action="generate-license-for-order" data-id="${o.id}" data-name="${escapeHtml(o.customer_name)}" data-email="${escapeHtml(o.owner_email)}">Buat License</button>`
               : ''
           }
           ${
             o.license_id && (o.status === 'LICENSE_CREATED' || o.status === 'PAID')
-              ? `<button class="btn btn-success btn-sm" onclick="openDeliveryPreparationModal(${o.id})">Kirim WA</button>`
+              ? `<button class="btn btn-success btn-sm" data-action="open-delivery-preparation" data-id="${o.id}">Kirim WA</button>`
               : ''
           }
         </div>
@@ -413,6 +520,8 @@ async function handleCreateOrder(e) {
   const customerName = document.getElementById('orderCustomerName').value.trim();
   const customerWhatsapp = document.getElementById('orderCustomerWhatsapp').value.trim();
   const ownerEmail = document.getElementById('orderOwnerEmail').value.trim();
+  const paymentMethodSelect = document.getElementById('orderPaymentMethod');
+  const paymentMethod = paymentMethodSelect ? paymentMethodSelect.value : 'QRIS';
   const notes = document.getElementById('orderNotes').value.trim();
 
   const submitBtn = document.getElementById('submitCreateOrderBtn');
@@ -427,6 +536,7 @@ async function handleCreateOrder(e) {
         customerName,
         customerWhatsapp,
         ownerEmail,
+        paymentMethod,
         notes
       })
     });
@@ -475,10 +585,20 @@ async function openOrderDetail(id) {
 
     document.getElementById('detailPaymentStatusBadge').innerHTML = renderPaymentStatusBadge(order.payment_status);
     document.getElementById('detailPaymentAmount').textContent = `Rp ${formatNumber(order.amount)}`;
-    document.getElementById('detailPaymentMethodRef').textContent = `${order.payment_method || '-'} / ${order.payment_reference || '-'}`;
+    document.getElementById('detailPaymentMethodRef').textContent = `${order.payment_method || 'QRIS'} / ${order.payment_reference || '-'}`;
     document.getElementById('detailPaymentVerifiedAt').textContent = order.verified_at ? formatDate(order.verified_at) : '-';
     document.getElementById('detailPaymentVerifiedBy').textContent = order.verified_by || '-';
     document.getElementById('detailPaymentNotes').textContent = order.notes || '-';
+
+    // Show/hide QRIS section in order detail
+    const qrisSection = document.getElementById('detailQrisSection');
+    if (qrisSection) {
+      if (!order.payment_method || order.payment_method.toUpperCase().includes('QRIS') || order.payment_status === 'UNPAID') {
+        qrisSection.classList.remove('hidden');
+      } else {
+        qrisSection.classList.add('hidden');
+      }
+    }
 
     if (license) {
       document.getElementById('detailOrderLicenseCode').textContent = order.license_code || license.license_uuid;
@@ -521,7 +641,7 @@ async function openOrderDetail(id) {
               <span>2. Pembayaran (Verifikasi Admin)</span>
               <span class="timeline-time">${isPaid ? formatDate(order.verified_at) : 'Menunggu'}</span>
             </div>
-            <div class="timeline-desc">${isPaid ? `Diverifikasi oleh ${escapeHtml(order.verified_by || 'ADMIN')} (${escapeHtml(order.payment_method || 'Transfer')})` : 'Pelanggan belum bayar / pembayaran belum diverifikasi admin.'}</div>
+            <div class="timeline-desc">${isPaid ? `Diverifikasi oleh ${escapeHtml(order.verified_by || 'ADMIN')} (${escapeHtml(order.payment_method || 'QRIS')})` : 'Pelanggan belum bayar / pembayaran belum diverifikasi admin.'}</div>
           </div>
         </div>
 
@@ -562,21 +682,21 @@ async function openOrderDetail(id) {
 
     // Modal footer dynamic actions
     const footer = document.getElementById('orderDetailModalFooter');
-    let actionButtons = `<button type="button" class="btn btn-secondary" onclick="closeModal('orderDetailModal')">Tutup</button>`;
+    let actionButtons = `<button type="button" class="btn btn-secondary" data-close-modal="orderDetailModal">Tutup</button>`;
 
     if (order.payment_status === 'UNPAID') {
       actionButtons = `
-        <button type="button" class="btn btn-warning" onclick="closeModal('orderDetailModal'); openVerifyPaymentModal(${order.id});">Verifikasi Pembayaran</button>
+        <button type="button" class="btn btn-warning" data-action="close-and-verify-payment" data-id="${order.id}">Verifikasi Pembayaran</button>
         ${actionButtons}
       `;
     } else if (order.payment_status === 'PAID' && !order.license_id) {
       actionButtons = `
-        <button type="button" class="btn btn-primary" onclick="closeModal('orderDetailModal'); handleGenerateLicenseForOrder(${order.id}, '${escapeHtml(order.customer_name)}', '${escapeHtml(order.owner_email)}');">🔑 Generate License Sekarang</button>
+        <button type="button" class="btn btn-primary" data-action="close-and-generate-license" data-id="${order.id}" data-name="${escapeHtml(order.customer_name)}" data-email="${escapeHtml(order.owner_email)}">🔑 Generate License Sekarang</button>
         ${actionButtons}
       `;
     } else if (order.license_id) {
       actionButtons = `
-        <button type="button" class="btn btn-success" onclick="closeModal('orderDetailModal'); openDeliveryPreparationModal(${order.id});">📲 Siapkan Pesan WhatsApp</button>
+        <button type="button" class="btn btn-success" data-action="close-and-delivery-preparation" data-id="${order.id}">📲 Siapkan Pesan WhatsApp</button>
         ${actionButtons}
       `;
     }
@@ -597,11 +717,32 @@ function openVerifyPaymentModal(orderId) {
   document.getElementById('verifyPayOrderCode').textContent = order.order_code;
   document.getElementById('verifyPayEmail').textContent = order.owner_email;
   document.getElementById('verifyPayAmount').textContent = `Rp ${formatNumber(order.amount)}`;
-  document.getElementById('verifyPaymentMethod').value = 'Transfer Bank';
+  const methodSelect = document.getElementById('verifyPaymentMethod');
+  if (methodSelect) {
+    methodSelect.value = (order.payment_method && order.payment_method.toUpperCase().includes('TRANSFER')) ? 'Transfer Bank' : 'QRIS';
+  }
   document.getElementById('verifyPaymentReference').value = '';
   document.getElementById('verifyPaymentNotes').value = '';
 
   openModal('verifyPaymentModal');
+}
+
+function copyQrisPaymentInstruction() {
+  const text = `Halo, untuk pembelian Buku Warung v0.1.0 sebesar Rp50.000, silakan lakukan pembayaran melalui QRIS Kios Kiara.
+
+Merchant: KIOS KIARA
+NMID: ID1026512762125
+Nominal: Rp50.000
+
+Setelah pembayaran berhasil, Admin akan melakukan pengecekan transaksi terlebih dahulu.
+
+Setelah pembayaran terverifikasi, kami akan membuat License Code dan mengirimkan APK Buku Warung beserta panduan aktivasi.`;
+
+  navigator.clipboard.writeText(text).then(() => {
+    showToast('Pesan instruksi QRIS berhasil disalin ke clipboard.');
+  }).catch(() => {
+    showToast('Gagal menyalin pesan.');
+  });
 }
 
 async function handleVerifyPayment(e) {
@@ -655,7 +796,7 @@ function handleGenerateLicenseForOrder(orderId, customerName, ownerEmail) {
   `;
   document.getElementById('confirmReasonGroup').classList.add('hidden');
 
-  document.getElementById('confirmActionBtn').onclick = async () => {
+  setConfirmAction(async () => {
     try {
       const res = await fetch(`/api/orders/${orderId}/generate-license`, {
         method: 'POST',
@@ -678,7 +819,7 @@ function handleGenerateLicenseForOrder(orderId, customerName, ownerEmail) {
     } catch {
       showToast('Terjadi kesalahan saat memproses lisensi.');
     }
-  };
+  });
 
   openModal('confirmModal');
 }
@@ -905,10 +1046,10 @@ function renderLicensesTable() {
       <td>${renderStatusBadge(l.status)}</td>
       <td>${formatDate(l.created_at)}</td>
       <td>
-        <button class="btn btn-secondary btn-sm" onclick="openLicenseDetail(${l.id})">Detail</button>
+        <button class="btn btn-secondary btn-sm" data-action="open-license-detail" data-id="${l.id}">Detail</button>
         ${
           l.status !== 'REVOKED'
-            ? `<button class="btn btn-danger btn-sm" onclick="confirmRevokeLicense(${l.id}, '${escapeHtml(l.owner_email_canonical)}')">Revoke</button>`
+            ? `<button class="btn btn-danger btn-sm" data-action="confirm-revoke-license" data-id="${l.id}" data-email="${escapeHtml(l.owner_email_canonical)}">Revoke</button>`
             : ''
         }
       </td>
@@ -945,10 +1086,13 @@ async function openLicenseDetail(id) {
       revokeBtn.classList.add('hidden');
     } else {
       revokeBtn.classList.remove('hidden');
-      revokeBtn.onclick = () => {
+      // Remove previous listener by cloning
+      const newRevokeBtn = revokeBtn.cloneNode(true);
+      revokeBtn.parentNode.replaceChild(newRevokeBtn, revokeBtn);
+      newRevokeBtn.addEventListener('click', () => {
         closeModal('licenseDetailModal');
         confirmRevokeLicense(license.id, license.owner_email_canonical);
-      };
+      });
     }
 
     // Devices table
@@ -967,7 +1111,7 @@ async function openLicenseDetail(id) {
           <td>
             ${
               d.status === 'ACTIVE'
-                ? `<button class="btn btn-danger btn-sm" onclick="confirmRevokeDevice(${d.id})">Revoke Device</button>`
+                ? `<button class="btn btn-danger btn-sm" data-action="confirm-revoke-device" data-id="${d.id}">Revoke Device</button>`
                 : '-'
             }
           </td>
@@ -1053,7 +1197,7 @@ async function loadRecoveries() {
         <td>
           ${
             r.status === 'PENDING'
-              ? `<button class="btn btn-primary btn-sm" onclick="confirmRebind(${r.license_id}, '${escapeHtml(r.new_device_binding)}')">Setujui & Rebind</button>`
+              ? `<button class="btn btn-primary btn-sm" data-action="confirm-rebind" data-id="${r.license_id}" data-binding="${escapeHtml(r.new_device_binding)}">Setujui & Rebind</button>`
               : '<span class="text-muted">Selesai</span>'
           }
         </td>
@@ -1167,7 +1311,7 @@ function confirmRevokeLicense(id, email) {
   document.getElementById('confirmMessage').innerHTML = `Apakah Anda yakin ingin me-revoke lisensi untuk <strong>${escapeHtml(email)}</strong>?<br><br><small class="text-danger">Perangkat yang sedang aktif akan otomatis dinonaktifkan.</small>`;
   document.getElementById('confirmReasonInput').value = '';
 
-  document.getElementById('confirmActionBtn').onclick = async () => {
+  setConfirmAction(async () => {
     const reason = document.getElementById('confirmReasonInput').value.trim() || 'Revocation by admin';
     try {
       const res = await fetch(`/api/licenses/${id}/revoke`, {
@@ -1187,7 +1331,7 @@ function confirmRevokeLicense(id, email) {
     } catch {
       showToast('Terjadi kesalahan jaringan.');
     }
-  };
+  });
 
   openModal('confirmModal');
 }
@@ -1198,7 +1342,7 @@ function confirmRevokeDevice(deviceId) {
   document.getElementById('confirmMessage').textContent = 'Apakah Anda yakin ingin me-revoke perangkat ini? Lisensi akan kembali ke status PENDING hingga perangkat baru diaktivasi.';
   document.getElementById('confirmReasonInput').value = '';
 
-  document.getElementById('confirmActionBtn').onclick = async () => {
+  setConfirmAction(async () => {
     const reason = document.getElementById('confirmReasonInput').value.trim() || 'Device binding revoked by admin';
     try {
       const res = await fetch(`/api/devices/${deviceId}/revoke`, {
@@ -1219,7 +1363,7 @@ function confirmRevokeDevice(deviceId) {
     } catch {
       showToast('Terjadi kesalahan jaringan.');
     }
-  };
+  });
 
   openModal('confirmModal');
 }
@@ -1230,7 +1374,7 @@ function confirmRebind(licenseId, newDeviceBinding) {
   document.getElementById('confirmMessage').innerHTML = `Setujui pemindahan lisensi ke perangkat baru (<strong>${maskString(newDeviceBinding)}</strong>)?<br><br><small class="text-warning">Perangkat lama akan otomatis di-REVOKE dan perangkat baru menjadi ACTIVE.</small>`;
   document.getElementById('confirmReasonInput').value = '';
 
-  document.getElementById('confirmActionBtn').onclick = async () => {
+  setConfirmAction(async () => {
     const reason = document.getElementById('confirmReasonInput').value.trim() || 'Admin approved device rebind';
     try {
       const res = await fetch('/api/license/rebind', {
@@ -1255,7 +1399,7 @@ function confirmRebind(licenseId, newDeviceBinding) {
     } catch {
       showToast('Terjadi kesalahan jaringan.');
     }
-  };
+  });
 
   openModal('confirmModal');
 }
@@ -1266,7 +1410,18 @@ function openModal(id) {
 }
 
 function closeModal(id) {
-  document.getElementById(id).classList.add('hidden');
+  const el = document.getElementById(id);
+  if (el) el.classList.add('hidden');
+}
+
+// Confirm action button helper — removes old listener by cloning
+let _confirmActionHandler = null;
+function setConfirmAction(handler) {
+  const btn = document.getElementById('confirmActionBtn');
+  const newBtn = btn.cloneNode(true);
+  btn.parentNode.replaceChild(newBtn, btn);
+  newBtn.addEventListener('click', handler);
+  _confirmActionHandler = handler;
 }
 
 // Formatters

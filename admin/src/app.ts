@@ -6,6 +6,7 @@ import fastifyHelmet from '@fastify/helmet';
 import fastifyCors from '@fastify/cors';
 import fastifyRateLimit from '@fastify/rate-limit';
 import fastifyStatic from '@fastify/static';
+import fs from 'fs';
 import { config } from './config/index.js';
 import { registerAuthRoutes } from './controllers/authController.js';
 import { registerDashboardRoutes } from './controllers/dashboardController.js';
@@ -26,7 +27,7 @@ export function buildAdminApp(): FastifyInstance {
         defaultSrc: ["'self'"],
         styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
         fontSrc: ["'self'", 'https://fonts.gstatic.com'],
-        scriptSrc: ["'self'", "'unsafe-inline'"],
+        scriptSrc: ["'self'"],
         imgSrc: ["'self'", 'data:']
       }
     }
@@ -49,7 +50,10 @@ export function buildAdminApp(): FastifyInstance {
   }
 
   // Static Assets
-  const publicPath = path.resolve(__dirname, '../../public');
+  const publicPath = fs.existsSync(path.resolve(__dirname, '../public'))
+    ? path.resolve(__dirname, '../public')
+    : path.resolve(__dirname, '../../public');
+
   app.register(fastifyStatic, {
     root: publicPath,
     prefix: '/'

@@ -138,7 +138,7 @@
           <div class="card">
             <div class="card-header">
               <h3>Lisensi Terbaru</h3>
-              <button class="btn btn-link btn-sm" onclick="switchTab('licenses')">Lihat Semua →</button>
+              <button class="btn btn-link btn-sm" data-tab-switch="licenses">Lihat Semua →</button>
             </div>
             <div class="table-container">
               <table class="data-table">
@@ -160,7 +160,7 @@
           <div class="card">
             <div class="card-header">
               <h3>Aktivitas Audit Terbaru</h3>
-              <button class="btn btn-link btn-sm" onclick="switchTab('audit')">Lihat Semua →</button>
+              <button class="btn btn-link btn-sm" data-tab-switch="audit">Lihat Semua →</button>
             </div>
             <div class="table-container">
               <table class="data-table">
@@ -367,7 +367,7 @@
     <div class="modal-card">
       <div class="modal-header">
         <h3>Buat Lisensi Baru</h3>
-        <button class="modal-close" onclick="closeModal('createLicenseModal')">×</button>
+        <button type="button" class="modal-close" data-close-modal="createLicenseModal">×</button>
       </div>
       <div class="modal-body">
         <form id="createLicenseForm">
@@ -397,7 +397,7 @@
             </div>
           </div>
           <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" onclick="closeModal('createLicenseModal')">Batal</button>
+            <button type="button" class="btn btn-secondary" data-close-modal="createLicenseModal">Batal</button>
             <button type="submit" id="submitCreateLicenseBtn" class="btn btn-primary">Generate Lisensi</button>
           </div>
         </form>
@@ -413,7 +413,7 @@
           </p>
           <div class="license-code-display">
             <span id="createdLicenseCodeText" class="code-text">BW-XXXX-XXXX-XXXX</span>
-            <button id="copyLicenseCodeBtn" class="btn btn-sm btn-dark" onclick="copyCreatedLicenseCode()">
+            <button type="button" id="copyLicenseCodeBtn" class="btn btn-sm btn-dark">
               📋 Salin Kode
             </button>
           </div>
@@ -423,7 +423,7 @@
             <div><strong>Harga:</strong> Rp50.000 (Sekali Beli)</div>
           </div>
           <div class="modal-footer">
-            <button type="button" class="btn btn-primary btn-block" onclick="closeModal('createLicenseModal')">Selesai</button>
+            <button type="button" class="btn btn-primary btn-block" data-close-modal="createLicenseModal">Selesai</button>
           </div>
         </div>
       </div>
@@ -435,7 +435,7 @@
     <div class="modal-card modal-large">
       <div class="modal-header">
         <h3>Detail Lisensi #<span id="detailLicenseId"></span></h3>
-        <button class="modal-close" onclick="closeModal('licenseDetailModal')">×</button>
+        <button type="button" class="modal-close" data-close-modal="licenseDetailModal">×</button>
       </div>
       <div class="modal-body">
         <div class="detail-section">
@@ -495,7 +495,7 @@
       </div>
       <div class="modal-footer">
         <button id="detailRevokeLicenseBtn" class="btn btn-danger">Revoke Lisensi Ini</button>
-        <button type="button" class="btn btn-secondary" onclick="closeModal('licenseDetailModal')">Tutup</button>
+        <button type="button" class="btn btn-secondary" data-close-modal="licenseDetailModal">Tutup</button>
       </div>
     </div>
   </div>
@@ -505,7 +505,7 @@
     <div class="modal-card modal-small">
       <div class="modal-header">
         <h3 id="confirmTitle">Konfirmasi Aksi</h3>
-        <button class="modal-close" onclick="closeModal('confirmModal')">×</button>
+        <button type="button" class="modal-close" data-close-modal="confirmModal">×</button>
       </div>
       <div class="modal-body">
         <p id="confirmMessage">Apakah Anda yakin ingin melanjutkan?</p>
@@ -515,7 +515,7 @@
         </div>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" onclick="closeModal('confirmModal')">Batal</button>
+        <button type="button" class="btn btn-secondary" data-close-modal="confirmModal">Batal</button>
         <button type="button" id="confirmActionBtn" class="btn btn-danger">Lanjutkan</button>
       </div>
     </div>
@@ -526,7 +526,7 @@
     <div class="modal-card">
       <div class="modal-header">
         <h3>+ Order Baru (Buku Warung)</h3>
-        <button class="modal-close" onclick="closeModal('createOrderModal')">×</button>
+        <button type="button" class="modal-close" data-close-modal="createOrderModal">×</button>
       </div>
       <div class="modal-body">
         <form id="createOrderForm">
@@ -555,11 +555,20 @@
             </div>
           </div>
           <div class="form-group">
+            <label for="orderPaymentMethod">Metode Pembayaran</label>
+            <select id="orderPaymentMethod">
+              <option value="QRIS — KIOS KIARA" selected>QRIS — KIOS KIARA</option>
+              <option value="Transfer Bank">Transfer Bank</option>
+              <option value="Tunai / Lainnya">Tunai / Lainnya</option>
+            </select>
+            <small class="form-hint">Scan QRIS untuk melakukan pembayaran. Setelah pembayaran berhasil, Admin akan memverifikasi transaksi secara manual.</small>
+          </div>
+          <div class="form-group">
             <label for="orderNotes">Catatan Tambahan (Opsional)</label>
             <input type="text" id="orderNotes" placeholder="Catatan transaksi">
           </div>
           <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" onclick="closeModal('createOrderModal')">Batal</button>
+            <button type="button" class="btn btn-secondary" data-close-modal="createOrderModal">Batal</button>
             <button type="submit" id="submitCreateOrderBtn" class="btn btn-primary">Simpan Order</button>
           </div>
         </form>
@@ -572,7 +581,7 @@
     <div class="modal-card modal-large">
       <div class="modal-header">
         <h3>Detail Order <span id="detailOrderCodeHeader" class="text-success"></span></h3>
-        <button class="modal-close" onclick="closeModal('orderDetailModal')">×</button>
+        <button type="button" class="modal-close" data-close-modal="orderDetailModal">×</button>
       </div>
       <div class="modal-body">
         <div class="detail-section">
@@ -609,6 +618,43 @@
           </div>
         </div>
 
+        <!-- Section: QRIS Payment Information (visible for QRIS orders) -->
+        <div id="detailQrisSection" class="detail-section">
+          <h4>Informasi QRIS Kios Kiara (Semi-Manual)</h4>
+          <div class="qris-display-card">
+            <div class="qris-card-header">
+              <span class="qris-badge">QRIS RESMI</span>
+              <span class="font-bold">KIOS KIARA — Rp50.000</span>
+            </div>
+            <div class="qris-body">
+              <div class="qris-image-container">
+                <img id="detailQrisImage" src="/img/qris-kios-kiara.png" alt="QRIS Kios Kiara" class="qris-image" />
+                <div class="qris-pending-notice">
+                  <span>📷 Asset: <code>/img/qris-kios-kiara.png</code></span>
+                  <small class="text-muted">(Scan menggunakan m-banking atau e-wallet)</small>
+                </div>
+              </div>
+              <div class="qris-specs">
+                <div><strong>Merchant:</strong> KIOS KIARA</div>
+                <div><strong>NMID:</strong> <span class="mono-text font-bold">ID1026512762125</span></div>
+                <div><strong>Terminal:</strong> A01</div>
+                <div><strong>Nominal:</strong> <span class="text-success font-bold">Rp50.000</span></div>
+                <div class="qris-instruction-text mt-2">
+                  Scan menggunakan mobile banking atau e-wallet.
+                </div>
+                <div class="qris-admin-warning">
+                  ⚠️ <strong>SOP:</strong> Admin tetap harus mengecek mutasi transaksi masuk pada aplikasi/merchant QRIS sebelum menekan <strong>Verifikasi Pembayaran</strong>.
+                </div>
+              </div>
+            </div>
+            <div class="qris-actions mt-2">
+              <button type="button" class="btn btn-secondary btn-sm" data-action="copy-qris-instruction">
+                📋 Salin Instruksi Bayar QRIS (Template WhatsApp)
+              </button>
+            </div>
+          </div>
+        </div>
+
         <div class="detail-section">
           <h4>Status Lisensi & Perangkat</h4>
           <div class="detail-grid">
@@ -627,17 +673,17 @@
         </div>
       </div>
       <div class="modal-footer" id="orderDetailModalFooter">
-        <button type="button" class="btn btn-secondary" onclick="closeModal('orderDetailModal')">Tutup</button>
+        <button type="button" class="btn btn-secondary" data-close-modal="orderDetailModal">Tutup</button>
       </div>
     </div>
   </div>
 
   <!-- Modal: Verify Payment -->
   <div id="verifyPaymentModal" class="modal-overlay hidden">
-    <div class="modal-card">
+    <div class="modal-card modal-large">
       <div class="modal-header">
         <h3>Verifikasi Pembayaran Manual</h3>
-        <button class="modal-close" onclick="closeModal('verifyPaymentModal')">×</button>
+        <button type="button" class="modal-close" data-close-modal="verifyPaymentModal">×</button>
       </div>
       <div class="modal-body">
         <div class="payment-verify-summary mb-3">
@@ -649,22 +695,61 @@
             <div><strong>Nominal:</strong> <span id="verifyPayAmount" class="text-success font-bold">Rp50.000</span></div>
           </div>
         </div>
+
+        <!-- QRIS Info Card inside Verify Modal -->
+        <div class="qris-display-card mb-3">
+          <div class="qris-card-header">
+            <span class="qris-badge">QRIS RESMI</span>
+            <span class="font-bold">QRIS — KIOS KIARA (Rp50.000)</span>
+          </div>
+          <div class="qris-body">
+            <div class="qris-image-container">
+              <img id="verifyQrisImage" src="/img/qris-kios-kiara.png" alt="QRIS Kios Kiara" class="qris-image" />
+              <div class="qris-pending-notice">
+                <span>📷 QRIS Kios Kiara</span>
+                <small class="text-muted">(Scan m-banking / e-wallet)</small>
+              </div>
+            </div>
+            <div class="qris-specs">
+              <div><strong>Merchant:</strong> KIOS KIARA</div>
+              <div><strong>NMID:</strong> <span class="mono-text font-bold">ID1026512762125</span></div>
+              <div><strong>Terminal:</strong> A01</div>
+              <div><strong>Nominal:</strong> <span class="text-success font-bold">Rp50.000</span></div>
+              <p class="qris-instruction-text mt-2">
+                Scan menggunakan mobile banking atau e-wallet.
+              </p>
+              <div class="qris-admin-warning">
+                ⚠️ <strong>PENTING:</strong> Admin tetap harus mengecek transaksi masuk pada aplikasi/merchant QRIS sebelum menekan <strong>Konfirmasi Pembayaran</strong>.
+              </div>
+            </div>
+          </div>
+          <div class="qris-actions mt-2">
+            <button type="button" class="btn btn-secondary btn-sm" data-action="copy-qris-instruction">
+              📋 Salin Pesan Instruksi QRIS ke Customer
+            </button>
+          </div>
+        </div>
+
         <form id="verifyPaymentForm">
           <input type="hidden" id="verifyPayOrderId">
           <div class="form-group">
             <label for="verifyPaymentMethod">Metode Pembayaran</label>
-            <input type="text" id="verifyPaymentMethod" placeholder="Contoh: Transfer BCA / QRIS / Mandiri">
+            <select id="verifyPaymentMethod">
+              <option value="QRIS" selected>QRIS — KIOS KIARA</option>
+              <option value="Transfer Bank">Transfer Bank</option>
+              <option value="Tunai / Lainnya">Tunai / Lainnya</option>
+            </select>
           </div>
           <div class="form-group">
             <label for="verifyPaymentReference">Nomor / Catatan Referensi (Opsional)</label>
-            <input type="text" id="verifyPaymentReference" placeholder="Contoh: REF123456 / Bukti Transfer">
+            <input type="text" id="verifyPaymentReference" placeholder="Contoh: RRN / Ref Transaksi QRIS / Bank">
           </div>
           <div class="form-group">
             <label for="verifyPaymentNotes">Catatan Verifikasi (Opsional)</label>
             <input type="text" id="verifyPaymentNotes" placeholder="Catatan internal admin">
           </div>
           <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" onclick="closeModal('verifyPaymentModal')">Batal</button>
+            <button type="button" class="btn btn-secondary" data-close-modal="verifyPaymentModal">Batal</button>
             <button type="submit" id="submitVerifyPaymentBtn" class="btn btn-primary">Konfirmasi Pembayaran (PAID)</button>
           </div>
         </form>
@@ -677,7 +762,7 @@
     <div class="modal-card modal-large">
       <div class="modal-header">
         <h3>📲 Siapkan Pengiriman Pesan WhatsApp</h3>
-        <button class="modal-close" onclick="closeModal('deliveryPreparationModal')">×</button>
+        <button type="button" class="modal-close" data-close-modal="deliveryPreparationModal">×</button>
       </div>
       <div class="modal-body">
         <p class="mb-3 text-muted">
@@ -695,7 +780,7 @@
         </div>
 
         <div class="delivery-actions-bar">
-          <button type="button" id="copyWaMsgBtn" class="btn btn-secondary" onclick="copyWaMessage()">
+          <button type="button" id="copyWaMsgBtn" class="btn btn-secondary">
             📋 Salin Pesan
           </button>
           <a id="openWaLinkBtn" href="#" target="_blank" class="btn btn-success">
@@ -716,7 +801,7 @@
         </div>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" onclick="closeModal('deliveryPreparationModal')">Tutup</button>
+        <button type="button" class="btn btn-secondary" data-close-modal="deliveryPreparationModal">Tutup</button>
       </div>
     </div>
   </div>
