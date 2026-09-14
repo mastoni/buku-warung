@@ -1,5 +1,12 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { LicenseClient, CreateLicensePayload, RebindPayload } from '../services/licenseClient.js';
+import {
+  LicenseClient,
+  CreateLicensePayload,
+  RebindPayload,
+  CreateOrderPayload,
+  VerifyPaymentPayload,
+  MarkDeliveredPayload
+} from '../services/licenseClient.js';
 import { sessionAuthMiddleware } from '../middleware/sessionAuth.js';
 
 export async function registerLicenseProxyRoutes(fastify: FastifyInstance) {
@@ -103,7 +110,7 @@ export async function registerLicenseProxyRoutes(fastify: FastifyInstance) {
   // POST /api/orders
   fastify.post(
     '/api/orders',
-    async (request: FastifyRequest<{ Body: any }>, reply: FastifyReply) => {
+    async (request: FastifyRequest<{ Body: CreateOrderPayload }>, reply: FastifyReply) => {
       const res = await licenseClient.createOrder(request.body);
       return reply.status(res.status).send(res.data);
     }
@@ -136,7 +143,7 @@ export async function registerLicenseProxyRoutes(fastify: FastifyInstance) {
   // POST /api/orders/:id/verify-payment
   fastify.post(
     '/api/orders/:id/verify-payment',
-    async (request: FastifyRequest<{ Params: { id: string }; Body?: any }>, reply: FastifyReply) => {
+    async (request: FastifyRequest<{ Params: { id: string }; Body: VerifyPaymentPayload }>, reply: FastifyReply) => {
       const id = parseInt(request.params.id, 10);
       if (isNaN(id)) {
         return reply.status(400).send({ success: false, error: { code: 'INVALID_ID', message: 'Order ID must be a number.' } });
@@ -164,7 +171,7 @@ export async function registerLicenseProxyRoutes(fastify: FastifyInstance) {
   // POST /api/orders/:id/mark-delivered
   fastify.post(
     '/api/orders/:id/mark-delivered',
-    async (request: FastifyRequest<{ Params: { id: string }; Body?: any }>, reply: FastifyReply) => {
+    async (request: FastifyRequest<{ Params: { id: string }; Body: MarkDeliveredPayload }>, reply: FastifyReply) => {
       const id = parseInt(request.params.id, 10);
       if (isNaN(id)) {
         return reply.status(400).send({ success: false, error: { code: 'INVALID_ID', message: 'Order ID must be a number.' } });

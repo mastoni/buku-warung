@@ -156,5 +156,8 @@ export interface OrderSummaryMetrics {
   pendingPayment: number;
   paid: number;
   pendingLicense: number;
+  delivered: number;
   active: number;
+  paidRevenue: number;
+  actionRequiredCount: number;
 }

@@ -210,6 +210,11 @@
             <span class="metric-value text-info" id="metricSalesActive">0</span>
             <span class="metric-desc">Aplikasi telah aktif</span>
           </div>
+          <div class="metric-card">
+            <span class="metric-label">Total Penjualan (PAID)</span>
+            <span class="metric-value text-success" id="metricSalesRevenue">Rp 0</span>
+            <span class="metric-desc">Pendapatan tervalidasi</span>
+          </div>
         </div>
 
         <!-- Section: PERLU DIPROSES -->
@@ -237,6 +242,7 @@
               <button class="order-filter-btn" data-order-filter="PENDING_PAYMENT">Menunggu Pembayaran</button>
               <button class="order-filter-btn" data-order-filter="PAID">Sudah Bayar</button>
               <button class="order-filter-btn" data-order-filter="PENDING_LICENSE">License Belum Dibuat</button>
+              <button class="order-filter-btn" data-order-filter="DELIVERED">Sudah Dikirim</button>
               <button class="order-filter-btn" data-order-filter="ACTIVE">Sudah Aktif</button>
             </div>
           </div>
@@ -610,6 +616,13 @@
             <div><strong>Status Lisensi:</strong> <span id="detailOrderLicenseStatus">-</span></div>
             <div><strong>Perangkat Terikat:</strong> <span id="detailOrderDeviceStatus">-</span></div>
             <div><strong>Aktivasi Pertama:</strong> <span id="detailOrderActivatedAt">-</span></div>
+          </div>
+        </div>
+
+        <div class="detail-section">
+          <h4>Alur Lifecycle Pesanan</h4>
+          <div id="orderLifecycleTimeline" class="lifecycle-timeline">
+            <!-- Timeline items rendered dynamically -->
           </div>
         </div>
       </div>

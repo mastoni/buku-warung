@@ -1,7 +1,13 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { AdminService } from '../services/adminService.js';
 import { adminAuthMiddleware } from '../middleware/auth.js';
-import { AdminCreateLicenseRequest, AdminRebindRequest } from '../types/index.js';
+import {
+  AdminCreateLicenseRequest,
+  AdminRebindRequest,
+  CreateOrderRequest,
+  VerifyPaymentRequest,
+  MarkDeliveredRequest
+} from '../types/index.js';
 
 export async function registerAdminRoutes(fastify: FastifyInstance) {
   const adminService = new AdminService();
@@ -210,8 +216,8 @@ export async function registerAdminRoutes(fastify: FastifyInstance) {
         }
       }
     },
-    async (request: FastifyRequest<{ Body: any }>, reply: FastifyReply) => {
-      const body = request.body || {};
+    async (request: FastifyRequest<{ Body: CreateOrderRequest & { customerWhatsapp?: string } }>, reply: FastifyReply) => {
+      const body = request.body || ({} as any);
       const payload: CreateOrderRequest = {
         customerName: body.customerName,
         customerContact: body.customerContact || body.customerWhatsapp || '',
@@ -275,7 +281,7 @@ export async function registerAdminRoutes(fastify: FastifyInstance) {
   // POST /v1/admin/orders/:id/verify-payment
   fastify.post(
     '/v1/admin/orders/:id/verify-payment',
-    async (request: FastifyRequest<{ Params: { id: string }; Body?: any }>, reply: FastifyReply) => {
+    async (request: FastifyRequest<{ Params: { id: string }; Body?: VerifyPaymentRequest }>, reply: FastifyReply) => {
       const id = parseInt(request.params.id, 10);
       if (isNaN(id)) {
         return reply.status(400).send({ success: false, error: { code: 'INVALID_ID', message: 'Order ID must be a number.' } });
@@ -325,7 +331,7 @@ export async function registerAdminRoutes(fastify: FastifyInstance) {
   // POST /v1/admin/orders/:id/mark-delivered
   fastify.post(
     '/v1/admin/orders/:id/mark-delivered',
-    async (request: FastifyRequest<{ Params: { id: string }; Body?: any }>, reply: FastifyReply) => {
+    async (request: FastifyRequest<{ Params: { id: string }; Body?: MarkDeliveredRequest }>, reply: FastifyReply) => {
       const id = parseInt(request.params.id, 10);
       if (isNaN(id)) {
         return reply.status(400).send({ success: false, error: { code: 'INVALID_ID', message: 'Order ID must be a number.' } });

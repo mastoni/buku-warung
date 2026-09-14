@@ -459,7 +459,10 @@ export class AdminService {
     let pendingPayment = 0;
     let paid = 0;
     let pendingLicense = 0;
+    let delivered = 0;
     let active = 0;
+    let paidRevenue = 0;
+    let actionRequiredCount = 0;
 
     const processedOrders = allOrders.map((o) => {
       let effectiveStatus = o.status;
@@ -472,11 +475,19 @@ export class AdminService {
       }
       if (o.payment_status === 'PAID') {
         paid++;
+        paidRevenue += (o.amount || 0);
         if (!o.license_id) {
           pendingLicense++;
+          actionRequiredCount++;
         }
       }
-      if (o.active_device_count > 0) {
+      if (o.status === 'LICENSE_CREATED') {
+        actionRequiredCount++;
+      }
+      if (o.status === 'DELIVERED') {
+        delivered++;
+      }
+      if (o.active_device_count > 0 || effectiveStatus === 'ACTIVE') {
         active++;
       }
 
@@ -489,14 +500,19 @@ export class AdminService {
     let filtered = processedOrders;
 
     if (filter) {
-      if (filter === 'PENDING_PAYMENT') {
+      const f = filter.toUpperCase();
+      if (f === 'PENDING_PAYMENT') {
         filtered = filtered.filter((o) => o.payment_status === 'UNPAID');
-      } else if (filter === 'PAID') {
+      } else if (f === 'PAID') {
         filtered = filtered.filter((o) => o.payment_status === 'PAID');
-      } else if (filter === 'PENDING_LICENSE') {
+      } else if (f === 'PENDING_LICENSE') {
         filtered = filtered.filter((o) => o.payment_status === 'PAID' && !o.license_id);
-      } else if (filter === 'ACTIVE') {
-        filtered = filtered.filter((o) => o.active_device_count > 0);
+      } else if (f === 'DELIVERED') {
+        filtered = filtered.filter((o) => o.status === 'DELIVERED');
+      } else if (f === 'ACTIVE') {
+        filtered = filtered.filter((o) => o.active_device_count > 0 || o.effective_status === 'ACTIVE');
+      } else if (f === 'ACTION_REQUIRED') {
+        filtered = filtered.filter((o) => (o.payment_status === 'PAID' && !o.license_id) || o.status === 'LICENSE_CREATED');
       }
     }
 
@@ -505,7 +521,7 @@ export class AdminService {
       filtered = filtered.filter((o) =>
         o.order_number.toLowerCase().includes(q) ||
         o.customer_name.toLowerCase().includes(q) ||
-        o.customer_contact.toLowerCase().includes(q) ||
+        (o.customer_contact && o.customer_contact.toLowerCase().includes(q)) ||
         o.owner_email.toLowerCase().includes(q)
       );
     }
@@ -517,7 +533,10 @@ export class AdminService {
         pendingPayment,
         paid,
         pendingLicense,
-        active
+        delivered,
+        active,
+        paidRevenue,
+        actionRequiredCount
       }
     };
   }

@@ -209,7 +209,9 @@ async function loadSales() {
         pendingPayment: 0,
         paid: 0,
         pendingLicense: 0,
+        delivered: 0,
         active: 0,
+        paidRevenue: 0,
         actionRequiredCount: 0
       };
 
@@ -219,6 +221,10 @@ async function loadSales() {
       document.getElementById('metricSalesPaid').textContent = metrics.paid;
       document.getElementById('metricSalesPendingLicense').textContent = metrics.pendingLicense;
       document.getElementById('metricSalesActive').textContent = metrics.active;
+      const revEl = document.getElementById('metricSalesRevenue');
+      if (revEl) {
+        revEl.textContent = `Rp ${formatNumber(metrics.paidRevenue || 0)}`;
+      }
 
       // Sidebar Action badge
       const actionBadge = document.getElementById('salesActionBadge');
@@ -258,7 +264,7 @@ function renderSalesActionQueue(orders, metrics) {
         type: 'VERIFY_PAY',
         order,
         priority: 2,
-        title: `${escapeHtml(order.customer_name)} (${order.order_code})`,
+        title: `${escapeHtml(order.customer_name)} (${order.order_code || order.order_number})`,
         meta: `Rp ${formatNumber(order.amount)} • Menunggu Pembayaran`,
         btnLabel: '💳 Verifikasi Bayar',
         btnClass: 'btn btn-warning btn-sm',
@@ -269,19 +275,19 @@ function renderSalesActionQueue(orders, metrics) {
         type: 'CREATE_LICENSE',
         order,
         priority: 1,
-        title: `${escapeHtml(order.customer_name)} (${order.order_code})`,
+        title: `${escapeHtml(order.customer_name)} (${order.order_code || order.order_number})`,
         meta: `PAID • ${escapeHtml(order.owner_email)} • License Belum Dibuat`,
         btnLabel: '🔑 Buat License',
         btnClass: 'btn btn-primary btn-sm',
         action: () => handleGenerateLicenseForOrder(order.id, order.customer_name, order.owner_email)
       });
-    } else if (order.license_id && order.status === 'LICENSE_CREATED') {
+    } else if (order.license_id && (order.status === 'LICENSE_CREATED' || order.status === 'PAID')) {
       actionItems.push({
         type: 'SEND_WA',
         order,
         priority: 3,
-        title: `${escapeHtml(order.customer_name)} (${order.order_code})`,
-        meta: `License Siap • Belum Dikirim ke WA (${escapeHtml(order.customer_whatsapp)})`,
+        title: `${escapeHtml(order.customer_name)} (${order.order_code || order.order_number})`,
+        meta: `License Siap • Belum Dikirim ke WA (${escapeHtml(order.customer_whatsapp || order.customer_contact || '-')})`,
         btnLabel: '📲 Siapkan WhatsApp',
         btnClass: 'btn btn-success btn-sm',
         action: () => openDeliveryPreparationModal(order.id)
@@ -323,6 +329,11 @@ function renderOrdersTable() {
   const tbody = document.getElementById('ordersTbody');
   if (!tbody) return;
 
+  if (cachedOrders.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="10" class="text-center text-muted p-4">Belum ada order. Klik "+ Order Baru" untuk membuat pesanan.</td></tr>';
+    return;
+  }
+
   const search = (document.getElementById('orderSearchInput')?.value || '').toLowerCase().trim();
 
   let filtered = cachedOrders.filter((o) => {
@@ -333,22 +344,27 @@ function renderOrdersTable() {
       matchFilter = o.payment_status === 'PAID';
     } else if (currentOrderFilter === 'PENDING_LICENSE') {
       matchFilter = o.payment_status === 'PAID' && !o.license_id;
+    } else if (currentOrderFilter === 'DELIVERED') {
+      matchFilter = o.status === 'DELIVERED';
     } else if (currentOrderFilter === 'ACTIVE') {
-      matchFilter = o.status === 'ACTIVE';
+      matchFilter = o.status === 'ACTIVE' || o.effective_status === 'ACTIVE';
     }
 
     const matchSearch =
       !search ||
       (o.order_code || '').toLowerCase().includes(search) ||
+      (o.order_number || '').toLowerCase().includes(search) ||
       (o.customer_name || '').toLowerCase().includes(search) ||
       (o.customer_whatsapp || '').toLowerCase().includes(search) ||
-      (o.owner_email || '').toLowerCase().includes(search);
+      (o.customer_contact || '').toLowerCase().includes(search) ||
+      (o.owner_email || '').toLowerCase().includes(search) ||
+      (o.notes || '').toLowerCase().includes(search);
 
     return matchFilter && matchSearch;
   });
 
   if (filtered.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="10" class="text-center text-muted">Tidak ada order yang cocok.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="10" class="text-center text-muted p-4">Order tidak ditemukan dengan filter saat ini.</td></tr>';
     return;
   }
 
@@ -356,13 +372,13 @@ function renderOrdersTable() {
     .map(
       (o) => `
     <tr>
-      <td><strong class="mono-text">${escapeHtml(o.order_code)}</strong></td>
+      <td><strong class="mono-text">${escapeHtml(o.order_code || o.order_number)}</strong></td>
       <td><strong>${escapeHtml(o.customer_name)}</strong></td>
-      <td>${escapeHtml(o.customer_whatsapp)}</td>
+      <td>${escapeHtml(o.customer_whatsapp || o.customer_contact || '-')}</td>
       <td>${escapeHtml(o.owner_email)}</td>
       <td>Rp ${formatNumber(o.amount)}</td>
       <td>${renderPaymentStatusBadge(o.payment_status)}</td>
-      <td>${renderOrderStatusBadge(o.status)}</td>
+      <td>${renderOrderStatusBadge(o.status || o.effective_status)}</td>
       <td>${o.license_code ? `<span class="mono-text text-success">${escapeHtml(o.license_code)}</span>` : (o.license_id ? `<span class="badge badge-info">ID #${o.license_id}</span>` : '<span class="text-muted">-</span>')}</td>
       <td>${formatDate(o.created_at)}</td>
       <td>
@@ -475,6 +491,73 @@ async function openOrderDetail(id) {
       document.getElementById('detailOrderLicenseStatus').textContent = 'Belum Dibuat';
       document.getElementById('detailOrderDeviceStatus').textContent = '-';
       document.getElementById('detailOrderActivatedAt').textContent = '-';
+    }
+
+    // Render Order Lifecycle Timeline
+    const timelineEl = document.getElementById('orderLifecycleTimeline');
+    if (timelineEl) {
+      const isPaid = order.payment_status === 'PAID';
+      const isLicenseCreated = Boolean(order.license_id);
+      const isDelivered = order.status === 'DELIVERED' || Boolean(order.delivered_at);
+      const activeDevice = devices.find((d) => d.status === 'ACTIVE');
+      const isActive = order.status === 'ACTIVE' || Boolean(activeDevice);
+
+      timelineEl.innerHTML = `
+        <div class="timeline-step completed">
+          <div class="timeline-dot">✓</div>
+          <div class="timeline-content">
+            <div class="timeline-title">
+              <span>1. Order Dibuat</span>
+              <span class="timeline-time">${formatDate(order.created_at)}</span>
+            </div>
+            <div class="timeline-desc">Order #${escapeHtml(order.order_code || order.order_number)} dibuat untuk ${escapeHtml(order.customer_name)} (Rp ${formatNumber(order.amount)})</div>
+          </div>
+        </div>
+
+        <div class="timeline-step ${isPaid ? 'completed' : 'active'}">
+          <div class="timeline-dot">${isPaid ? '✓' : '2'}</div>
+          <div class="timeline-content">
+            <div class="timeline-title">
+              <span>2. Pembayaran (Verifikasi Admin)</span>
+              <span class="timeline-time">${isPaid ? formatDate(order.verified_at) : 'Menunggu'}</span>
+            </div>
+            <div class="timeline-desc">${isPaid ? `Diverifikasi oleh ${escapeHtml(order.verified_by || 'ADMIN')} (${escapeHtml(order.payment_method || 'Transfer')})` : 'Pelanggan belum bayar / pembayaran belum diverifikasi admin.'}</div>
+          </div>
+        </div>
+
+        <div class="timeline-step ${isLicenseCreated ? 'completed' : (isPaid ? 'active' : '')}">
+          <div class="timeline-dot">${isLicenseCreated ? '✓' : '3'}</div>
+          <div class="timeline-content">
+            <div class="timeline-title">
+              <span>3. Pembuatan Lisensi</span>
+              <span class="timeline-time">${isLicenseCreated ? (license ? formatDate(license.created_at) : '-') : 'Menunggu'}</span>
+            </div>
+            <div class="timeline-desc">${isLicenseCreated ? `Kode Lisensi resmi dikaitkan: ${escapeHtml(order.license_code || license?.license_uuid || 'Tersedia')}` : (isPaid ? 'Pembayaran lunas. Siap digenerate oleh admin.' : 'Menunggu pembayaran selesai.')}</div>
+          </div>
+        </div>
+
+        <div class="timeline-step ${isDelivered ? 'completed' : (isLicenseCreated ? 'active' : '')}">
+          <div class="timeline-dot">${isDelivered ? '✓' : '4'}</div>
+          <div class="timeline-content">
+            <div class="timeline-title">
+              <span>4. Pengiriman Paket ke Pelanggan</span>
+              <span class="timeline-time">${isDelivered ? formatDate(order.delivered_at) : 'Menunggu'}</span>
+            </div>
+            <div class="timeline-desc">${isDelivered ? `Paket APK & Lisensi telah dikirim via WhatsApp (${escapeHtml(order.customer_whatsapp || order.customer_contact || '-')})` : (isLicenseCreated ? 'Lisensi siap dikirimkan ke nomor WhatsApp pelanggan.' : 'Menunggu lisensi dibuat.')}</div>
+          </div>
+        </div>
+
+        <div class="timeline-step ${isActive ? 'completed' : (isDelivered ? 'active' : '')}">
+          <div class="timeline-dot">${isActive ? '✓' : '5'}</div>
+          <div class="timeline-content">
+            <div class="timeline-title">
+              <span>5. Aktivasi di HP Android Pelanggan</span>
+              <span class="timeline-time">${isActive ? formatDate(license?.activated_at) : 'Menunggu'}</span>
+            </div>
+            <div class="timeline-desc">${isActive ? `Aplikasi telah aktif (${activeDevice ? maskString(activeDevice.device_binding) : 'Perangkat Terikat'}). 100% Siap Digunakan Offline.` : 'Pelanggan belum melakukan aktivasi pada aplikasi Buku Warung di HP.'}</div>
+          </div>
+        </div>
+      `;
     }
 
     // Modal footer dynamic actions
