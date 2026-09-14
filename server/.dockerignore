@@ -1,0 +1,13 @@
+node_modules
+dist
+bukuwarung_license.db*
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+.env
+.env.*
+.git
+tests
+deploy
+npm-debug.log

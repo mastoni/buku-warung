@@ -1,0 +1,160 @@
+export type LicenseStatus = 'PENDING' | 'ACTIVE' | 'REVOKED';
+export type DeviceStatus = 'ACTIVE' | 'REVOKED';
+export type RecoveryStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
+
+export type ValidationResultStatus =
+  | 'VALID'
+  | 'INVALID'
+  | 'DEVICE_MISMATCH'
+  | 'EMAIL_MISMATCH'
+  | 'REVOKED';
+
+export interface LicenseRecord {
+  id: number;
+  license_uuid: string;
+  license_code_hash: string;
+  owner_email_canonical: string;
+  owner_email_hash: string;
+  product: string;
+  price: number;
+  status: LicenseStatus;
+  created_at: number;
+  activated_at: number | null;
+  revoked_at: number | null;
+  updated_at: number;
+}
+
+export interface LicenseDeviceRecord {
+  id: number;
+  license_id: number;
+  device_binding: string;
+  status: DeviceStatus;
+  first_activated_at: number;
+  last_validated_at: number;
+  revoked_at: number | null;
+  created_at: number;
+  updated_at: number;
+}
+
+export type OrderStatus =
+  | 'PENDING_PAYMENT'
+  | 'PAID'
+  | 'LICENSE_CREATED'
+  | 'DELIVERED'
+  | 'ACTIVE'
+  | 'COMPLETED';
+
+export type PaymentStatus = 'UNPAID' | 'PAID' | 'REJECTED';
+
+export interface OrderRecord {
+  id: number;
+  order_number: string;
+  customer_name: string;
+  customer_contact: string;
+  owner_email: string;
+  product: string;
+  amount: number;
+  status: OrderStatus;
+  payment_status: PaymentStatus;
+  license_id: number | null;
+  payment_method: string | null;
+  payment_reference: string | null;
+  verified_at: number | null;
+  verified_by: string | null;
+  delivered_at: number | null;
+  delivered_by: string | null;
+  notes: string | null;
+  created_at: number;
+  updated_at: number;
+}
+
+export interface AuditLogRecord {
+  id: number;
+  action: string;
+  license_id: number | null;
+  old_state: string | null;
+  new_state: string | null;
+  actor: string;
+  reason: string | null;
+  created_at: number;
+}
+
+export interface RecoveryRequestRecord {
+  id: number;
+  license_id: number;
+  old_device_binding: string | null;
+  new_device_binding: string;
+  status: RecoveryStatus;
+  reason: string | null;
+  created_at: number;
+  resolved_at: number | null;
+}
+
+export interface ApiResponse<T = any> {
+  success: boolean;
+  data?: T;
+  error?: {
+    code: string;
+    message: string;
+  };
+}
+
+export interface ActivateRequest {
+  licenseCode: string;
+  ownerEmail: string;
+  deviceBinding: string;
+}
+
+export interface ValidateRequest {
+  licenseCode: string;
+  ownerEmail: string;
+  deviceBinding: string;
+}
+
+export interface RecoverRequest {
+  licenseCode: string;
+  ownerEmail: string;
+  newDeviceBinding: string;
+  reason?: string;
+}
+
+export interface AdminCreateLicenseRequest {
+  ownerEmail: string;
+  product?: string;
+  price?: number;
+  customerName?: string;
+  customerContact?: string;
+}
+
+export interface AdminRebindRequest {
+  licenseId: number;
+  newDeviceBinding: string;
+  reason?: string;
+}
+
+export interface CreateOrderRequest {
+  customerName: string;
+  customerContact: string;
+  ownerEmail: string;
+  product?: string;
+  amount?: number;
+  notes?: string;
+}
+
+export interface VerifyPaymentRequest {
+  paymentMethod?: string;
+  paymentReference?: string;
+  notes?: string;
+}
+
+export interface MarkDeliveredRequest {
+  notes?: string;
+}
+
+export interface OrderSummaryMetrics {
+  totalOrders: number;
+  pendingPayment: number;
+  paid: number;
+  pendingLicense: number;
+  active: number;
+}

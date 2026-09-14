@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Buku Warung — License Admin Dashboard</title>
+  <link rel="stylesheet" href="/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+  <!-- Login Container -->
+  <div id="loginSection" class="login-wrapper">
+    <div class="login-card">
+      <div class="brand-header">
+        <div class="brand-icon">BW</div>
+        <h2>Buku Warung Admin</h2>
+        <p class="subtitle">Commercial Licensing Management</p>
+      </div>
+      <form id="loginForm" class="login-form">
+        <div id="loginError" class="alert-banner hidden"></div>
+        <div class="form-group">
+          <label for="usernameInput">Username</label>
+          <input type="text" id="usernameInput" required placeholder="admin" autocomplete="username">
+        </div>
+        <div class="form-group">
+          <label for="passwordInput">Password</label>
+          <input type="password" id="passwordInput" required placeholder="••••••••" autocomplete="current-password">
+        </div>
+        <button type="submit" id="loginBtn" class="btn btn-primary btn-block">
+          <span>Masuk ke Dashboard</span>
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Main App Container -->
+  <div id="appSection" class="app-layout hidden">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <div class="brand-icon small">BW</div>
+        <div class="brand-text">
+          <h1>Buku Warung</h1>
+          <span class="badge badge-subtle">License Server</span>
+        </div>
+      </div>
+      <nav class="nav-menu">
+        <button class="nav-item active" data-tab="dashboard">
+          <span class="nav-icon">📊</span>
+          <span>Dashboard</span>
+        </button>
+        <button class="nav-item" data-tab="sales">
+          <span class="nav-icon">🛒</span>
+          <span>Penjualan Buku Warung</span>
+          <span id="salesActionBadge" class="nav-badge hidden">0</span>
+        </button>
+        <button class="nav-item" data-tab="licenses">
+          <span class="nav-icon">🔑</span>
+          <span>Daftar Lisensi</span>
+        </button>
+        <button class="nav-item" data-tab="recovery">
+          <span class="nav-icon">🔄</span>
+          <span>Permintaan Recovery</span>
+          <span id="recoveryBadge" class="nav-badge hidden">0</span>
+        </button>
+        <button class="nav-item" data-tab="audit">
+          <span class="nav-icon">📜</span>
+          <span>Audit Log</span>
+        </button>
+      </nav>
+      <div class="sidebar-footer">
+        <div class="user-info">
+          <span class="user-avatar">👤</span>
+          <div class="user-meta">
+            <span class="user-name" id="adminUsernameDisplay">admin</span>
+            <span class="user-role">Administrator</span>
+          </div>
+        </div>
+        <button id="logoutBtn" class="btn btn-ghost btn-sm" title="Logout">
+          <span>🚪 Logout</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+      <!-- Top Bar -->
+      <header class="top-bar">
+        <h2 id="pageTitle" class="page-title">Dashboard Overview</h2>
+        <div class="top-actions">
+          <button id="openCreateOrderBtn" class="btn btn-secondary">
+            <span>+ Order Baru</span>
+          </button>
+          <button id="openCreateModalBtn" class="btn btn-primary">
+            <span>+ Buat Lisensi Langsung</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- View: Dashboard -->
+      <section id="tab-dashboard" class="tab-view">
+        <div class="metrics-grid">
+          <div class="metric-card">
+            <span class="metric-label">Total Lisensi</span>
+            <span class="metric-value" id="metricTotal">0</span>
+            <span class="metric-desc">Seluruh lisensi tercatat</span>
+          </div>
+          <div class="metric-card active">
+            <span class="metric-label">Lisensi Aktif</span>
+            <span class="metric-value text-success" id="metricActive">0</span>
+            <span class="metric-desc">Terikat pada perangkat</span>
+          </div>
+          <div class="metric-card pending">
+            <span class="metric-label">Lisensi Pending</span>
+            <span class="metric-value text-warning" id="metricPending">0</span>
+            <span class="metric-desc">Belum diaktivasi pembeli</span>
+          </div>
+          <div class="metric-card revoked">
+            <span class="metric-label">Lisensi Direvoke</span>
+            <span class="metric-value text-danger" id="metricRevoked">0</span>
+            <span class="metric-desc">Dinonaktifkan admin</span>
+          </div>
+          <div class="metric-card devices">
+            <span class="metric-label">Perangkat Aktif</span>
+            <span class="metric-value text-info" id="metricDevices">0</span>
+            <span class="metric-desc">Total binding aktif</span>
+          </div>
+          <div class="metric-card recovery">
+            <span class="metric-label">Pending Recovery</span>
+            <span class="metric-value text-purple" id="metricRecovery">0</span>
+            <span class="metric-desc">Menunggu approval admin</span>
+          </div>
+        </div>
+
+        <div class="dashboard-recent-grid">
+          <div class="card">
+            <div class="card-header">
+              <h3>Lisensi Terbaru</h3>
+              <button class="btn btn-link btn-sm" onclick="switchTab('licenses')">Lihat Semua →</button>
+            </div>
+            <div class="table-container">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Email Pemilik</th>
+                    <th>Produk</th>
+                    <th>Status</th>
+                    <th>Waktu Dibuat</th>
+                  </tr>
+                </thead>
+                <tbody id="recentLicensesTbody">
+                  <tr><td colspan="4" class="text-center text-muted">Memuat data...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <h3>Aktivitas Audit Terbaru</h3>
+              <button class="btn btn-link btn-sm" onclick="switchTab('audit')">Lihat Semua →</button>
+            </div>
+            <div class="table-container">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Waktu</th>
+                    <th>Aksi</th>
+                    <th>Actor</th>
+                    <th>Catatan</th>
+                  </tr>
+                </thead>
+                <tbody id="recentAuditTbody">
+                  <tr><td colspan="4" class="text-center text-muted">Memuat data...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- View: Sales (Penjualan Buku Warung) -->
+      <section id="tab-sales" class="tab-view hidden">
+        <!-- Sales Summary Cards -->
+        <div class="metrics-grid">
+          <div class="metric-card">
+            <span class="metric-label">Total Order</span>
+            <span class="metric-value" id="metricSalesTotal">0</span>
+            <span class="metric-desc">Semua pesanan masuk</span>
+          </div>
+          <div class="metric-card pending">
+            <span class="metric-label">Menunggu Pembayaran</span>
+            <span class="metric-value text-warning" id="metricSalesPendingPayment">0</span>
+            <span class="metric-desc">Belum diverifikasi</span>
+          </div>
+          <div class="metric-card active">
+            <span class="metric-label">Sudah Bayar</span>
+            <span class="metric-value text-success" id="metricSalesPaid">0</span>
+            <span class="metric-desc">Pembayaran tervalidasi</span>
+          </div>
+          <div class="metric-card revoked">
+            <span class="metric-label">License Belum Dibuat</span>
+            <span class="metric-value text-danger" id="metricSalesPendingLicense">0</span>
+            <span class="metric-desc">Perlu generate lisensi</span>
+          </div>
+          <div class="metric-card devices">
+            <span class="metric-label">Sudah Aktif</span>
+            <span class="metric-value text-info" id="metricSalesActive">0</span>
+            <span class="metric-desc">Aplikasi telah aktif</span>
+          </div>
+        </div>
+
+        <!-- Section: PERLU DIPROSES -->
+        <div class="card card-accent-action mb-4">
+          <div class="card-header">
+            <div class="action-header-title">
+              <span class="action-bolt">⚡</span>
+              <h3>PERLU DIPROSES</h3>
+            </div>
+            <span id="actionQueueSummaryBadge" class="badge badge-warning">0 Perlu Tindakan</span>
+          </div>
+          <div id="salesActionQueue" class="action-queue-grid">
+            <div class="text-center text-muted p-4">Memuat antrean tindakan...</div>
+          </div>
+        </div>
+
+        <!-- Section: Daftar Order -->
+        <div class="card">
+          <div class="card-toolbar">
+            <div class="search-box">
+              <input type="text" id="orderSearchInput" placeholder="Cari Kode Order / Nama / WA / Email...">
+            </div>
+            <div class="filter-group">
+              <button class="order-filter-btn active" data-order-filter="ALL">Semua</button>
+              <button class="order-filter-btn" data-order-filter="PENDING_PAYMENT">Menunggu Pembayaran</button>
+              <button class="order-filter-btn" data-order-filter="PAID">Sudah Bayar</button>
+              <button class="order-filter-btn" data-order-filter="PENDING_LICENSE">License Belum Dibuat</button>
+              <button class="order-filter-btn" data-order-filter="ACTIVE">Sudah Aktif</button>
+            </div>
+          </div>
+          <div class="table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Order Code</th>
+                  <th>Customer</th>
+                  <th>WhatsApp</th>
+                  <th>Owner Email</th>
+                  <th>Nominal</th>
+                  <th>Status Bayar</th>
+                  <th>Status Order</th>
+                  <th>Lisensi</th>
+                  <th>Waktu</th>
+                  <th>Aksi</th>
+                </tr>
+              </thead>
+              <tbody id="ordersTbody">
+                <tr><td colspan="10" class="text-center text-muted">Memuat data order...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- View: Licenses -->
+      <section id="tab-licenses" class="tab-view hidden">
+        <div class="card">
+          <div class="card-toolbar">
+            <div class="search-box">
+              <input type="text" id="licenseSearchInput" placeholder="Cari email pemilik / UUID...">
+            </div>
+            <div class="filter-group">
+              <button class="filter-btn active" data-filter="ALL">Semua</button>
+              <button class="filter-btn" data-filter="ACTIVE">Aktif</button>
+              <button class="filter-btn" data-filter="PENDING">Pending</button>
+              <button class="filter-btn" data-filter="REVOKED">Revoked</button>
+            </div>
+          </div>
+          <div class="table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Email Pemilik</th>
+                  <th>Produk</th>
+                  <th>Harga</th>
+                  <th>Status</th>
+                  <th>Dibuat Pada</th>
+                  <th>Aksi</th>
+                </tr>
+              </thead>
+              <tbody id="licensesTbody">
+                <tr><td colspan="7" class="text-center text-muted">Memuat lisensi...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- View: Recovery Requests -->
+      <section id="tab-recovery" class="tab-view hidden">
+        <div class="card">
+          <div class="card-header">
+            <h3>Permintaan Pemindahan Perangkat (Recovery)</h3>
+          </div>
+          <div class="table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Req ID</th>
+                  <th>Lisensi ID</th>
+                  <th>Email Pemilik</th>
+                  <th>Perangkat Lama</th>
+                  <th>Perangkat Baru</th>
+                  <th>Status</th>
+                  <th>Alasan</th>
+                  <th>Waktu</th>
+                  <th>Aksi</th>
+                </tr>
+              </thead>
+              <tbody id="recoveryTbody">
+                <tr><td colspan="9" class="text-center text-muted">Tidak ada permintaan recovery.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- View: Audit Logs -->
+      <section id="tab-audit" class="tab-view hidden">
+        <div class="card">
+          <div class="card-header">
+            <h3>Audit Trail Log (Read-Only)</h3>
+          </div>
+          <div class="table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Waktu</th>
+                  <th>Aksi</th>
+                  <th>Lisensi ID</th>
+                  <th>State Lama → Baru</th>
+                  <th>Pelaksana</th>
+                  <th>Alasan</th>
+                </tr>
+              </thead>
+              <tbody id="auditTbody">
+                <tr><td colspan="6" class="text-center text-muted">Memuat audit log...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Modal: Create License -->
+  <div id="createLicenseModal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Buat Lisensi Baru</h3>
+        <button class="modal-close" onclick="closeModal('createLicenseModal')">×</button>
+      </div>
+      <div class="modal-body">
+        <form id="createLicenseForm">
+          <div class="form-group">
+            <label for="createEmail">Email Pemilik (Owner Email) *</label>
+            <input type="email" id="createEmail" required placeholder="pemilik@warung.com">
+            <small class="form-hint">Email ini akan diverifikasi saat aktivasi di perangkat Android.</small>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="createCustName">Nama Pembeli (Opsional)</label>
+              <input type="text" id="createCustName" placeholder="Pak Budi">
+            </div>
+            <div class="form-group">
+              <label for="createCustContact">Kontak / HP (Opsional)</label>
+              <input type="text" id="createCustContact" placeholder="081234567890">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="createProduct">Produk</label>
+              <input type="text" id="createProduct" value="BUKU_WARUNG" readonly>
+            </div>
+            <div class="form-group">
+              <label for="createPrice">Harga (Rp)</label>
+              <input type="number" id="createPrice" value="50000" readonly>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="closeModal('createLicenseModal')">Batal</button>
+            <button type="submit" id="submitCreateLicenseBtn" class="btn btn-primary">Generate Lisensi</button>
+          </div>
+        </form>
+
+        <!-- Success Result Box -->
+        <div id="createSuccessBox" class="success-box hidden">
+          <div class="success-header">
+            <span class="success-icon">🎉</span>
+            <h4>Lisensi Berhasil Dibuat!</h4>
+          </div>
+          <p class="success-warning">
+            ⚠️ <strong>PENTING:</strong> Salin dan berikan kode lisensi di bawah ini kepada pembeli sekarang. Server hanya menyimpan hash kode dan kode ini <strong>tidak dapat ditampilkan ulang</strong>.
+          </p>
+          <div class="license-code-display">
+            <span id="createdLicenseCodeText" class="code-text">BW-XXXX-XXXX-XXXX</span>
+            <button id="copyLicenseCodeBtn" class="btn btn-sm btn-dark" onclick="copyCreatedLicenseCode()">
+              📋 Salin Kode
+            </button>
+          </div>
+          <div class="license-meta-summary">
+            <div><strong>Email:</strong> <span id="createdOwnerEmail"></span></div>
+            <div><strong>Status:</strong> <span class="badge badge-warning">PENDING</span></div>
+            <div><strong>Harga:</strong> Rp50.000 (Sekali Beli)</div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-primary btn-block" onclick="closeModal('createLicenseModal')">Selesai</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: License Detail -->
+  <div id="licenseDetailModal" class="modal-overlay hidden">
+    <div class="modal-card modal-large">
+      <div class="modal-header">
+        <h3>Detail Lisensi #<span id="detailLicenseId"></span></h3>
+        <button class="modal-close" onclick="closeModal('licenseDetailModal')">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="detail-section">
+          <h4>Informasi Lisensi</h4>
+          <div class="detail-grid">
+            <div><strong>UUID:</strong> <span id="detailUuid" class="mono-text"></span></div>
+            <div><strong>Email Pemilik:</strong> <span id="detailEmail"></span></div>
+            <div><strong>Produk:</strong> <span id="detailProduct"></span></div>
+            <div><strong>Harga:</strong> <span id="detailPrice"></span></div>
+            <div><strong>Status:</strong> <span id="detailStatusBadge"></span></div>
+            <div><strong>Dibuat:</strong> <span id="detailCreatedAt"></span></div>
+            <div><strong>Aktivasi Pertama:</strong> <span id="detailActivatedAt">-</span></div>
+            <div><strong>Direvoke:</strong> <span id="detailRevokedAt">-</span></div>
+          </div>
+        </div>
+
+        <div class="detail-section">
+          <h4>Perangkat Terikat (Device Bindings)</h4>
+          <div class="table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Device Binding ID (Masked)</th>
+                  <th>Status</th>
+                  <th>Aktivasi Pertama</th>
+                  <th>Validasi Terakhir</th>
+                  <th>Aksi</th>
+                </tr>
+              </thead>
+              <tbody id="detailDevicesTbody">
+                <tr><td colspan="5" class="text-center text-muted">Belum ada perangkat terhubung.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="detail-section">
+          <h4>Riwayat Permintaan Recovery</h4>
+          <div class="table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Perangkat Lama</th>
+                  <th>Perangkat Baru</th>
+                  <th>Status</th>
+                  <th>Alasan</th>
+                  <th>Waktu</th>
+                </tr>
+              </thead>
+              <tbody id="detailRecoveriesTbody">
+                <tr><td colspan="6" class="text-center text-muted">Tidak ada permintaan recovery.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="detailRevokeLicenseBtn" class="btn btn-danger">Revoke Lisensi Ini</button>
+        <button type="button" class="btn btn-secondary" onclick="closeModal('licenseDetailModal')">Tutup</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Confirmation Dialog -->
+  <div id="confirmModal" class="modal-overlay hidden">
+    <div class="modal-card modal-small">
+      <div class="modal-header">
+        <h3 id="confirmTitle">Konfirmasi Aksi</h3>
+        <button class="modal-close" onclick="closeModal('confirmModal')">×</button>
+      </div>
+      <div class="modal-body">
+        <p id="confirmMessage">Apakah Anda yakin ingin melanjutkan?</p>
+        <div class="form-group" id="confirmReasonGroup">
+          <label for="confirmReasonInput">Alasan (Opsional)</label>
+          <input type="text" id="confirmReasonInput" placeholder="Alasan tindakan">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('confirmModal')">Batal</button>
+        <button type="button" id="confirmActionBtn" class="btn btn-danger">Lanjutkan</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Create Order -->
+  <div id="createOrderModal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>+ Order Baru (Buku Warung)</h3>
+        <button class="modal-close" onclick="closeModal('createOrderModal')">×</button>
+      </div>
+      <div class="modal-body">
+        <form id="createOrderForm">
+          <div class="form-group">
+            <label for="orderCustomerName">Nama Calon Pelanggan *</label>
+            <input type="text" id="orderCustomerName" required placeholder="Contoh: Budi Santoso">
+          </div>
+          <div class="form-group">
+            <label for="orderCustomerWhatsapp">Nomor WhatsApp *</label>
+            <input type="text" id="orderCustomerWhatsapp" required placeholder="Contoh: 081234567890 / 6281234567890">
+            <small class="form-hint">Digunakan untuk konfirmasi dan pengiriman license via WhatsApp.</small>
+          </div>
+          <div class="form-group">
+            <label for="orderOwnerEmail">Owner Email (Email Aktivasi) *</label>
+            <input type="email" id="orderOwnerEmail" required placeholder="pemilik@warung.com">
+            <small class="form-hint">1 License = 1 Owner Email = 1 Active Device.</small>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="orderProduct">Produk</label>
+              <input type="text" id="orderProduct" value="Buku Warung v0.1.0" readonly>
+            </div>
+            <div class="form-group">
+              <label for="orderAmount">Harga (Rp)</label>
+              <input type="text" id="orderAmount" value="50.000 (Sekali Beli)" readonly>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="orderNotes">Catatan Tambahan (Opsional)</label>
+            <input type="text" id="orderNotes" placeholder="Catatan transaksi">
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="closeModal('createOrderModal')">Batal</button>
+            <button type="submit" id="submitCreateOrderBtn" class="btn btn-primary">Simpan Order</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Order Detail -->
+  <div id="orderDetailModal" class="modal-overlay hidden">
+    <div class="modal-card modal-large">
+      <div class="modal-header">
+        <h3>Detail Order <span id="detailOrderCodeHeader" class="text-success"></span></h3>
+        <button class="modal-close" onclick="closeModal('orderDetailModal')">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="detail-section">
+          <h4>Data Pelanggan</h4>
+          <div class="detail-grid">
+            <div><strong>Nama:</strong> <span id="detailCustomerName"></span></div>
+            <div><strong>WhatsApp:</strong> <span id="detailCustomerWhatsapp"></span></div>
+            <div><strong>Owner Email:</strong> <span id="detailOwnerEmail"></span></div>
+            <div><strong>Catatan:</strong> <span id="detailOrderNotes">-</span></div>
+          </div>
+        </div>
+
+        <div class="detail-section">
+          <h4>Informasi Pesanan & Status</h4>
+          <div class="detail-grid">
+            <div><strong>Kode Order:</strong> <span id="detailOrderCode" class="mono-text"></span></div>
+            <div><strong>Produk:</strong> <span id="detailOrderProduct"></span></div>
+            <div><strong>Nominal:</strong> <span id="detailOrderAmount"></span></div>
+            <div><strong>Status Order:</strong> <span id="detailOrderStatusBadge"></span></div>
+            <div><strong>Dibuat Pada:</strong> <span id="detailOrderCreatedAt"></span></div>
+            <div><strong>Dikirim Pada:</strong> <span id="detailOrderDeliveredAt">-</span></div>
+          </div>
+        </div>
+
+        <div class="detail-section">
+          <h4>Pembayaran (Manual Verification)</h4>
+          <div class="detail-grid">
+            <div><strong>Status Bayar:</strong> <span id="detailPaymentStatusBadge"></span></div>
+            <div><strong>Nominal:</strong> <span id="detailPaymentAmount"></span></div>
+            <div><strong>Metode / Referensi:</strong> <span id="detailPaymentMethodRef">-</span></div>
+            <div><strong>Diverifikasi Pada:</strong> <span id="detailPaymentVerifiedAt">-</span></div>
+            <div><strong>Diverifikasi Oleh:</strong> <span id="detailPaymentVerifiedBy">-</span></div>
+            <div><strong>Catatan Bayar:</strong> <span id="detailPaymentNotes">-</span></div>
+          </div>
+        </div>
+
+        <div class="detail-section">
+          <h4>Status Lisensi & Perangkat</h4>
+          <div class="detail-grid">
+            <div><strong>Kode Lisensi:</strong> <span id="detailOrderLicenseCode" class="mono-text"></span></div>
+            <div><strong>Status Lisensi:</strong> <span id="detailOrderLicenseStatus">-</span></div>
+            <div><strong>Perangkat Terikat:</strong> <span id="detailOrderDeviceStatus">-</span></div>
+            <div><strong>Aktivasi Pertama:</strong> <span id="detailOrderActivatedAt">-</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer" id="orderDetailModalFooter">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('orderDetailModal')">Tutup</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Verify Payment -->
+  <div id="verifyPaymentModal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Verifikasi Pembayaran Manual</h3>
+        <button class="modal-close" onclick="closeModal('verifyPaymentModal')">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="payment-verify-summary mb-3">
+          <p>Konfirmasi pembayaran untuk pesanan berikut:</p>
+          <div class="summary-box">
+            <div><strong>Customer:</strong> <span id="verifyPayCustName"></span></div>
+            <div><strong>Order Code:</strong> <span id="verifyPayOrderCode" class="mono-text"></span></div>
+            <div><strong>Owner Email:</strong> <span id="verifyPayEmail"></span></div>
+            <div><strong>Nominal:</strong> <span id="verifyPayAmount" class="text-success font-bold">Rp50.000</span></div>
+          </div>
+        </div>
+        <form id="verifyPaymentForm">
+          <input type="hidden" id="verifyPayOrderId">
+          <div class="form-group">
+            <label for="verifyPaymentMethod">Metode Pembayaran</label>
+            <input type="text" id="verifyPaymentMethod" placeholder="Contoh: Transfer BCA / QRIS / Mandiri">
+          </div>
+          <div class="form-group">
+            <label for="verifyPaymentReference">Nomor / Catatan Referensi (Opsional)</label>
+            <input type="text" id="verifyPaymentReference" placeholder="Contoh: REF123456 / Bukti Transfer">
+          </div>
+          <div class="form-group">
+            <label for="verifyPaymentNotes">Catatan Verifikasi (Opsional)</label>
+            <input type="text" id="verifyPaymentNotes" placeholder="Catatan internal admin">
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="closeModal('verifyPaymentModal')">Batal</button>
+            <button type="submit" id="submitVerifyPaymentBtn" class="btn btn-primary">Konfirmasi Pembayaran (PAID)</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Delivery Preparation (WhatsApp) -->
+  <div id="deliveryPreparationModal" class="modal-overlay hidden">
+    <div class="modal-card modal-large">
+      <div class="modal-header">
+        <h3>📲 Siapkan Pengiriman Pesan WhatsApp</h3>
+        <button class="modal-close" onclick="closeModal('deliveryPreparationModal')">×</button>
+      </div>
+      <div class="modal-body">
+        <p class="mb-3 text-muted">
+          Pesan siap kirim ke customer via WhatsApp resmi (<strong>085157056604</strong>). Salin atau buka langsung tautan WhatsApp di bawah ini:
+        </p>
+
+        <div class="form-group">
+          <label>Penerima:</label>
+          <div class="text-main font-bold" id="waRecipientInfo"></div>
+        </div>
+
+        <div class="form-group">
+          <label>Draft Pesan WhatsApp:</label>
+          <textarea id="waMessageDraft" rows="9" class="mono-text-area" readonly></textarea>
+        </div>
+
+        <div class="delivery-actions-bar">
+          <button type="button" id="copyWaMsgBtn" class="btn btn-secondary" onclick="copyWaMessage()">
+            📋 Salin Pesan
+          </button>
+          <a id="openWaLinkBtn" href="#" target="_blank" class="btn btn-success">
+            💬 Buka WhatsApp Web
+          </a>
+        </div>
+
+        <hr class="modal-divider">
+
+        <div class="mark-delivery-box">
+          <h5>Konfirmasi Pengiriman</h5>
+          <p class="text-muted text-sm mb-3">
+            Klik tombol di bawah setelah Anda mengirimkan APK dan License kepada customer:
+          </p>
+          <button type="button" id="markDeliveredBtn" class="btn btn-primary">
+            ✓ Tandai Sudah Dikirim (DELIVERED)
+          </button>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('deliveryPreparationModal')">Tutup</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="/app.js"></script>
+</body>
+</html>

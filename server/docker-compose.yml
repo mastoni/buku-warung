@@ -1,0 +1,34 @@
+version: '3.9'
+
+networks:
+  bukuwarung-license-internal:
+    name: bukuwarung-license-internal
+    driver: bridge
+
+volumes:
+  bukuwarung_license_data:
+    name: bukuwarung_license_data
+
+services:
+  bukuwarung_license_server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: bukuwarung-license-server:production
+    container_name: bukuwarung_license_server
+    restart: always
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: 3000
+      DATABASE_PATH: /var/data/bukuwarung-license/license.db
+      ADMIN_API_KEY: ${ADMIN_API_KEY}
+      SERVER_PEPPER: ${SERVER_PEPPER}
+      RATE_LIMIT_MAX: ${RATE_LIMIT_MAX:-60}
+      RATE_LIMIT_WINDOW_MS: ${RATE_LIMIT_WINDOW_MS:-60000}
+    volumes:
+      - bukuwarung_license_data:/var/data/bukuwarung-license
+    networks:
+      - bukuwarung-license-internal
+    expose:
+      - "3000"

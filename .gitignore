@@ -31,3 +31,7 @@ tap_result.png
 
 # Logs
 *.log
+
+# Node dependencies
+node_modules/
+dist/

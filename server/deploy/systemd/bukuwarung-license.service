@@ -1,0 +1,30 @@
+[Unit]
+Description=Buku Warung Fastify License Server
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/bukuwarung/server
+ExecStart=/usr/bin/node /var/www/bukuwarung/server/dist/server.js
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=bukuwarung-license
+
+# Environment
+Environment=NODE_ENV=production
+Environment=HOST=127.0.0.1
+Environment=PORT=3000
+Environment=DATABASE_PATH=/var/data/bukuwarung/license.db
+EnvironmentFile=-/var/www/bukuwarung/server/.env
+
+# Security Hardening
+ProtectSystem=full
+ProtectHome=true
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target
