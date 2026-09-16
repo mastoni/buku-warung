@@ -50,4 +50,28 @@ export async function registerDashboardRoutes(fastify: FastifyInstance) {
       });
     }
   );
+
+  fastify.get(
+    '/api/dashboard/funnel',
+    {
+      preHandler: [sessionAuthMiddleware],
+      schema: {
+        querystring: {
+          type: 'object',
+          properties: {
+            range: { type: 'string', enum: ['today', '7d', '30d', 'all'] },
+            start: { type: 'string' },
+            end: { type: 'string' }
+          }
+        }
+      }
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const range = (request.query as { range?: string; start?: string; end?: string })?.range;
+      const start = (request.query as { range?: string; start?: string; end?: string })?.start;
+      const end = (request.query as { range?: string; start?: string; end?: string })?.end;
+      const res = await licenseClient.getFunnelAnalytics(range, start, end);
+      return reply.status(res.status).send(res.data);
+    }
+  );
 }

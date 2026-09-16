@@ -139,6 +139,19 @@ export class LicenseClient {
     });
   }
 
+  /* Funnel Analytics */
+
+  async getFunnelAnalytics(range?: string, start?: string, end?: string) {
+    const params = new URLSearchParams();
+    if (range) params.append('range', range);
+    if (start) params.append('start', start);
+    if (end) params.append('end', end);
+    const query = params.toString() ? `?${params.toString()}` : '';
+    return this.request(`/v1/landing/metrics${query}`, {
+      method: 'GET'
+    });
+  }
+
   /* Sales & Order methods (C.10.1) */
 
   async createOrder(payload: CreateOrderPayload) {

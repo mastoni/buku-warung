@@ -51,6 +51,10 @@
           <span class="nav-icon">📊</span>
           <span>Dashboard</span>
         </button>
+        <button class="nav-item" data-tab="analytics">
+          <span class="nav-icon">📈</span>
+          <span>Funnel Analytics</span>
+        </button>
         <button class="nav-item" data-tab="sales">
           <span class="nav-icon">🛒</span>
           <span>Penjualan Buku Warung</span>
@@ -174,6 +178,98 @@
                 </thead>
                 <tbody id="recentAuditTbody">
                   <tr><td colspan="4" class="text-center text-muted">Memuat data...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- View: Analytics (Funnel Analytics) -->
+      <section id="tab-analytics" class="tab-view hidden">
+        <!-- North Star Metric -->
+        <div class="card mb-4">
+          <div class="card-header">
+            <h3>North Star Metric</h3>
+          </div>
+          <div class="metrics-grid">
+            <div class="metric-card active">
+              <span class="metric-label">Activated Paid Customer</span>
+              <span class="metric-value text-success" id="metricNorthStar">0</span>
+              <span class="metric-desc">Pelanggan yang sudah bayar dan lisensinya aktif di perangkat</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Funnel Visualization -->
+        <div class="card mb-4">
+          <div class="card-header">
+            <h3>Marketing Funnel</h3>
+            <div class="date-filter-group">
+              <button class="date-btn active" data-date-range="all">Semua Waktu</button>
+              <button class="date-btn" data-date-range="30d">30 Hari</button>
+              <button class="date-btn" data-date-range="7d">7 Hari</button>
+              <button class="date-btn" data-date-range="today">Hari Ini</button>
+            </div>
+          </div>
+          <div id="funnelVisualization" class="funnel-viz">
+            <!-- Funnel stages rendered dynamically -->
+          </div>
+        </div>
+
+        <!-- Conversion Rates -->
+        <div class="card mb-4">
+          <div class="card-header">
+            <h3>Conversion Rates</h3>
+          </div>
+          <div id="conversionRates" class="conversion-grid">
+            <!-- Conversion rates rendered dynamically -->
+          </div>
+        </div>
+
+        <!-- Attribution -->
+        <div class="dashboard-recent-grid">
+          <div class="card">
+            <div class="card-header">
+              <h3>Top Sources</h3>
+            </div>
+            <div class="table-container">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Source</th>
+                    <th>Leads</th>
+                    <th>Orders</th>
+                    <th>Paid</th>
+                    <th>Licenses</th>
+                    <th>Activated</th>
+                  </tr>
+                </thead>
+                <tbody id="attributionSourcesBody">
+                  <tr><td colspan="6" class="text-center text-muted">Memuat data...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <h3>Top Campaigns</h3>
+            </div>
+            <div class="table-container">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Campaign</th>
+                    <th>Leads</th>
+                    <th>Orders</th>
+                    <th>Paid</th>
+                    <th>Licenses</th>
+                    <th>Activated</th>
+                  </tr>
+                </thead>
+                <tbody id="attributionCampaignsBody">
+                  <tr><td colspan="6" class="text-center text-muted">Memuat data...</td></tr>
                 </tbody>
               </table>
             </div>
@@ -774,9 +870,11 @@
           <div class="text-main font-bold" id="waRecipientInfo"></div>
         </div>
 
+        <div id="deliveryPackageInfo"></div>
+
         <div class="form-group">
           <label>Draft Pesan WhatsApp:</label>
-          <textarea id="waMessageDraft" rows="9" class="mono-text-area" readonly></textarea>
+          <textarea id="waMessageDraft" rows="14" class="mono-text-area" readonly></textarea>
         </div>
 
         <div class="delivery-actions-bar">

@@ -290,6 +290,7 @@ function switchTab(tab) {
 
   const titles = {
     dashboard: 'Dashboard Overview',
+    analytics: 'Funnel Analytics',
     sales: 'Penjualan Buku Warung (Order & Sales Management)',
     licenses: 'Daftar Lisensi Komersial',
     recovery: 'Permintaan Recovery & Rebind Perangkat',
@@ -298,6 +299,7 @@ function switchTab(tab) {
   document.getElementById('pageTitle').textContent = titles[tab] || 'Dashboard';
 
   if (tab === 'dashboard') loadDashboard();
+  if (tab === 'analytics') loadAnalytics();
   if (tab === 'sales') loadSales();
   if (tab === 'licenses') loadLicenses();
   if (tab === 'recovery') loadRecoveries();
@@ -357,6 +359,117 @@ async function loadSales() {
   } catch {
     showToast('Gagal memuat data penjualan.');
   }
+}
+
+// Date filter for analytics
+let currentAnalyticsRange = 'all';
+document.querySelectorAll('.date-btn').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.date-btn').forEach((b) => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentAnalyticsRange = btn.getAttribute('data-date-range');
+    loadAnalytics();
+  });
+});
+
+// Data Fetching: Analytics (Funnel Analytics)
+async function loadAnalytics() {
+  try {
+    const res = await fetch(`/api/dashboard/funnel?range=${currentAnalyticsRange}`);
+    if (res.ok) {
+      const result = await res.json();
+      if (result.success && result.data) {
+        renderFunnelAnalytics(result.data);
+      }
+    } else {
+      showToast('Gagal memuat data analitik.');
+    }
+  } catch {
+    showToast('Gagal memuat data analitik.');
+  }
+}
+
+function renderFunnelAnalytics(data) {
+  // North Star
+  const northStarEl = document.getElementById('metricNorthStar');
+  if (northStarEl) {
+    northStarEl.textContent = data.northStar?.activatedPaidCustomers || 0;
+  }
+
+  // Funnel
+  const funnelContainer = document.getElementById('funnelVisualization');
+  if (funnelContainer) {
+    const funnel = data.funnel || [];
+    funnelContainer.innerHTML = funnel.map((stage) => {
+      const isTraffic = stage.name === 'PAGE_VIEW' || stage.name === 'VIEW_PRODUCT' || stage.name === 'VIEW_PRICE';
+      const isLead = stage.name === 'CLICK_WHATSAPP' || stage.name === 'LEAD_CREATED';
+      const isSales = stage.name === 'ORDER_CREATED' || stage.name === 'PAYMENT_CONFIRMED';
+      const isFulfillment = stage.name === 'LICENSE_CREATED' || stage.name === 'DELIVERY_READY' || stage.name === 'APK_DOWNLOADED';
+      const isConversion = stage.name === 'LICENSE_ACTIVATED';
+      let badgeClass = '';
+      let label = stage.name.replace(/_/g, ' ').toLowerCase();
+      if (isTraffic) badgeClass = 'badge-light';
+      else if (isLead) badgeClass = 'badge-warning';
+      else if (isSales) badgeClass = 'badge-info';
+      else if (isFulfillment) badgeClass = 'badge-success';
+      else if (isConversion) badgeClass = 'badge-primary';
+      return `
+        <div class="funnel-stage">
+          <span class="funnel-stage-label">${label}</span>
+          <span class="funnel-stage-count">${stage.count}</span>
+        </div>
+      `;
+    }).join('');
+  }
+
+  // Conversions
+  const convContainer = document.getElementById('conversionRates');
+  if (convContainer) {
+    const conversions = data.conversions || [];
+    convContainer.innerHTML = conversions.map((c) => {
+      const from = c.from.replace(/_/g, ' ').toLowerCase();
+      const to = c.to.replace(/_/g, ' ').toLowerCase();
+      return `
+        <div class="metric-card">
+          <span class="metric-label">${from} → ${to}</span>
+          <span class="metric-value">${formatPercent(c.rate)}</span>
+          <span class="metric-desc">${c.numerator} / ${c.denominator}</span>
+        </div>
+      `;
+    }).join('');
+  }
+
+  // Attribution tables
+  const renderAttributionBody = (tbodyId, entries) => {
+    const tbody = document.getElementById(tbodyId);
+    if (!tbody) return;
+    if (!entries || entries.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">Tidak ada data.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = entries.map((e) => `
+      <tr>
+        <td>${escapeHtml(e.value || '-')}</td>
+        <td>${e.leads || 0}</td>
+        <td>${e.orders || 0}</td>
+        <td>${e.paidOrders || 0}</td>
+        <td>${e.licenses || 0}</td>
+        <td>${e.activatedCustomers || 0}</td>
+      </tr>
+    `).join('');
+  };
+
+  renderAttributionBody('attributionSourcesBody', data.attribution?.sources);
+  renderAttributionBody('attributionCampaignsBody', data.attribution?.campaigns);
+}
+
+function formatPercent(value) {
+  if (value === null || value === undefined || isNaN(value)) return '-';
+  if (value === 0) return '0%';
+  if (value >= 100) return '100%';
+  const v = Math.round(value * 10) / 10;
+  if (v === Math.floor(v)) return `${v}%`;
+  return `${v.toFixed(1)}%`;
 }
 
 function renderSalesActionQueue(orders, metrics) {
@@ -845,30 +958,46 @@ async function openDeliveryPreparationModal(orderId, directLicenseCode) {
 
     activeDeliveryOrder = order;
 
-    // Display info
-    document.getElementById('waRecipientInfo').textContent = `${order.customer_name} (${order.customer_whatsapp}) — ${order.owner_email}`;
+    // Display recipient info
+    document.getElementById('waRecipientInfo').textContent = `${order.customer_name} (${order.customer_whatsapp || order.customer_contact}) — ${order.owner_email}`;
 
-    const draftText = `Halo ${order.customer_name} 👋
+    // Display delivery package info
+    const deliveryInfoEl = document.getElementById('deliveryPackageInfo');
+    if (deliveryInfoEl) {
+      deliveryInfoEl.innerHTML = `
+        <div style="background:#f7fafc;border-radius:8px;padding:12px;margin-bottom:12px;font-size:13px;text-align:left;">
+          <div style="margin-bottom:6px;"><strong>📦 Delivery Package</strong></div>
+          <div>👤 <strong>Customer:</strong> ${escapeHtml(order.customer_name)}</div>
+          <div>📋 <strong>Order:</strong> ${escapeHtml(order.order_code || order.order_number)}</div>
+          <div>🔑 <strong>License:</strong> ${escapeHtml(licenseCode || order.license_code || '-')}</div>
+          <div>📱 <strong>APK:</strong> <a href="https://license.skmnetwork.com/download/buku-warung" target="_blank">Download Page</a></div>
+          <div>📄 <strong>Panduan:</strong> <a href="https://license.skmnetwork.com/download/buku-warung/panduan" target="_blank">PDF Guide</a></div>
+          <div>📊 <strong>Status:</strong> ${escapeHtml(order.status)}</div>
+        </div>
+      `;
+    }
 
-Pembayaran Buku Warung Anda sudah kami konfirmasi.
+    const draftText = `Pembayaran Anda sudah kami verifikasi. ✅
 
-Order Code:
-${order.order_code}
+Buku Warung Anda sudah siap digunakan.
 
-License Code:
+📱 Download APK:
+https://license.skmnetwork.com/download/buku-warung
+
+📄 Panduan:
+https://license.skmnetwork.com/download/buku-warung/panduan
+
+🔑 License Code:
 ${licenseCode || order.license_code || 'BW-XXXX-XXXX-XXXX'}
 
-Harga:
-Rp50.000
+Setelah instalasi, buka Buku Warung dan lakukan aktivasi menggunakan License Code tersebut.
 
-Silakan install Buku Warung v0.1.0 lalu lakukan aktivasi menggunakan Owner Email (${order.owner_email}) dan License Code tersebut.
-
-Terima kasih.`;
+Jika mengalami kendala, silakan hubungi admin melalui WhatsApp.`;
 
     document.getElementById('waMessageDraft').value = draftText;
 
     // Build WA URL
-    let waPhone = (order.customer_whatsapp || '').replace(/\D/g, '');
+    let waPhone = (order.customer_whatsapp || order.customer_contact || '').replace(/\D/g, '');
     if (waPhone.startsWith('0')) {
       waPhone = '62' + waPhone.substring(1);
     } else if (waPhone.startsWith('8')) {

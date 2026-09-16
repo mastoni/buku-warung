@@ -385,10 +385,13 @@ describe('Buku Warung License Admin Dashboard MVP (C.3)', () => {
     const files = fs.readdirSync(publicDir);
 
     for (const file of files) {
-      const content = fs.readFileSync(path.join(publicDir, file), 'utf8');
-      expect(content).not.toContain(adminConfig.adminApiKey);
-      expect(content).not.toContain('ADMIN_API_KEY');
-      expect(content).not.toContain(adminConfig.adminPassword);
+      const fullPath = path.join(publicDir, file);
+      if (fs.statSync(fullPath).isFile()) {
+        const content = fs.readFileSync(fullPath, 'utf8');
+        expect(content).not.toContain(adminConfig.adminApiKey);
+        expect(content).not.toContain('ADMIN_API_KEY');
+        expect(content).not.toContain(adminConfig.adminPassword);
+      }
     }
   });
 
@@ -419,5 +422,99 @@ describe('Buku Warung License Admin Dashboard MVP (C.3)', () => {
       headers: { cookie: sessionCookie }
     });
     expect(testOldRes.statusCode).toBe(401);
+  });
+
+  // TEST M.1.5-01: Funnel analytics endpoint requires session auth
+  it('TEST M.1.5-01: /api/dashboard/funnel requires session auth', async () => {
+    const res = await adminApp.inject({
+      method: 'GET',
+      url: '/api/dashboard/funnel'
+    });
+    expect(res.statusCode).toBe(401);
+  });
+
+  // TEST M.1.5-02: Funnel analytics returns structured data with session auth
+  it('TEST M.1.5-02: /api/dashboard/funnel returns funnel analytics', async () => {
+    // First login to get a session
+    const loginRes = await adminApp.inject({
+      method: 'POST',
+      url: '/api/auth/login',
+      payload: {
+        username: adminConfig.adminUsername,
+        password: adminConfig.adminPassword
+      }
+    });
+    const setCookie = loginRes.headers['set-cookie'] as string | string[];
+    const cookie = (Array.isArray(setCookie) ? setCookie[0] : setCookie).split(';')[0];
+
+    const res = await adminApp.inject({
+      method: 'GET',
+      url: '/api/dashboard/funnel?range=all',
+      headers: { cookie }
+    });
+
+    expect(res.statusCode).toBe(200);
+    const body = JSON.parse(res.body);
+    expect(body.success).toBe(true);
+    const funnel = body.data.funnel;
+    expect(funnel).toHaveProperty('funnel');
+    expect(funnel).toHaveProperty('conversions');
+    expect(funnel).toHaveProperty('attribution');
+    expect(funnel).toHaveProperty('northStar');
+    expect(funnel.northStar).toHaveProperty('activatedPaidCustomers');
+  });
+
+  // TEST M.1.5-03: Funnel analytics date range filtering
+  it('TEST M.1.5-03: /api/dashboard/funnel supports range=today', async () => {
+    const loginRes = await adminApp.inject({
+      method: 'POST',
+      url: '/api/auth/login',
+      payload: {
+        username: adminConfig.adminUsername,
+        password: adminConfig.adminPassword
+      }
+    });
+    const setCookie = loginRes.headers['set-cookie'] as string | string[];
+    const cookie = (Array.isArray(setCookie) ? setCookie[0] : setCookie).split(';')[0];
+
+    const res = await adminApp.inject({
+      method: 'GET',
+      url: '/api/dashboard/funnel?range=today',
+      headers: { cookie }
+    });
+
+    expect(res.statusCode).toBe(200);
+    const body = JSON.parse(res.body);
+    expect(body.success).toBe(true);
+    expect(body.data.funnel.dateRange).toBeDefined();
+  });
+
+  // TEST M.1.5-04: Funnel analytics date range filtering with custom range
+  it('TEST M.1.5-04: /api/dashboard/funnel supports custom start/end', async () => {
+    const loginRes = await adminApp.inject({
+      method: 'POST',
+      url: '/api/auth/login',
+      payload: {
+        username: adminConfig.adminUsername,
+        password: adminConfig.adminPassword
+      }
+    });
+    const setCookie = loginRes.headers['set-cookie'] as string | string[];
+    const cookie = (Array.isArray(setCookie) ? setCookie[0] : setCookie).split(';')[0];
+
+    const futureStart = Date.now() + 365 * 24 * 60 * 60 * 1000;
+    const res = await adminApp.inject({
+      method: 'GET',
+      url: `/api/dashboard/funnel?range=all&start=${futureStart}`,
+      headers: { cookie }
+    });
+
+    expect(res.statusCode).toBe(200);
+    const body = JSON.parse(res.body);
+    const stages = body.data.funnel.funnel;
+    expect(Array.isArray(stages)).toBe(true);
+    for (const stage of stages) {
+      expect(stage.count).toBe(0);
+    }
   });
 });
