@@ -40,7 +40,7 @@ dist/
 classes*.dex
 kotlin/
 lib/
-res/
+/res/
 META-INF/
 resources.arsc
 DebugProbesKt.bin
