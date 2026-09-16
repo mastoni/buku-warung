@@ -55,4 +55,28 @@ interface SaleReturnDao {
 
     @Query("SELECT SUM(CAST(quantity * purchase_price AS INTEGER)) FROM sale_return_items JOIN sale_return_transactions ON sale_return_items.return_transaction_id = sale_return_transactions.id WHERE return_date >= :startDate AND return_date <= :endDate")
     fun getReturnCogsTotal(startDate: Long, endDate: Long): Flow<Long?>
+
+    @Query("""
+        SELECT 
+            COALESCE(NULLIF(product_uuid, ''), CAST(product_id AS TEXT)) AS productUuid,
+            product_id AS productId,
+            product_name AS productName,
+            SUM(quantity) AS returnedQuantity,
+            SUM(subtotal) AS returnedRevenue,
+            SUM(CAST(quantity * purchase_price AS INTEGER)) AS returnedCogs
+        FROM sale_return_items
+        JOIN sale_return_transactions ON sale_return_items.return_transaction_id = sale_return_transactions.id
+        WHERE return_date >= :startDate AND return_date <= :endDate
+        GROUP BY COALESCE(NULLIF(product_uuid, ''), CAST(product_id AS TEXT)), product_id, product_name
+    """)
+    fun getProductReturnsSummaryByDateRange(startDate: Long, endDate: Long): Flow<List<ProductReturnSummaryItem>>
 }
+
+data class ProductReturnSummaryItem(
+    val productUuid: String,
+    val productId: Long,
+    val productName: String,
+    val returnedQuantity: Double,
+    val returnedRevenue: Long,
+    val returnedCogs: Long
+)

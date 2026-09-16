@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import java.util.Calendar
@@ -188,6 +189,292 @@ class ReportViewModel(
 
     val paidPayablesCount: StateFlow<Int> = repository.paidPayablesCount
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+
+    suspend fun buildBusinessSummaryData(
+        userSettings: id.skmnetwork.bukuwarung.data.preferences.UserSettings,
+        period: ReportPeriod = selectedPeriod.value
+    ): id.skmnetwork.bukuwarung.pdf.reports.BusinessSummaryReportData {
+        val range = calculateDateRange(period)
+        val grossSales = repository.getSalesTotal(range.startDate, range.endDate).first() ?: 0L
+        val returns = repository.getSalesReturnTotal(range.startDate, range.endDate).first() ?: 0L
+        val netSales = grossSales - returns
+        val salesCount = repository.getSalesCount(range.startDate, range.endDate).first()
+        val returnCount = repository.getSalesReturnCount(range.startDate, range.endDate).first()
+        val netCogs = repository.getNetCogsTotal(range.startDate, range.endDate).first()
+        val grossProfit = netSales - netCogs
+        val opExpense = repository.getOperatingExpenseTotal(range.startDate, range.endDate).first() ?: 0L
+        val netProfit = grossProfit - opExpense
+
+        val cashBalance = repository.totalCashBalance.first() ?: 0L
+        val stockVal = repository.totalStockValue.first() ?: 0L
+        val debt = repository.totalOutstandingDebt.first() ?: 0L
+        val payable = repository.totalOutstandingPayable.first() ?: 0L
+
+        val sdf = java.text.SimpleDateFormat("dd MMM yyyy, HH:mm", java.util.Locale.forLanguageTag("id-ID"))
+        val printedAt = sdf.format(java.util.Date())
+
+        return id.skmnetwork.bukuwarung.pdf.reports.BusinessSummaryReportData(
+            shopName = userSettings.shopName.ifBlank { "Warung Saya" },
+            address = userSettings.address,
+            phone = userSettings.phone,
+            periodLabel = period.label,
+            printedAt = printedAt,
+            grossSales = grossSales,
+            salesReturn = returns,
+            netSales = netSales,
+            salesCount = salesCount,
+            salesReturnCount = returnCount,
+            netCogs = netCogs,
+            grossProfit = grossProfit,
+            operatingExpense = opExpense,
+            netProfit = netProfit,
+            cashBalance = cashBalance,
+            stockValue = stockVal,
+            outstandingDebt = debt,
+            outstandingPayable = payable
+        )
+    }
+
+    suspend fun buildSalesReportData(
+        userSettings: id.skmnetwork.bukuwarung.data.preferences.UserSettings,
+        period: ReportPeriod = selectedPeriod.value
+    ): id.skmnetwork.bukuwarung.pdf.reports.SalesReportData {
+        val range = calculateDateRange(period)
+        val salesList = repository.getSalesWithCustomerByDateRange(range.startDate, range.endDate).first()
+        val allReturns = repository.getAllReturnsList()
+        val returnsBySaleId = allReturns.groupBy { it.saleTransactionId }
+
+        val grossSales = repository.getSalesTotal(range.startDate, range.endDate).first() ?: 0L
+        val totalRefunds = repository.getSalesReturnTotal(range.startDate, range.endDate).first() ?: 0L
+        val netSales = grossSales - totalRefunds
+
+        val sdfDate = java.text.SimpleDateFormat("dd/MM/yy HH:mm", java.util.Locale.forLanguageTag("id-ID"))
+        val rows = salesList.map { sale ->
+            val customerName = sale.customerName?.ifBlank { "Umum" } ?: "Umum"
+            val paymentMethodLabel = when (sale.paymentMethod.uppercase()) {
+                "CASH" -> "Tunai"
+                "QRIS" -> "QRIS"
+                "CREDIT" -> "Kredit"
+                else -> sale.paymentMethod
+            }
+
+            val saleReturns = returnsBySaleId[sale.id] ?: emptyList()
+            val totalRefundOnThisSale = saleReturns.sumOf { it.totalRefundAmount }
+
+            val statusLabel = when {
+                totalRefundOnThisSale >= sale.totalAmount && sale.totalAmount > 0 -> "Retur Total"
+                totalRefundOnThisSale > 0 -> "Retur Sbg"
+                sale.paymentMethod.uppercase() == "CREDIT" -> "Kredit"
+                else -> "Lunas"
+            }
+
+            id.skmnetwork.bukuwarung.pdf.reports.SalesReportRow(
+                dateFormatted = sdfDate.format(java.util.Date(sale.transactionDate)),
+                transactionNumber = sale.transactionNumber,
+                customerName = customerName,
+                paymentMethod = paymentMethodLabel,
+                totalAmount = sale.totalAmount,
+                refundAmount = totalRefundOnThisSale,
+                status = statusLabel
+            )
+        }
+
+        val sdfPrinted = java.text.SimpleDateFormat("dd MMM yyyy, HH:mm", java.util.Locale.forLanguageTag("id-ID"))
+
+        return id.skmnetwork.bukuwarung.pdf.reports.SalesReportData(
+            shopName = userSettings.shopName.ifBlank { "Warung Saya" },
+            address = userSettings.address,
+            phone = userSettings.phone,
+            periodLabel = period.label,
+            printedAt = sdfPrinted.format(java.util.Date()),
+            items = rows,
+            grossSales = grossSales,
+            totalRefund = totalRefunds,
+            netSales = netSales,
+            totalTransactions = salesList.size
+        )
+    }
+
+    suspend fun buildProductReportData(
+        userSettings: id.skmnetwork.bukuwarung.data.preferences.UserSettings,
+        period: ReportPeriod = selectedPeriod.value
+    ): id.skmnetwork.bukuwarung.pdf.reports.ProductReportData {
+        val range = calculateDateRange(period)
+        val salesList = repository.getProductSalesSummaryByDateRange(range.startDate, range.endDate).first()
+        val returnsList = repository.getProductReturnsSummaryByDateRange(range.startDate, range.endDate).first()
+
+        val salesMap = salesList.associateBy { it.productUuid }
+        val returnsMap = returnsList.associateBy { it.productUuid }
+
+        val allKeys = (salesMap.keys + returnsMap.keys).distinct()
+
+        val rows = allKeys.mapNotNull { key ->
+            val sale = salesMap[key]
+            val ret = returnsMap[key]
+
+            val name = sale?.productName ?: ret?.productName ?: "Produk Tidak Dikenal"
+            val grossQty = sale?.totalQuantity ?: 0.0
+            val retQty = ret?.returnedQuantity ?: 0.0
+            val netQty = (grossQty - retQty).coerceAtLeast(0.0)
+
+            val grossRev = sale?.totalRevenue ?: 0L
+            val retRev = ret?.returnedRevenue ?: 0L
+            val netRev = grossRev - retRev
+
+            val grossCogs = sale?.totalCogs ?: 0L
+            val retCogs = ret?.returnedCogs ?: 0L
+            val netCogs = grossCogs - retCogs
+
+            val grossProfit = netRev - netCogs
+
+            if (grossQty == 0.0 && retQty == 0.0 && grossRev == 0L && retRev == 0L) {
+                null
+            } else {
+                id.skmnetwork.bukuwarung.pdf.reports.ProductReportRow(
+                    productUuid = key,
+                    productName = name,
+                    quantitySold = netQty,
+                    revenue = netRev,
+                    cogs = netCogs,
+                    grossProfit = grossProfit
+                )
+            }
+        }.sortedWith(
+            compareByDescending<id.skmnetwork.bukuwarung.pdf.reports.ProductReportRow> { it.revenue }
+                .thenByDescending { it.quantitySold }
+        )
+
+        val totalProductsCount = rows.size
+        val totalNetQuantity = rows.sumOf { it.quantitySold }
+        val totalNetRevenue = rows.sumOf { it.revenue }
+        val totalNetCogs = rows.sumOf { it.cogs }
+        val totalGrossProfit = totalNetRevenue - totalNetCogs
+
+        val sdfPrinted = java.text.SimpleDateFormat("dd MMM yyyy, HH:mm", java.util.Locale.forLanguageTag("id-ID"))
+
+        return id.skmnetwork.bukuwarung.pdf.reports.ProductReportData(
+            shopName = userSettings.shopName.ifBlank { "Warung Saya" },
+            address = userSettings.address,
+            phone = userSettings.phone,
+            periodLabel = period.label,
+            printedAt = sdfPrinted.format(java.util.Date()),
+            items = rows,
+            totalProductsCount = totalProductsCount,
+            totalNetQuantity = totalNetQuantity,
+            totalNetRevenue = totalNetRevenue,
+            totalNetCogs = totalNetCogs,
+            totalGrossProfit = totalGrossProfit
+        )
+    }
+
+    suspend fun buildPurchaseReportData(
+        userSettings: id.skmnetwork.bukuwarung.data.preferences.UserSettings,
+        period: ReportPeriod = selectedPeriod.value
+    ): id.skmnetwork.bukuwarung.pdf.reports.PurchaseReportData {
+        val range = calculateDateRange(period)
+        val purchaseList = repository.getPurchasesWithSupplierByDateRange(range.startDate, range.endDate).first()
+
+        val totalPurchases = repository.getPurchaseTotal(range.startDate, range.endDate).first() ?: 0L
+        val cashPurchases = purchaseList.filter { it.paymentMethod.uppercase() == "CASH" }.sumOf { it.totalAmount }
+        val creditPurchases = purchaseList.filter { it.paymentMethod.uppercase() == "CREDIT" }.sumOf { it.totalAmount }
+
+        val sdfDate = java.text.SimpleDateFormat("dd/MM/yy HH:mm", java.util.Locale.forLanguageTag("id-ID"))
+        val rows = purchaseList.map { purchase ->
+            val supplierName = purchase.supplierName?.ifBlank { "Umum" } ?: "Umum"
+            val paymentMethodLabel = when (purchase.paymentMethod.uppercase()) {
+                "CASH" -> "Tunai"
+                "CREDIT" -> "Kredit"
+                else -> purchase.paymentMethod
+            }
+            val statusLabel = if (purchase.paymentMethod.uppercase() == "CREDIT") "Kredit" else "Lunas"
+
+            id.skmnetwork.bukuwarung.pdf.reports.PurchaseReportRow(
+                dateFormatted = sdfDate.format(java.util.Date(purchase.transactionDate)),
+                transactionNumber = purchase.transactionNumber,
+                supplierName = supplierName,
+                paymentMethod = paymentMethodLabel,
+                totalAmount = purchase.totalAmount,
+                status = statusLabel
+            )
+        }
+
+        val sdfPrinted = java.text.SimpleDateFormat("dd MMM yyyy, HH:mm", java.util.Locale.forLanguageTag("id-ID"))
+
+        return id.skmnetwork.bukuwarung.pdf.reports.PurchaseReportData(
+            shopName = userSettings.shopName.ifBlank { "Warung Saya" },
+            address = userSettings.address,
+            phone = userSettings.phone,
+            periodLabel = period.label,
+            printedAt = sdfPrinted.format(java.util.Date()),
+            items = rows,
+            totalPurchases = totalPurchases,
+            cashPurchasesTotal = cashPurchases,
+            creditPurchasesTotal = creditPurchases,
+            totalTransactions = purchaseList.size
+        )
+    }
+
+    suspend fun buildCustomerDebtReportData(
+        userSettings: id.skmnetwork.bukuwarung.data.preferences.UserSettings,
+        mode: id.skmnetwork.bukuwarung.pdf.reports.DebtReportMode = id.skmnetwork.bukuwarung.pdf.reports.DebtReportMode.CURRENT_OUTSTANDING,
+        period: ReportPeriod = ReportPeriod.TODAY,
+        customDateRange: DateRange? = null
+    ): id.skmnetwork.bukuwarung.pdf.reports.DebtReportData {
+        val debtList = if (mode == id.skmnetwork.bukuwarung.pdf.reports.DebtReportMode.CURRENT_OUTSTANDING) {
+            repository.getOpenDebtsWithCustomer().first()
+        } else {
+            val range = customDateRange ?: calculateDateRange(period)
+            repository.getDebtsWithCustomerByDateRange(range.startDate, range.endDate).first()
+        }
+
+        val sdfDate = java.text.SimpleDateFormat("dd/MM/yy HH:mm", java.util.Locale.forLanguageTag("id-ID"))
+        val rows = debtList.map { debt ->
+            val customerName = debt.customerName?.ifBlank { "Pelanggan Umum" } ?: "Pelanggan Umum"
+            val customerPhone = debt.customerPhone?.ifBlank { "-" } ?: "-"
+            val trxNumber = debt.transactionNumber ?: "TRX-${debt.uuid.take(8).uppercase()}"
+            val remaining = (debt.totalDebt - debt.paidAmount).coerceAtLeast(0L)
+            val statusLabel = if (debt.status.uppercase() == "PAID" || remaining == 0L) "Lunas" else "Belum Lunas"
+
+            id.skmnetwork.bukuwarung.pdf.reports.DebtReportRow(
+                dateFormatted = sdfDate.format(java.util.Date(debt.createdAt)),
+                transactionNumber = trxNumber,
+                customerName = customerName,
+                customerPhone = customerPhone,
+                totalDebt = debt.totalDebt,
+                paidAmount = debt.paidAmount,
+                remainingDebt = remaining,
+                status = statusLabel
+            )
+        }
+
+        val totalOutstanding = debtList.sumOf { (it.totalDebt - it.paidAmount).coerceAtLeast(0L) }
+        val totalPaid = debtList.sumOf { it.paidAmount }
+        val totalCreated = debtList.sumOf { it.totalDebt }
+        val activeDebtors = debtList.filter { (it.totalDebt - it.paidAmount) > 0 }.map { it.customerId }.distinct().size
+
+        val periodLabel = if (mode == id.skmnetwork.bukuwarung.pdf.reports.DebtReportMode.CURRENT_OUTSTANDING) {
+            "Saldo Piutang Aktif Saat Ini"
+        } else {
+            "Mutasi: ${period.label}"
+        }
+
+        val sdfPrinted = java.text.SimpleDateFormat("dd MMM yyyy, HH:mm", java.util.Locale.forLanguageTag("id-ID"))
+
+        return id.skmnetwork.bukuwarung.pdf.reports.DebtReportData(
+            mode = mode,
+            shopName = userSettings.shopName.ifBlank { "Warung Saya" },
+            address = userSettings.address,
+            phone = userSettings.phone,
+            periodLabel = periodLabel,
+            printedAt = sdfPrinted.format(java.util.Date()),
+            items = rows,
+            totalOutstanding = totalOutstanding,
+            totalPaid = totalPaid,
+            totalDebtCreated = totalCreated,
+            activeDebtorsCount = activeDebtors,
+            totalTransactions = debtList.size
+        )
+    }
 
     companion object {
         fun calculateDateRange(period: ReportPeriod): DateRange {

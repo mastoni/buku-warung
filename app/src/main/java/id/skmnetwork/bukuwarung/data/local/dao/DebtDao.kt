@@ -62,4 +62,67 @@ interface DebtDao {
 
     @Query("SELECT COUNT(*) FROM debts WHERE status = 'PAID'")
     fun getPaidDebtsCount(): Flow<Int>
+
+    @Query("""
+        SELECT 
+            d.id AS debtId,
+            d.uuid AS uuid,
+            d.customer_id AS customerId,
+            d.sale_transaction_id AS saleTransactionId,
+            c.name AS customerName,
+            c.phone AS customerPhone,
+            c.address AS customerAddress,
+            st.transaction_number AS transactionNumber,
+            d.total_debt AS totalDebt,
+            d.paid_amount AS paidAmount,
+            d.status AS status,
+            d.created_at AS createdAt,
+            d.updated_at AS updatedAt
+        FROM debts d
+        LEFT JOIN customers c ON d.customer_id = c.id
+        LEFT JOIN sales_transactions st ON d.sale_transaction_id = st.id
+        WHERE d.status = 'OPEN'
+        ORDER BY d.created_at DESC, d.id DESC
+    """)
+    fun getOpenDebtsWithCustomer(): Flow<List<DebtWithCustomerItem>>
+
+    @Query("""
+        SELECT 
+            d.id AS debtId,
+            d.uuid AS uuid,
+            d.customer_id AS customerId,
+            d.sale_transaction_id AS saleTransactionId,
+            c.name AS customerName,
+            c.phone AS customerPhone,
+            c.address AS customerAddress,
+            st.transaction_number AS transactionNumber,
+            d.total_debt AS totalDebt,
+            d.paid_amount AS paidAmount,
+            d.status AS status,
+            d.created_at AS createdAt,
+            d.updated_at AS updatedAt
+        FROM debts d
+        LEFT JOIN customers c ON d.customer_id = c.id
+        LEFT JOIN sales_transactions st ON d.sale_transaction_id = st.id
+        WHERE d.created_at >= :startDate AND d.created_at <= :endDate
+        ORDER BY d.created_at DESC, d.id DESC
+    """)
+    fun getDebtsWithCustomerByDateRange(startDate: Long, endDate: Long): Flow<List<DebtWithCustomerItem>>
 }
+
+data class DebtWithCustomerItem(
+    val debtId: Long,
+    val uuid: String,
+    val customerId: Long,
+    val saleTransactionId: Long?,
+    val customerName: String?,
+    val customerPhone: String?,
+    val customerAddress: String?,
+    val transactionNumber: String?,
+    val totalDebt: Long,
+    val paidAmount: Long,
+    val status: String,
+    val createdAt: Long,
+    val updatedAt: Long
+)
+

@@ -108,12 +108,11 @@ class SaleRepository(
 
         runCatching {
             appDatabase.withTransaction {
-                // 1. Validate customer if credit sale
-                var customer: CustomerEntity? = null
-                if (methodUpper == "CREDIT") {
-                    customer = customerDao.getCustomerById(customerId!!)
-                        ?: throw IllegalStateException("Pelanggan tidak ditemukan")
-                }
+                // 1. Validate customer if provided or credit sale
+                val customer: CustomerEntity? = if (customerId != null) {
+                    customerDao.getCustomerById(customerId)
+                        ?: if (methodUpper == "CREDIT") throw IllegalStateException("Pelanggan tidak ditemukan") else null
+                } else null
 
                 // 2. Validate products and stock availability
                 val productMap = mutableMapOf<Long, ProductEntity>()

@@ -34,4 +34,32 @@ interface PurchaseDao {
 
     @Query("SELECT SUM(quantity) FROM purchase_items JOIN purchase_transactions ON purchase_items.transaction_id = purchase_transactions.id WHERE transaction_date >= :startDate AND transaction_date <= :endDate")
     fun getItemsPurchasedTotal(startDate: Long, endDate: Long): Flow<Double?>
+
+    @Query("""
+        SELECT 
+            p.id AS id,
+            p.uuid AS uuid,
+            p.transaction_number AS transactionNumber,
+            p.transaction_date AS transactionDate,
+            p.total_amount AS totalAmount,
+            p.payment_method AS paymentMethod,
+            p.supplier_id AS supplierId,
+            s.name AS supplierName
+        FROM purchase_transactions p
+        LEFT JOIN suppliers s ON p.supplier_id = s.id
+        WHERE p.transaction_date >= :startDate AND p.transaction_date <= :endDate
+        ORDER BY p.transaction_date DESC
+    """)
+    fun getPurchasesWithSupplierByDateRange(startDate: Long, endDate: Long): Flow<List<PurchaseWithSupplierItem>>
 }
+
+data class PurchaseWithSupplierItem(
+    val id: Long,
+    val uuid: String,
+    val transactionNumber: String,
+    val transactionDate: Long,
+    val totalAmount: Long,
+    val paymentMethod: String,
+    val supplierId: Long?,
+    val supplierName: String?
+)

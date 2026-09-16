@@ -53,4 +53,40 @@ interface SupplierPayableDao {
 
     @Query("SELECT COUNT(*) FROM supplier_payables WHERE status = 'PAID'")
     fun getPaidPayablesCount(): Flow<Int>
+
+    @Query("""
+        SELECT 
+            sp.id AS payableId,
+            sp.uuid AS uuid,
+            sp.supplier_id AS supplierId,
+            sp.purchase_transaction_id AS purchaseTransactionId,
+            s.name AS supplierName,
+            s.phone AS supplierPhone,
+            s.address AS supplierAddress,
+            sp.total_debt AS totalDebt,
+            sp.paid_amount AS paidAmount,
+            sp.status AS status,
+            sp.created_at AS createdAt,
+            sp.updated_at AS updatedAt
+        FROM supplier_payables sp
+        LEFT JOIN suppliers s ON sp.supplier_id = s.id
+        WHERE sp.status = 'OPEN'
+        ORDER BY sp.created_at DESC, sp.id DESC
+    """)
+    fun getOpenPayablesWithSupplier(): Flow<List<PayableWithSupplierItem>>
 }
+
+data class PayableWithSupplierItem(
+    val payableId: Long,
+    val uuid: String,
+    val supplierId: Long,
+    val purchaseTransactionId: Long?,
+    val supplierName: String?,
+    val supplierPhone: String?,
+    val supplierAddress: String?,
+    val totalDebt: Long,
+    val paidAmount: Long,
+    val status: String,
+    val createdAt: Long,
+    val updatedAt: Long
+)
