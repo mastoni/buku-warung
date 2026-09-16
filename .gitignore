@@ -35,3 +35,45 @@ tap_result.png
 # Node dependencies
 node_modules/
 dist/
+
+# Android build artifacts
+classes*.dex
+kotlin/
+lib/
+res/
+META-INF/
+resources.arsc
+DebugProbesKt.bin
+kotlin-tooling-metadata.json
+assets/
+
+# ML Kit / barcode scanning model artifacts
+*.properties
+
+# Crash logs and JVM logs
+hs_err_pid*.log
+replay_pid*.log
+
+# Test / scratch databases
+test_pull.db
+
+# Deployment archives
+admin_deploy*.tar.gz
+
+# Sensitive scratch files
+cookies.txt
+
+# Misplaced root manifest
+/AndroidManifest.xml
+
+# Scratch / test scripts
+c8_commercial_flow_test.py
+gen_test_code.py
+check_schema_app.js
+
+# Test / feature graphics
+featuregrafic*.png
+bukuwarung-512x512.png
+
+# Server public release artifacts (served via Docker build context, not git)
+server/public/
