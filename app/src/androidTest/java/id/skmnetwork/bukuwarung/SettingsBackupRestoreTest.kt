@@ -109,6 +109,8 @@ class SettingsBackupRestoreTest {
 
     @Test
     fun testRequirementC_BackupLoadingAndSuccessState() = runBlocking {
+        prefsRepo.setGoogleAccount("test@warung.com")
+
         // Seed some data first
         val cat = productRepository.createCategory("Makanan").getOrThrow()
         productRepository.insertProductWithCategory(
@@ -139,6 +141,8 @@ class SettingsBackupRestoreTest {
 
     @Test
     fun testRequirementD_BackupSuccessUpdatesTimestampAndPreferences() = runBlocking {
+        prefsRepo.setGoogleAccount("test@warung.com")
+
         val cat = productRepository.createCategory("Minuman").getOrThrow()
         productRepository.insertProductWithCategory(
             name = "Kopi Hitam",
@@ -170,6 +174,8 @@ class SettingsBackupRestoreTest {
 
     @Test
     fun testRequirementE_BackupFailureDisplaysFriendlyErrorWithoutMutatingLocalData() = runBlocking {
+        prefsRepo.setGoogleAccount("test@warung.com")
+
         // Configure transport failure
         mockTransport.simulateNetworkFailure = true
 
@@ -237,6 +243,8 @@ class SettingsBackupRestoreTest {
 
     @Test
     fun testRequirementH_RestoreFailureKeepsLocalDatabaseIntact() = runBlocking {
+        prefsRepo.setGoogleAccount("test@warung.com")
+
         // 1. Initial valid local data
         val cat = productRepository.createCategory("Kebutuhan").getOrThrow()
         val prodId = productRepository.insertProductWithCategory(

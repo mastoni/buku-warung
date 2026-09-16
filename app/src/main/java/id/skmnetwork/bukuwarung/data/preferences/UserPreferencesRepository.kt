@@ -80,12 +80,17 @@ data class UserSettings(
     // 10. Cadangan Google Sheets
     val lastBackupTimestamp: Long = 0L,
     val backupSpreadsheetId: String = "",
-    val googleAccountEmail: String = ""
+    val backupSpreadsheetName: String = "",
+    val googleAccountEmail: String = "",
+
+    // 11. Static QRIS Warung
+    val qrisImagePath: String = ""
 )
 
 class UserPreferencesRepository(
-    private val context: Context,
-    private val dataStore: DataStore<Preferences> = context.dataStore
+    private val context: Context? = null,
+    private val dataStore: DataStore<Preferences> = context?.dataStore
+        ?: throw IllegalStateException("Context or DataStore must be provided")
 ) {
 
     object Keys {
@@ -148,7 +153,20 @@ class UserPreferencesRepository(
         // 11. GOOGLE SHEETS BACKUP & RESTORE
         val LAST_BACKUP_TIMESTAMP = androidx.datastore.preferences.core.longPreferencesKey("last_backup_timestamp")
         val BACKUP_SPREADSHEET_ID = stringPreferencesKey("backup_spreadsheet_id")
+        val BACKUP_SPREADSHEET_NAME = stringPreferencesKey("backup_spreadsheet_name")
         val GOOGLE_ACCOUNT_EMAIL = stringPreferencesKey("google_account_email")
+
+        // 12. STATIC QRIS WARUNG
+        val QRIS_IMAGE_PATH = stringPreferencesKey("qris_image_path")
+
+        // 13. NOTIFICATION STATE PERSISTENCE
+        val READ_NOTIFICATION_IDS = androidx.datastore.preferences.core.stringSetPreferencesKey("read_notification_ids")
+
+        // 14. COMMERCIAL LICENSE ENTITLEMENT METADATA
+        val LICENSE_STATUS = stringPreferencesKey("commercial_license_status")
+        val LICENSE_OWNER_EMAIL = stringPreferencesKey("commercial_license_owner_email")
+        val LICENSE_ACTIVATED_AT = androidx.datastore.preferences.core.longPreferencesKey("commercial_license_activated_at")
+        val LICENSE_LAST_VALIDATED_AT = androidx.datastore.preferences.core.longPreferencesKey("commercial_license_last_validated_at")
     }
 
     val userSettings: Flow<UserSettings> = dataStore.data.map { prefs ->
@@ -214,7 +232,9 @@ class UserPreferencesRepository(
 
             lastBackupTimestamp = prefs[Keys.LAST_BACKUP_TIMESTAMP] ?: 0L,
             backupSpreadsheetId = prefs[Keys.BACKUP_SPREADSHEET_ID] ?: "",
-            googleAccountEmail = prefs[Keys.GOOGLE_ACCOUNT_EMAIL] ?: ""
+            backupSpreadsheetName = prefs[Keys.BACKUP_SPREADSHEET_NAME] ?: "",
+            googleAccountEmail = prefs[Keys.GOOGLE_ACCOUNT_EMAIL] ?: "",
+            qrisImagePath = prefs[Keys.QRIS_IMAGE_PATH] ?: ""
         )
     }
 
@@ -583,6 +603,7 @@ class UserPreferencesRepository(
     suspend fun updateBackupInfo(
         lastBackupTimestamp: Long,
         backupSpreadsheetId: String = "",
+        backupSpreadsheetName: String = "",
         googleAccountEmail: String = ""
     ) {
         dataStore.edit { prefs ->
@@ -590,9 +611,207 @@ class UserPreferencesRepository(
             if (backupSpreadsheetId.isNotBlank()) {
                 prefs[Keys.BACKUP_SPREADSHEET_ID] = backupSpreadsheetId
             }
+            if (backupSpreadsheetName.isNotBlank()) {
+                prefs[Keys.BACKUP_SPREADSHEET_NAME] = backupSpreadsheetName
+            }
             if (googleAccountEmail.isNotBlank()) {
                 prefs[Keys.GOOGLE_ACCOUNT_EMAIL] = googleAccountEmail
             }
         }
     }
+
+    suspend fun setGoogleAccount(email: String) {
+        dataStore.edit { prefs ->
+            prefs[Keys.GOOGLE_ACCOUNT_EMAIL] = email.trim()
+        }
+    }
+
+    suspend fun clearGoogleAccount() {
+        dataStore.edit { prefs ->
+            prefs.remove(Keys.GOOGLE_ACCOUNT_EMAIL)
+            prefs.remove(Keys.BACKUP_SPREADSHEET_ID)
+            prefs.remove(Keys.BACKUP_SPREADSHEET_NAME)
+        }
+    }
+
+    // ==========================================
+    // 12. STATIC QRIS WARUNG PERSISTENCE
+    // ==========================================
+
+    suspend fun getQrisImagePath(): String {
+        val prefs = dataStore.data.first()
+        return prefs[Keys.QRIS_IMAGE_PATH] ?: ""
+    }
+
+    suspend fun saveQrisImagePath(path: String) {
+        dataStore.edit { prefs ->
+            prefs[Keys.QRIS_IMAGE_PATH] = path
+        }
+    }
+
+    suspend fun clearQrisImagePath() {
+        dataStore.edit { prefs ->
+            prefs.remove(Keys.QRIS_IMAGE_PATH)
+        }
+    }
+
+    suspend fun saveQrisImageFromUri(uri: android.net.Uri): Result<String> = withContext(Dispatchers.IO) {
+        try {
+            val ctx = context ?: return@withContext Result.failure(Exception("Context tidak tersedia"))
+            val qrisDir = java.io.File(ctx.filesDir, "qris").apply { if (!exists()) mkdirs() }
+            val tempFile = java.io.File(qrisDir, "merchant_qris_${System.currentTimeMillis()}.jpg")
+            ctx.contentResolver.openInputStream(uri)?.use { input ->
+                java.io.FileOutputStream(tempFile).use { output ->
+                    input.copyTo(output)
+                }
+            } ?: return@withContext Result.failure(Exception("Tidak dapat membaca data gambar"))
+
+            if (!tempFile.exists() || tempFile.length() <= 0L) {
+                tempFile.delete()
+                return@withContext Result.failure(Exception("File gambar kosong"))
+            }
+
+            val bitmap = android.graphics.BitmapFactory.decodeFile(tempFile.absolutePath)
+            if (bitmap == null) {
+                tempFile.delete()
+                return@withContext Result.failure(Exception("QRIS tidak dapat digunakan. Pastikan foto QRIS terlihat jelas dan tidak terpotong."))
+            }
+
+            // Cleanup previous files in qris dir to prevent orphan files
+            qrisDir.listFiles()?.forEach { file ->
+                if (file.absolutePath != tempFile.absolutePath) {
+                    file.delete()
+                }
+            }
+
+            val savedPath = tempFile.absolutePath
+            saveQrisImagePath(savedPath)
+            Result.success(savedPath)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun saveQrisImageBitmap(bitmap: android.graphics.Bitmap): Result<String> = withContext(Dispatchers.IO) {
+        try {
+            val ctx = context ?: return@withContext Result.failure(Exception("Context tidak tersedia"))
+            val qrisDir = java.io.File(ctx.filesDir, "qris").apply { if (!exists()) mkdirs() }
+            val tempFile = java.io.File(qrisDir, "merchant_qris_${System.currentTimeMillis()}.jpg")
+            java.io.FileOutputStream(tempFile).use { output ->
+                bitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 90, output)
+            }
+
+            if (!tempFile.exists() || tempFile.length() <= 0L) {
+                tempFile.delete()
+                return@withContext Result.failure(Exception("Gagal menyimpan gambar QRIS"))
+            }
+
+            val decoded = android.graphics.BitmapFactory.decodeFile(tempFile.absolutePath)
+            if (decoded == null) {
+                tempFile.delete()
+                return@withContext Result.failure(Exception("QRIS tidak dapat digunakan. Pastikan foto QRIS terlihat jelas dan tidak terpotong."))
+            }
+
+            // Cleanup previous files in qris dir to prevent orphan files
+            qrisDir.listFiles()?.forEach { file ->
+                if (file.absolutePath != tempFile.absolutePath) {
+                    file.delete()
+                }
+            }
+
+            val savedPath = tempFile.absolutePath
+            saveQrisImagePath(savedPath)
+            Result.success(savedPath)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun deleteQrisImage(): Boolean = withContext(Dispatchers.IO) {
+        try {
+            val ctx = context ?: return@withContext false
+            val qrisDir = java.io.File(ctx.filesDir, "qris")
+            if (qrisDir.exists()) {
+                qrisDir.listFiles()?.forEach { it.delete() }
+            }
+            clearQrisImagePath()
+            true
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    // ==========================================
+    // 13. NOTIFICATION PERSISTENCE METHODS
+    // ==========================================
+
+    val readNotificationIds: Flow<Set<String>> = dataStore.data.map { prefs ->
+        prefs[Keys.READ_NOTIFICATION_IDS] ?: emptySet()
+    }
+
+    suspend fun markNotificationAsRead(notificationId: String) {
+        dataStore.edit { prefs ->
+            val current = prefs[Keys.READ_NOTIFICATION_IDS] ?: emptySet()
+            prefs[Keys.READ_NOTIFICATION_IDS] = current + notificationId
+        }
+    }
+
+    suspend fun markAllNotificationsAsRead(notificationIds: Collection<String>) {
+        dataStore.edit { prefs ->
+            val current = prefs[Keys.READ_NOTIFICATION_IDS] ?: emptySet()
+            prefs[Keys.READ_NOTIFICATION_IDS] = current + notificationIds
+        }
+    }
+
+    suspend fun cleanupReadNotifications(activeIds: Set<String>) {
+        dataStore.edit { prefs ->
+            val current = prefs[Keys.READ_NOTIFICATION_IDS] ?: emptySet()
+            prefs[Keys.READ_NOTIFICATION_IDS] = current.filter { it in activeIds }.toSet()
+        }
+    }
+
+    // ==========================================
+    // 14. COMMERCIAL LICENSE PERSISTENCE METHODS
+    // ==========================================
+
+    suspend fun saveLicenseEntitlement(
+        status: String,
+        ownerEmail: String,
+        activatedAt: Long,
+        lastValidatedAt: Long
+    ) {
+        dataStore.edit { prefs ->
+            prefs[Keys.LICENSE_STATUS] = status
+            prefs[Keys.LICENSE_OWNER_EMAIL] = ownerEmail
+            prefs[Keys.LICENSE_ACTIVATED_AT] = activatedAt
+            prefs[Keys.LICENSE_LAST_VALIDATED_AT] = lastValidatedAt
+        }
+    }
+
+    suspend fun updateLicenseStatus(status: String, lastValidatedAt: Long = System.currentTimeMillis()) {
+        dataStore.edit { prefs ->
+            prefs[Keys.LICENSE_STATUS] = status
+            prefs[Keys.LICENSE_LAST_VALIDATED_AT] = lastValidatedAt
+        }
+    }
+
+    suspend fun clearLicenseEntitlement() {
+        dataStore.edit { prefs ->
+            prefs.remove(Keys.LICENSE_STATUS)
+            prefs.remove(Keys.LICENSE_OWNER_EMAIL)
+            prefs.remove(Keys.LICENSE_ACTIVATED_AT)
+            prefs.remove(Keys.LICENSE_LAST_VALIDATED_AT)
+        }
+    }
+
+    suspend fun getLicenseEntitlement(): id.skmnetwork.bukuwarung.license.LicenseEntitlementData {
+        val prefs = dataStore.data.first()
+        return id.skmnetwork.bukuwarung.license.LicenseEntitlementData(
+            status = prefs[Keys.LICENSE_STATUS] ?: "UNLICENSED",
+            ownerEmail = prefs[Keys.LICENSE_OWNER_EMAIL] ?: "",
+            activatedAt = prefs[Keys.LICENSE_ACTIVATED_AT] ?: 0L,
+            lastValidatedAt = prefs[Keys.LICENSE_LAST_VALIDATED_AT] ?: 0L
+        )
+    }
 }
+

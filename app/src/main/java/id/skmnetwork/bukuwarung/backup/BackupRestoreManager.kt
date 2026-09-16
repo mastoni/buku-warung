@@ -17,8 +17,19 @@ import kotlinx.coroutines.withContext
 class BackupRestoreManager(
     private val database: AppDatabase,
     private val userPreferencesRepository: UserPreferencesRepository,
-    private val transport: SheetsBackupTransport = MockSheetsTransport()
+    val transport: SheetsBackupTransport = MockSheetsTransport()
 ) {
+
+    /**
+     * Creates a new spreadsheet if transport supports creation, or returns a deterministic identifier.
+     */
+    suspend fun ensureSpreadsheetCreated(title: String): Result<String> {
+        return if (transport is id.skmnetwork.bukuwarung.backup.transport.GoogleSheetsApiTransport) {
+            transport.createSpreadsheet(title)
+        } else {
+            Result.success("SPREADSHEET_${System.currentTimeMillis()}")
+        }
+    }
 
     /**
      * Captures DataStore + Room snapshot and returns a deterministic BackupSnapshot.

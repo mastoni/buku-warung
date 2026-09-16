@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<data-extraction-rules>
+    <cloud-backup>
+        <!-- Include all standard app business data & preferences -->
+        <include domain="root" path="." />
+        <include domain="file" path="." />
+        <include domain="database" path="." />
+        <include domain="sharedpref" path="." />
+        <!-- Exclude device-bound hardware encrypted license credential -->
+        <exclude domain="file" path="bukuwarung_sec_lic.dat" />
+    </cloud-backup>
+    <device-transfer>
+        <!-- Include all standard app business data & preferences -->
+        <include domain="root" path="." />
+        <include domain="file" path="." />
+        <include domain="database" path="." />
+        <include domain="sharedpref" path="." />
+        <!-- Exclude device-bound hardware encrypted license credential -->
+        <exclude domain="file" path="bukuwarung_sec_lic.dat" />
+    </device-transfer>
+</data-extraction-rules>

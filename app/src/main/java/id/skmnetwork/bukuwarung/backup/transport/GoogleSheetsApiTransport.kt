@@ -17,7 +17,7 @@ import java.net.URLEncoder
  * Communicates with Google Sheets v4 REST API using OAuth Bearer authorization.
  */
 class GoogleSheetsApiTransport(
-    private val authProvider: GoogleAuthCredentialProvider,
+    val authProvider: GoogleAuthCredentialProvider,
     private val httpEngine: SheetsHttpEngine = DefaultSheetsHttpEngine(),
     private val baseUrl: String = "https://sheets.googleapis.com/v4/spreadsheets"
 ) : SheetsBackupTransport {
@@ -112,7 +112,7 @@ class GoogleSheetsApiTransport(
         when (response.statusCode) {
             in 200..299 -> Result.success(Unit)
             401, 403 -> Result.failure(SecurityException("Google API autentikasi ditolak (HTTP ${response.statusCode})"))
-            404 -> Result.failure(IOException("Spreadsheet '$spreadsheetId' tidak ditemukan di Google Drive (HTTP 404)"))
+            404 -> Result.failure(id.skmnetwork.bukuwarung.backup.SpreadsheetNotFoundException(spreadsheetId))
             else -> Result.failure(IOException("Google Sheets API error HTTP ${response.statusCode}: ${response.body}"))
         }
     }
@@ -153,7 +153,7 @@ class GoogleSheetsApiTransport(
             return@withContext Result.failure(SecurityException("Google API autentikasi ditolak (HTTP ${response.statusCode})"))
         }
         if (response.statusCode == 404) {
-            return@withContext Result.failure(IOException("Spreadsheet '$spreadsheetId' tidak ditemukan (HTTP 404)"))
+            return@withContext Result.failure(id.skmnetwork.bukuwarung.backup.SpreadsheetNotFoundException(spreadsheetId))
         }
         if (!response.isSuccessful) {
             return@withContext Result.failure(IOException("Google Sheets API error HTTP ${response.statusCode}: ${response.body}"))
@@ -237,4 +237,61 @@ class GoogleSheetsApiTransport(
             Result.failure(IOException("Gagal mem-parsing payload Google Sheets: ${e.message}", e))
         }
     }
+
+    /**
+     * Creates a new Google Spreadsheet with all 19 canonical tabs on the owner's Google Drive.
+     */
+    suspend fun createSpreadsheet(title: String): Result<String> = withContext(Dispatchers.IO) {
+        val tokenResult = authProvider.getAccessToken()
+        if (tokenResult.isFailure) {
+            return@withContext Result.failure(
+                tokenResult.exceptionOrNull() ?: SecurityException("Gagal mendapatkan token autentikasi Google")
+            )
+        }
+        val accessToken = tokenResult.getOrThrow()
+        val authHeaders = mapOf(
+            "Authorization" to "Bearer $accessToken",
+            "Content-Type" to "application/json",
+            "Accept" to "application/json"
+        )
+
+        val sheetsArray = JSONArray()
+        CanonicalSerializer.ALL_TAB_NAMES.forEach { tabName ->
+            sheetsArray.put(JSONObject().apply {
+                put("properties", JSONObject().apply {
+                    put("title", tabName)
+                })
+            })
+        }
+
+        val requestBody = JSONObject().apply {
+            put("properties", JSONObject().apply {
+                put("title", title)
+            })
+            put("sheets", sheetsArray)
+        }.toString()
+
+        val responseResult = httpEngine.execute("POST", baseUrl, authHeaders, requestBody)
+        if (responseResult.isFailure) {
+            return@withContext Result.failure(
+                responseResult.exceptionOrNull() ?: IOException("Gagal membuat spreadsheet baru di Google Drive")
+            )
+        }
+
+        val response = responseResult.getOrThrow()
+        if (!response.isSuccessful) {
+            return@withContext Result.failure(
+                IOException("Gagal membuat spreadsheet (HTTP ${response.statusCode}): ${response.body}")
+            )
+        }
+
+        try {
+            val rootJson = JSONObject(response.body)
+            val spreadsheetId = rootJson.getString("spreadsheetId")
+            Result.success(spreadsheetId)
+        } catch (e: Exception) {
+            Result.failure(IOException("Gagal membaca ID spreadsheet baru: ${e.message}", e))
+        }
+    }
 }
+

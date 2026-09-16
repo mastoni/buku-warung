@@ -56,3 +56,8 @@ class IncompatibleBackupFormatException(message: String) : BackupException(messa
 class IncompatibleSchemaVersionException(message: String) : BackupException(message)
 class ChecksumMismatchException(message: String) : BackupException(message)
 class CorruptedBackupException(message: String) : BackupException(message)
+class SpreadsheetNotFoundException(
+    val spreadsheetId: String,
+    message: String = "Spreadsheet '$spreadsheetId' tidak ditemukan di Google Drive (HTTP 404)"
+) : java.io.IOException(message)
+

@@ -182,12 +182,32 @@ class PostFoundationIntegration2Test {
         var token: String = "test_valid_oauth_token_12345",
         var shouldFail: Boolean = false
     ) : GoogleAuthCredentialProvider {
+        override suspend fun authorizeAccount(email: String): id.skmnetwork.bukuwarung.backup.transport.GoogleAuthConnectionState {
+            return if (shouldFail) {
+                id.skmnetwork.bukuwarung.backup.transport.GoogleAuthConnectionState.Error("Test error")
+            } else {
+                id.skmnetwork.bukuwarung.backup.transport.GoogleAuthConnectionState.Connected(email, listOf("https://www.googleapis.com/auth/spreadsheets"))
+            }
+        }
+
+        override suspend fun handleAuthorizationResult(email: String, data: android.content.Intent?): Result<id.skmnetwork.bukuwarung.backup.transport.GoogleAuthConnectionState.Connected> {
+            return if (shouldFail) {
+                Result.failure(id.skmnetwork.bukuwarung.backup.transport.GoogleConsentDeniedException())
+            } else {
+                Result.success(id.skmnetwork.bukuwarung.backup.transport.GoogleAuthConnectionState.Connected(email, listOf("https://www.googleapis.com/auth/spreadsheets")))
+            }
+        }
+
         override suspend fun getAccessToken(): Result<String> {
             return if (shouldFail) {
                 Result.failure(SecurityException("Simulated OAuth token retrieval error"))
             } else {
                 Result.success(token)
             }
+        }
+
+        override fun clearToken() {
+            // No-op for test provider
         }
     }
 

@@ -29,6 +29,14 @@ val releaseKeyPassword: String? = localProperties.getProperty("RELEASE_KEY_PASSW
     ?: System.getenv("RELEASE_KEY_PASSWORD")
     ?: releaseKeystorePassword
 
+val releaseLicenseServerUrl: String = localProperties.getProperty("RELEASE_LICENSE_SERVER_URL")
+    ?: System.getenv("RELEASE_LICENSE_SERVER_URL")
+    ?: "https://license.skmnetwork.com"
+
+if (!releaseLicenseServerUrl.startsWith("https://")) {
+    throw GradleException("Release build requires a valid HTTPS RELEASE_LICENSE_SERVER_URL (was '$releaseLicenseServerUrl')")
+}
+
 android {
     namespace = "id.skmnetwork.bukuwarung"
     compileSdk = 37
@@ -61,10 +69,12 @@ android {
     buildTypes {
         debug {
             buildConfigField("boolean", "ENABLE_OWNER_TEST", "true")
+            buildConfigField("String", "LICENSE_SERVER_URL", "\"http://10.0.2.2:3000\"")
         }
         release {
             isMinifyEnabled = false
             buildConfigField("boolean", "ENABLE_OWNER_TEST", "false")
+            buildConfigField("String", "LICENSE_SERVER_URL", "\"$releaseLicenseServerUrl\"")
             val releaseSigning = signingConfigs.getByName("release")
             if (releaseSigning.storeFile != null) {
                 signingConfig = releaseSigning
@@ -78,6 +88,7 @@ android {
             initWith(getByName("release"))
             matchingFallbacks += listOf("release")
             buildConfigField("boolean", "ENABLE_OWNER_TEST", "true")
+            buildConfigField("String", "LICENSE_SERVER_URL", "\"http://10.0.2.2:3000\"")
             val releaseSigning = signingConfigs.getByName("release")
             if (releaseSigning.storeFile != null) {
                 signingConfig = releaseSigning
@@ -126,6 +137,8 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-tooling")
 
     testImplementation("junit:junit:4.13.2")
+    testImplementation("org.json:json:20240303")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
 
@@ -144,6 +157,12 @@ dependencies {
 
     // Jetpack DataStore Preferences
     implementation("androidx.datastore:datastore-preferences:1.1.2")
+
+    // Google Identity / Credential Manager & Play Services Auth
+    implementation("androidx.credentials:credentials:1.3.0")
+    implementation("androidx.credentials:credentials-play-services-auth:1.3.0")
+    implementation("com.google.android.libraries.identity.googleid:googleid:1.1.1")
+    implementation("com.google.android.gms:play-services-auth:21.3.0")
 }
 
 ksp {
