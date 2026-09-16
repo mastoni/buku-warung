@@ -34,6 +34,30 @@ export function closeDatabase(): void {
 }
 
 function initSchema(db: Database.Database): void {
+  // Migrate existing orders table if columns are missing
+  try {
+    const existingCols = db.pragma('table_info(orders)') as Array<{ name: string }>;
+    const colNames = new Set(existingCols.map((c) => c.name));
+
+    if (!colNames.has('owner_email')) db.exec("ALTER TABLE orders ADD COLUMN owner_email TEXT NOT NULL DEFAULT ''");
+    if (!colNames.has('product')) db.exec("ALTER TABLE orders ADD COLUMN product TEXT NOT NULL DEFAULT 'BUKU_WARUNG'");
+    if (!colNames.has('status')) db.exec("ALTER TABLE orders ADD COLUMN status TEXT NOT NULL DEFAULT 'PENDING_PAYMENT'");
+    if (!colNames.has('payment_method')) db.exec("ALTER TABLE orders ADD COLUMN payment_method TEXT");
+    if (!colNames.has('payment_reference')) db.exec("ALTER TABLE orders ADD COLUMN payment_reference TEXT");
+    if (!colNames.has('verified_at')) db.exec("ALTER TABLE orders ADD COLUMN verified_at INTEGER");
+    if (!colNames.has('verified_by')) db.exec("ALTER TABLE orders ADD COLUMN verified_by TEXT");
+    if (!colNames.has('delivered_at')) db.exec("ALTER TABLE orders ADD COLUMN delivered_at INTEGER");
+    if (!colNames.has('delivered_by')) db.exec("ALTER TABLE orders ADD COLUMN delivered_by TEXT");
+    if (!colNames.has('notes')) db.exec("ALTER TABLE orders ADD COLUMN notes TEXT");
+    if (!colNames.has('lead_token')) db.exec("ALTER TABLE orders ADD COLUMN lead_token TEXT");
+    if (!colNames.has('utm_source')) db.exec("ALTER TABLE orders ADD COLUMN utm_source TEXT");
+    if (!colNames.has('utm_medium')) db.exec("ALTER TABLE orders ADD COLUMN utm_medium TEXT");
+    if (!colNames.has('utm_campaign')) db.exec("ALTER TABLE orders ADD COLUMN utm_campaign TEXT");
+    if (!colNames.has('utm_content')) db.exec("ALTER TABLE orders ADD COLUMN utm_content TEXT");
+  } catch {
+    // Ignore migration error if table just created
+  }
+
   db.exec(`
     CREATE TABLE IF NOT EXISTS licenses (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -88,6 +112,11 @@ function initSchema(db: Database.Database): void {
       delivered_at INTEGER,
       delivered_by TEXT,
       notes TEXT,
+      lead_token TEXT,
+      utm_source TEXT,
+      utm_medium TEXT,
+      utm_campaign TEXT,
+      utm_content TEXT,
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL
     );
@@ -96,6 +125,21 @@ function initSchema(db: Database.Database): void {
     CREATE INDEX IF NOT EXISTS idx_orders_payment_status ON orders(payment_status);
     CREATE INDEX IF NOT EXISTS idx_orders_license_id ON orders(license_id);
     CREATE INDEX IF NOT EXISTS idx_orders_email ON orders(owner_email);
+    CREATE INDEX IF NOT EXISTS idx_orders_lead_token ON orders(lead_token) WHERE lead_token IS NOT NULL;
+
+    CREATE TABLE IF NOT EXISTS funnel_events (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      lead_token TEXT NOT NULL,
+      event_type TEXT NOT NULL,
+      event_data TEXT,
+      ip_hash TEXT,
+      user_agent TEXT,
+      created_at INTEGER NOT NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_funnel_events_token ON funnel_events(lead_token);
+    CREATE INDEX IF NOT EXISTS idx_funnel_events_type ON funnel_events(event_type);
+    CREATE INDEX IF NOT EXISTS idx_funnel_events_created ON funnel_events(created_at);
 
     CREATE TABLE IF NOT EXISTS audit_logs (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -123,23 +167,4 @@ function initSchema(db: Database.Database): void {
 
     CREATE INDEX IF NOT EXISTS idx_recovery_license_id ON recovery_requests(license_id);
   `);
-
-  // Migrate existing orders table if columns are missing
-  try {
-    const existingCols = db.pragma('table_info(orders)') as Array<{ name: string }>;
-    const colNames = new Set(existingCols.map((c) => c.name));
-
-    if (!colNames.has('owner_email')) db.exec("ALTER TABLE orders ADD COLUMN owner_email TEXT NOT NULL DEFAULT ''");
-    if (!colNames.has('product')) db.exec("ALTER TABLE orders ADD COLUMN product TEXT NOT NULL DEFAULT 'BUKU_WARUNG'");
-    if (!colNames.has('status')) db.exec("ALTER TABLE orders ADD COLUMN status TEXT NOT NULL DEFAULT 'PENDING_PAYMENT'");
-    if (!colNames.has('payment_method')) db.exec("ALTER TABLE orders ADD COLUMN payment_method TEXT");
-    if (!colNames.has('payment_reference')) db.exec("ALTER TABLE orders ADD COLUMN payment_reference TEXT");
-    if (!colNames.has('verified_at')) db.exec("ALTER TABLE orders ADD COLUMN verified_at INTEGER");
-    if (!colNames.has('verified_by')) db.exec("ALTER TABLE orders ADD COLUMN verified_by TEXT");
-    if (!colNames.has('delivered_at')) db.exec("ALTER TABLE orders ADD COLUMN delivered_at INTEGER");
-    if (!colNames.has('delivered_by')) db.exec("ALTER TABLE orders ADD COLUMN delivered_by TEXT");
-    if (!colNames.has('notes')) db.exec("ALTER TABLE orders ADD COLUMN notes TEXT");
-  } catch {
-    // Ignore migration error if table just created
-  }
 }

@@ -66,6 +66,11 @@ export interface OrderRecord {
   notes: string | null;
   created_at: number;
   updated_at: number;
+  lead_token: string | null;
+  utm_source: string | null;
+  utm_medium: string | null;
+  utm_campaign: string | null;
+  utm_content: string | null;
 }
 
 export interface AuditLogRecord {
@@ -139,6 +144,38 @@ export interface CreateOrderRequest {
   product?: string;
   amount?: number;
   notes?: string;
+  leadToken?: string;
+  utm_source?: string;
+  utm_medium?: string;
+  utm_campaign?: string;
+  utm_content?: string;
+}
+
+export interface LandingTrackRequest {
+  eventType: string;
+  leadToken?: string;
+  utm_source?: string;
+  utm_medium?: string;
+  utm_campaign?: string;
+  utm_content?: string;
+}
+
+export interface LandingTrackResponse {
+  success: boolean;
+  data: {
+    leadToken: string;
+    action: 'created' | 'matched' | 'updated';
+  };
+}
+
+export interface FunnelEventRecord {
+  id: number;
+  lead_token: string;
+  event_type: string;
+  event_data: string | null;
+  ip_hash: string | null;
+  user_agent: string | null;
+  created_at: number;
 }
 
 export interface VerifyPaymentRequest {
@@ -160,4 +197,44 @@ export interface OrderSummaryMetrics {
   active: number;
   paidRevenue: number;
   actionRequiredCount: number;
+  attributedOrders: number;
+  unattributedOrders: number;
+}
+
+export interface FunnelStage {
+  name: string;
+  count: number;
+}
+
+export interface FunnelConversion {
+  from: string;
+  to: string;
+  rate: number;
+  numerator: number;
+  denominator: number;
+}
+
+export interface AttributionEntry {
+  dimension: string;
+  value: string;
+  leads: number;
+  orders: number;
+  paidOrders: number;
+  licenses: number;
+  activatedCustomers: number;
+}
+
+export interface FunnelAnalytics {
+  dateRange: { start: number; end: number };
+  funnel: FunnelStage[];
+  conversions: FunnelConversion[];
+  attribution: {
+    sources: AttributionEntry[];
+    mediums: AttributionEntry[];
+    campaigns: AttributionEntry[];
+    contents: AttributionEntry[];
+  };
+  northStar: {
+    activatedPaidCustomers: number;
+  };
 }

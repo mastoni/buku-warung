@@ -80,6 +80,23 @@ export class LicenseService {
             .prepare('UPDATE license_devices SET last_validated_at = ?, updated_at = ? WHERE id = ?')
             .run(now, now, activeDevice.id);
 
+          const orderWithToken = this.db
+            .prepare('SELECT lead_token FROM orders WHERE license_id = ?')
+            .get(license.id) as { lead_token: string | null } | undefined;
+
+          if (orderWithToken?.lead_token) {
+            this.db
+              .prepare(`
+                INSERT INTO funnel_events (lead_token, event_type, event_data, ip_hash, user_agent, created_at)
+                VALUES (?, 'LICENSE_ACTIVATED', ?, NULL, NULL, ?)
+              `)
+              .run(
+                orderWithToken.lead_token,
+                JSON.stringify({ licenseId: license.id, licenseUuid: license.license_uuid, idempotent: true }),
+                now
+              );
+          }
+
           return {
             success: true,
             status: 'ACTIVE'
@@ -119,6 +136,23 @@ export class LicenseService {
           VALUES ('ACTIVATE_LICENSE', ?, ?, 'ACTIVE', 'CLIENT', 'Initial device activation', ?)
         `)
         .run(license.id, license.status, now);
+
+      const orderWithToken = this.db
+        .prepare('SELECT lead_token FROM orders WHERE license_id = ?')
+        .get(license.id) as { lead_token: string | null } | undefined;
+
+      if (orderWithToken?.lead_token) {
+        this.db
+          .prepare(`
+            INSERT INTO funnel_events (lead_token, event_type, event_data, ip_hash, user_agent, created_at)
+            VALUES (?, 'LICENSE_ACTIVATED', ?, NULL, NULL, ?)
+          `)
+          .run(
+            orderWithToken.lead_token,
+            JSON.stringify({ licenseId: license.id, licenseUuid: license.license_uuid }),
+            now
+          );
+      }
 
       return {
         success: true,

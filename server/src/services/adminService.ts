@@ -365,6 +365,11 @@ export class AdminService {
   } {
     const { customerName, ownerEmail, product = 'BUKU_WARUNG', amount = 50000, notes } = payload;
     const contact = (payload.customerContact || (payload as any).customerWhatsapp || '').trim();
+    const leadToken = payload.leadToken || null;
+    const utm_source = payload.utm_source || null;
+    const utm_medium = payload.utm_medium || null;
+    const utm_campaign = payload.utm_campaign || null;
+    const utm_content = payload.utm_content || null;
 
     if (!customerName || !customerName.trim()) {
       return { success: false, error: { code: 'INVALID_NAME', message: 'Customer name is required.' } };
@@ -387,8 +392,9 @@ export class AdminService {
       const stmt = this.db.prepare(`
         INSERT INTO orders (
           order_number, customer_name, customer_contact, owner_email, product, amount,
-          status, payment_status, license_id, notes, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, 'PENDING_PAYMENT', 'UNPAID', NULL, ?, ?, ?)
+          status, payment_status, license_id, notes, lead_token, utm_source, utm_medium,
+          utm_campaign, utm_content, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, 'PENDING_PAYMENT', 'UNPAID', NULL, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
 
       const result = stmt.run(
@@ -399,6 +405,11 @@ export class AdminService {
         product,
         amount,
         notes || null,
+        leadToken,
+        utm_source,
+        utm_medium,
+        utm_campaign,
+        utm_content,
         now,
         now
       );
@@ -411,6 +422,15 @@ export class AdminService {
           VALUES ('CREATE_ORDER', NULL, NULL, 'PENDING_PAYMENT', ?, ?, ?)
         `)
         .run(actor, `Order #${orderId} (${orderNumber}) created for ${customerName}`, now);
+
+      if (leadToken) {
+        this.db
+          .prepare(`
+            INSERT INTO funnel_events (lead_token, event_type, event_data, ip_hash, user_agent, created_at)
+            VALUES (?, 'ORDER_CREATED', ?, NULL, NULL, ?)
+          `)
+          .run(leadToken, JSON.stringify({ orderId, orderNumber }), now);
+      }
 
       const order = this.db.prepare('SELECT * FROM orders WHERE id = ?').get(orderId) as OrderRecord;
       return order;
@@ -463,6 +483,8 @@ export class AdminService {
     let active = 0;
     let paidRevenue = 0;
     let actionRequiredCount = 0;
+    let ordersWithToken = 0;
+    let ordersWithoutToken = 0;
 
     const processedOrders = allOrders.map((o) => {
       let effectiveStatus = o.status;
@@ -489,6 +511,11 @@ export class AdminService {
       }
       if (o.active_device_count > 0 || effectiveStatus === 'ACTIVE') {
         active++;
+      }
+      if (o.lead_token) {
+        ordersWithToken++;
+      } else {
+        ordersWithoutToken++;
       }
 
       return {
@@ -536,7 +563,9 @@ export class AdminService {
         delivered,
         active,
         paidRevenue,
-        actionRequiredCount
+        actionRequiredCount,
+        attributedOrders: ordersWithToken,
+        unattributedOrders: ordersWithoutToken
       }
     };
   }
@@ -637,6 +666,15 @@ export class AdminService {
         `)
         .run(order.license_id, actor, `Payment verified for Order #${orderId} (${order.order_number})`, now);
 
+      if (order.lead_token) {
+        this.db
+          .prepare(`
+            INSERT INTO funnel_events (lead_token, event_type, event_data, ip_hash, user_agent, created_at)
+            VALUES (?, 'PAYMENT_CONFIRMED', ?, NULL, NULL, ?)
+          `)
+          .run(order.lead_token, JSON.stringify({ orderId, orderNumber: order.order_number }), now);
+      }
+
       const updated = this.db.prepare('SELECT * FROM orders WHERE id = ?').get(orderId) as OrderRecord;
       return { success: true, data: updated };
     });
@@ -736,6 +774,15 @@ export class AdminService {
         `)
         .run(licenseId, actor, `License generated for Order #${orderId} (${order.order_number})`, now);
 
+      if (order.lead_token) {
+        this.db
+          .prepare(`
+            INSERT INTO funnel_events (lead_token, event_type, event_data, ip_hash, user_agent, created_at)
+            VALUES (?, 'LICENSE_CREATED', ?, NULL, NULL, ?)
+          `)
+          .run(order.lead_token, JSON.stringify({ licenseUuid, licenseId }), now);
+      }
+
       const updatedOrder = this.db.prepare('SELECT * FROM orders WHERE id = ?').get(orderId) as OrderRecord;
 
       return {
@@ -800,6 +847,15 @@ export class AdminService {
           VALUES ('MARK_ORDER_DELIVERED', ?, 'LICENSE_CREATED', 'DELIVERED', ?, ?, ?)
         `)
         .run(order.license_id, actor, `Order #${orderId} marked as delivered to customer`, now);
+
+      if (order.lead_token) {
+        this.db
+          .prepare(`
+            INSERT INTO funnel_events (lead_token, event_type, event_data, ip_hash, user_agent, created_at)
+            VALUES (?, 'DELIVERY_READY', ?, NULL, NULL, ?)
+          `)
+          .run(order.lead_token, JSON.stringify({ orderId, orderNumber: order.order_number }), now);
+      }
 
       const updated = this.db.prepare('SELECT * FROM orders WHERE id = ?').get(orderId) as OrderRecord;
       return { success: true, data: updated };

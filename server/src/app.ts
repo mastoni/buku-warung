@@ -6,15 +6,18 @@ import { config } from './config/index.js';
 import { registerHealthRoutes } from './controllers/healthController.js';
 import { registerLicenseRoutes } from './controllers/licenseController.js';
 import { registerAdminRoutes } from './controllers/adminController.js';
+import { registerLandingRoutes } from './controllers/landingController.js';
+import { registerDownloadRoutes } from './controllers/downloadController.js';
 
 export function buildApp(): FastifyInstance {
   const app = Fastify({
     logger: config.nodeEnv !== 'test'
       ? {
           level: 'info',
-          redact: ['req.headers.authorization', 'body.licenseCode', 'body.ownerEmail']
+          redact: ['req.headers.authorization', 'body.licenseCode', 'body.ownerEmail', 'body.customerContact']
         }
-      : false
+      : false,
+    bodyLimit: 10240
   });
 
   // Security Plugins
@@ -33,6 +36,8 @@ export function buildApp(): FastifyInstance {
   app.register(registerHealthRoutes);
   app.register(registerLicenseRoutes);
   app.register(registerAdminRoutes);
+  app.register(registerLandingRoutes);
+  app.register(registerDownloadRoutes);
 
   // Error Handler
   app.setErrorHandler((error: any, _request, reply) => {

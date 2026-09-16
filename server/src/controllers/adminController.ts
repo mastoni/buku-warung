@@ -185,14 +185,19 @@ export async function registerAdminRoutes(fastify: FastifyInstance) {
       paymentMethod: order.payment_method,
       paymentReference: order.payment_reference,
       licenseId: order.license_id,
-      notes: order.notes,
-      verifiedAt: order.verified_at,
-      verifiedBy: order.verified_by,
-      deliveredAt: order.delivered_at,
-      deliveredBy: order.delivered_by,
-      createdAt: order.created_at,
-      updatedAt: order.updated_at,
-      order: order
+       notes: order.notes,
+       verifiedAt: order.verified_at,
+       verifiedBy: order.verified_by,
+       deliveredAt: order.delivered_at,
+       deliveredBy: order.delivered_by,
+       createdAt: order.created_at,
+       updatedAt: order.updated_at,
+       leadToken: order.lead_token,
+       utmSource: order.utm_source,
+       utmMedium: order.utm_medium,
+       utmCampaign: order.utm_campaign,
+       utmContent: order.utm_content,
+       order: order
     };
   }
 
@@ -208,10 +213,15 @@ export async function registerAdminRoutes(fastify: FastifyInstance) {
             customerName: { type: 'string', minLength: 1 },
             customerContact: { type: 'string' },
             customerWhatsapp: { type: 'string' },
-            ownerEmail: { type: 'string', minLength: 3 },
-            product: { type: 'string' },
-            amount: { type: 'number' },
-            notes: { type: 'string' }
+             ownerEmail: { type: 'string', minLength: 3 },
+             product: { type: 'string' },
+             amount: { type: 'number' },
+             notes: { type: 'string' },
+             leadToken: { type: 'string' },
+             utm_source: { type: 'string' },
+             utm_medium: { type: 'string' },
+             utm_campaign: { type: 'string' },
+             utm_content: { type: 'string' }
           }
         }
       }
@@ -224,7 +234,12 @@ export async function registerAdminRoutes(fastify: FastifyInstance) {
         ownerEmail: body.ownerEmail,
         product: body.product || 'BUKU_WARUNG',
         amount: body.amount || 50000,
-        notes: body.notes
+        notes: body.notes,
+        leadToken: body.leadToken || undefined,
+        utm_source: body.utm_source || undefined,
+        utm_medium: body.utm_medium || undefined,
+        utm_campaign: body.utm_campaign || undefined,
+        utm_content: body.utm_content || undefined
       };
 
       const result = adminService.createOrder(payload, 'ADMIN_API');
