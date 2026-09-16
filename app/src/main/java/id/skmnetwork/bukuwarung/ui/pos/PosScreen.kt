@@ -22,16 +22,21 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.People
+import androidx.compose.material.icons.filled.PointOfSale
 import androidx.compose.material.icons.filled.QrCodeScanner
+import androidx.compose.material.icons.filled.Receipt
 import androidx.compose.material.icons.filled.Remove
+import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -46,7 +51,9 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
@@ -55,14 +62,17 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import id.skmnetwork.bukuwarung.data.preferences.UserSettings
 import id.skmnetwork.bukuwarung.data.local.entity.CustomerEntity
+import id.skmnetwork.bukuwarung.data.local.entity.SaleTransactionEntity
 import id.skmnetwork.bukuwarung.ui.components.AppCard
 import id.skmnetwork.bukuwarung.ui.components.AppEmptyState
 import id.skmnetwork.bukuwarung.ui.components.AppTextField
@@ -76,11 +86,6 @@ import id.skmnetwork.bukuwarung.ui.theme.AppShapes
 import id.skmnetwork.bukuwarung.ui.theme.AppSpacing
 import id.skmnetwork.bukuwarung.util.formatRupiah
 import kotlinx.coroutines.launch
-
-import androidx.compose.material.icons.filled.History
-import androidx.compose.material.icons.filled.Receipt
-import androidx.compose.material.icons.filled.ShoppingCart
-import id.skmnetwork.bukuwarung.data.local.entity.SaleTransactionEntity
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -92,7 +97,8 @@ fun PosScreen(
     customerViewModel: CustomerViewModel,
     userSettings: UserSettings = UserSettings(),
     printerService: id.skmnetwork.bukuwarung.printer.PrinterService? = null,
-    onNavigateToAddProduct: () -> Unit = {}
+    onNavigateToAddProduct: () -> Unit = {},
+    onNavigateToSettings: () -> Unit = {}
 ) {
     val dbProducts by viewModel.products.collectAsStateWithLifecycle()
     val dbCategories by viewModel.categories.collectAsStateWithLifecycle()
@@ -312,6 +318,8 @@ fun PosScreen(
         QrisPaymentDialog(
             totalPrice = totalPrice,
             isCheckingOut = isCheckingOut,
+            qrisImagePath = userSettings.qrisImagePath,
+            onNavigateToSettings = onNavigateToSettings,
             onDismiss = { showQrisPaymentDialog = false },
             onConfirmQrisPayment = {
                 if (isCheckingOut) return@QrisPaymentDialog
@@ -666,7 +674,80 @@ fun PosScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text(if (selectedTab == 0) "Jualan (Kasir)" else "Riwayat Penjualan", fontWeight = FontWeight.Bold) })
+            TopAppBar(
+                title = {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(vertical = 2.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(38.dp)
+                                .clip(RoundedCornerShape(11.dp))
+                                .background(AppColors.GreenPrimary),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.PointOfSale,
+                                contentDescription = "Kasir Logo",
+                                tint = Color.White,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+
+                        Spacer(Modifier.width(10.dp))
+
+                        Column(
+                            modifier = Modifier.weight(1f, fill = false)
+                        ) {
+                            Text(
+                                text = if (selectedTab == 0) "Jualan (Kasir)" else "Riwayat Penjualan",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 16.5.sp,
+                                color = AppColors.TextPrimary,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Text(
+                                text = if (selectedTab == 0) "Catat transaksi & kasir cepat" else "Daftar struk & riwayat penjualan",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = AppColors.TextSecondary,
+                                fontSize = 11.5.sp
+                            )
+                        }
+                    }
+                },
+                actions = {
+                    Surface(
+                        shape = RoundedCornerShape(14.dp),
+                        color = AppColors.GreenLight,
+                        border = BorderStroke(1.dp, Color(0xFFCCE8D7)),
+                        modifier = Modifier.padding(end = AppSpacing.sm)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(6.dp)
+                                    .clip(CircleShape)
+                                    .background(AppColors.GreenPrimary)
+                            )
+                            Spacer(Modifier.width(5.dp))
+                            Text(
+                                text = if (selectedTab == 0) "Mode Kasir" else "Riwayat",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = AppColors.GreenDark
+                            )
+                        }
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color.White
+                )
+            )
         },
         containerColor = Color.White
     ) { padding ->
@@ -675,66 +756,76 @@ fun PosScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            // Screen Tab Navigation (Kasir vs Riwayat Penjualan)
-            Row(
+            // Segmented Capsule Navigation (Kasir vs Riwayat Penjualan)
+            Surface(
+                shape = RoundedCornerShape(14.dp),
+                color = Color(0xFFF1F4F2),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = AppSpacing.lg, vertical = AppSpacing.xs),
-                horizontalArrangement = Arrangement.spacedBy(AppSpacing.sm)
+                    .padding(horizontal = AppSpacing.lg, vertical = 4.dp)
             ) {
-                Surface(
-                    shape = AppShapes.ChipShape,
-                    color = if (selectedTab == 0) AppColors.GreenPrimary else AppColors.SurfaceGray,
-                    modifier = Modifier
-                        .weight(1f)
-                        .clickable { selectedTab = 0 }
+                Row(
+                    modifier = Modifier.padding(3.dp),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    Row(
-                        modifier = Modifier.padding(vertical = AppSpacing.sm),
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.CenterVertically
+                    val tab0Active = selectedTab == 0
+                    Surface(
+                        shape = RoundedCornerShape(11.dp),
+                        color = if (tab0Active) AppColors.GreenPrimary else Color.Transparent,
+                        shadowElevation = if (tab0Active) 1.dp else 0.dp,
+                        modifier = Modifier
+                            .weight(1f)
+                            .clickable { selectedTab = 0 }
                     ) {
-                        Icon(
-                            Icons.Default.ShoppingCart,
-                            null,
-                            tint = if (selectedTab == 0) Color.White else AppColors.TextSecondary,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(Modifier.width(AppSpacing.xs))
-                        Text(
-                            "Kasir",
-                            color = if (selectedTab == 0) Color.White else AppColors.TextSecondary,
-                            fontWeight = FontWeight.Bold,
-                            style = MaterialTheme.typography.labelMedium
-                        )
+                        Row(
+                            modifier = Modifier.padding(vertical = 8.dp),
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                Icons.Default.ShoppingCart,
+                                null,
+                                tint = if (tab0Active) Color.White else AppColors.TextSecondary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(Modifier.width(6.dp))
+                            Text(
+                                "Kasir",
+                                color = if (tab0Active) Color.White else AppColors.TextSecondary,
+                                fontWeight = FontWeight.Bold,
+                                style = MaterialTheme.typography.labelMedium
+                            )
+                        }
                     }
-                }
 
-                Surface(
-                    shape = AppShapes.ChipShape,
-                    color = if (selectedTab == 1) AppColors.GreenPrimary else AppColors.SurfaceGray,
-                    modifier = Modifier
-                        .weight(1f)
-                        .clickable { selectedTab = 1 }
-                ) {
-                    Row(
-                        modifier = Modifier.padding(vertical = AppSpacing.sm),
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.CenterVertically
+                    val tab1Active = selectedTab == 1
+                    Surface(
+                        shape = RoundedCornerShape(11.dp),
+                        color = if (tab1Active) AppColors.GreenPrimary else Color.Transparent,
+                        shadowElevation = if (tab1Active) 1.dp else 0.dp,
+                        modifier = Modifier
+                            .weight(1f)
+                            .clickable { selectedTab = 1 }
                     ) {
-                        Icon(
-                            Icons.Default.History,
-                            null,
-                            tint = if (selectedTab == 1) Color.White else AppColors.TextSecondary,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(Modifier.width(AppSpacing.xs))
-                        Text(
-                            "Riwayat Penjualan",
-                            color = if (selectedTab == 1) Color.White else AppColors.TextSecondary,
-                            fontWeight = FontWeight.Bold,
-                            style = MaterialTheme.typography.labelMedium
-                        )
+                        Row(
+                            modifier = Modifier.padding(vertical = 8.dp),
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                Icons.Default.History,
+                                null,
+                                tint = if (tab1Active) Color.White else AppColors.TextSecondary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(Modifier.width(6.dp))
+                            Text(
+                                "Riwayat Penjualan",
+                                color = if (tab1Active) Color.White else AppColors.TextSecondary,
+                                fontWeight = FontWeight.Bold,
+                                style = MaterialTheme.typography.labelMedium
+                            )
+                        }
                     }
                 }
             }
@@ -756,17 +847,25 @@ fun PosScreen(
                         )
                         if (userSettings.showBarcode) {
                             Spacer(Modifier.width(AppSpacing.sm))
-                            IconButton(
-                                onClick = { showPosScannerDialog = true },
+                            Surface(
+                                shape = AppShapes.TextFieldShape,
+                                color = AppColors.GreenLight,
+                                border = BorderStroke(1.dp, Color(0xFFCCE8D7)),
                                 modifier = Modifier
                                     .size(52.dp)
-                                    .background(AppColors.GreenLight, AppShapes.ButtonShape)
+                                    .clickable { showPosScannerDialog = true }
                             ) {
-                                Icon(
-                                    imageVector = Icons.Default.QrCodeScanner,
-                                    contentDescription = "Pindai Barcode",
-                                    tint = AppColors.GreenPrimary
-                                )
+                                Box(
+                                    contentAlignment = Alignment.Center,
+                                    modifier = Modifier.fillMaxSize()
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.QrCodeScanner,
+                                        contentDescription = "Pindai Barcode",
+                                        tint = AppColors.GreenPrimary,
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                }
                             }
                         }
                     }
@@ -780,30 +879,40 @@ fun PosScreen(
                             item {
                                 val isSelected = selectedCategoryId == null
                                 Surface(
-                                    shape = AppShapes.ChipShape,
-                                    color = if (isSelected) AppColors.GreenPrimary else AppColors.SurfaceGray,
+                                    shape = RoundedCornerShape(20.dp),
+                                    color = if (isSelected) AppColors.GreenPrimary else Color.White,
+                                    border = BorderStroke(
+                                        1.dp,
+                                        if (isSelected) AppColors.GreenPrimary else Color(0xFFE0E5E2)
+                                    ),
                                     modifier = Modifier.clickable { selectedCategoryId = null }
                                 ) {
                                     Text(
                                         text = "Semua",
                                         color = if (isSelected) Color.White else AppColors.TextSecondary,
-                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                        modifier = Modifier.padding(horizontal = AppSpacing.lg, vertical = AppSpacing.sm)
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                        fontSize = 12.5.sp,
+                                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp)
                                     )
                                 }
                             }
                             items(dbCategories, key = { it.id }) { category ->
                                 val isSelected = selectedCategoryId == category.id
                                 Surface(
-                                    shape = AppShapes.ChipShape,
-                                    color = if (isSelected) AppColors.GreenPrimary else AppColors.SurfaceGray,
+                                    shape = RoundedCornerShape(20.dp),
+                                    color = if (isSelected) AppColors.GreenPrimary else Color.White,
+                                    border = BorderStroke(
+                                        1.dp,
+                                        if (isSelected) AppColors.GreenPrimary else Color(0xFFE0E5E2)
+                                    ),
                                     modifier = Modifier.clickable { selectedCategoryId = category.id }
                                 ) {
                                     Text(
                                         text = category.name,
                                         color = if (isSelected) Color.White else AppColors.TextSecondary,
-                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                        modifier = Modifier.padding(horizontal = AppSpacing.lg, vertical = AppSpacing.sm)
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                        fontSize = 12.5.sp,
+                                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp)
                                     )
                                 }
                             }
@@ -811,12 +920,13 @@ fun PosScreen(
                     }
                 }
 
-                Spacer(Modifier.height(AppSpacing.md))
+                Spacer(Modifier.height(AppSpacing.sm))
 
                 if (dbProducts.isEmpty()) {
                     AppEmptyState(
                         icon = Icons.Default.Inventory2,
                         title = "Belum ada produk jualan",
+                        description = "Tambahkan produk di menu Produk & Stok untuk mulai berjualan",
                         actionText = "+ Tambah Produk",
                         onActionClick = onNavigateToAddProduct,
                         modifier = Modifier.weight(1f)
@@ -839,7 +949,7 @@ fun PosScreen(
                                     val isOutofStock = product.stock <= 0.0
                                     val isInCart = currentCartQty > 0.0
 
-                                    AppCard(
+                                    Surface(
                                         onClick = {
                                             if (!isOutofStock) {
                                                 if (currentCartQty + 1.0 <= product.stock) {
@@ -849,73 +959,115 @@ fun PosScreen(
                                                 }
                                             }
                                         },
-                                        backgroundColor = if (isInCart) AppColors.GreenLight else Color.White,
-                                        modifier = Modifier
-                                            .weight(1f)
-                                            .then(
-                                                if (isInCart) Modifier.border(BorderStroke(2.dp, AppColors.GreenPrimary), AppShapes.CardShape) else Modifier
-                                            )
+                                        shape = RoundedCornerShape(14.dp),
+                                        color = if (isInCart) AppColors.GreenLight else Color.White,
+                                        border = BorderStroke(
+                                            if (isInCart) 1.5.dp else 1.dp,
+                                            if (isInCart) AppColors.GreenPrimary else Color(0xFFE8ECE9)
+                                        ),
+                                        modifier = Modifier.weight(1f)
                                     ) {
                                         Column(
                                             modifier = Modifier
                                                 .fillMaxWidth()
-                                                .padding(AppSpacing.md)
+                                                .padding(AppSpacing.sm)
                                         ) {
                                             if (userSettings.showProductImage) {
                                                 Box(
                                                     modifier = Modifier
                                                         .fillMaxWidth()
-                                                        .height(68.dp)
-                                                        .background(if (isOutofStock) Color(0xFFFFE8E8) else if (isInCart) Color.White else AppColors.GreenLight, AppShapes.CardShape),
+                                                        .height(80.dp)
+                                                        .clip(RoundedCornerShape(10.dp))
+                                                        .background(
+                                                            if (isOutofStock) Color(0xFFFFEBEE)
+                                                            else if (isInCart) Color.White
+                                                            else Color(0xFFF4F8F5)
+                                                        ),
                                                     contentAlignment = Alignment.Center
                                                 ) {
-                                                    ProductImageThumbnail(
-                                                        imageUri = product.imageUri,
-                                                        modifier = Modifier.size(48.dp),
-                                                        tint = if (isOutofStock) AppColors.RedExpense else AppColors.GreenPrimary
-                                                    )
+                                                    if (!product.imageUri.isNullOrEmpty()) {
+                                                        ProductImageThumbnail(
+                                                            imageUri = product.imageUri,
+                                                            contentScale = ContentScale.Crop,
+                                                            modifier = Modifier.fillMaxSize()
+                                                        )
+                                                    } else {
+                                                        ProductImageThumbnail(
+                                                            imageUri = null,
+                                                            modifier = Modifier.size(30.dp),
+                                                            tint = if (isOutofStock) AppColors.RedExpense else AppColors.GreenPrimary
+                                                        )
+                                                    }
                                                     if (isInCart) {
-                                                        Box(
+                                                        Surface(
+                                                            shape = RoundedCornerShape(8.dp),
+                                                            color = AppColors.GreenPrimary,
                                                             modifier = Modifier
                                                                 .align(Alignment.TopEnd)
                                                                 .padding(4.dp)
-                                                                .size(24.dp)
-                                                                .background(AppColors.GreenPrimary, CircleShape),
-                                                            contentAlignment = Alignment.Center
                                                         ) {
                                                             Text(
-                                                                text = "${currentCartQty.toInt()}",
+                                                                text = "${currentCartQty.toInt()}x",
                                                                 color = Color.White,
                                                                 fontWeight = FontWeight.Bold,
-                                                                style = MaterialTheme.typography.labelSmall
+                                                                fontSize = 11.sp,
+                                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                                                             )
                                                         }
                                                     }
                                                 }
 
-                                                Spacer(Modifier.height(AppSpacing.sm))
+                                                Spacer(Modifier.height(8.dp))
                                             }
 
                                             Text(
                                                 text = product.name,
                                                 fontWeight = FontWeight.Bold,
-                                                maxLines = 1,
+                                                fontSize = 13.5.sp,
+                                                color = AppColors.TextPrimary,
+                                                minLines = 2,
+                                                maxLines = 2,
                                                 overflow = TextOverflow.Ellipsis
                                             )
+
+                                            Spacer(Modifier.height(4.dp))
 
                                             Text(
                                                 text = formatRupiah(product.sellingPrice),
                                                 color = AppColors.GreenPrimary,
                                                 fontWeight = FontWeight.Bold,
-                                                style = MaterialTheme.typography.bodyMedium
+                                                fontSize = 13.5.sp
                                             )
 
                                             if (userSettings.showStock) {
-                                                Text(
-                                                    text = if (isOutofStock) "Stok habis" else "Stok: ${product.stock.toInt()} ${product.unit}",
-                                                    color = if (isOutofStock) AppColors.RedExpense else AppColors.TextSecondary,
-                                                    style = MaterialTheme.typography.labelSmall
-                                                )
+                                                Spacer(Modifier.height(2.dp))
+                                                if (isOutofStock) {
+                                                    Surface(
+                                                        shape = RoundedCornerShape(6.dp),
+                                                        color = Color(0xFFFFEBEE)
+                                                    ) {
+                                                        Text(
+                                                            text = "Habis",
+                                                            color = AppColors.RedExpense,
+                                                            fontSize = 10.5.sp,
+                                                            fontWeight = FontWeight.Bold,
+                                                            modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp)
+                                                        )
+                                                    }
+                                                } else if (product.stock <= product.minimumStock) {
+                                                    Text(
+                                                        text = "Sisa: ${product.stock.toInt()} ${product.unit}",
+                                                        color = Color(0xFFD97706),
+                                                        fontSize = 11.sp,
+                                                        fontWeight = FontWeight.SemiBold
+                                                    )
+                                                } else {
+                                                    Text(
+                                                        text = "Stok: ${product.stock.toInt()} ${product.unit}",
+                                                        color = AppColors.TextSecondary,
+                                                        fontSize = 11.sp
+                                                    )
+                                                }
                                             }
                                         }
                                     }
@@ -929,67 +1081,166 @@ fun PosScreen(
                 }
 
                 if (cart.isNotEmpty()) {
-                    Card(
-                        colors = CardDefaults.cardColors(containerColor = AppColors.GreenLight),
-                        shape = AppShapes.CardShape,
+                    Surface(
+                        shape = RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp),
+                        color = Color.White,
+                        border = BorderStroke(1.dp, Color(0xFFCCE8D7)),
+                        shadowElevation = 8.dp,
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Column(Modifier.padding(AppSpacing.lg)) {
+                        Column(Modifier.padding(horizontal = AppSpacing.lg, vertical = AppSpacing.md)) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.clickable { isCartExpanded = !isCartExpanded }
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .clickable { isCartExpanded = !isCartExpanded }
+                                    .padding(vertical = 2.dp)
                             ) {
-                                Column(Modifier.weight(1f)) {
-                                    Text("$totalItemCount item", fontWeight = FontWeight.Bold)
-                                    Text(formatRupiah(totalPrice), style = MaterialTheme.typography.titleMedium, color = AppColors.GreenPrimary, fontWeight = FontWeight.Bold)
+                                Box(
+                                    modifier = Modifier
+                                        .size(36.dp)
+                                        .clip(CircleShape)
+                                        .background(AppColors.GreenLight),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        Icons.Default.ShoppingCart,
+                                        contentDescription = null,
+                                        tint = AppColors.GreenPrimary,
+                                        modifier = Modifier.size(18.dp)
+                                    )
                                 }
-                                Icon(
-                                    imageVector = if (isCartExpanded) Icons.Default.KeyboardArrowDown else Icons.Default.KeyboardArrowUp,
-                                    contentDescription = "Detail Keranjang"
-                                )
+
+                                Spacer(Modifier.width(10.dp))
+
+                                Column(Modifier.weight(1f)) {
+                                    Text(
+                                        text = "$totalItemCount item dipilih",
+                                        fontWeight = FontWeight.SemiBold,
+                                        fontSize = 12.5.sp,
+                                        color = AppColors.TextSecondary
+                                    )
+                                    Text(
+                                        text = formatRupiah(totalPrice),
+                                        fontSize = 16.5.sp,
+                                        color = AppColors.GreenPrimary,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = Color(0xFFF1F5F2)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = if (isCartExpanded) "Tutup" else "Detail",
+                                            fontSize = 11.5.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = AppColors.TextSecondary
+                                        )
+                                        Spacer(Modifier.width(2.dp))
+                                        Icon(
+                                            imageVector = if (isCartExpanded) Icons.Default.KeyboardArrowDown else Icons.Default.KeyboardArrowUp,
+                                            contentDescription = "Detail Keranjang",
+                                            tint = AppColors.TextSecondary,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    }
+                                }
                             }
 
                             AnimatedVisibility(visible = isCartExpanded) {
                                 Column(
-                                    verticalArrangement = Arrangement.spacedBy(AppSpacing.sm),
-                                    modifier = Modifier.padding(top = AppSpacing.md)
+                                    verticalArrangement = Arrangement.spacedBy(AppSpacing.xs),
+                                    modifier = Modifier
+                                        .padding(top = AppSpacing.sm, bottom = AppSpacing.xs)
+                                        .fillMaxWidth()
                                 ) {
                                     cart.entries.forEach { (prodId, qty) ->
                                         val prod = dbProducts.find { it.id == prodId }
                                         if (prod != null) {
-                                            Row(
-                                                verticalAlignment = Alignment.CenterVertically,
+                                            Surface(
+                                                shape = RoundedCornerShape(10.dp),
+                                                color = Color(0xFFF8FAF9),
                                                 modifier = Modifier.fillMaxWidth()
                                             ) {
-                                                Column(modifier = Modifier.weight(1f)) {
-                                                    Text(prod.name, fontWeight = FontWeight.Bold)
-                                                    Text("${formatRupiah(prod.sellingPrice)} × ${qty.toInt()} = ${formatRupiah(prod.sellingPrice * qty.toLong())}", color = AppColors.TextSecondary, style = MaterialTheme.typography.labelSmall)
-                                                }
-                                                IconButton(
-                                                    onClick = {
-                                                        val newQty = qty - 1.0
-                                                        if (newQty <= 0) {
-                                                            cart.remove(prodId)
-                                                        } else {
-                                                            cart[prodId] = newQty
-                                                        }
-                                                    },
-                                                    modifier = Modifier.size(32.dp)
+                                                Row(
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .padding(horizontal = 10.dp, vertical = 6.dp)
                                                 ) {
-                                                    Icon(Icons.Default.Remove, "Kurangi", tint = AppColors.RedExpense)
-                                                }
-                                                Text("${qty.toInt()}", fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = AppSpacing.xs))
-                                                IconButton(
-                                                    onClick = {
-                                                        if (qty + 1.0 <= prod.stock) {
-                                                            cart[prodId] = qty + 1.0
-                                                        } else {
-                                                            Toast.makeText(context, "Stok ${prod.name} hanya tersisa ${prod.stock.toInt()}", Toast.LENGTH_SHORT).show()
+                                                    Column(modifier = Modifier.weight(1f)) {
+                                                        Text(
+                                                            prod.name,
+                                                            fontWeight = FontWeight.Bold,
+                                                            fontSize = 13.sp,
+                                                            color = AppColors.TextPrimary,
+                                                            maxLines = 1,
+                                                            overflow = TextOverflow.Ellipsis
+                                                        )
+                                                        Text(
+                                                            "${formatRupiah(prod.sellingPrice)} × ${qty.toInt()} = ${formatRupiah(prod.sellingPrice * qty.toLong())}",
+                                                            color = AppColors.TextSecondary,
+                                                            fontSize = 11.sp
+                                                        )
+                                                    }
+                                                    Surface(
+                                                        shape = CircleShape,
+                                                        color = Color(0xFFFFEBEE),
+                                                        modifier = Modifier
+                                                            .size(28.dp)
+                                                            .clickable {
+                                                                val newQty = qty - 1.0
+                                                                if (newQty <= 0) {
+                                                                    cart.remove(prodId)
+                                                                } else {
+                                                                    cart[prodId] = newQty
+                                                                }
+                                                            }
+                                                    ) {
+                                                        Box(contentAlignment = Alignment.Center) {
+                                                            Icon(
+                                                                Icons.Default.Remove,
+                                                                "Kurangi",
+                                                                tint = AppColors.RedExpense,
+                                                                modifier = Modifier.size(16.dp)
+                                                            )
                                                         }
-                                                    },
-                                                    modifier = Modifier.size(32.dp)
-                                                ) {
-                                                    Icon(Icons.Default.Add, "Tambah", tint = AppColors.GreenPrimary)
+                                                    }
+                                                    Text(
+                                                        "${qty.toInt()}",
+                                                        fontWeight = FontWeight.Bold,
+                                                        fontSize = 13.sp,
+                                                        modifier = Modifier.padding(horizontal = 8.dp)
+                                                    )
+                                                    Surface(
+                                                        shape = CircleShape,
+                                                        color = AppColors.GreenLight,
+                                                        modifier = Modifier
+                                                            .size(28.dp)
+                                                            .clickable {
+                                                                if (qty + 1.0 <= prod.stock) {
+                                                                    cart[prodId] = qty + 1.0
+                                                                } else {
+                                                                    Toast.makeText(context, "Stok ${prod.name} hanya tersisa ${prod.stock.toInt()}", Toast.LENGTH_SHORT).show()
+                                                                }
+                                                            }
+                                                    ) {
+                                                        Box(contentAlignment = Alignment.Center) {
+                                                            Icon(
+                                                                Icons.Default.Add,
+                                                                "Tambah",
+                                                                tint = AppColors.GreenPrimary,
+                                                                modifier = Modifier.size(16.dp)
+                                                            )
+                                                        }
+                                                    }
                                                 }
                                             }
                                         }
@@ -997,27 +1248,33 @@ fun PosScreen(
                                 }
                             }
 
-                            Spacer(Modifier.height(AppSpacing.md))
+                            Spacer(Modifier.height(AppSpacing.sm))
 
                             Button(
                                 onClick = { showPaymentSelectorDialog = true },
-                                shape = AppShapes.ButtonShape,
+                                shape = RoundedCornerShape(14.dp),
                                 colors = ButtonDefaults.buttonColors(containerColor = AppColors.GreenPrimary),
-                                modifier = Modifier.fillMaxWidth()
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(48.dp)
                             ) {
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.Center
                                 ) {
-                                    Text("BAYAR", fontWeight = FontWeight.Bold)
+                                    Text(
+                                        "BAYAR / PROSES (${totalItemCount})",
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 14.sp
+                                    )
                                     Spacer(Modifier.width(AppSpacing.sm))
-                                    Icon(Icons.AutoMirrored.Filled.ArrowForward, null)
+                                    Icon(Icons.AutoMirrored.Filled.ArrowForward, null, modifier = Modifier.size(18.dp))
                                 }
                             }
                         }
                     }
                 } else {
-                    Spacer(Modifier.height(AppSpacing.sm))
+                    Spacer(Modifier.height(AppSpacing.xs))
                 }
             } else {
                 // TAB 1: RIWAYAT PENJUALAN (SALES HISTORY)
@@ -1025,7 +1282,7 @@ fun PosScreen(
                     AppTextField(
                         value = salesHistoryQuery,
                         onValueChange = { salesHistoryQuery = it },
-                        label = "Cari nomor struk / transaksi...",
+                        label = "Cari nomor struk atau nama pelanggan...",
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
@@ -1036,6 +1293,7 @@ fun PosScreen(
                     AppEmptyState(
                         icon = Icons.Default.Receipt,
                         title = "Belum ada riwayat penjualan",
+                        description = "Transaksi kasir yang selesai akan tercatat otomatis di sini",
                         actionText = "+ Kasir Baru",
                         onActionClick = { selectedTab = 0 },
                         modifier = Modifier.weight(1f)
@@ -1058,7 +1316,7 @@ fun PosScreen(
                     ) {
                         items(filteredSales, key = { it.id }) { sale ->
                             val custName = customers.find { it.id == sale.customerId }?.name ?: "Pelanggan Umum"
-                            val dateStr = SimpleDateFormat("dd MMM yyyy, HH:mm", Locale("id", "ID")).format(Date(sale.transactionDate))
+                            val dateStr = SimpleDateFormat("dd MMM yyyy, HH:mm", Locale.forLanguageTag("id-ID")).format(Date(sale.transactionDate))
                             val isCredit = sale.paymentMethod == "CREDIT"
                             val paymentLabel = when (sale.paymentMethod) {
                                 "CREDIT" -> "HUTANG"
@@ -1066,7 +1324,13 @@ fun PosScreen(
                                 else -> "TUNAI"
                             }
 
-                            AppCard(onClick = { selectedSaleForDetail = sale }) {
+                            Surface(
+                                onClick = { selectedSaleForDetail = sale },
+                                shape = RoundedCornerShape(14.dp),
+                                color = Color.White,
+                                border = BorderStroke(1.dp, Color(0xFFE8ECE9)),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
@@ -1075,39 +1339,46 @@ fun PosScreen(
                                 ) {
                                     Box(
                                         modifier = Modifier
-                                            .size(46.dp)
+                                            .size(44.dp)
+                                            .clip(CircleShape)
                                             .background(
-                                                if (isCredit) Color(0xFFFFE8E8) else AppColors.GreenLight,
-                                                CircleShape
+                                                if (isCredit) Color(0xFFFFEBEE) else AppColors.GreenLight
                                             ),
                                         contentAlignment = Alignment.Center
                                     ) {
                                         Icon(
                                             Icons.Default.Receipt,
                                             null,
-                                            tint = if (isCredit) AppColors.RedExpense else AppColors.GreenPrimary
+                                            tint = if (isCredit) AppColors.RedExpense else AppColors.GreenPrimary,
+                                            modifier = Modifier.size(22.dp)
                                         )
                                     }
                                     Spacer(Modifier.width(AppSpacing.md))
                                     Column(modifier = Modifier.weight(1f)) {
                                         Row(
                                             verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(AppSpacing.xs)
+                                            horizontalArrangement = Arrangement.spacedBy(6.dp)
                                         ) {
                                             Text(
                                                 sale.transactionNumber,
                                                 fontWeight = FontWeight.Bold,
-                                                style = MaterialTheme.typography.bodyMedium
+                                                fontSize = 13.5.sp,
+                                                color = AppColors.TextPrimary,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis,
+                                                modifier = Modifier.weight(1f, fill = false)
                                             )
                                             Surface(
-                                                shape = AppShapes.ChipShape,
-                                                color = if (isCredit) Color(0xFFFFE8E8) else AppColors.GreenLight
+                                                shape = RoundedCornerShape(6.dp),
+                                                color = if (isCredit) Color(0xFFFFEBEE) else AppColors.GreenLight
                                             ) {
                                                 Text(
                                                     text = paymentLabel,
-                                                    color = if (isCredit) AppColors.RedExpense else AppColors.GreenPrimary,
-                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = if (isCredit) AppColors.RedExpense else AppColors.GreenDark,
+                                                    fontSize = 10.sp,
                                                     fontWeight = FontWeight.Bold,
+                                                    maxLines = 1,
+                                                    softWrap = false,
                                                     modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                                                 )
                                             }
@@ -1117,18 +1388,22 @@ fun PosScreen(
                                             custName,
                                             color = AppColors.TextPrimary,
                                             fontWeight = FontWeight.Medium,
-                                            style = MaterialTheme.typography.bodySmall
+                                            fontSize = 12.sp,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
                                         )
                                         Text(
                                             dateStr,
                                             color = AppColors.TextSecondary,
-                                            style = MaterialTheme.typography.labelSmall
+                                            fontSize = 11.sp,
+                                            maxLines = 1
                                         )
                                     }
+                                    Spacer(Modifier.width(AppSpacing.sm))
                                     Text(
                                         formatRupiah(sale.totalAmount),
                                         fontWeight = FontWeight.Bold,
-                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontSize = 14.sp,
                                         color = if (isCredit) AppColors.RedExpense else AppColors.GreenPrimary
                                     )
                                 }
