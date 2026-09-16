@@ -6,13 +6,16 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -33,6 +36,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import id.skmnetwork.bukuwarung.ui.components.AppCard
 import id.skmnetwork.bukuwarung.ui.components.AppTextField
 import id.skmnetwork.bukuwarung.ui.components.PrimaryButton
@@ -53,20 +57,22 @@ fun FirstSetupScreen(
         modifier = Modifier
             .fillMaxSize()
             .statusBarsPadding()
-            .navigationBarsPadding(),
-        color = AppColors.BackgroundLight
+            .navigationBarsPadding()
+            .imePadding(),
+        color = Color(0xFFF9FBF9)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(AppSpacing.lg)
+                .padding(horizontal = 20.dp, vertical = 16.dp)
                 .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
+            // [Logo Kecil]
             Box(
                 modifier = Modifier
-                    .size(64.dp)
+                    .size(52.dp)
                     .clip(CircleShape)
                     .background(AppColors.GreenLight),
                 contentAlignment = Alignment.Center
@@ -75,32 +81,47 @@ fun FirstSetupScreen(
                     imageVector = Icons.Default.Storefront,
                     contentDescription = null,
                     tint = AppColors.GreenPrimary,
-                    modifier = Modifier.size(36.dp)
+                    modifier = Modifier.size(28.dp)
                 )
             }
 
-            Spacer(Modifier.height(AppSpacing.md))
+            Spacer(Modifier.height(12.dp))
 
+            // Greeting & Subtitle
             Text(
-                "Selamat Datang 👋",
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold
+                text = "Selamat Datang 👋",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = AppColors.TextPrimary
             )
+            Spacer(Modifier.height(4.dp))
             Text(
-                "Siapkan profil warung Anda untuk memulai.",
+                text = "Siapkan profil warung Anda untuk memulai.",
                 color = AppColors.TextSecondary,
-                style = MaterialTheme.typography.bodyMedium
+                fontSize = 13.sp
             )
 
-            Spacer(Modifier.height(AppSpacing.lg))
+            Spacer(Modifier.height(20.dp))
 
-            AppCard(backgroundColor = Color.White) {
+            // Form Card
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = Color.White,
+                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE5EBE5)),
+                shadowElevation = 1.dp,
+                modifier = Modifier.fillMaxWidth()
+            ) {
                 Column(
-                    modifier = Modifier.padding(AppSpacing.lg),
-                    verticalArrangement = Arrangement.spacedBy(AppSpacing.md)
+                    modifier = Modifier.padding(18.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     if (errorText != null) {
-                        Text(errorText!!, color = AppColors.RedExpense, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium)
+                        Text(
+                            text = errorText!!,
+                            color = AppColors.RedExpense,
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Medium
+                        )
                     }
 
                     AppTextField(
@@ -132,7 +153,7 @@ fun FirstSetupScreen(
                         label = "Alamat Warung (opsional)"
                     )
 
-                    Spacer(Modifier.height(AppSpacing.xs))
+                    Spacer(Modifier.height(4.dp))
 
                     PrimaryButton(
                         text = "Simpan Profil & Mulai",

@@ -15,6 +15,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -28,6 +29,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import id.skmnetwork.bukuwarung.data.local.database.AppDatabase
@@ -40,6 +42,7 @@ import id.skmnetwork.bukuwarung.data.repository.SupplierRepository
 import id.skmnetwork.bukuwarung.license.LicenseManager
 import id.skmnetwork.bukuwarung.license.LicenseStatus
 import id.skmnetwork.bukuwarung.ui.cash.CashScreen
+import id.skmnetwork.bukuwarung.ui.catalog.CatalogScreen
 import id.skmnetwork.bukuwarung.ui.customer.CustomerViewModel
 import id.skmnetwork.bukuwarung.ui.customer.CustomerViewModelFactory
 import id.skmnetwork.bukuwarung.ui.customer.CustomersScreen
@@ -73,7 +76,7 @@ fun BukuWarungApp() {
     val scope = rememberCoroutineScope()
 
     val userPreferencesRepository = remember { UserPreferencesRepository(context) }
-    val licenseManager = remember { LicenseManager(userPreferencesRepository) }
+    val licenseManager = remember { LicenseManager(userPreferencesRepository = userPreferencesRepository, context = context) }
 
     val userSettings by userPreferencesRepository.userSettings.collectAsStateWithLifecycle(initialValue = UserSettings())
     val licenseStatus by licenseManager.licenseStatus.collectAsStateWithLifecycle()
@@ -92,6 +95,9 @@ fun BukuWarungApp() {
     val customerRepository = remember { CustomerRepository(database) }
     val supplierRepository = remember { SupplierRepository(database) }
     val reportRepository = remember { ReportRepository(database) }
+    val notificationRepository = remember {
+        id.skmnetwork.bukuwarung.notification.NotificationRepository(database, userPreferencesRepository)
+    }
 
     LaunchedEffect(Unit) {
         userPreferencesRepository.autoMigrateExistingUserIfNeeded(database)
@@ -173,12 +179,26 @@ fun BukuWarungApp() {
     val reportViewModel: ReportViewModel = viewModel(
         factory = ReportViewModelFactory(reportRepository)
     )
+    val authCredentialProvider = remember {
+        id.skmnetwork.bukuwarung.backup.transport.AndroidGoogleAuthCredentialProvider(context, userPreferencesRepository)
+    }
+    val googleSheetsTransport = remember {
+        id.skmnetwork.bukuwarung.backup.transport.GoogleSheetsApiTransport(authCredentialProvider)
+    }
     val backupRestoreManager = remember {
-        BackupRestoreManager(database, userPreferencesRepository)
+        BackupRestoreManager(
+            database = database,
+            userPreferencesRepository = userPreferencesRepository,
+            transport = googleSheetsTransport
+        )
     }
     val backupViewModel: BackupViewModel = viewModel(
-        factory = BackupViewModelFactory(backupRestoreManager, userPreferencesRepository)
+        factory = BackupViewModelFactory(backupRestoreManager, userPreferencesRepository, authCredentialProvider)
     )
+    val notificationViewModel: id.skmnetwork.bukuwarung.notification.NotificationViewModel = viewModel(
+        factory = id.skmnetwork.bukuwarung.notification.NotificationViewModelFactory(notificationRepository)
+    )
+    val unreadNotificationCount by notificationViewModel.unreadCount.collectAsStateWithLifecycle(initialValue = 0)
 
     // ==========================================
     // 1. LICENSE & INITIAL MIGRATION CHECK
@@ -264,7 +284,13 @@ fun BukuWarungApp() {
                 AppScreen.HOME -> HomeScreen(
                     viewModel = productViewModel,
                     userSettings = userSettings,
-                    onNavigate = { screen = it }
+                    unreadNotificationCount = unreadNotificationCount,
+                    onNavigate = {
+                        if (it == AppScreen.NOTIFICATIONS) {
+                            previousScreen = AppScreen.HOME
+                        }
+                        screen = it
+                    }
                 )
                 AppScreen.POS -> PosScreen(
                     viewModel = productViewModel,
@@ -273,6 +299,9 @@ fun BukuWarungApp() {
                     printerService = printerService,
                     onNavigateToAddProduct = {
                         navigateToAddProduct(fromScreen = AppScreen.POS)
+                    },
+                    onNavigateToSettings = {
+                        screen = AppScreen.SETTINGS
                     }
                 )
                 AppScreen.PRODUCTS -> ProductsScreen(
@@ -282,6 +311,17 @@ fun BukuWarungApp() {
                     },
                     onEditProduct = { productId ->
                         navigateToAddProduct(fromScreen = AppScreen.PRODUCTS, productId = productId)
+                    },
+                    onNavigateToCatalog = {
+                        previousScreen = AppScreen.PRODUCTS
+                        screen = AppScreen.CATALOG
+                    }
+                )
+                AppScreen.CATALOG -> CatalogScreen(
+                    viewModel = productViewModel,
+                    userSettings = userSettings,
+                    onBack = {
+                        screen = previousScreen
                     }
                 )
                 AppScreen.ADD_PRODUCT -> AddProductScreen(
@@ -301,7 +341,10 @@ fun BukuWarungApp() {
                     }
                 )
                 AppScreen.CASH -> CashScreen(viewModel = productViewModel)
-                AppScreen.REPORTS -> ReportsScreen(reportViewModel = reportViewModel)
+                AppScreen.REPORTS -> ReportsScreen(
+                    reportViewModel = reportViewModel,
+                    userPreferencesRepository = userPreferencesRepository
+                )
                 AppScreen.CUSTOMERS -> CustomersScreen(customerViewModel = customerViewModel)
                 AppScreen.SUPPLIERS -> SuppliersScreen(supplierViewModel = supplierViewModel)
                 AppScreen.SETTINGS -> SettingsScreen(
@@ -309,6 +352,16 @@ fun BukuWarungApp() {
                     licenseManager = licenseManager,
                     printerService = printerService,
                     backupViewModel = backupViewModel
+                )
+                AppScreen.NOTIFICATIONS -> id.skmnetwork.bukuwarung.ui.notification.NotificationCenterScreen(
+                    viewModel = notificationViewModel,
+                    onBack = {
+                        screen = previousScreen
+                    },
+                    onNavigate = { target ->
+                        previousScreen = AppScreen.NOTIFICATIONS
+                        screen = target
+                    }
                 )
             }
         }
@@ -334,7 +387,7 @@ private fun BottomNav(
         )
 
         items.forEach { (screen, icon, navLabel) ->
-            val isSelected = if (current == AppScreen.ADD_PRODUCT) {
+            val isSelected = if (current == AppScreen.ADD_PRODUCT || current == AppScreen.CATALOG || current == AppScreen.NOTIFICATIONS) {
                 screen == previousScreen
             } else {
                 current == screen
@@ -348,10 +401,18 @@ private fun BottomNav(
                     Text(
                         text = navLabel,
                         style = MaterialTheme.typography.labelSmall,
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                         maxLines = 1,
                         softWrap = false
                     )
-                }
+                },
+                colors = NavigationBarItemDefaults.colors(
+                    selectedIconColor = AppColors.GreenDark,
+                    selectedTextColor = AppColors.GreenDark,
+                    unselectedIconColor = AppColors.TextSecondary,
+                    unselectedTextColor = AppColors.TextSecondary,
+                    indicatorColor = AppColors.GreenLight
+                )
             )
         }
     }

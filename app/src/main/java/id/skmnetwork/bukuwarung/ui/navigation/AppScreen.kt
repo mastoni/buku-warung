@@ -11,6 +11,8 @@ enum class AppScreen(val label: String) {
     SUPPLIERS("Supplier & Hutang"),
     SETTINGS("Pengaturan"),
     ADD_PRODUCT("Tambah Produk"),
+    CATALOG("Katalog WhatsApp"),
+    NOTIFICATIONS("Notifikasi"),
 }
 
 data class CheckoutSuccessData(

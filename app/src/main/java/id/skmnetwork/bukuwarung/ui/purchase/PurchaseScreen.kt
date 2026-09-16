@@ -1,11 +1,13 @@
 package id.skmnetwork.bukuwarung.ui.purchase
 
 import android.widget.Toast
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -18,8 +20,12 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowForward
+import androidx.compose.material.icons.filled.CalendarToday
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Inventory2
@@ -27,10 +33,12 @@ import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.LocalShipping
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Receipt
+import androidx.compose.material.icons.filled.ReceiptLong
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.ShoppingCart
-import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -42,7 +50,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -52,22 +59,23 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import id.skmnetwork.bukuwarung.data.local.entity.ProductEntity
 import id.skmnetwork.bukuwarung.data.local.entity.PurchaseItemEntity
 import id.skmnetwork.bukuwarung.data.local.entity.PurchaseTransactionEntity
 import id.skmnetwork.bukuwarung.data.local.entity.SupplierEntity
-import id.skmnetwork.bukuwarung.ui.components.AppCard
-import id.skmnetwork.bukuwarung.ui.components.AppEmptyState
-import id.skmnetwork.bukuwarung.ui.components.PrimaryButton
+import id.skmnetwork.bukuwarung.ui.components.ProductImageThumbnail
 import id.skmnetwork.bukuwarung.ui.product.ProductViewModel
 import id.skmnetwork.bukuwarung.ui.supplier.SupplierViewModel
 import id.skmnetwork.bukuwarung.ui.theme.AppColors
-import id.skmnetwork.bukuwarung.ui.theme.AppShapes
-import id.skmnetwork.bukuwarung.ui.theme.AppSpacing
 import id.skmnetwork.bukuwarung.util.formatRupiah
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -107,23 +115,51 @@ fun PurchaseScreen(
         (prod?.purchasePrice ?: 0L) * qty.toLong()
     }
 
-    // Supplier Picker Dialog
+    // ==========================================
+    // SUPPLIER PICKER DIALOG
+    // ==========================================
     if (showSupplierPickerSheet) {
         AlertDialog(
             onDismissRequest = { showSupplierPickerSheet = false },
-            title = { Text("Pilih Supplier", fontWeight = FontWeight.Bold) },
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(34.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(Color(0xFFE8F5E9)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.People,
+                            contentDescription = null,
+                            tint = AppColors.GreenPrimary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                    Spacer(Modifier.width(10.dp))
+                    Text("Pilih Supplier", fontWeight = FontWeight.Bold, fontSize = 16.5.sp)
+                }
+            },
             text = {
                 Column(
-                    verticalArrangement = Arrangement.spacedBy(AppSpacing.sm),
-                    modifier = Modifier.height(260.dp)
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.height(280.dp)
                 ) {
                     if (suppliers.isEmpty()) {
-                        Text(
-                            "Belum ada supplier. Tambahkan supplier di menu Supplier & Hutang.",
-                            color = AppColors.TextSecondary
-                        )
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "Belum ada supplier tersimpan.\nTambahkan supplier di menu Pengaturan / Supplier.",
+                                color = AppColors.TextSecondary,
+                                textAlign = TextAlign.Center,
+                                fontSize = 13.sp
+                            )
+                        }
                     } else {
-                        LazyColumn(verticalArrangement = Arrangement.spacedBy(AppSpacing.xs)) {
+                        LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                             items(suppliers) { sup ->
                                 val isSelected = if (isPickerForCash) {
                                     selectedSupplierForCash?.id == sup.id
@@ -132,8 +168,9 @@ fun PurchaseScreen(
                                 }
 
                                 Surface(
-                                    shape = AppShapes.CardShape,
-                                    color = if (isSelected) AppColors.GreenLight else AppColors.SurfaceGray,
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = if (isSelected) Color(0xFFE8F5E9) else Color(0xFFF8FAF8),
+                                    border = BorderStroke(1.dp, if (isSelected) AppColors.GreenPrimary else Color(0xFFE2E8F0)),
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .clickable {
@@ -145,11 +182,37 @@ fun PurchaseScreen(
                                             showSupplierPickerSheet = false
                                         }
                                 ) {
-                                    Text(
-                                        text = sup.name + if (!sup.phone.isNullOrEmpty()) " (${sup.phone})" else "",
-                                        fontWeight = FontWeight.Bold,
-                                        modifier = Modifier.padding(AppSpacing.md)
-                                    )
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(12.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Column {
+                                            Text(
+                                                text = sup.name,
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 14.sp,
+                                                color = AppColors.TextPrimary
+                                            )
+                                            if (!sup.phone.isNullOrEmpty()) {
+                                                Text(
+                                                    text = sup.phone,
+                                                    fontSize = 12.sp,
+                                                    color = AppColors.TextSecondary
+                                                )
+                                            }
+                                        }
+                                        if (isSelected) {
+                                            Icon(
+                                                imageVector = Icons.Default.CheckCircle,
+                                                contentDescription = "Terpilih",
+                                                tint = AppColors.GreenPrimary,
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -158,27 +221,63 @@ fun PurchaseScreen(
             },
             confirmButton = {
                 TextButton(onClick = { showSupplierPickerSheet = false }) {
-                    Text("Tutup", fontWeight = FontWeight.Bold)
+                    Text("Tutup", fontWeight = FontWeight.Bold, color = AppColors.GreenPrimary)
                 }
             }
         )
     }
 
-    // Purchase Success Dialog
+    // ==========================================
+    // PURCHASE SUCCESS DIALOG
+    // ==========================================
     if (showSuccessDialog) {
         AlertDialog(
             onDismissRequest = { showSuccessDialog = false },
-            title = { Text("Pembelian Berhasil!", fontWeight = FontWeight.Bold) },
-            text = { Text("Stok produk telah bertambah dan status transaksi pembelian berhasil dicatat.") },
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(34.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFFE8F5E9)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.CheckCircle,
+                            contentDescription = null,
+                            tint = AppColors.GreenPrimary,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
+                    Spacer(Modifier.width(10.dp))
+                    Text("Pembelian Berhasil!", fontWeight = FontWeight.Bold, fontSize = 16.5.sp)
+                }
+            },
+            text = {
+                Text(
+                    "Stok produk telah otomatis bertambah dan status transaksi pembelian berhasil dicatat.",
+                    fontSize = 13.5.sp,
+                    color = AppColors.TextPrimary
+                )
+            },
             confirmButton = {
-                TextButton(onClick = { showSuccessDialog = false }) {
-                    Text("OK", fontWeight = FontWeight.Bold, color = AppColors.GreenPrimary)
+                Button(
+                    onClick = { showSuccessDialog = false },
+                    shape = RoundedCornerShape(10.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = AppColors.GreenPrimary,
+                        contentColor = Color.White
+                    )
+                ) {
+                    Text("Selesai", fontWeight = FontWeight.Bold)
                 }
             }
         )
     }
 
-    // Purchase Detail Dialog (Read-only / Immutable)
+    // ==========================================
+    // PURCHASE DETAIL DIALOG (Read-only / Immutable)
+    // ==========================================
     if (selectedPurchaseForDetail != null) {
         val purchase = selectedPurchaseForDetail!!
         val supplierName = suppliers.find { it.id == purchase.supplierId }?.name ?: "Tunai Umum"
@@ -197,21 +296,39 @@ fun PurchaseScreen(
         AlertDialog(
             onDismissRequest = { selectedPurchaseForDetail = null },
             title = {
-                Column {
-                    Text("Detail Pembelian", fontWeight = FontWeight.Bold)
-                    Text(
-                        purchase.transactionNumber,
-                        style = MaterialTheme.typography.labelMedium,
-                        color = AppColors.TextSecondary
-                    )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text("Detail Pembelian", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                        Text(
+                            purchase.transactionNumber,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = AppColors.TextSecondary
+                        )
+                    }
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = if (purchase.paymentMethod == "CREDIT") Color(0xFFFFEBEE) else Color(0xFFE8F5E9)
+                    ) {
+                        Text(
+                            text = if (purchase.paymentMethod == "CREDIT") "HUTANG" else "TUNAI",
+                            color = if (purchase.paymentMethod == "CREDIT") Color(0xFFD32F2F) else AppColors.GreenPrimary,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 11.sp,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                        )
+                    }
                 }
             },
             text = {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .heightIn(max = 400.dp),
-                    verticalArrangement = Arrangement.spacedBy(AppSpacing.sm)
+                        .heightIn(max = 380.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -227,22 +344,10 @@ fun PurchaseScreen(
                         Text("Supplier", color = AppColors.TextSecondary, style = MaterialTheme.typography.bodySmall)
                         Text(supplierName, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodySmall)
                     }
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text("Metode", color = AppColors.TextSecondary, style = MaterialTheme.typography.bodySmall)
-                        Text(
-                            if (purchase.paymentMethod == "CREDIT") "Hutang Supplier (Kredit)" else "Tunai (CASH)",
-                            fontWeight = FontWeight.Bold,
-                            color = if (purchase.paymentMethod == "CREDIT") AppColors.RedExpense else AppColors.GreenPrimary,
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                    }
 
-                    HorizontalDivider(Modifier.padding(vertical = AppSpacing.xs))
+                    HorizontalDivider(Modifier.padding(vertical = 4.dp), color = Color(0xFFE2E8F0))
 
-                    Text("Daftar Barang:", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelMedium)
+                    Text("Rincian Barang:", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelMedium)
 
                     if (isLoadingItems) {
                         Text("Memuat rincian barang...", color = AppColors.TextSecondary)
@@ -250,7 +355,7 @@ fun PurchaseScreen(
                         Text("Tidak ada data barang", color = AppColors.TextSecondary)
                     } else {
                         LazyColumn(
-                            verticalArrangement = Arrangement.spacedBy(AppSpacing.xs),
+                            verticalArrangement = Arrangement.spacedBy(6.dp),
                             modifier = Modifier.weight(1f, fill = false)
                         ) {
                             items(detailItems) { item ->
@@ -270,14 +375,15 @@ fun PurchaseScreen(
                                     Text(
                                         formatRupiah(item.subtotal),
                                         fontWeight = FontWeight.Bold,
-                                        style = MaterialTheme.typography.bodySmall
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = AppColors.TextPrimary
                                     )
                                 }
                             }
                         }
                     }
 
-                    HorizontalDivider(Modifier.padding(vertical = AppSpacing.xs))
+                    HorizontalDivider(Modifier.padding(vertical = 4.dp), color = Color(0xFFE2E8F0))
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -302,316 +408,279 @@ fun PurchaseScreen(
         )
     }
 
+    // ==========================================
+    // MAIN SCREEN SCAFFOLD
+    // ==========================================
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text("Pembelian / Kulakan", fontWeight = FontWeight.Bold) })
+            PurchaseHeader(
+                selectedTab = selectedTab,
+                onTabSelected = { selectedTab = it }
+            )
         },
-        containerColor = Color.White
+        containerColor = Color(0xFFFBFDFB)
     ) { padding ->
-        Column(
-            Modifier
+        Box(
+            modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            // Screen Tab Navigation (Belanja Baru vs Riwayat Belanja)
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = AppSpacing.lg, vertical = AppSpacing.xs),
-                horizontalArrangement = Arrangement.spacedBy(AppSpacing.sm)
-            ) {
-                Surface(
-                    shape = AppShapes.ChipShape,
-                    color = if (selectedTab == 0) AppColors.GreenPrimary else AppColors.SurfaceGray,
-                    modifier = Modifier
-                        .weight(1f)
-                        .clickable { selectedTab = 0 }
-                ) {
-                    Row(
-                        modifier = Modifier.padding(vertical = AppSpacing.sm),
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            Icons.Default.ShoppingCart,
-                            null,
-                            tint = if (selectedTab == 0) Color.White else AppColors.TextSecondary,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(Modifier.width(AppSpacing.xs))
-                        Text(
-                            "Belanja Baru",
-                            color = if (selectedTab == 0) Color.White else AppColors.TextSecondary,
-                            fontWeight = FontWeight.Bold,
-                            style = MaterialTheme.typography.labelMedium
-                        )
-                    }
-                }
-
-                Surface(
-                    shape = AppShapes.ChipShape,
-                    color = if (selectedTab == 1) AppColors.GreenPrimary else AppColors.SurfaceGray,
-                    modifier = Modifier
-                        .weight(1f)
-                        .clickable { selectedTab = 1 }
-                ) {
-                    Row(
-                        modifier = Modifier.padding(vertical = AppSpacing.sm),
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            Icons.Default.History,
-                            null,
-                            tint = if (selectedTab == 1) Color.White else AppColors.TextSecondary,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(Modifier.width(AppSpacing.xs))
-                        Text(
-                            "Riwayat Belanja",
-                            color = if (selectedTab == 1) Color.White else AppColors.TextSecondary,
-                            fontWeight = FontWeight.Bold,
-                            style = MaterialTheme.typography.labelMedium
-                        )
-                    }
-                }
-            }
-
-            Spacer(Modifier.height(AppSpacing.xs))
-
             if (selectedTab == 0) {
-                // TAB 0: BELANJA BARU
-                Column(Modifier.padding(horizontal = AppSpacing.lg)) {
+                // ==========================================
+                // TAB 0: BELANJA BARU (RESTOCK / PURCHASE)
+                // ==========================================
+                Column(
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    // Month / Period Header Card
                     Surface(
-                        shape = AppShapes.TextFieldShape,
-                        color = AppColors.SurfaceGray,
-                        modifier = Modifier.fillMaxWidth()
+                        shape = RoundedCornerShape(12.dp),
+                        color = Color.White,
+                        border = BorderStroke(1.dp, Color(0xFFEFF3F0)),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp)
                     ) {
                         Row(
-                            Modifier.padding(AppSpacing.md),
-                            verticalAlignment = Alignment.CenterVertically
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Icon(Icons.Default.Sync, null, tint = AppColors.TextSecondary)
-                            Spacer(Modifier.width(AppSpacing.sm))
-                            Text(currentMonthYear, fontWeight = FontWeight.Medium)
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Default.CalendarToday,
+                                    contentDescription = null,
+                                    tint = AppColors.GreenPrimary,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(Modifier.width(10.dp))
+                                Text(
+                                    text = currentMonthYear,
+                                    fontWeight = FontWeight.SemiBold,
+                                    fontSize = 13.5.sp,
+                                    color = AppColors.TextPrimary
+                                )
+                            }
+                            Surface(
+                                shape = RoundedCornerShape(20.dp),
+                                color = Color(0xFFF1F5F2)
+                            ) {
+                                Text(
+                                    text = "Periode Belanja",
+                                    fontSize = 11.sp,
+                                    color = AppColors.TextSecondary,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                )
+                            }
                         }
                     }
-                }
 
-                Spacer(Modifier.height(AppSpacing.sm))
+                    if (dbProducts.isEmpty()) {
+                        // Empty State when no products exist in catalog
+                        PurchaseEmptyProductsState(onAddProduct = onNavigateToAddProduct)
+                    } else {
+                        // Product Restock List
+                        LazyColumn(
+                            verticalArrangement = Arrangement.spacedBy(10.dp),
+                            contentPadding = PaddingValues(
+                                start = 16.dp,
+                                end = 16.dp,
+                                top = 4.dp,
+                                bottom = if (purchaseCart.isNotEmpty()) 240.dp else 88.dp
+                            ),
+                            modifier = Modifier.fillMaxSize()
+                        ) {
+                            items(dbProducts, key = { it.id }) { product ->
+                                val qty = purchaseCart[product.id] ?: 0.0
+                                val itemSubtotal = product.purchasePrice * qty.toLong()
 
-                if (dbProducts.isEmpty()) {
-                    AppEmptyState(
-                        icon = Icons.Default.Inventory2,
-                        title = "Belum ada produk untuk dibeli",
-                        actionText = "+ Tambah Barang",
-                        onActionClick = onNavigateToAddProduct,
-                        modifier = Modifier.weight(1f)
-                    )
-                } else {
-                    LazyColumn(
-                        verticalArrangement = Arrangement.spacedBy(AppSpacing.sm),
-                        modifier = Modifier
-                            .weight(1f)
-                            .padding(horizontal = AppSpacing.lg)
-                    ) {
-                        items(dbProducts, key = { it.id }) { product ->
-                            val qty = purchaseCart[product.id] ?: 0.0
-                            val itemSubtotal = product.purchasePrice * qty.toLong()
-
-                            AppCard {
-                                Row(
-                                    Modifier
-                                        .fillMaxWidth()
-                                        .padding(AppSpacing.md),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Box(
-                                        Modifier
-                                            .size(46.dp)
-                                            .background(AppColors.GreenLight, CircleShape),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Icon(Icons.Default.Inventory2, null, tint = AppColors.GreenPrimary)
-                                    }
-                                    Spacer(Modifier.width(AppSpacing.md))
-                                    Column(Modifier.weight(1f)) {
-                                        Text(product.name, fontWeight = FontWeight.SemiBold)
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            IconButton(
-                                                onClick = {
-                                                    if (qty > 0) purchaseCart[product.id] = qty - 1.0
-                                                    if (purchaseCart[product.id] == 0.0) purchaseCart.remove(product.id)
-                                                },
-                                                modifier = Modifier.size(24.dp)
-                                            ) {
-                                                Icon(Icons.Default.Remove, "Kurangi", tint = AppColors.TextSecondary)
-                                            }
-                                            Text(
-                                                "${qty.toInt()}",
-                                                fontWeight = FontWeight.Bold,
-                                                modifier = Modifier.padding(horizontal = AppSpacing.sm)
-                                            )
-                                            IconButton(
-                                                onClick = { purchaseCart[product.id] = qty + 1.0 },
-                                                modifier = Modifier.size(24.dp)
-                                            ) {
-                                                Icon(Icons.Default.Add, "Tambah", tint = AppColors.GreenPrimary)
+                                PurchaseItemCard(
+                                    product = product,
+                                    quantity = qty,
+                                    subtotal = itemSubtotal,
+                                    onIncrease = {
+                                        purchaseCart[product.id] = qty + 1.0
+                                    },
+                                    onDecrease = {
+                                        if (qty > 0) {
+                                            purchaseCart[product.id] = qty - 1.0
+                                            if (purchaseCart[product.id] == 0.0) {
+                                                purchaseCart.remove(product.id)
                                             }
                                         }
-                                        Text(
-                                            formatRupiah(product.purchasePrice),
-                                            color = AppColors.TextSecondary,
-                                            style = MaterialTheme.typography.labelSmall
-                                        )
+                                    },
+                                    onClear = {
+                                        purchaseCart.remove(product.id)
                                     }
-                                    Text(
-                                        formatRupiah(itemSubtotal),
-                                        fontWeight = FontWeight.Bold,
-                                        color = AppColors.GreenPrimary
-                                    )
-                                }
+                                )
                             }
                         }
                     }
                 }
 
+                // ==========================================
+                // BOTTOM SUMMARY & CHECKOUT SHEET (ANCHORED)
+                // ==========================================
                 if (purchaseCart.isNotEmpty()) {
-                    Card(
-                        colors = CardDefaults.cardColors(containerColor = AppColors.GreenLight),
-                        shape = AppShapes.CardShape,
-                        modifier = Modifier.fillMaxWidth()
+                    Surface(
+                        shape = RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp),
+                        color = Color.White,
+                        shadowElevation = 8.dp,
+                        border = BorderStroke(1.dp, Color(0xFFE8EFEA)),
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .fillMaxWidth()
                     ) {
-                        Column(Modifier.padding(AppSpacing.lg)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text("Total Belanja", fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            // Total Belanja Row
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column {
+                                    Text(
+                                        text = "Total Belanja",
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 13.sp,
+                                        color = AppColors.TextSecondary
+                                    )
+                                    Text(
+                                        text = "${purchaseCart.size} jenis barang",
+                                        fontSize = 11.5.sp,
+                                        color = AppColors.TextSecondary
+                                    )
+                                }
                                 Text(
-                                    formatRupiah(totalPurchaseAmount),
+                                    text = formatRupiah(totalPurchaseAmount),
                                     fontWeight = FontWeight.Bold,
                                     color = AppColors.GreenPrimary,
-                                    style = MaterialTheme.typography.titleMedium
+                                    fontSize = 18.sp
                                 )
                             }
 
-                            Spacer(Modifier.height(AppSpacing.md))
-
-                            // Payment Method Toggle
-                            Row(horizontalArrangement = Arrangement.spacedBy(AppSpacing.sm)) {
+                            // Payment Method Segmented Selector
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                // Cash Button
                                 Surface(
-                                    shape = AppShapes.ChipShape,
-                                    color = if (paymentMethod == "CASH") AppColors.GreenPrimary else AppColors.SurfaceGray,
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = if (paymentMethod == "CASH") AppColors.GreenPrimary else Color(0xFFF1F4F2),
                                     modifier = Modifier
                                         .weight(1f)
+                                        .height(40.dp)
                                         .clickable { paymentMethod = "CASH" }
                                 ) {
-                                    Box(
-                                        Modifier.padding(vertical = AppSpacing.sm),
-                                        contentAlignment = Alignment.Center
-                                    ) {
+                                    Box(contentAlignment = Alignment.Center) {
                                         Text(
-                                            "Tunai",
+                                            text = "Tunai (CASH)",
                                             color = if (paymentMethod == "CASH") Color.White else AppColors.TextSecondary,
-                                            fontWeight = FontWeight.Bold
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 13.sp
                                         )
                                     }
                                 }
+
+                                // Credit Button
                                 Surface(
-                                    shape = AppShapes.ChipShape,
-                                    color = if (paymentMethod == "CREDIT") AppColors.GreenPrimary else AppColors.SurfaceGray,
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = if (paymentMethod == "CREDIT") Color(0xFFD32F2F) else Color(0xFFF1F4F2),
                                     modifier = Modifier
                                         .weight(1f)
+                                        .height(40.dp)
                                         .clickable { paymentMethod = "CREDIT" }
                                 ) {
-                                    Box(
-                                        Modifier.padding(vertical = AppSpacing.sm),
-                                        contentAlignment = Alignment.Center
-                                    ) {
+                                    Box(contentAlignment = Alignment.Center) {
                                         Text(
-                                            "Hutang Supplier",
+                                            text = "Hutang Supplier",
                                             color = if (paymentMethod == "CREDIT") Color.White else AppColors.TextSecondary,
-                                            fontWeight = FontWeight.Bold
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 13.sp
                                         )
                                     }
                                 }
                             }
 
-                            Spacer(Modifier.height(AppSpacing.sm))
-
-                            // Supplier Selector (Optional for CASH, Required for CREDIT)
-                            if (paymentMethod == "CASH") {
-                                Surface(
-                                    shape = AppShapes.CardShape,
-                                    color = Color.White,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable {
-                                            isPickerForCash = true
-                                            showSupplierPickerSheet = true
-                                        }
+                            // Supplier Selector Pill
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = Color(0xFFF8FAF8),
+                                border = BorderStroke(
+                                    1.dp,
+                                    if (paymentMethod == "CREDIT" && selectedSupplierForCredit == null) Color(0xFFFFCDD2) else Color(0xFFE2E8F0)
+                                ),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        isPickerForCash = (paymentMethod == "CASH")
+                                        showSupplierPickerSheet = true
+                                    }
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Row(
-                                        Modifier.padding(AppSpacing.md),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Icon(Icons.Default.LocalShipping, null, tint = AppColors.GreenPrimary)
-                                        Spacer(Modifier.width(AppSpacing.sm))
-                                        Text(
-                                            text = selectedSupplierForCash?.name ?: "Pilih Supplier (Opsional)",
-                                            fontWeight = FontWeight.Bold,
-                                            color = if (selectedSupplierForCash != null) AppColors.TextPrimary else AppColors.TextSecondary,
-                                            modifier = Modifier.weight(1f)
-                                        )
-                                        if (selectedSupplierForCash != null) {
-                                            IconButton(
-                                                onClick = { selectedSupplierForCash = null },
-                                                modifier = Modifier.size(24.dp)
-                                            ) {
-                                                Icon(Icons.Default.Close, "Hapus Supplier", tint = AppColors.TextSecondary)
-                                            }
+                                    Icon(
+                                        imageVector = if (paymentMethod == "CREDIT") Icons.Default.People else Icons.Default.LocalShipping,
+                                        contentDescription = null,
+                                        tint = if (paymentMethod == "CREDIT" && selectedSupplierForCredit == null) Color(0xFFD32F2F) else AppColors.GreenPrimary,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                    Spacer(Modifier.width(10.dp))
+                                    Text(
+                                        text = if (paymentMethod == "CASH") {
+                                            selectedSupplierForCash?.name ?: "Pilih Supplier (Opsional)"
                                         } else {
-                                            Icon(Icons.Default.KeyboardArrowDown, null)
+                                            selectedSupplierForCredit?.name ?: "+ Pilih Supplier (Wajib)*"
+                                        },
+                                        fontWeight = FontWeight.SemiBold,
+                                        fontSize = 13.sp,
+                                        color = when {
+                                            paymentMethod == "CREDIT" && selectedSupplierForCredit == null -> Color(0xFFD32F2F)
+                                            paymentMethod == "CASH" && selectedSupplierForCash == null -> AppColors.TextSecondary
+                                            else -> AppColors.TextPrimary
+                                        },
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    if (paymentMethod == "CASH" && selectedSupplierForCash != null) {
+                                        IconButton(
+                                            onClick = { selectedSupplierForCash = null },
+                                            modifier = Modifier.size(24.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Close,
+                                                contentDescription = "Hapus Supplier",
+                                                tint = AppColors.TextSecondary,
+                                                modifier = Modifier.size(16.dp)
+                                            )
                                         }
-                                    }
-                                }
-                            } else {
-                                Surface(
-                                    shape = AppShapes.CardShape,
-                                    color = Color.White,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable {
-                                            isPickerForCash = false
-                                            showSupplierPickerSheet = true
-                                        }
-                                ) {
-                                    Row(
-                                        Modifier.padding(AppSpacing.md),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Icon(Icons.Default.People, null, tint = AppColors.GreenPrimary)
-                                        Spacer(Modifier.width(AppSpacing.sm))
-                                        Text(
-                                            text = selectedSupplierForCredit?.name ?: "+ Pilih Supplier *",
-                                            fontWeight = FontWeight.Bold,
-                                            color = if (selectedSupplierForCredit == null) AppColors.RedExpense else AppColors.TextPrimary,
-                                            modifier = Modifier.weight(1f)
+                                    } else {
+                                        Icon(
+                                            imageVector = Icons.Default.KeyboardArrowDown,
+                                            contentDescription = null,
+                                            tint = AppColors.TextSecondary,
+                                            modifier = Modifier.size(20.dp)
                                         )
-                                        Icon(Icons.Default.KeyboardArrowDown, null)
                                     }
                                 }
                             }
 
-                            Spacer(Modifier.height(AppSpacing.md))
-
-                            PrimaryButton(
-                                text = if (paymentMethod == "CREDIT") "Simpan Belanja Kredit" else "Simpan Belanja Tunai",
+                            // Primary Action Button (Simpan Belanja)
+                            Button(
                                 onClick = {
-                                    if (isSaving) return@PrimaryButton
+                                    if (isSaving) return@Button
                                     if (paymentMethod == "CREDIT" && selectedSupplierForCredit == null) {
                                         Toast.makeText(context, "Pilih supplier untuk pembelian kredit", Toast.LENGTH_SHORT).show()
                                         isPickerForCash = false
                                         showSupplierPickerSheet = true
-                                        return@PrimaryButton
+                                        return@Button
                                     }
 
                                     isSaving = true
@@ -647,105 +716,636 @@ fun PurchaseScreen(
                                         )
                                     }
                                 },
-                                enabled = !isSaving
-                            )
-                        }
-                    }
-                } else {
-                    Spacer(Modifier.height(AppSpacing.sm))
-                }
-            } else {
-                // TAB 1: RIWAYAT BELANJA (PURCHASE HISTORY)
-                if (purchases.isEmpty()) {
-                    AppEmptyState(
-                        icon = Icons.Default.Receipt,
-                        title = "Belum ada riwayat belanja",
-                        actionText = "+ Belanja Baru",
-                        onActionClick = { selectedTab = 0 },
-                        modifier = Modifier.weight(1f)
-                    )
-                } else {
-                    LazyColumn(
-                        verticalArrangement = Arrangement.spacedBy(AppSpacing.sm),
-                        modifier = Modifier
-                            .weight(1f)
-                            .padding(horizontal = AppSpacing.lg)
-                    ) {
-                        items(purchases, key = { it.id }) { purchase ->
-                            val supName = suppliers.find { it.id == purchase.supplierId }?.name ?: "Tunai Umum"
-                            val dateStr = SimpleDateFormat("dd MMM yyyy, HH:mm", Locale("id", "ID")).format(Date(purchase.transactionDate))
-                            val isCredit = purchase.paymentMethod == "CREDIT"
-
-                            AppCard(onClick = { selectedPurchaseForDetail = purchase }) {
+                                enabled = !isSaving,
+                                shape = RoundedCornerShape(12.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = if (paymentMethod == "CREDIT") Color(0xFFD32F2F) else AppColors.GreenPrimary,
+                                    contentColor = Color.White
+                                ),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(48.dp)
+                            ) {
                                 Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(AppSpacing.md),
-                                    verticalAlignment = Alignment.CenterVertically
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Center
                                 ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(46.dp)
-                                            .background(
-                                                if (isCredit) Color(0xFFFFE8E8) else AppColors.GreenLight,
-                                                CircleShape
-                                            ),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Icon(
-                                            Icons.Default.Receipt,
-                                            null,
-                                            tint = if (isCredit) AppColors.RedExpense else AppColors.GreenPrimary
-                                        )
-                                    }
-                                    Spacer(Modifier.width(AppSpacing.md))
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(AppSpacing.xs)
-                                        ) {
-                                            Text(
-                                                purchase.transactionNumber,
-                                                fontWeight = FontWeight.Bold,
-                                                style = MaterialTheme.typography.bodyMedium
-                                            )
-                                            Surface(
-                                                shape = AppShapes.ChipShape,
-                                                color = if (isCredit) Color(0xFFFFE8E8) else AppColors.GreenLight
-                                            ) {
-                                                Text(
-                                                    text = if (isCredit) "HUTANG" else "TUNAI",
-                                                    color = if (isCredit) AppColors.RedExpense else AppColors.GreenPrimary,
-                                                    style = MaterialTheme.typography.labelSmall,
-                                                    fontWeight = FontWeight.Bold,
-                                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                                )
-                                            }
-                                        }
-                                        Spacer(Modifier.height(2.dp))
-                                        Text(
-                                            supName,
-                                            color = AppColors.TextPrimary,
-                                            fontWeight = FontWeight.Medium,
-                                            style = MaterialTheme.typography.bodySmall
-                                        )
-                                        Text(
-                                            dateStr,
-                                            color = AppColors.TextSecondary,
-                                            style = MaterialTheme.typography.labelSmall
-                                        )
-                                    }
                                     Text(
-                                        formatRupiah(purchase.totalAmount),
+                                        text = if (paymentMethod == "CREDIT") "Simpan Belanja Kredit" else "Simpan Belanja Tunai",
                                         fontWeight = FontWeight.Bold,
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = if (isCredit) AppColors.RedExpense else AppColors.GreenPrimary
+                                        fontSize = 14.5.sp
+                                    )
+                                    Spacer(Modifier.width(8.dp))
+                                    Icon(
+                                        imageVector = Icons.Default.ArrowForward,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(18.dp)
                                     )
                                 }
                             }
                         }
                     }
                 }
+            } else {
+                // ==========================================
+                // TAB 1: RIWAYAT BELANJA (PURCHASE HISTORY)
+                // ==========================================
+                if (purchases.isEmpty()) {
+                    PurchaseEmptyHistoryState(onNewPurchase = { selectedTab = 0 })
+                } else {
+                    LazyColumn(
+                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                        contentPadding = PaddingValues(
+                            start = 16.dp,
+                            end = 16.dp,
+                            top = 10.dp,
+                            bottom = 88.dp
+                        ),
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        items(purchases, key = { it.id }) { purchase ->
+                            val supName = suppliers.find { it.id == purchase.supplierId }?.name ?: "Tunai Umum"
+                            val dateStr = SimpleDateFormat("dd MMM yyyy, HH:mm", Locale("id", "ID")).format(Date(purchase.transactionDate))
+                            val isCredit = purchase.paymentMethod == "CREDIT"
+
+                            PurchaseHistoryCard(
+                                purchase = purchase,
+                                supplierName = supName,
+                                dateStr = dateStr,
+                                isCredit = isCredit,
+                                onClick = { selectedPurchaseForDetail = purchase }
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Header harmonized with Home, Kasir, and Produk screens.
+ */
+@Composable
+private fun PurchaseHeader(
+    selectedTab: Int,
+    onTabSelected: (Int) -> Unit
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = Color.White,
+        shadowElevation = 0.5.dp
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 10.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    modifier = Modifier.weight(1f, fill = false),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(AppColors.GreenPrimary),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = if (selectedTab == 0) Icons.Default.LocalShipping else Icons.Default.ReceiptLong,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
+                    Column {
+                        Text(
+                            text = if (selectedTab == 0) "Pembelian (Kulakan)" else "Riwayat Belanja",
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 16.5.sp,
+                                color = AppColors.TextPrimary
+                            )
+                        )
+                        Text(
+                            text = if (selectedTab == 0) "Catat stok masuk & belanja barang" else "Daftar transaksi belanja produk",
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                fontSize = 11.5.sp,
+                                color = AppColors.TextSecondary
+                            )
+                        )
+                    }
+                }
+
+                Surface(
+                    shape = RoundedCornerShape(20.dp),
+                    color = Color(0xFFE8F5E9)
+                ) {
+                    Text(
+                        text = if (selectedTab == 0) "Belanja Baru" else "Riwayat",
+                        color = AppColors.GreenPrimary,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 11.sp,
+                        maxLines = 1,
+                        softWrap = false,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(10.dp))
+
+            // Segmented Capsule Tab Bar
+            Surface(
+                shape = RoundedCornerShape(24.dp),
+                color = Color(0xFFF1F4F2),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(42.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Tab 0: Belanja Baru
+                    Surface(
+                        shape = RoundedCornerShape(20.dp),
+                        color = if (selectedTab == 0) AppColors.GreenPrimary else Color.Transparent,
+                        shadowElevation = if (selectedTab == 0) 1.dp else 0.dp,
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(3.dp)
+                            .clickable { onTabSelected(0) }
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxSize(),
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.ShoppingCart,
+                                contentDescription = null,
+                                tint = if (selectedTab == 0) Color.White else AppColors.TextSecondary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(Modifier.width(6.dp))
+                            Text(
+                                text = "Belanja Baru",
+                                color = if (selectedTab == 0) Color.White else AppColors.TextSecondary,
+                                fontWeight = if (selectedTab == 0) FontWeight.Bold else FontWeight.Medium,
+                                fontSize = 13.sp
+                            )
+                        }
+                    }
+
+                    // Tab 1: Riwayat Belanja
+                    Surface(
+                        shape = RoundedCornerShape(20.dp),
+                        color = if (selectedTab == 1) AppColors.GreenPrimary else Color.Transparent,
+                        shadowElevation = if (selectedTab == 1) 1.dp else 0.dp,
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(3.dp)
+                            .clickable { onTabSelected(1) }
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxSize(),
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.History,
+                                contentDescription = null,
+                                tint = if (selectedTab == 1) Color.White else AppColors.TextSecondary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(Modifier.width(6.dp))
+                            Text(
+                                text = "Riwayat Belanja",
+                                color = if (selectedTab == 1) Color.White else AppColors.TextSecondary,
+                                fontWeight = if (selectedTab == 1) FontWeight.Bold else FontWeight.Medium,
+                                fontSize = 13.sp
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Purchase item card for restocking with quantity stepper and subtotal.
+ */
+@Composable
+private fun PurchaseItemCard(
+    product: ProductEntity,
+    quantity: Double,
+    subtotal: Long,
+    onIncrease: () -> Unit,
+    onDecrease: () -> Unit,
+    onClear: () -> Unit
+) {
+    val isSelected = quantity > 0
+
+    Surface(
+        shape = RoundedCornerShape(14.dp),
+        color = Color.White,
+        border = BorderStroke(1.dp, if (isSelected) AppColors.GreenPrimary.copy(alpha = 0.4f) else Color(0xFFEFF3F0)),
+        shadowElevation = if (isSelected) 1.dp else 0.5.dp,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Product Image Thumbnail
+            Box(
+                modifier = Modifier
+                    .size(54.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(Color(0xFFF4F7F4)),
+                contentAlignment = Alignment.Center
+            ) {
+                ProductImageThumbnail(
+                    imageUri = product.imageUri,
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
+
+            Spacer(Modifier.width(12.dp))
+
+            // Product Details & Stepper
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(
+                    text = product.name,
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 14.5.sp,
+                        color = AppColors.TextPrimary
+                    ),
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                Spacer(Modifier.height(2.dp))
+
+                Text(
+                    text = "Harga Beli: ${formatRupiah(product.purchasePrice)}",
+                    style = MaterialTheme.typography.bodySmall.copy(
+                        fontSize = 12.sp,
+                        color = AppColors.TextSecondary
+                    )
+                )
+
+                Spacer(Modifier.height(6.dp))
+
+                // Capsule Stepper
+                Surface(
+                    shape = RoundedCornerShape(18.dp),
+                    color = Color(0xFFF1F5F2)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                    ) {
+                        IconButton(
+                            onClick = onDecrease,
+                            modifier = Modifier.size(26.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Remove,
+                                contentDescription = "Kurangi",
+                                tint = if (quantity > 0) AppColors.TextPrimary else AppColors.TextSecondary.copy(alpha = 0.5f),
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+
+                        Text(
+                            text = "${quantity.toInt()}",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.5.sp,
+                            color = if (quantity > 0) AppColors.GreenPrimary else AppColors.TextPrimary,
+                            modifier = Modifier.padding(horizontal = 8.dp)
+                        )
+
+                        IconButton(
+                            onClick = onIncrease,
+                            modifier = Modifier.size(26.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Add,
+                                contentDescription = "Tambah",
+                                tint = AppColors.GreenPrimary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Subtotal Column
+            if (isSelected) {
+                Column(
+                    horizontalAlignment = Alignment.End,
+                    modifier = Modifier.padding(start = 8.dp)
+                ) {
+                    Text(
+                        text = "Subtotal",
+                        fontSize = 10.5.sp,
+                        color = AppColors.TextSecondary
+                    )
+                    Text(
+                        text = formatRupiah(subtotal),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp,
+                        color = AppColors.GreenPrimary
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    IconButton(
+                        onClick = onClear,
+                        modifier = Modifier.size(22.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Hapus",
+                            tint = AppColors.TextSecondary,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Purchase History Receipt Card.
+ */
+@Composable
+private fun PurchaseHistoryCard(
+    purchase: PurchaseTransactionEntity,
+    supplierName: String,
+    dateStr: String,
+    isCredit: Boolean,
+    onClick: () -> Unit
+) {
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(14.dp),
+        color = Color.White,
+        border = BorderStroke(1.dp, Color(0xFFEFF3F0)),
+        shadowElevation = 0.5.dp,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .background(
+                        if (isCredit) Color(0xFFFFEBEE) else Color(0xFFE8F5E9),
+                        CircleShape
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Receipt,
+                    contentDescription = null,
+                    tint = if (isCredit) Color(0xFFD32F2F) else AppColors.GreenPrimary,
+                    modifier = Modifier.size(22.dp)
+                )
+            }
+
+            Spacer(Modifier.width(12.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Text(
+                        text = purchase.transactionNumber,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.5.sp,
+                        color = AppColors.TextPrimary,
+                        maxLines = 1,
+                        softWrap = false,
+                        modifier = Modifier.weight(1f, fill = false)
+                    )
+                    Surface(
+                        shape = RoundedCornerShape(4.dp),
+                        color = if (isCredit) Color(0xFFFFEBEE) else Color(0xFFE8F5E9)
+                    ) {
+                        Text(
+                            text = if (isCredit) "HUTANG" else "TUNAI",
+                            color = if (isCredit) Color(0xFFD32F2F) else AppColors.GreenPrimary,
+                            fontSize = 10.5.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
+                    }
+                }
+
+                Spacer(Modifier.height(2.dp))
+
+                Text(
+                    text = supplierName,
+                    color = AppColors.TextPrimary,
+                    fontWeight = FontWeight.Medium,
+                    fontSize = 12.5.sp
+                )
+
+                Text(
+                    text = dateStr,
+                    color = AppColors.TextSecondary,
+                    fontSize = 11.5.sp
+                )
+            }
+
+            Text(
+                text = formatRupiah(purchase.totalAmount),
+                fontWeight = FontWeight.Bold,
+                fontSize = 14.sp,
+                color = if (isCredit) Color(0xFFD32F2F) else AppColors.GreenPrimary,
+                modifier = Modifier.padding(start = 6.dp)
+            )
+        }
+    }
+}
+
+/**
+ * Empty state when no products exist in catalog.
+ */
+@Composable
+private fun PurchaseEmptyProductsState(
+    onAddProduct: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(24.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(72.dp)
+                    .background(Color(0xFFE8F5E9), CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Inventory2,
+                    contentDescription = null,
+                    tint = AppColors.GreenPrimary,
+                    modifier = Modifier.size(36.dp)
+                )
+            }
+
+            Spacer(Modifier.height(16.dp))
+
+            Text(
+                text = "Belum Ada Produk Untuk Dibeli",
+                style = MaterialTheme.typography.titleMedium.copy(
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.5.sp,
+                    color = AppColors.TextPrimary
+                )
+            )
+
+            Spacer(Modifier.height(6.dp))
+
+            Text(
+                text = "Tambahkan produk terlebih dahulu agar dapat mencatat pembelian & stok masuk.",
+                style = MaterialTheme.typography.bodyMedium.copy(
+                    fontSize = 13.sp,
+                    color = AppColors.TextSecondary,
+                    textAlign = TextAlign.Center
+                ),
+                modifier = Modifier.padding(horizontal = 24.dp)
+            )
+
+            Spacer(Modifier.height(20.dp))
+
+            Button(
+                onClick = onAddProduct,
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = AppColors.GreenPrimary,
+                    contentColor = Color.White
+                ),
+                modifier = Modifier.height(44.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(Modifier.width(6.dp))
+                Text(
+                    text = "Tambah Barang",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 13.5.sp
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Empty state for Purchase History.
+ */
+@Composable
+private fun PurchaseEmptyHistoryState(
+    onNewPurchase: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(24.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(72.dp)
+                    .background(Color(0xFFF1F5F2), CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.ReceiptLong,
+                    contentDescription = null,
+                    tint = AppColors.TextSecondary,
+                    modifier = Modifier.size(36.dp)
+                )
+            }
+
+            Spacer(Modifier.height(16.dp))
+
+            Text(
+                text = "Belum Ada Riwayat Belanja",
+                style = MaterialTheme.typography.titleMedium.copy(
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp,
+                    color = AppColors.TextPrimary
+                )
+            )
+
+            Spacer(Modifier.height(6.dp))
+
+            Text(
+                text = "Semua transaksi pembelian dan restock produk akan dicatat di sini.",
+                style = MaterialTheme.typography.bodyMedium.copy(
+                    fontSize = 13.sp,
+                    color = AppColors.TextSecondary,
+                    textAlign = TextAlign.Center
+                ),
+                modifier = Modifier.padding(horizontal = 24.dp)
+            )
+
+            Spacer(Modifier.height(20.dp))
+
+            Button(
+                onClick = onNewPurchase,
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = AppColors.GreenPrimary,
+                    contentColor = Color.White
+                ),
+                modifier = Modifier.height(44.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.ShoppingCart,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(Modifier.width(6.dp))
+                Text(
+                    text = "Belanja Baru",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 13.5.sp
+                )
             }
         }
     }

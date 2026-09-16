@@ -23,9 +23,10 @@ import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.Assessment
 import androidx.compose.material.icons.filled.CalendarToday
-import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Eco
 import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.LocalShipping
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.PointOfSale
 import androidx.compose.material.icons.filled.Settings
@@ -69,14 +70,15 @@ import java.util.Date
 import java.util.Locale
 
 /**
- * Phase 6B.2 — Home / Beranda Screen (Design Master Alignment)
+ * Gate I.2-R1 — Home / Beranda Screen (Design Master Refinement)
  *
- * Structure:
- * 1. Store Identity Header (Store Avatar, Shop Name, Subtitle, Status)
- * 2. Greeting & Dynamic Indonesian Date
- * 3. Financial Summary 2x2 Grid (Penjualan, Pengeluaran, Saldo Kas, Stok Menipis)
- * 4. Menu Utama (8 compact, colorful pastel icon tiles in 4-column grid)
- * 5. Low Stock Notice (if applicable)
+ * Visual & Structural Hierarchy:
+ * 1. Store Identity Header (Branding, Shop Name, Subtitle, Active Badge & Initial Avatar)
+ * 2. Welcoming Greeting & Dynamic Indonesian Date Banner (Focal Point)
+ * 3. Financial Summary 2x2 Pastel Grid (Penjualan, Pengeluaran, Saldo Kas, Stok Menipis)
+ * 4. Menu Utama (8 comfortable pastel icon tiles in 4-column grid with generous touch targets)
+ * 5. Low Stock Notice Banner (if active)
+ * 6. UMKM Motivation Banner ("Warung Kecil, Langkah Besar Masa Depan")
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -84,6 +86,7 @@ fun HomeScreen(
     viewModel: ProductViewModel,
     userSettings: UserSettings = UserSettings(),
     shopName: String = userSettings.shopName,
+    unreadNotificationCount: Int = 0,
     onNavigate: (AppScreen) -> Unit
 ) {
     val dbProducts by viewModel.products.collectAsStateWithLifecycle()
@@ -119,6 +122,10 @@ fun HomeScreen(
         sdf.format(Date())
     }
 
+    val shopInitial = remember(effectiveShopName) {
+        effectiveShopName.trim().firstOrNull()?.uppercaseChar()?.toString() ?: "W"
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -127,17 +134,17 @@ fun HomeScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.padding(vertical = 2.dp)
                     ) {
-                        // Store Avatar / Logo
+                        // 1. Buku Warung Branding Icon
                         Box(
                             modifier = Modifier
                                 .size(38.dp)
-                                .clip(RoundedCornerShape(12.dp))
+                                .clip(RoundedCornerShape(11.dp))
                                 .background(AppColors.GreenPrimary),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Storefront,
-                                contentDescription = "Store Avatar",
+                                contentDescription = "Buku Warung Logo",
                                 tint = Color.White,
                                 modifier = Modifier.size(22.dp)
                             )
@@ -145,11 +152,14 @@ fun HomeScreen(
 
                         Spacer(Modifier.width(10.dp))
 
-                        Column {
+                        // 2. Shop Name & Subtitle
+                        Column(
+                            modifier = Modifier.weight(1f, fill = false)
+                        ) {
                             Text(
                                 text = effectiveShopName,
                                 fontWeight = FontWeight.Bold,
-                                fontSize = 16.sp,
+                                fontSize = 16.5.sp,
                                 color = AppColors.TextPrimary,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
@@ -157,33 +167,84 @@ fun HomeScreen(
                             Text(
                                 text = "Pembukuan Warung Kecil",
                                 style = MaterialTheme.typography.labelSmall,
-                                color = AppColors.TextSecondary
+                                color = AppColors.TextSecondary,
+                                fontSize = 11.5.sp
                             )
                         }
                     }
                 },
                 actions = {
-                    Surface(
-                        shape = RoundedCornerShape(20.dp),
-                        color = AppColors.GreenLight,
-                        border = BorderStroke(1.dp, Color(0xFFCCE8D7)),
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.padding(end = AppSpacing.sm)
                     ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                        // 1. Notification Bell
+                        Box(
+                            modifier = Modifier
+                                .padding(end = 6.dp)
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .clickable { onNavigate(AppScreen.NOTIFICATIONS) },
+                            contentAlignment = Alignment.Center
                         ) {
                             Icon(
-                                imageVector = Icons.Default.CheckCircle,
-                                contentDescription = "Online Status",
-                                tint = AppColors.GreenPrimary,
-                                modifier = Modifier.size(13.dp)
+                                imageVector = Icons.Default.Notifications,
+                                contentDescription = "Notifikasi",
+                                tint = AppColors.TextPrimary,
+                                modifier = Modifier.size(22.dp)
                             )
-                            Spacer(Modifier.width(4.dp))
+                            if (unreadNotificationCount > 0) {
+                                Box(
+                                    modifier = Modifier
+                                        .align(Alignment.TopEnd)
+                                        .padding(top = 4.dp, end = 4.dp)
+                                        .size(8.dp)
+                                        .clip(CircleShape)
+                                        .background(Color(0xFFE53935))
+                                )
+                            }
+                        }
+
+                        // 2. Active status pill
+                        Surface(
+                            shape = RoundedCornerShape(14.dp),
+                            color = AppColors.GreenLight,
+                            border = BorderStroke(1.dp, Color(0xFFCCE8D7)),
+                            modifier = Modifier.padding(end = 8.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.5.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(6.dp)
+                                        .clip(CircleShape)
+                                        .background(AppColors.GreenPrimary)
+                                )
+                                Spacer(Modifier.width(4.dp))
+                                Text(
+                                    text = "Aktif",
+                                    fontSize = 10.5.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = AppColors.GreenDark
+                                )
+                            }
+                        }
+
+                        // 3. Shop Avatar (User / Warung Initial)
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(AppColors.GreenLight)
+                                .border(BorderStroke(1.5.dp, Color(0xFFCCE8D7)), CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
                             Text(
-                                text = "Aktif",
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.SemiBold,
+                                text = shopInitial,
+                                fontWeight = FontWeight.ExtraBold,
+                                fontSize = 15.sp,
                                 color = AppColors.GreenDark
                             )
                         }
@@ -200,53 +261,55 @@ fun HomeScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(horizontal = AppSpacing.md),
-            verticalArrangement = Arrangement.spacedBy(AppSpacing.sm)
+                .padding(horizontal = AppSpacing.lg),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             // ==========================================
-            // 1. GREETING & DATE BANNER
+            // 1. GREETING & DATE BANNER (FOCAL POINT)
             // ==========================================
             item {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 2.dp)
+                        .padding(top = 6.dp)
                 ) {
                     Text(
                         text = greeting,
-                        fontSize = 13.sp,
+                        fontSize = 14.sp,
                         color = AppColors.TextSecondary,
                         fontWeight = FontWeight.Medium
                     )
-                    Spacer(Modifier.height(1.dp))
+                    Spacer(Modifier.height(2.dp))
                     Text(
                         text = "$effectiveShopName 👋",
-                        style = MaterialTheme.typography.headlineSmall,
+                        fontSize = 24.sp,
                         fontWeight = FontWeight.ExtraBold,
                         color = AppColors.GreenDark
                     )
-                    Spacer(Modifier.height(4.dp))
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(Color.White)
-                            .border(width = 1.dp, color = Color(0xFFE8E8E8), shape = RoundedCornerShape(8.dp))
-                            .padding(horizontal = 8.dp, vertical = 3.dp)
+                    Spacer(Modifier.height(8.dp))
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = Color.White,
+                        border = BorderStroke(1.dp, Color(0xFFE5E7EB))
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.CalendarToday,
-                            contentDescription = "Tanggal",
-                            tint = AppColors.TextSecondary,
-                            modifier = Modifier.size(12.dp)
-                        )
-                        Spacer(Modifier.width(6.dp))
-                        Text(
-                            text = currentDateStr,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = AppColors.TextSecondary
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.CalendarToday,
+                                contentDescription = "Tanggal",
+                                tint = AppColors.TextSecondary,
+                                modifier = Modifier.size(13.dp)
+                            )
+                            Spacer(Modifier.width(6.dp))
+                            Text(
+                                text = currentDateStr,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = AppColors.TextSecondary
+                            )
+                        }
                     }
                 }
             }
@@ -271,19 +334,19 @@ fun HomeScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 4.dp),
+                        .padding(top = 2.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(
                         text = "Menu Utama",
-                        fontSize = 15.sp,
+                        fontSize = 16.5.sp,
                         fontWeight = FontWeight.Bold,
                         color = AppColors.TextPrimary
                     )
                     Text(
                         text = "8 Fitur",
-                        fontSize = 12.sp,
+                        fontSize = 12.5.sp,
                         fontWeight = FontWeight.Medium,
                         color = AppColors.TextSecondary
                     )
@@ -300,7 +363,7 @@ fun HomeScreen(
             if (userSettings.lowStockAlertEnabled && lowStockCount > 0) {
                 item {
                     Card(
-                        shape = RoundedCornerShape(14.dp),
+                        shape = RoundedCornerShape(16.dp),
                         colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF7E6)),
                         border = BorderStroke(1.dp, Color(0xFFFFD591)),
                         modifier = Modifier
@@ -308,12 +371,12 @@ fun HomeScreen(
                             .clickable { onNavigate(AppScreen.PRODUCTS) }
                     ) {
                         Row(
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Box(
                                 modifier = Modifier
-                                    .size(34.dp)
+                                    .size(38.dp)
                                     .clip(CircleShape)
                                     .background(Color(0xFFFFE7BA)),
                                 contentAlignment = Alignment.Center
@@ -322,33 +385,83 @@ fun HomeScreen(
                                     imageVector = Icons.Default.WarningAmber,
                                     contentDescription = "Peringatan Stok",
                                     tint = Color(0xFFD46B08),
-                                    modifier = Modifier.size(18.dp)
+                                    modifier = Modifier.size(20.dp)
                                 )
                             }
-                            Spacer(Modifier.width(10.dp))
+                            Spacer(Modifier.width(12.dp))
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
                                     text = "Barang Hampir Habis",
                                     fontWeight = FontWeight.Bold,
-                                    fontSize = 12.5.sp,
+                                    fontSize = 13.5.sp,
                                     color = Color(0xFFD46B08)
                                 )
                                 Text(
                                     text = "$lowStockCount produk mencapai batas minimum stok",
-                                    fontSize = 11.sp,
+                                    fontSize = 12.sp,
                                     color = AppColors.TextSecondary
                                 )
                             }
                             Text(
                                 text = "Lihat >",
-                                fontSize = 12.sp,
+                                fontSize = 13.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = Color(0xFFD46B08)
                             )
                         }
                     }
-                    Spacer(Modifier.height(AppSpacing.xs))
                 }
+            }
+
+            // ==========================================
+            // 5. MOTIVATIONAL VALUE BANNER (DESIGN MASTER ALIGNED)
+            // ==========================================
+            item {
+                Card(
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFFE8F7EF)),
+                    border = BorderStroke(1.dp, Color(0xFFCEECD9)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(Color(0xFFD3F2E0)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Eco,
+                                contentDescription = "Buku Warung Icon",
+                                tint = AppColors.GreenDark,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                        Spacer(Modifier.width(12.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Warung Kecil, Langkah Besar Masa Depan",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.sp,
+                                color = AppColors.GreenDark
+                            )
+                            Text(
+                                text = "Data Anda, Aset Anda, Masa Depan Anda 💚",
+                                fontSize = 11.5.sp,
+                                color = AppColors.GreenPrimary
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Bottom spacer to ensure smooth scrolling above bottom navigation bar
+            item {
+                Spacer(Modifier.height(AppSpacing.lg))
             }
         }
     }
@@ -365,8 +478,11 @@ private fun SummaryGrid(
     lowStockCount: Int,
     showLowStockAlert: Boolean
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
             SummaryCard(
                 title = "Penjualan Hari Ini",
                 value = todaySalesStr,
@@ -388,7 +504,10 @@ private fun SummaryGrid(
                 modifier = Modifier.weight(1f)
             )
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
             SummaryCard(
                 title = "Saldo Kas",
                 value = cashBalanceStr,
@@ -425,54 +544,53 @@ private fun SummaryCard(
     modifier: Modifier = Modifier
 ) {
     Card(
-        shape = RoundedCornerShape(14.dp),
+        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = cardBg),
         border = BorderStroke(1.dp, borderColor),
         modifier = modifier
     ) {
-        Column(
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 10.dp, vertical = 8.dp)
+                .padding(horizontal = 10.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-                modifier = Modifier.fillMaxWidth()
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(iconBg),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = iconTint,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+            Spacer(Modifier.width(8.dp))
+            Column(
+                modifier = Modifier.weight(1f)
             ) {
                 Text(
                     text = title,
                     fontSize = 10.5.sp,
                     fontWeight = FontWeight.Medium,
                     color = AppColors.TextSecondary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f)
+                    lineHeight = 12.sp,
+                    maxLines = 2
                 )
-                Box(
-                    modifier = Modifier
-                        .size(22.dp)
-                        .clip(CircleShape)
-                        .background(iconBg),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = null,
-                        tint = iconTint,
-                        modifier = Modifier.size(12.dp)
-                    )
-                }
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    text = value,
+                    fontSize = 14.5.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = AppColors.TextPrimary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
-            Spacer(Modifier.height(4.dp))
-            Text(
-                text = value,
-                fontSize = 13.5.sp,
-                fontWeight = FontWeight.ExtraBold,
-                color = AppColors.TextPrimary,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
         }
     }
 }
@@ -486,13 +604,13 @@ private data class MenuItemData(
 )
 
 /**
- * 4-column compact rounded tiles matching Design Master
+ * 4-column comfortable rounded tiles matching Design Master
  */
 @Composable
 private fun MenuGrid(onNavigate: (AppScreen) -> Unit) {
     val menus = listOf(
         MenuItemData(
-            label = "Jualan",
+            label = "Jualan\n(Kasir)",
             icon = Icons.Default.PointOfSale,
             iconBg = Color(0xFFE8F7EF),
             iconTint = Color(0xFF0B9F57),
@@ -549,33 +667,33 @@ private fun MenuGrid(onNavigate: (AppScreen) -> Unit) {
         )
     )
 
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         menus.chunked(4).forEach { rowItems ->
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 rowItems.forEach { item ->
                     Card(
-                        shape = RoundedCornerShape(14.dp),
+                        shape = RoundedCornerShape(16.dp),
                         colors = CardDefaults.cardColors(containerColor = Color.White),
                         border = BorderStroke(1.dp, Color(0xFFEDEDED)),
                         onClick = { onNavigate(item.destination) },
                         modifier = Modifier
                             .weight(1f)
-                            .height(88.dp)
+                            .height(96.dp)
                     ) {
                         Column(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .padding(vertical = 6.dp, horizontal = 2.dp),
+                                .padding(vertical = 8.dp, horizontal = 3.dp),
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.Center
                         ) {
                             Box(
                                 modifier = Modifier
-                                    .size(38.dp)
-                                    .clip(RoundedCornerShape(11.dp))
+                                    .size(42.dp)
+                                    .clip(RoundedCornerShape(12.dp))
                                     .background(item.iconBg),
                                 contentAlignment = Alignment.Center
                             ) {
@@ -583,17 +701,17 @@ private fun MenuGrid(onNavigate: (AppScreen) -> Unit) {
                                     imageVector = item.icon,
                                     contentDescription = item.label,
                                     tint = item.iconTint,
-                                    modifier = Modifier.size(20.dp)
+                                    modifier = Modifier.size(22.dp)
                                 )
                             }
-                            Spacer(Modifier.height(4.dp))
+                            Spacer(Modifier.height(5.dp))
                             Text(
                                 text = item.label,
-                                fontSize = 10.sp,
+                                fontSize = 10.5.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 color = AppColors.TextPrimary,
                                 textAlign = TextAlign.Center,
-                                lineHeight = 11.sp,
+                                lineHeight = 12.sp,
                                 maxLines = 2
                             )
                         }
@@ -609,3 +727,5 @@ private fun MenuGrid(onNavigate: (AppScreen) -> Unit) {
         }
     }
 }
+
+
