@@ -58,6 +58,8 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import id.skmnetwork.bukuwarung.data.local.entity.CustomerEntity
 import id.skmnetwork.bukuwarung.data.local.entity.DebtEntity
+import id.skmnetwork.bukuwarung.data.preferences.UserSettings
+import id.skmnetwork.bukuwarung.domain.business.BusinessTaxonomyRegistry
 import id.skmnetwork.bukuwarung.ui.components.AppTextField
 import id.skmnetwork.bukuwarung.ui.theme.AppColors
 import id.skmnetwork.bukuwarung.util.formatRupiah
@@ -67,8 +69,18 @@ import java.util.Locale
 
 @Composable
 fun CustomersScreen(
-    customerViewModel: CustomerViewModel
+    customerViewModel: CustomerViewModel,
+    userSettings: UserSettings? = null
 ) {
+    val resolvedProfile = remember(userSettings?.primaryBusinessType, userSettings?.secondaryActivities) {
+        BusinessTaxonomyRegistry.resolve(
+            primaryType = userSettings?.primaryBusinessType,
+            secondaryActivities = userSettings?.secondaryActivities
+        )
+    }
+    val terminology = resolvedProfile.terminology
+    val customerLabel = terminology.customerLabel
+
     val customers by customerViewModel.customers.collectAsStateWithLifecycle()
     var query by remember { mutableStateOf("") }
 
@@ -101,7 +113,7 @@ fun CustomersScreen(
             containerColor = Color.White,
             title = {
                 Text(
-                    text = if (customerToEdit == null) "Tambah Pelanggan" else "Edit Pelanggan",
+                    text = if (customerToEdit == null) "Tambah $customerLabel" else "Edit $customerLabel",
                     style = MaterialTheme.typography.titleMedium.copy(
                         fontWeight = FontWeight.Bold,
                         fontSize = 17.sp,
@@ -136,7 +148,7 @@ fun CustomersScreen(
                             nameInput = it
                             dialogError = null
                         },
-                        label = "Nama Pelanggan *"
+                        label = "Nama $customerLabel *"
                     )
 
                     AppTextField(
@@ -176,7 +188,7 @@ fun CustomersScreen(
                                     nameInput = ""
                                     phoneInput = ""
                                     addressInput = ""
-                                    Toast.makeText(context, "Pelanggan berhasil ditambahkan", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(context, "$customerLabel berhasil ditambahkan", Toast.LENGTH_SHORT).show()
                                 },
                                 onError = {
                                     isSaving = false
@@ -196,7 +208,7 @@ fun CustomersScreen(
                                     nameInput = ""
                                     phoneInput = ""
                                     addressInput = ""
-                                    Toast.makeText(context, "Pelanggan berhasil diperbarui", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(context, "$customerLabel berhasil diperbarui", Toast.LENGTH_SHORT).show()
                                 },
                                 onError = {
                                     isSaving = false
@@ -252,7 +264,7 @@ fun CustomersScreen(
             shape = RoundedCornerShape(16.dp),
             containerColor = Color.White,
             title = {
-                Text("Hapus Pelanggan", fontWeight = FontWeight.Bold, fontSize = 17.sp, color = AppColors.TextPrimary)
+                Text("Hapus $customerLabel", fontWeight = FontWeight.Bold, fontSize = 17.sp, color = AppColors.TextPrimary)
             },
             text = {
                 Text(
@@ -268,7 +280,7 @@ fun CustomersScreen(
                             onSuccess = {
                                 showDeleteConfirmDialog = false
                                 customerToEdit = null
-                                Toast.makeText(context, "Pelanggan berhasil dihapus", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, "$customerLabel berhasil dihapus", Toast.LENGTH_SHORT).show()
                             },
                             onError = {
                                 showDeleteConfirmDialog = false
@@ -494,7 +506,7 @@ fun CustomersScreen(
                     Spacer(Modifier.height(2.dp))
 
                     Text(
-                        text = "Histori Hutang / Piutang Pelanggan",
+                        text = "Histori Hutang / Piutang $customerLabel",
                         style = MaterialTheme.typography.titleSmall.copy(
                             fontWeight = FontWeight.Bold,
                             fontSize = 13.sp,
@@ -504,7 +516,7 @@ fun CustomersScreen(
 
                     if (customerDebts.isEmpty()) {
                         Text(
-                            text = "Belum ada histori hutang pelanggan",
+                            text = "Belum ada histori hutang $customerLabel",
                             color = AppColors.TextSecondary,
                             style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp)
                         )
@@ -540,7 +552,7 @@ fun CustomersScreen(
                 containerColor = Color.White,
                 title = {
                     Text(
-                        text = "Bayar Hutang Pelanggan",
+                        text = "Bayar Hutang $customerLabel",
                         style = MaterialTheme.typography.titleMedium.copy(
                             fontWeight = FontWeight.Bold,
                             fontSize = 17.sp,
@@ -676,7 +688,10 @@ fun CustomersScreen(
     // ==========================================
     Scaffold(
         topBar = {
-            CustomersTopHeader(customerCount = customers.size)
+            CustomersTopHeader(
+                customerCount = customers.size,
+                customerLabel = customerLabel
+            )
         },
         containerColor = Color.White
     ) { padding ->
@@ -697,7 +712,7 @@ fun CustomersScreen(
                         query = it
                         customerViewModel.search(it)
                     },
-                    placeholder = { Text("Cari pelanggan...", fontSize = 13.sp, color = AppColors.TextSecondary) },
+                    placeholder = { Text("Cari ${customerLabel.lowercase()}...", fontSize = 13.sp, color = AppColors.TextSecondary) },
                     leadingIcon = {
                         Icon(
                             imageVector = Icons.Default.Search,
@@ -759,7 +774,7 @@ fun CustomersScreen(
                     )
                     Spacer(Modifier.width(6.dp))
                     Text(
-                        text = "Tambah Pelanggan",
+                        text = "Tambah $customerLabel",
                         fontWeight = FontWeight.Bold,
                         fontSize = 13.5.sp
                     )
@@ -770,7 +785,10 @@ fun CustomersScreen(
 
             // Customer List Content
             if (customers.isEmpty()) {
-                CustomersEmptyState(isSearching = query.isNotBlank())
+                CustomersEmptyState(
+                    isSearching = query.isNotBlank(),
+                    customerLabel = customerLabel
+                )
             } else {
                 Column(
                     modifier = Modifier
@@ -785,7 +803,7 @@ fun CustomersScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "Daftar Pelanggan",
+                            text = "Daftar $customerLabel",
                             style = MaterialTheme.typography.titleMedium.copy(
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 14.5.sp,
@@ -793,7 +811,7 @@ fun CustomersScreen(
                             )
                         )
                         Text(
-                            text = "${customers.size} Kontak",
+                            text = "${customers.size} $customerLabel",
                             style = MaterialTheme.typography.bodySmall.copy(
                                 fontSize = 11.5.sp,
                                 color = AppColors.TextSecondary
@@ -830,7 +848,10 @@ fun CustomersScreen(
  * Top Header matching Home/Kasir/Produk/Pembelian/Cash header language.
  */
 @Composable
-private fun CustomersTopHeader(customerCount: Int) {
+private fun CustomersTopHeader(
+    customerCount: Int,
+    customerLabel: String = "Pelanggan"
+) {
     Surface(
         color = Color.White,
         shadowElevation = 0.5.dp,
@@ -864,7 +885,7 @@ private fun CustomersTopHeader(customerCount: Int) {
 
                 Column {
                     Text(
-                        text = "Pelanggan & Piutang",
+                        text = "$customerLabel & Piutang",
                         style = MaterialTheme.typography.titleMedium.copy(
                             fontWeight = FontWeight.Bold,
                             fontSize = 16.5.sp,
@@ -886,7 +907,7 @@ private fun CustomersTopHeader(customerCount: Int) {
                 color = Color(0xFFE8F5E9)
             ) {
                 Text(
-                    text = if (customerCount > 0) "$customerCount Pelanggan" else "Buku Piutang",
+                    text = if (customerCount > 0) "$customerCount $customerLabel" else "Buku Piutang",
                     color = AppColors.GreenPrimary,
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 11.sp,
@@ -1110,7 +1131,10 @@ private fun CustomerDebtItemCard(debt: DebtEntity) {
  * Clean Empty State when no customers exist or search has no match.
  */
 @Composable
-private fun CustomersEmptyState(isSearching: Boolean) {
+private fun CustomersEmptyState(
+    isSearching: Boolean,
+    customerLabel: String = "Pelanggan"
+) {
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -1139,7 +1163,7 @@ private fun CustomersEmptyState(isSearching: Boolean) {
             Spacer(Modifier.height(14.dp))
 
             Text(
-                text = if (isSearching) "Pelanggan Tidak Ditemukan" else "Belum Ada Pelanggan",
+                text = if (isSearching) "$customerLabel Tidak Ditemukan" else "Belum Ada $customerLabel",
                 style = MaterialTheme.typography.titleMedium.copy(
                     fontWeight = FontWeight.Bold,
                     fontSize = 16.sp,
@@ -1150,7 +1174,7 @@ private fun CustomersEmptyState(isSearching: Boolean) {
             Spacer(Modifier.height(4.dp))
 
             Text(
-                text = if (isSearching) "Coba gunakan kata kunci pencarian yang lain." else "Tambah pelanggan untuk mencatat transaksi penjualan kredit & piutang usaha.",
+                text = if (isSearching) "Coba gunakan kata kunci pencarian yang lain." else "Tambah ${customerLabel.lowercase()} untuk mencatat transaksi penjualan kredit & piutang usaha.",
                 style = MaterialTheme.typography.bodySmall.copy(
                     fontSize = 12.5.sp,
                     color = AppColors.TextSecondary,

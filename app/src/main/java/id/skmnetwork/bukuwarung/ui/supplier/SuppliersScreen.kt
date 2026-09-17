@@ -60,6 +60,8 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import id.skmnetwork.bukuwarung.data.local.entity.SupplierEntity
 import id.skmnetwork.bukuwarung.data.local.entity.SupplierPayableEntity
+import id.skmnetwork.bukuwarung.data.preferences.UserSettings
+import id.skmnetwork.bukuwarung.domain.business.BusinessTaxonomyRegistry
 import id.skmnetwork.bukuwarung.ui.components.AppTextField
 import id.skmnetwork.bukuwarung.ui.theme.AppColors
 import id.skmnetwork.bukuwarung.util.formatRupiah
@@ -69,8 +71,19 @@ import java.util.Locale
 
 @Composable
 fun SuppliersScreen(
-    supplierViewModel: SupplierViewModel
+    supplierViewModel: SupplierViewModel,
+    userSettings: UserSettings? = null
 ) {
+    val resolvedProfile = remember(userSettings?.primaryBusinessType, userSettings?.secondaryActivities) {
+        BusinessTaxonomyRegistry.resolve(
+            primaryType = userSettings?.primaryBusinessType,
+            secondaryActivities = userSettings?.secondaryActivities
+        )
+    }
+    val terminology = resolvedProfile.terminology
+    val supplierLabel = terminology.supplierLabel
+    val debtLabel = terminology.debtLabel
+
     val suppliers by supplierViewModel.suppliers.collectAsStateWithLifecycle()
     var query by remember { mutableStateOf("") }
 
@@ -103,7 +116,7 @@ fun SuppliersScreen(
             containerColor = Color.White,
             title = {
                 Text(
-                    text = if (supplierToEdit == null) "Tambah Supplier" else "Edit Supplier",
+                    text = if (supplierToEdit == null) "Tambah $supplierLabel" else "Edit $supplierLabel",
                     style = MaterialTheme.typography.titleMedium.copy(
                         fontWeight = FontWeight.Bold,
                         fontSize = 17.sp,
@@ -138,7 +151,7 @@ fun SuppliersScreen(
                             nameInput = it
                             dialogError = null
                         },
-                        label = "Nama Supplier *"
+                        label = "Nama $supplierLabel *"
                     )
 
                     AppTextField(
@@ -178,7 +191,7 @@ fun SuppliersScreen(
                                     nameInput = ""
                                     phoneInput = ""
                                     addressInput = ""
-                                    Toast.makeText(context, "Supplier berhasil ditambahkan", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(context, "$supplierLabel berhasil ditambahkan", Toast.LENGTH_SHORT).show()
                                 },
                                 onError = {
                                     isSaving = false
@@ -198,7 +211,7 @@ fun SuppliersScreen(
                                     nameInput = ""
                                     phoneInput = ""
                                     addressInput = ""
-                                    Toast.makeText(context, "Supplier berhasil diperbarui", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(context, "$supplierLabel berhasil diperbarui", Toast.LENGTH_SHORT).show()
                                 },
                                 onError = {
                                     isSaving = false
@@ -254,7 +267,7 @@ fun SuppliersScreen(
             shape = RoundedCornerShape(16.dp),
             containerColor = Color.White,
             title = {
-                Text("Hapus Supplier", fontWeight = FontWeight.Bold, fontSize = 17.sp, color = AppColors.TextPrimary)
+                Text("Hapus $supplierLabel", fontWeight = FontWeight.Bold, fontSize = 17.sp, color = AppColors.TextPrimary)
             },
             text = {
                 Text(
@@ -270,7 +283,7 @@ fun SuppliersScreen(
                             onSuccess = {
                                 showDeleteConfirmDialog = false
                                 supplierToEdit = null
-                                Toast.makeText(context, "Supplier berhasil dihapus", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, "$supplierLabel berhasil dihapus", Toast.LENGTH_SHORT).show()
                             },
                             onError = {
                                 showDeleteConfirmDialog = false
@@ -486,7 +499,7 @@ fun SuppliersScreen(
                             )
                             Spacer(Modifier.width(6.dp))
                             Text(
-                                text = "Bayar Hutang Supplier",
+                                text = "Bayar $debtLabel $supplierLabel",
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 13.sp
                             )
@@ -496,7 +509,7 @@ fun SuppliersScreen(
                     Spacer(Modifier.height(2.dp))
 
                     Text(
-                        text = "Histori Tagihan / Hutang Supplier",
+                        text = "Histori Tagihan / $debtLabel $supplierLabel",
                         style = MaterialTheme.typography.titleSmall.copy(
                             fontWeight = FontWeight.Bold,
                             fontSize = 13.sp,
@@ -506,7 +519,7 @@ fun SuppliersScreen(
 
                     if (supplierPayables.isEmpty()) {
                         Text(
-                            text = "Belum ada histori hutang supplier",
+                            text = "Belum ada histori ${debtLabel.lowercase()} $supplierLabel",
                             color = AppColors.TextSecondary,
                             style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp)
                         )
@@ -542,7 +555,7 @@ fun SuppliersScreen(
                 containerColor = Color.White,
                 title = {
                     Text(
-                        text = "Bayar Hutang Supplier",
+                        text = "Bayar $debtLabel $supplierLabel",
                         style = MaterialTheme.typography.titleMedium.copy(
                             fontWeight = FontWeight.Bold,
                             fontSize = 17.sp,
@@ -639,7 +652,7 @@ fun SuppliersScreen(
                                     showPaySupplierDialog = false
                                     paymentAmountInput = ""
                                     paymentNoteInput = ""
-                                    Toast.makeText(context, "Pembayaran supplier berhasil!", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(context, "Pembayaran ${supplierLabel.lowercase()} berhasil!", Toast.LENGTH_SHORT).show()
                                 },
                                 onError = {
                                     isSaving = false
@@ -678,7 +691,11 @@ fun SuppliersScreen(
     // ==========================================
     Scaffold(
         topBar = {
-            SuppliersTopHeader(supplierCount = suppliers.size)
+            SuppliersTopHeader(
+                supplierCount = suppliers.size,
+                supplierLabel = supplierLabel,
+                debtLabel = debtLabel
+            )
         },
         containerColor = Color.White
     ) { padding ->
@@ -699,7 +716,7 @@ fun SuppliersScreen(
                         query = it
                         supplierViewModel.search(it)
                     },
-                    placeholder = { Text("Cari supplier...", fontSize = 13.sp, color = AppColors.TextSecondary) },
+                    placeholder = { Text("Cari ${supplierLabel.lowercase()}...", fontSize = 13.sp, color = AppColors.TextSecondary) },
                     leadingIcon = {
                         Icon(
                             imageVector = Icons.Default.Search,
@@ -761,7 +778,7 @@ fun SuppliersScreen(
                     )
                     Spacer(Modifier.width(6.dp))
                     Text(
-                        text = "Tambah Supplier",
+                        text = "Tambah $supplierLabel",
                         fontWeight = FontWeight.Bold,
                         fontSize = 13.5.sp
                     )
@@ -772,7 +789,11 @@ fun SuppliersScreen(
 
             // Supplier List Content
             if (suppliers.isEmpty()) {
-                SuppliersEmptyState(isSearching = query.isNotBlank())
+                SuppliersEmptyState(
+                    isSearching = query.isNotBlank(),
+                    supplierLabel = supplierLabel,
+                    debtLabel = debtLabel
+                )
             } else {
                 Column(
                     modifier = Modifier
@@ -787,7 +808,7 @@ fun SuppliersScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "Daftar Supplier",
+                            text = "Daftar $supplierLabel",
                             style = MaterialTheme.typography.titleMedium.copy(
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 14.5.sp,
@@ -795,7 +816,7 @@ fun SuppliersScreen(
                             )
                         )
                         Text(
-                            text = "${suppliers.size} Distributor",
+                            text = "${suppliers.size} $supplierLabel",
                             style = MaterialTheme.typography.bodySmall.copy(
                                 fontSize = 11.5.sp,
                                 color = AppColors.TextSecondary
@@ -832,7 +853,11 @@ fun SuppliersScreen(
  * Top Header matching Home/Kasir/Produk/Pembelian/Cash/Customers header language.
  */
 @Composable
-private fun SuppliersTopHeader(supplierCount: Int) {
+private fun SuppliersTopHeader(
+    supplierCount: Int,
+    supplierLabel: String = "Supplier",
+    debtLabel: String = "Hutang"
+) {
     Surface(
         color = Color.White,
         shadowElevation = 0.5.dp,
@@ -866,7 +891,7 @@ private fun SuppliersTopHeader(supplierCount: Int) {
 
                 Column {
                     Text(
-                        text = "Supplier & Hutang",
+                        text = "$supplierLabel & $debtLabel",
                         style = MaterialTheme.typography.titleMedium.copy(
                             fontWeight = FontWeight.Bold,
                             fontSize = 16.5.sp,
@@ -888,7 +913,7 @@ private fun SuppliersTopHeader(supplierCount: Int) {
                 color = Color(0xFFE8F5E9)
             ) {
                 Text(
-                    text = if (supplierCount > 0) "$supplierCount Supplier" else "Buku Hutang",
+                    text = if (supplierCount > 0) "$supplierCount $supplierLabel" else "Buku $debtLabel",
                     color = AppColors.GreenPrimary,
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 11.sp,
@@ -1112,7 +1137,11 @@ private fun SupplierPayableItemCard(payable: SupplierPayableEntity) {
  * Clean Empty State when no suppliers exist or search has no match.
  */
 @Composable
-private fun SuppliersEmptyState(isSearching: Boolean) {
+private fun SuppliersEmptyState(
+    isSearching: Boolean,
+    supplierLabel: String = "Supplier",
+    debtLabel: String = "Hutang"
+) {
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -1141,7 +1170,7 @@ private fun SuppliersEmptyState(isSearching: Boolean) {
             Spacer(Modifier.height(14.dp))
 
             Text(
-                text = if (isSearching) "Supplier Tidak Ditemukan" else "Belum Ada Supplier",
+                text = if (isSearching) "$supplierLabel Tidak Ditemukan" else "Belum Ada $supplierLabel",
                 style = MaterialTheme.typography.titleMedium.copy(
                     fontWeight = FontWeight.Bold,
                     fontSize = 16.sp,
@@ -1152,7 +1181,7 @@ private fun SuppliersEmptyState(isSearching: Boolean) {
             Spacer(Modifier.height(4.dp))
 
             Text(
-                text = if (isSearching) "Coba gunakan kata kunci pencarian yang lain." else "Tambah supplier untuk mencatat transaksi pembelian barang & hutang usaha.",
+                text = if (isSearching) "Coba gunakan kata kunci pencarian yang lain." else "Tambah ${supplierLabel.lowercase()} untuk mencatat transaksi pembelian barang & ${debtLabel.lowercase()} usaha.",
                 style = MaterialTheme.typography.bodySmall.copy(
                     fontSize = 12.5.sp,
                     color = AppColors.TextSecondary,
