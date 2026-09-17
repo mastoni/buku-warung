@@ -11,7 +11,7 @@ export function normalizeEmail(email: string): string {
 /**
  * Computes deterministic SHA-256 hash of canonicalized email with server pepper.
  */
-export function hashEmail(email: string, pepper: string = config.serverPepper): string {
+export function hashEmail(email: string, pepper: string = getServerPepper()): string {
   const canonical = normalizeEmail(email);
   return crypto.createHmac('sha256', pepper).update(canonical).digest('hex');
 }
@@ -19,9 +19,17 @@ export function hashEmail(email: string, pepper: string = config.serverPepper): 
 /**
  * Normalizes license code (uppercase, trim) and hashes using HMAC-SHA256 with server pepper.
  */
-export function hashLicenseCode(code: string, pepper: string = config.serverPepper): string {
+export function hashLicenseCode(code: string, pepper: string = getServerPepper()): string {
   const normalized = code.trim().toUpperCase();
   return crypto.createHmac('sha256', pepper).update(normalized).digest('hex');
+}
+
+function getServerPepper(): string {
+  const pepper = config.serverPepper;
+  if (!pepper) {
+    throw new Error('SERVER_PEPPER is required. Set it in the environment before starting the server.');
+  }
+  return pepper;
 }
 
 /**

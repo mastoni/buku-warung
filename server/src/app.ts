@@ -8,6 +8,7 @@ import { registerLicenseRoutes } from './controllers/licenseController.js';
 import { registerAdminRoutes } from './controllers/adminController.js';
 import { registerLandingRoutes } from './controllers/landingController.js';
 import { registerDownloadRoutes } from './controllers/downloadController.js';
+import { registerPublicOrderRoutes } from './controllers/publicOrderController.js';
 
 export function buildApp(): FastifyInstance {
   const app = Fastify({
@@ -17,12 +18,29 @@ export function buildApp(): FastifyInstance {
           redact: ['req.headers.authorization', 'body.licenseCode', 'body.ownerEmail', 'body.customerContact']
         }
       : false,
-    bodyLimit: 10240
+    bodyLimit: 10240,
+    routerOptions: {
+      maxParamLength: 500
+    }
   });
 
   // Security Plugins
   app.register(helmet, { global: true });
-  app.register(cors, { origin: true });
+  app.register(cors, {
+    origin: (origin, cb) => {
+      if (!origin) return cb(null, true);
+      if (config.nodeEnv !== 'production') return cb(null, true);
+      const allowedOrigins = [
+        'https://skmnetwork.com',
+        'https://www.skmnetwork.com',
+        'https://license.skmnetwork.com'
+      ];
+      if (allowedOrigins.includes(origin)) {
+        return cb(null, true);
+      }
+      return cb(new Error('Not allowed by CORS'), false);
+    }
+  });
 
   // Rate Limiter
   if (config.nodeEnv !== 'test') {
@@ -38,6 +56,7 @@ export function buildApp(): FastifyInstance {
   app.register(registerAdminRoutes);
   app.register(registerLandingRoutes);
   app.register(registerDownloadRoutes);
+  app.register(registerPublicOrderRoutes);
 
   // Error Handler
   app.setErrorHandler((error: any, _request, reply) => {
