@@ -32,6 +32,11 @@ data class UserSettings(
     val phone: String = "",
     val address: String = "",
 
+    // 1.1 Business Profile (Adaptive Layer v0.2.0)
+    val primaryBusinessType: String = "WARUNG_SEMBAKO",
+    val secondaryActivities: Set<String> = setOf("ACTIVITY_GOODS_SELLING"),
+    val profileVersion: Int = 1,
+
     // 2. POS Settings
     val showProductImage: Boolean = true,
     val showStock: Boolean = true,
@@ -167,6 +172,11 @@ class UserPreferencesRepository(
         val LICENSE_OWNER_EMAIL = stringPreferencesKey("commercial_license_owner_email")
         val LICENSE_ACTIVATED_AT = androidx.datastore.preferences.core.longPreferencesKey("commercial_license_activated_at")
         val LICENSE_LAST_VALIDATED_AT = androidx.datastore.preferences.core.longPreferencesKey("commercial_license_last_validated_at")
+
+        // 15. ADAPTIVE BUSINESS PROFILE (v0.2.0)
+        val PRIMARY_BUSINESS_TYPE = stringPreferencesKey("primary_business_type")
+        val SECONDARY_ACTIVITIES = androidx.datastore.preferences.core.stringSetPreferencesKey("secondary_activities")
+        val PROFILE_VERSION = intPreferencesKey("profile_version")
     }
 
     val userSettings: Flow<UserSettings> = dataStore.data.map { prefs ->
@@ -192,6 +202,10 @@ class UserPreferencesRepository(
             ownerName = prefs[Keys.OWNER_NAME] ?: "",
             phone = prefs[Keys.PHONE] ?: "",
             address = prefs[Keys.ADDRESS] ?: "",
+
+            primaryBusinessType = prefs[Keys.PRIMARY_BUSINESS_TYPE] ?: "WARUNG_SEMBAKO",
+            secondaryActivities = prefs[Keys.SECONDARY_ACTIVITIES] ?: setOf("ACTIVITY_GOODS_SELLING"),
+            profileVersion = prefs[Keys.PROFILE_VERSION] ?: 1,
 
             showProductImage = prefs[Keys.SHOW_PRODUCT_IMAGE] ?: true,
             showStock = prefs[Keys.SHOW_STOCK] ?: true,
@@ -427,6 +441,33 @@ class UserPreferencesRepository(
                     }
                 }
             }
+        }
+
+        // 3. Initialize Default Business Profile if missing (Idempotent - preserves existing profile)
+        if (prefs[Keys.PRIMARY_BUSINESS_TYPE] == null || prefs[Keys.SECONDARY_ACTIVITIES] == null || prefs[Keys.PROFILE_VERSION] == null) {
+            dataStore.edit { editPrefs ->
+                if (editPrefs[Keys.PRIMARY_BUSINESS_TYPE] == null) {
+                    editPrefs[Keys.PRIMARY_BUSINESS_TYPE] = "WARUNG_SEMBAKO"
+                }
+                if (editPrefs[Keys.SECONDARY_ACTIVITIES] == null) {
+                    editPrefs[Keys.SECONDARY_ACTIVITIES] = setOf("ACTIVITY_GOODS_SELLING")
+                }
+                if (editPrefs[Keys.PROFILE_VERSION] == null) {
+                    editPrefs[Keys.PROFILE_VERSION] = 1
+                }
+            }
+        }
+    }
+
+    suspend fun updateBusinessProfile(
+        primaryType: String,
+        secondaryActivities: Set<String>,
+        version: Int = 1
+    ) {
+        dataStore.edit { prefs ->
+            prefs[Keys.PRIMARY_BUSINESS_TYPE] = primaryType.trim()
+            prefs[Keys.SECONDARY_ACTIVITIES] = secondaryActivities
+            prefs[Keys.PROFILE_VERSION] = version
         }
     }
 
