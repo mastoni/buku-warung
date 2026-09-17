@@ -9,24 +9,27 @@ import { FaqSection } from './components/FaqSection';
 import { StickyMobileCta } from './components/StickyMobileCta';
 import { Footer } from './components/Footer';
 import { useScrollReveal } from './hooks/useScrollReveal';
+import { PricingProvider } from './hooks/usePricingPromo';
 
 export const App: React.FC = () => {
   useScrollReveal();
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900">
-      <Navbar />
-      <main className="flex-1">
-        <Hero />
-        <FeatureGrid />
-        <AdaptiveBusinessSwitcher />
-        <ScreenshotShowcase />
-        <PricingSection />
-        <FaqSection />
-      </main>
-      <Footer />
-      <StickyMobileCta />
-    </div>
+    <PricingProvider>
+      <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900">
+        <Navbar />
+        <main className="flex-1">
+          <Hero />
+          <FeatureGrid />
+          <AdaptiveBusinessSwitcher />
+          <ScreenshotShowcase />
+          <PricingSection />
+          <FaqSection />
+        </main>
+        <Footer />
+        <StickyMobileCta />
+      </div>
+    </PricingProvider>
   );
 };
 

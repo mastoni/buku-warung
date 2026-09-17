@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { ShoppingCart, Menu, X, ArrowRight } from 'lucide-react';
 import { LANDING_CONFIG } from '../data/landingData';
+import { usePricing } from '../hooks/usePricingPromo';
 
 export const Navbar: React.FC = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { effectivePriceFormatted } = usePricing();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -75,7 +77,7 @@ export const Navbar: React.FC = () => {
             className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm px-4 py-2.5 rounded-xl shadow-xs hover:shadow-md transition-all active:scale-95"
           >
             <ShoppingCart className="w-4 h-4" />
-            <span>Beli Sekarang — Rp 50.000</span>
+            <span>Beli Sekarang — {effectivePriceFormatted}</span>
           </a>
         </div>
 
@@ -135,7 +137,7 @@ export const Navbar: React.FC = () => {
               href={LANDING_CONFIG.publicOrderUrl}
               className="flex items-center justify-center gap-2 bg-emerald-600 text-white font-bold py-3 rounded-xl shadow-xs text-sm"
             >
-              <span>Beli Sekarang — Rp 50.000</span>
+              <span>Beli Sekarang — {effectivePriceFormatted}</span>
               <ArrowRight className="w-4 h-4" />
             </a>
             <a

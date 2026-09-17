@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { FAQS, FaqItem } from '../data/landingData';
+import { usePricing } from '../hooks/usePricingPromo';
 
 export const FaqSection: React.FC = () => {
   const [openId, setOpenId] = useState<string | null>(FAQS[0].id);
+  const { effectivePriceFormatted } = usePricing();
 
   const toggleFaq = (id: string) => {
     setOpenId(openId === id ? null : id);
@@ -29,6 +31,9 @@ export const FaqSection: React.FC = () => {
         <div className="space-y-3">
           {FAQS.map((faq: FaqItem) => {
             const isOpen = openId === faq.id;
+            const question = faq.question.replace(/Rp 50\.000/g, effectivePriceFormatted);
+            const answer = faq.answer.replace(/Rp 50\.000/g, effectivePriceFormatted);
+
             return (
               <div
                 key={faq.id}
@@ -40,7 +45,7 @@ export const FaqSection: React.FC = () => {
                   aria-expanded={isOpen}
                   className="w-full text-left p-5 sm:p-6 flex items-center justify-between gap-4 font-bold text-slate-900 hover:text-emerald-700 transition-colors cursor-pointer"
                 >
-                  <span className="text-base sm:text-lg">{faq.question}</span>
+                  <span className="text-base sm:text-lg">{question}</span>
                   <ChevronDown
                     className={`w-5 h-5 text-slate-400 shrink-0 transition-transform duration-200 ${
                       isOpen ? 'rotate-180 text-emerald-600' : ''
@@ -49,7 +54,7 @@ export const FaqSection: React.FC = () => {
                 </button>
                 {isOpen && (
                   <div className="px-5 pb-5 sm:px-6 sm:pb-6 text-sm sm:text-base text-slate-600 leading-relaxed border-t border-slate-100 pt-3 animate-in fade-in duration-150">
-                    {faq.answer}
+                    {answer}
                   </div>
                 )}
               </div>

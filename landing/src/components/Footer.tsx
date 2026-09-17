@@ -1,8 +1,11 @@
 import React from 'react';
 import { ShoppingCart, MessageCircle, ShieldCheck } from 'lucide-react';
 import { LANDING_CONFIG } from '../data/landingData';
+import { usePricing } from '../hooks/usePricingPromo';
 
 export const Footer: React.FC = () => {
+  const { effectivePriceFormatted } = usePricing();
+
   return (
     <footer className="bg-slate-900 text-slate-300 py-12 md:py-16 border-t border-slate-800">
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
@@ -66,7 +69,7 @@ export const Footer: React.FC = () => {
                 className="inline-flex items-center gap-2 text-xs font-bold text-emerald-400 hover:text-emerald-300 transition-colors"
               >
                 <ShoppingCart className="w-3.5 h-3.5" />
-                <span>Beli Lisensi (Rp 50.000)</span>
+                <span>Beli Lisensi ({effectivePriceFormatted})</span>
               </a>
               <div>
                 <a

@@ -1,8 +1,20 @@
 import React from 'react';
 import { ShoppingCart, Check, MessageCircle, Sparkles } from 'lucide-react';
 import { LANDING_CONFIG, COMPARISON_POINTS } from '../data/landingData';
+import { usePricing } from '../hooks/usePricingPromo';
+import { PromoCountdown } from './PromoCountdown';
 
 export const PricingSection: React.FC = () => {
+  const {
+    isPromoActive,
+    effectivePriceFormatted,
+    normalPriceFormatted,
+    promoName,
+    showCountdown,
+    normalPrice,
+    effectivePrice,
+  } = usePricing();
+
   return (
     <section id="harga" className="py-16 md:py-24 bg-white border-t border-slate-200 reveal-on-scroll">
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
@@ -31,26 +43,31 @@ export const PricingSection: React.FC = () => {
               <div className="flex items-center justify-between gap-2 mb-6">
                 <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 text-xs font-extrabold">
                   <Sparkles className="w-3.5 h-3.5" />
-                  Promo Peluncuran
+                  {isPromoActive ? (promoName || 'Promo Peluncuran') : 'Lisensi Komersial'}
                 </span>
-                <span className="text-xs text-emerald-300/80 font-semibold line-through">
-                  {LANDING_CONFIG.priceNormalFormatted}
-                </span>
+                {isPromoActive && normalPrice > effectivePrice && (
+                  <span className="text-xs text-emerald-300/80 font-semibold line-through">
+                    {normalPriceFormatted}
+                  </span>
+                )}
               </div>
 
               {/* Title & Price */}
               <h3 className="text-2xl font-extrabold text-white">Lisensi Komersial Lifetime</h3>
               <p className="text-xs text-emerald-200/80 mt-1">Akses penuh semua fitur kasir & pembukuan</p>
 
-              <div className="mt-6 mb-8 flex items-baseline gap-2">
+              <div className="mt-6 mb-4 flex items-baseline gap-2">
                 <span className="text-4xl sm:text-5xl font-extrabold text-white tracking-tight">
-                  {LANDING_CONFIG.priceFormatted}
+                  {effectivePriceFormatted}
                 </span>
                 <span className="text-xs sm:text-sm font-semibold text-emerald-300">/ sekali beli seumur hidup</span>
               </div>
 
+              {/* Dynamic Countdown Display */}
+              {isPromoActive && showCountdown && <PromoCountdown variant="card" />}
+
               {/* Feature Highlights */}
-              <ul className="space-y-3 text-sm text-emerald-100/90 font-medium">
+              <ul className="space-y-3 text-sm text-emerald-100/90 font-medium mt-6">
                 <li className="flex items-start gap-2.5">
                   <Check className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
                   <span>100% Offline-First (Jualan tanpa kuota internet)</span>
@@ -81,7 +98,7 @@ export const PricingSection: React.FC = () => {
                 className="w-full flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold text-base py-4 rounded-xl shadow-lg hover:shadow-emerald-500/25 transition-all active:scale-98"
               >
                 <ShoppingCart className="w-5 h-5" />
-                <span>Beli Sekarang — Rp 50.000</span>
+                <span>Beli Sekarang — {effectivePriceFormatted}</span>
               </a>
               <p className="text-[11px] text-center text-emerald-300/70 font-medium">
                 Aktivasi instan via kode lisensi resmi SKMNetwork
@@ -98,29 +115,36 @@ export const PricingSection: React.FC = () => {
               </p>
 
               <div className="space-y-4">
-                {COMPARISON_POINTS.map((item, index) => (
-                  <div
-                    key={index}
-                    className={`p-4 rounded-xl border transition-all ${
-                      item.highlight
-                        ? 'bg-emerald-50/70 border-emerald-200'
-                        : 'bg-white border-slate-200/70'
-                    }`}
-                  >
-                    <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
-                      {item.feature}
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
-                      <div className="flex items-start gap-1.5 text-emerald-900 font-bold">
-                        <Check className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                        <span>Buku Warung: {item.bukuWarung}</span>
+                {COMPARISON_POINTS.map((item, index) => {
+                  const displayBukuWarung =
+                    item.feature === 'Model Pembayaran'
+                      ? `${effectivePriceFormatted} Sekali Beli Seumur Hidup`
+                      : item.bukuWarung;
+
+                  return (
+                    <div
+                      key={index}
+                      className={`p-4 rounded-xl border transition-all ${
+                        item.highlight
+                          ? 'bg-emerald-50/70 border-emerald-200'
+                          : 'bg-white border-slate-200/70'
+                      }`}
+                    >
+                      <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+                        {item.feature}
                       </div>
-                      <div className="text-slate-500 text-xs sm:text-sm pl-5 sm:pl-0">
-                        Lainnya: {item.others}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+                        <div className="flex items-start gap-1.5 text-emerald-900 font-bold">
+                          <Check className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                          <span>Buku Warung: {displayBukuWarung}</span>
+                        </div>
+                        <div className="text-slate-500 text-xs sm:text-sm pl-5 sm:pl-0">
+                          Lainnya: {item.others}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
 

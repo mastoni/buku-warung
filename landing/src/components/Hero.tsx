@@ -1,8 +1,12 @@
 import React from 'react';
 import { ShoppingCart, MessageCircle, CheckCircle2, ShieldCheck, Zap, Sparkles } from 'lucide-react';
 import { LANDING_CONFIG } from '../data/landingData';
+import { usePricing } from '../hooks/usePricingPromo';
+import { PromoCountdown } from './PromoCountdown';
 
 export const Hero: React.FC = () => {
+  const { isPromoActive, effectivePriceFormatted, promoName, showCountdown } = usePricing();
+
   return (
     <section id="beranda" className="pt-28 pb-16 md:pt-36 md:pb-24 relative overflow-hidden">
       {/* Background decoration */}
@@ -13,7 +17,11 @@ export const Hero: React.FC = () => {
           {/* Tagline Badge */}
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-100/90 text-emerald-900 border border-emerald-200/80 text-xs sm:text-sm font-bold shadow-xs">
             <Sparkles className="w-4 h-4 text-emerald-600" />
-            <span>Promo Peluncuran: Rp 50.000 Sekali Beli Seumur Hidup</span>
+            <span>
+              {isPromoActive
+                ? `${promoName || 'Promo Peluncuran'}: ${effectivePriceFormatted} Sekali Beli Seumur Hidup`
+                : `Lisensi Resmi: ${effectivePriceFormatted} Sekali Beli Seumur Hidup`}
+            </span>
           </div>
 
           {/* Headline */}
@@ -30,6 +38,13 @@ export const Hero: React.FC = () => {
             Offline-first untuk warung sembako, apotek, toko bangunan, bengkel, dan UMKM.
           </p>
 
+          {/* Hero Countdown if active */}
+          {isPromoActive && showCountdown && (
+            <div className="pt-1 flex justify-center">
+              <PromoCountdown variant="hero" />
+            </div>
+          )}
+
           {/* Action Buttons */}
           <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3.5">
             <a
@@ -37,7 +52,7 @@ export const Hero: React.FC = () => {
               className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white font-extrabold text-base px-7 py-4 rounded-2xl shadow-lg shadow-emerald-600/25 hover:shadow-xl hover:shadow-emerald-600/30 transition-all group"
             >
               <ShoppingCart className="w-5 h-5 group-hover:-translate-y-0.5 transition-transform" />
-              <span>Beli Sekarang — Rp 50.000 (Sekali Beli)</span>
+              <span>Beli Sekarang — {effectivePriceFormatted} (Sekali Beli)</span>
             </a>
             <a
               href={LANDING_CONFIG.whatsappConsultationUrl}
