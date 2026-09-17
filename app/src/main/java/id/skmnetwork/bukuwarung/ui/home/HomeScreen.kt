@@ -59,6 +59,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import id.skmnetwork.bukuwarung.data.preferences.UserSettings
+import id.skmnetwork.bukuwarung.domain.business.BusinessCapability
+import id.skmnetwork.bukuwarung.domain.business.BusinessTaxonomyRegistry
+import id.skmnetwork.bukuwarung.domain.business.BusinessTerminology
+import id.skmnetwork.bukuwarung.domain.business.ResolvedBusinessProfile
 import id.skmnetwork.bukuwarung.ui.navigation.AppScreen
 import id.skmnetwork.bukuwarung.ui.product.ProductViewModel
 import id.skmnetwork.bukuwarung.ui.theme.AppColors
@@ -70,7 +74,7 @@ import java.util.Date
 import java.util.Locale
 
 /**
- * Gate I.2-R1 — Home / Beranda Screen (Design Master Refinement)
+ * Gate I.2-R1 & G6 — Home / Beranda Screen (Adaptive Design Master)
  *
  * Visual & Structural Hierarchy:
  * 1. Store Identity Header (Branding, Shop Name, Subtitle, Active Badge & Initial Avatar)
@@ -89,12 +93,21 @@ fun HomeScreen(
     unreadNotificationCount: Int = 0,
     onNavigate: (AppScreen) -> Unit
 ) {
+    val resolvedProfile = remember(userSettings.primaryBusinessType, userSettings.secondaryActivities) {
+        BusinessTaxonomyRegistry.resolve(
+            primaryType = userSettings.primaryBusinessType,
+            secondaryActivities = userSettings.secondaryActivities
+        )
+    }
+    val terminology = resolvedProfile.terminology
+    val hasStockCapability = resolvedProfile.hasCapability(BusinessCapability.CAP_INVENTORY_STOCK)
+
     val dbProducts by viewModel.products.collectAsStateWithLifecycle()
     val cashBalance by viewModel.cashBalance.collectAsStateWithLifecycle()
     val todaySalesTotal by viewModel.todaySalesTotal.collectAsStateWithLifecycle()
     val todayExpenseTotal by viewModel.todayExpenseTotal.collectAsStateWithLifecycle()
 
-    val lowStockCount = if (userSettings.lowStockAlertEnabled) {
+    val lowStockCount = if (userSettings.lowStockAlertEnabled && hasStockCapability) {
         dbProducts.count { it.stock <= it.minimumStock }
     } else {
         0
@@ -165,10 +178,12 @@ fun HomeScreen(
                                 overflow = TextOverflow.Ellipsis
                             )
                             Text(
-                                text = "Pembukuan Warung Kecil",
+                                text = "Pembukuan ${resolvedProfile.businessType.displayName}",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = AppColors.TextSecondary,
-                                fontSize = 11.5.sp
+                                fontSize = 11.5.sp,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
                         }
                     }
@@ -323,7 +338,8 @@ fun HomeScreen(
                     todayExpenseStr = todayExpenseFormatted,
                     cashBalanceStr = cashBalanceFormatted,
                     lowStockCount = lowStockCount,
-                    showLowStockAlert = userSettings.lowStockAlertEnabled
+                    showLowStockAlert = userSettings.lowStockAlertEnabled && hasStockCapability,
+                    terminology = terminology
                 )
             }
 
@@ -354,13 +370,16 @@ fun HomeScreen(
             }
 
             item {
-                MenuGrid(onNavigate = onNavigate)
+                MenuGrid(
+                    terminology = terminology,
+                    onNavigate = onNavigate
+                )
             }
 
             // ==========================================
             // 4. LOW STOCK WARNING BANNER (IF ACTIVE)
             // ==========================================
-            if (userSettings.lowStockAlertEnabled && lowStockCount > 0) {
+            if (userSettings.lowStockAlertEnabled && hasStockCapability && lowStockCount > 0) {
                 item {
                     Card(
                         shape = RoundedCornerShape(16.dp),
@@ -391,13 +410,13 @@ fun HomeScreen(
                             Spacer(Modifier.width(12.dp))
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = "Barang Hampir Habis",
+                                    text = "${terminology.productLabel} Hampir Habis",
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 13.5.sp,
                                     color = Color(0xFFD46B08)
                                 )
                                 Text(
-                                    text = "$lowStockCount produk mencapai batas minimum stok",
+                                    text = "$lowStockCount ${terminology.productLabel.lowercase()} mencapai batas minimum stok",
                                     fontSize = 12.sp,
                                     color = AppColors.TextSecondary
                                 )
@@ -476,7 +495,8 @@ private fun SummaryGrid(
     todayExpenseStr: String,
     cashBalanceStr: String,
     lowStockCount: Int,
-    showLowStockAlert: Boolean
+    showLowStockAlert: Boolean,
+    terminology: BusinessTerminology = BusinessTerminology()
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Row(
@@ -484,7 +504,7 @@ private fun SummaryGrid(
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             SummaryCard(
-                title = "Penjualan Hari Ini",
+                title = "${terminology.transactionLabel} Hari Ini",
                 value = todaySalesStr,
                 icon = Icons.Default.ShoppingCart,
                 iconTint = Color(0xFF087A43),
@@ -519,8 +539,8 @@ private fun SummaryGrid(
                 modifier = Modifier.weight(1f)
             )
             SummaryCard(
-                title = "Stok Menipis",
-                value = if (showLowStockAlert) "$lowStockCount barang" else "Nonaktif",
+                title = "${terminology.stockLabel} Menipis",
+                value = if (showLowStockAlert) "$lowStockCount ${terminology.productLabel.lowercase()}" else "Nonaktif",
                 icon = Icons.Default.Inventory2,
                 iconTint = if (showLowStockAlert && lowStockCount > 0) Color(0xFFD46B08) else Color(0xFF8C8C8C),
                 iconBg = if (showLowStockAlert && lowStockCount > 0) Color(0xFFFFE7BA) else Color(0xFFE8E8E8),
@@ -607,38 +627,41 @@ private data class MenuItemData(
  * 4-column comfortable rounded tiles matching Design Master
  */
 @Composable
-private fun MenuGrid(onNavigate: (AppScreen) -> Unit) {
+private fun MenuGrid(
+    terminology: BusinessTerminology = BusinessTerminology(),
+    onNavigate: (AppScreen) -> Unit
+) {
     val menus = listOf(
         MenuItemData(
-            label = "Jualan\n(Kasir)",
+            label = "${terminology.transactionLabel}\n(Kasir)",
             icon = Icons.Default.PointOfSale,
             iconBg = Color(0xFFE8F7EF),
             iconTint = Color(0xFF0B9F57),
             destination = AppScreen.POS
         ),
         MenuItemData(
-            label = "Produk\n& Stok",
+            label = "${terminology.productLabel}\n& ${terminology.stockLabel}",
             icon = Icons.Default.Inventory2,
             iconBg = Color(0xFFE8F3FF),
             iconTint = Color(0xFF096DD9),
             destination = AppScreen.PRODUCTS
         ),
         MenuItemData(
-            label = "Pembelian\n(Kulakan)",
+            label = "${terminology.purchaseLabel}\n(Kulakan)",
             icon = Icons.Default.ShoppingBag,
             iconBg = Color(0xFFFFF7E6),
             iconTint = Color(0xFFD46B08),
             destination = AppScreen.PURCHASE
         ),
         MenuItemData(
-            label = "Pelanggan\n& Piutang",
+            label = "${terminology.customerLabel}\n& Piutang",
             icon = Icons.Default.People,
             iconBg = Color(0xFFF0EDFE),
             iconTint = Color(0xFF722ED1),
             destination = AppScreen.CUSTOMERS
         ),
         MenuItemData(
-            label = "Supplier\n& Hutang",
+            label = "${terminology.supplierLabel}\n& ${terminology.debtLabel}",
             icon = Icons.Default.LocalShipping,
             iconBg = Color(0xFFE6FFFB),
             iconTint = Color(0xFF08979C),

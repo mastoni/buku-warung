@@ -6,7 +6,6 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -53,7 +52,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.layout.ContentScale
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
@@ -64,15 +63,20 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import id.skmnetwork.bukuwarung.data.preferences.UserSettings
 import id.skmnetwork.bukuwarung.data.local.entity.CustomerEntity
+import id.skmnetwork.bukuwarung.data.local.entity.ItemType
 import id.skmnetwork.bukuwarung.data.local.entity.SaleTransactionEntity
+import id.skmnetwork.bukuwarung.data.preferences.UserSettings
+import id.skmnetwork.bukuwarung.domain.business.BusinessCapability
+import id.skmnetwork.bukuwarung.domain.business.BusinessTaxonomyRegistry
+import id.skmnetwork.bukuwarung.domain.business.ResolvedBusinessProfile
 import id.skmnetwork.bukuwarung.ui.components.AppCard
 import id.skmnetwork.bukuwarung.ui.components.AppEmptyState
 import id.skmnetwork.bukuwarung.ui.components.AppTextField
@@ -100,6 +104,14 @@ fun PosScreen(
     onNavigateToAddProduct: () -> Unit = {},
     onNavigateToSettings: () -> Unit = {}
 ) {
+    val resolvedProfile = remember(userSettings.primaryBusinessType, userSettings.secondaryActivities) {
+        BusinessTaxonomyRegistry.resolve(
+            primaryType = userSettings.primaryBusinessType,
+            secondaryActivities = userSettings.secondaryActivities
+        )
+    }
+    val terminology = resolvedProfile.terminology
+
     val dbProducts by viewModel.products.collectAsStateWithLifecycle()
     val dbCategories by viewModel.categories.collectAsStateWithLifecycle()
     val customers by customerViewModel.customers.collectAsStateWithLifecycle()
@@ -199,19 +211,24 @@ fun PosScreen(
                 scope.launch {
                     val matchedProduct = viewModel.getProductByBarcode(cleanBarcode)
                     if (matchedProduct != null) {
-                        if (matchedProduct.stock <= 0.0) {
-                            Toast.makeText(context, "Stok ${matchedProduct.name} habis (0)", Toast.LENGTH_SHORT).show()
+                        val isServiceOrDigital = matchedProduct.itemType == ItemType.SERVICE.name || matchedProduct.itemType == ItemType.DIGITAL.name
+                        if (isServiceOrDigital) {
+                            val currentQty = cart[matchedProduct.id] ?: 0.0
+                            cart[matchedProduct.id] = currentQty + 1.0
+                            Toast.makeText(context, "+1 ${matchedProduct.name}", Toast.LENGTH_SHORT).show()
+                        } else if (matchedProduct.stock <= 0.0) {
+                            Toast.makeText(context, "${terminology.stockLabel} ${matchedProduct.name} habis (0)", Toast.LENGTH_SHORT).show()
                         } else {
                             val currentQty = cart[matchedProduct.id] ?: 0.0
                             if (currentQty + 1.0 <= matchedProduct.stock) {
                                 cart[matchedProduct.id] = currentQty + 1.0
                                 Toast.makeText(context, "+1 ${matchedProduct.name}", Toast.LENGTH_SHORT).show()
                             } else {
-                                Toast.makeText(context, "Stok ${matchedProduct.name} hanya tersisa ${matchedProduct.stock.toInt()}", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, "${terminology.stockLabel} ${matchedProduct.name} hanya tersisa ${matchedProduct.stock.toInt()}", Toast.LENGTH_SHORT).show()
                             }
                         }
                     } else {
-                        Toast.makeText(context, "Produk barcode $cleanBarcode tidak ditemukan", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, "${terminology.productLabel} barcode $cleanBarcode tidak ditemukan", Toast.LENGTH_SHORT).show()
                     }
                 }
             }
@@ -221,14 +238,14 @@ fun PosScreen(
     if (showCustomerPickerSheet) {
         AlertDialog(
             onDismissRequest = { showCustomerPickerSheet = false },
-            title = { Text("Pilih Pelanggan Hutang", fontWeight = FontWeight.Bold) },
+            title = { Text("Pilih ${terminology.customerLabel} Hutang", fontWeight = FontWeight.Bold) },
             text = {
                 Column(
                     verticalArrangement = Arrangement.spacedBy(AppSpacing.sm),
                     modifier = Modifier.height(260.dp)
                 ) {
                     if (customers.isEmpty()) {
-                        Text("Belum ada pelanggan. Tambahkan pelanggan terlebih dahulu.", color = AppColors.TextSecondary)
+                        Text("Belum ada ${terminology.customerLabel.lowercase()}. Tambahkan ${terminology.customerLabel.lowercase()} terlebih dahulu.", color = AppColors.TextSecondary)
                     } else {
                         LazyColumn(verticalArrangement = Arrangement.spacedBy(AppSpacing.xs)) {
                             items(customers) { cust ->
@@ -411,7 +428,7 @@ fun PosScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.fillMaxWidth().padding(vertical = AppSpacing.xs)
                     ) {
-                        Text("TOTAL ($totalItemCount item)", fontWeight = FontWeight.Bold)
+                        Text("TOTAL ($totalItemCount ${terminology.productLabel.lowercase()})", fontWeight = FontWeight.Bold)
                         Spacer(Modifier.weight(1f))
                         Text(formatRupiah(totalPrice), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = AppColors.GreenPrimary)
                     }
@@ -474,7 +491,7 @@ fun PosScreen(
                                 Icon(Icons.Default.People, null, tint = AppColors.GreenPrimary)
                                 Spacer(Modifier.width(AppSpacing.sm))
                                 Text(
-                                    text = selectedCustomerForCredit?.name ?: "Pilih Pelanggan *",
+                                    text = selectedCustomerForCredit?.name ?: "Pilih ${terminology.customerLabel} *",
                                     fontWeight = FontWeight.Bold,
                                     color = if (selectedCustomerForCredit == null) AppColors.RedExpense else AppColors.TextPrimary,
                                     modifier = Modifier.weight(1f)
@@ -483,7 +500,7 @@ fun PosScreen(
                             }
                         }
                         if (selectedCustomerForCredit == null) {
-                            Text("Pilih pelanggan terlebih dahulu.", color = AppColors.RedExpense, style = MaterialTheme.typography.labelSmall)
+                            Text("Pilih ${terminology.customerLabel.lowercase()} terlebih dahulu.", color = AppColors.RedExpense, style = MaterialTheme.typography.labelSmall)
                         }
                     }
                 }
@@ -502,7 +519,7 @@ fun PosScreen(
                             }
                             "CREDIT" -> {
                                 if (selectedCustomerForCredit == null) {
-                                    Toast.makeText(context, "Pilih pelanggan terlebih dahulu", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(context, "Pilih ${terminology.customerLabel.lowercase()} terlebih dahulu", Toast.LENGTH_SHORT).show()
                                     showCustomerPickerSheet = true
                                     return@Button
                                 }
@@ -518,7 +535,7 @@ fun PosScreen(
                                             lastCheckoutData = CheckoutSuccessData(
                                                 items = cartSummaryList,
                                                 totalAmount = totalPrice,
-                                                paymentMethodLabel = "Hutang (${selectedCustomerForCredit?.name ?: "Pelanggan"})",
+                                                paymentMethodLabel = "Hutang (${selectedCustomerForCredit?.name ?: terminology.customerLabel})",
                                                 customerName = selectedCustomerForCredit?.name,
                                                 saleId = saleId,
                                                 receiptData = receiptData
@@ -623,11 +640,12 @@ fun PosScreen(
                         Text("Pembayaran: ${data.paymentMethodLabel}", style = MaterialTheme.typography.bodySmall, color = AppColors.TextSecondary)
 
                         if (printerStatusMessage != null) {
+                            val msg = printerStatusMessage ?: ""
                             Spacer(Modifier.height(AppSpacing.xs))
                             Text(
-                                text = printerStatusMessage!!,
+                                text = msg,
                                 style = MaterialTheme.typography.labelSmall,
-                                color = if (printerStatusMessage!!.contains("berhasil")) AppColors.GreenPrimary else AppColors.TextSecondary,
+                                color = if (msg.contains("berhasil")) AppColors.GreenPrimary else AppColors.TextSecondary,
                                 fontWeight = FontWeight.Medium
                             )
                         }
@@ -701,7 +719,7 @@ fun PosScreen(
                             modifier = Modifier.weight(1f, fill = false)
                         ) {
                             Text(
-                                text = if (selectedTab == 0) "Jualan (Kasir)" else "Riwayat Penjualan",
+                                text = if (selectedTab == 0) "${terminology.transactionLabel} (Kasir)" else "Riwayat ${terminology.transactionLabel}",
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 16.5.sp,
                                 color = AppColors.TextPrimary,
@@ -709,7 +727,7 @@ fun PosScreen(
                                 overflow = TextOverflow.Ellipsis
                             )
                             Text(
-                                text = if (selectedTab == 0) "Catat transaksi & kasir cepat" else "Daftar struk & riwayat penjualan",
+                                text = if (selectedTab == 0) "Catat ${terminology.transactionLabel.lowercase()} & kasir cepat" else "Daftar struk & riwayat ${terminology.transactionLabel.lowercase()}",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = AppColors.TextSecondary,
                                 fontSize = 11.5.sp
@@ -820,7 +838,7 @@ fun PosScreen(
                             )
                             Spacer(Modifier.width(6.dp))
                             Text(
-                                "Riwayat Penjualan",
+                                "Riwayat ${terminology.transactionLabel}",
                                 color = if (tab1Active) Color.White else AppColors.TextSecondary,
                                 fontWeight = FontWeight.Bold,
                                 style = MaterialTheme.typography.labelMedium
@@ -842,7 +860,7 @@ fun PosScreen(
                         AppTextField(
                             value = query,
                             onValueChange = { query = it },
-                            label = "Cari nama atau barcode...",
+                            label = "Cari ${terminology.productLabel.lowercase()} atau barcode...",
                             modifier = Modifier.weight(1f)
                         )
                         if (userSettings.showBarcode) {
@@ -925,9 +943,9 @@ fun PosScreen(
                 if (dbProducts.isEmpty()) {
                     AppEmptyState(
                         icon = Icons.Default.Inventory2,
-                        title = "Belum ada produk jualan",
-                        description = "Tambahkan produk di menu Produk & Stok untuk mulai berjualan",
-                        actionText = "+ Tambah Produk",
+                        title = "Belum ada ${terminology.productLabel.lowercase()} jualan",
+                        description = "Tambahkan ${terminology.productLabel.lowercase()} di menu ${terminology.productLabel} & ${terminology.stockLabel} untuk mulai berjualan",
+                        actionText = "+ Tambah ${terminology.productLabel}",
                         onActionClick = onNavigateToAddProduct,
                         modifier = Modifier.weight(1f)
                     )
@@ -946,16 +964,19 @@ fun PosScreen(
                             ) {
                                 rowProducts.forEach { product ->
                                     val currentCartQty = cart[product.id] ?: 0.0
-                                    val isOutofStock = product.stock <= 0.0
+                                    val isServiceOrDigital = product.itemType == ItemType.SERVICE.name || product.itemType == ItemType.DIGITAL.name
+                                    val isOutofStock = if (isServiceOrDigital) false else product.stock <= 0.0
                                     val isInCart = currentCartQty > 0.0
 
                                     Surface(
                                         onClick = {
-                                            if (!isOutofStock) {
+                                            if (isServiceOrDigital) {
+                                                cart[product.id] = currentCartQty + 1.0
+                                            } else if (!isOutofStock) {
                                                 if (currentCartQty + 1.0 <= product.stock) {
                                                     cart[product.id] = currentCartQty + 1.0
                                                 } else {
-                                                    Toast.makeText(context, "Stok ${product.name} hanya tersisa ${product.stock.toInt()}", Toast.LENGTH_SHORT).show()
+                                                    Toast.makeText(context, "${terminology.stockLabel} ${product.name} hanya tersisa ${product.stock.toInt()}", Toast.LENGTH_SHORT).show()
                                                 }
                                             }
                                         },
@@ -980,7 +1001,7 @@ fun PosScreen(
                                                         .clip(RoundedCornerShape(10.dp))
                                                         .background(
                                                             if (isOutofStock) Color(0xFFFFEBEE)
-                                                            else if (isInCart) Color.White
+                                                             else if (isInCart) Color.White
                                                             else Color(0xFFF4F8F5)
                                                         ),
                                                     contentAlignment = Alignment.Center
@@ -1041,32 +1062,64 @@ fun PosScreen(
 
                                             if (userSettings.showStock) {
                                                 Spacer(Modifier.height(2.dp))
-                                                if (isOutofStock) {
-                                                    Surface(
-                                                        shape = RoundedCornerShape(6.dp),
-                                                        color = Color(0xFFFFEBEE)
-                                                    ) {
-                                                        Text(
-                                                            text = "Habis",
-                                                            color = AppColors.RedExpense,
-                                                            fontSize = 10.5.sp,
-                                                            fontWeight = FontWeight.Bold,
-                                                            modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp)
-                                                        )
+                                                when (product.itemType) {
+                                                    ItemType.SERVICE.name -> {
+                                                        Surface(
+                                                            shape = RoundedCornerShape(6.dp),
+                                                            color = Color(0xFFE8F3FF)
+                                                        ) {
+                                                            Text(
+                                                                text = terminology.serviceLabel,
+                                                                color = Color(0xFF096DD9),
+                                                                fontSize = 10.5.sp,
+                                                                fontWeight = FontWeight.Bold,
+                                                                modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp)
+                                                            )
+                                                        }
                                                     }
-                                                } else if (product.stock <= product.minimumStock) {
-                                                    Text(
-                                                        text = "Sisa: ${product.stock.toInt()} ${product.unit}",
-                                                        color = Color(0xFFD97706),
-                                                        fontSize = 11.sp,
-                                                        fontWeight = FontWeight.SemiBold
-                                                    )
-                                                } else {
-                                                    Text(
-                                                        text = "Stok: ${product.stock.toInt()} ${product.unit}",
-                                                        color = AppColors.TextSecondary,
-                                                        fontSize = 11.sp
-                                                    )
+                                                    ItemType.DIGITAL.name -> {
+                                                        Surface(
+                                                            shape = RoundedCornerShape(6.dp),
+                                                            color = Color(0xFFF6FFED)
+                                                        ) {
+                                                            Text(
+                                                                text = "Digital",
+                                                                color = Color(0xFF389E0D),
+                                                                fontSize = 10.5.sp,
+                                                                fontWeight = FontWeight.Bold,
+                                                                modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp)
+                                                            )
+                                                        }
+                                                    }
+                                                    else -> {
+                                                        if (isOutofStock) {
+                                                            Surface(
+                                                                shape = RoundedCornerShape(6.dp),
+                                                                color = Color(0xFFFFEBEE)
+                                                            ) {
+                                                                Text(
+                                                                    text = "Habis",
+                                                                    color = AppColors.RedExpense,
+                                                                    fontSize = 10.5.sp,
+                                                                    fontWeight = FontWeight.Bold,
+                                                                    modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp)
+                                                                )
+                                                            }
+                                                        } else if (product.stock <= product.minimumStock) {
+                                                            Text(
+                                                                text = "Sisa: ${product.stock.toInt()} ${product.unit}",
+                                                                color = Color(0xFFD97706),
+                                                                fontSize = 11.sp,
+                                                                fontWeight = FontWeight.SemiBold
+                                                            )
+                                                        } else {
+                                                            Text(
+                                                                text = "${terminology.stockLabel}: ${product.stock.toInt()} ${product.unit}",
+                                                                color = AppColors.TextSecondary,
+                                                                fontSize = 11.sp
+                                                            )
+                                                        }
+                                                    }
                                                 }
                                             }
                                         }
@@ -1116,7 +1169,7 @@ fun PosScreen(
 
                                 Column(Modifier.weight(1f)) {
                                     Text(
-                                        text = "$totalItemCount item dipilih",
+                                        text = "$totalItemCount ${terminology.productLabel.lowercase()} dipilih",
                                         fontWeight = FontWeight.SemiBold,
                                         fontSize = 12.5.sp,
                                         color = AppColors.TextSecondary
@@ -1164,6 +1217,7 @@ fun PosScreen(
                                     cart.entries.forEach { (prodId, qty) ->
                                         val prod = dbProducts.find { it.id == prodId }
                                         if (prod != null) {
+                                            val isServiceOrDigitalProd = prod.itemType == ItemType.SERVICE.name || prod.itemType == ItemType.DIGITAL.name
                                             Surface(
                                                 shape = RoundedCornerShape(10.dp),
                                                 color = Color(0xFFF8FAF9),
@@ -1225,10 +1279,10 @@ fun PosScreen(
                                                         modifier = Modifier
                                                             .size(28.dp)
                                                             .clickable {
-                                                                if (qty + 1.0 <= prod.stock) {
+                                                                if (isServiceOrDigitalProd || qty + 1.0 <= prod.stock) {
                                                                     cart[prodId] = qty + 1.0
                                                                 } else {
-                                                                    Toast.makeText(context, "Stok ${prod.name} hanya tersisa ${prod.stock.toInt()}", Toast.LENGTH_SHORT).show()
+                                                                    Toast.makeText(context, "${terminology.stockLabel} ${prod.name} hanya tersisa ${prod.stock.toInt()}", Toast.LENGTH_SHORT).show()
                                                                 }
                                                             }
                                                     ) {
@@ -1282,7 +1336,7 @@ fun PosScreen(
                     AppTextField(
                         value = salesHistoryQuery,
                         onValueChange = { salesHistoryQuery = it },
-                        label = "Cari nomor struk atau nama pelanggan...",
+                        label = "Cari nomor struk atau nama ${terminology.customerLabel.lowercase()}...",
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
@@ -1292,9 +1346,9 @@ fun PosScreen(
                 if (sales.isEmpty()) {
                     AppEmptyState(
                         icon = Icons.Default.Receipt,
-                        title = "Belum ada riwayat penjualan",
+                        title = "Belum ada riwayat ${terminology.transactionLabel.lowercase()}",
                         description = "Transaksi kasir yang selesai akan tercatat otomatis di sini",
-                        actionText = "+ Kasir Baru",
+                        actionText = "+ ${terminology.transactionLabel} Baru",
                         onActionClick = { selectedTab = 0 },
                         modifier = Modifier.weight(1f)
                     )
@@ -1305,7 +1359,7 @@ fun PosScreen(
                             .fillMaxWidth(),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text("Tidak ada transaksi penjualan yang cocok", color = AppColors.TextSecondary)
+                        Text("Tidak ada transaksi ${terminology.transactionLabel.lowercase()} yang cocok", color = AppColors.TextSecondary)
                     }
                 } else {
                     LazyColumn(
@@ -1315,7 +1369,7 @@ fun PosScreen(
                             .padding(horizontal = AppSpacing.lg)
                     ) {
                         items(filteredSales, key = { it.id }) { sale ->
-                            val custName = customers.find { it.id == sale.customerId }?.name ?: "Pelanggan Umum"
+                            val custName = customers.find { it.id == sale.customerId }?.name ?: "${terminology.customerLabel} Umum"
                             val dateStr = SimpleDateFormat("dd MMM yyyy, HH:mm", Locale.forLanguageTag("id-ID")).format(Date(sale.transactionDate))
                             val isCredit = sale.paymentMethod == "CREDIT"
                             val paymentLabel = when (sale.paymentMethod) {
@@ -1415,3 +1469,5 @@ fun PosScreen(
         }
     }
 }
+
+
