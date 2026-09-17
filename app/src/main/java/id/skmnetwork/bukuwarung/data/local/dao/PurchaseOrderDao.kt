@@ -58,6 +58,12 @@ interface PurchaseOrderDao {
     @Query("UPDATE purchase_orders SET status = :status, sent_at = :sentAt, updated_at = :updatedAt WHERE id = :id")
     suspend fun updatePurchaseOrderToOrdered(id: Long, status: String, sentAt: Long, updatedAt: Long = System.currentTimeMillis())
 
+    @Query("UPDATE purchase_orders SET status = :status, received_at = :receivedAt, final_purchase_id = :finalPurchaseId, updated_at = :updatedAt WHERE id = :id")
+    suspend fun updatePurchaseOrderToReceived(id: Long, status: String, receivedAt: Long, finalPurchaseId: Long, updatedAt: Long = System.currentTimeMillis())
+
+    @Query("UPDATE purchase_order_items SET received_quantity = :receivedQuantity WHERE id = :id")
+    suspend fun updatePurchaseOrderItemReceivedQuantity(id: Long, receivedQuantity: Double)
+
     @Delete
     suspend fun deletePurchaseOrder(order: PurchaseOrderEntity)
 }

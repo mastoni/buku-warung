@@ -17,7 +17,8 @@ import kotlinx.coroutines.withContext
 import java.util.UUID
 
 class PurchaseRepository(
-    private val appDatabase: AppDatabase
+    private val appDatabase: AppDatabase,
+    private val transactionRunner: (suspend (suspend () -> Any?) -> Any?)? = null
 ) {
     private val purchaseDao = appDatabase.purchaseDao()
     private val productDao = appDatabase.productDao()
@@ -28,6 +29,15 @@ class PurchaseRepository(
     private val syncQueueDao = appDatabase.syncQueueDao()
 
     val allTransactions: Flow<List<PurchaseTransactionEntity>> = purchaseDao.getAllPurchaseTransactions()
+
+    private suspend fun <T> runInTransaction(block: suspend () -> T): T {
+        return if (transactionRunner != null) {
+            @Suppress("UNCHECKED_CAST")
+            transactionRunner.invoke { block() } as T
+        } else {
+            appDatabase.withTransaction { block() }
+        }
+    }
 
     suspend fun getTransactionById(id: Long): PurchaseTransactionEntity? = withContext(Dispatchers.IO) {
         purchaseDao.getTransactionById(id)
@@ -53,7 +63,7 @@ class PurchaseRepository(
         }
 
         runCatching {
-            appDatabase.withTransaction {
+            runInTransaction {
                 // 1. Validate supplier if provided or if credit purchase
                 val supplier = if (supplierId != null) {
                     supplierDao.getSupplierById(supplierId)

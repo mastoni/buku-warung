@@ -67,21 +67,25 @@ class PurchaseOrderLifecycleUnitTest {
         private val prodDao: ProductDao,
         private val suppDao: SupplierDao,
         private val syncDao: SyncQueueDao,
+        private val purDao: PurchaseDao,
+        private val cashDao: CashDao,
+        private val payableDao: SupplierPayableDao,
+        private val movementDao: StockMovementDao,
         private val helper: SupportSQLiteOpenHelper
     ) : AppDatabase() {
         override fun purchaseOrderDao(): PurchaseOrderDao = poDao
         override fun productDao(): ProductDao = prodDao
         override fun supplierDao(): SupplierDao = suppDao
         override fun syncQueueDao(): SyncQueueDao = syncDao
+        override fun purchaseDao(): PurchaseDao = purDao
+        override fun cashDao(): CashDao = cashDao
+        override fun supplierPayableDao(): SupplierPayableDao = payableDao
+        override fun stockMovementDao(): StockMovementDao = movementDao
 
         override fun categoryDao(): CategoryDao = throw UnsupportedOperationException()
         override fun saleDao(): SaleDao = throw UnsupportedOperationException()
-        override fun cashDao(): CashDao = throw UnsupportedOperationException()
-        override fun purchaseDao(): PurchaseDao = throw UnsupportedOperationException()
         override fun customerDao(): CustomerDao = throw UnsupportedOperationException()
         override fun debtDao(): DebtDao = throw UnsupportedOperationException()
-        override fun supplierPayableDao(): SupplierPayableDao = throw UnsupportedOperationException()
-        override fun stockMovementDao(): StockMovementDao = throw UnsupportedOperationException()
         override fun saleReturnDao(): SaleReturnDao = throw UnsupportedOperationException()
 
         override val openHelper: SupportSQLiteOpenHelper = helper
@@ -174,6 +178,10 @@ class PurchaseOrderLifecycleUnitTest {
         val fakeProductDao = createFakeProductDao()
         val fakeSupplierDao = createFakeSupplierDao()
         val fakeSyncQueueDao = createFakeSyncQueueDao()
+        val fakePurchaseDao = Proxy.newProxyInstance(PurchaseDao::class.java.classLoader, arrayOf(PurchaseDao::class.java)) { _, _, _ -> null } as PurchaseDao
+        val fakeCashDao = Proxy.newProxyInstance(CashDao::class.java.classLoader, arrayOf(CashDao::class.java)) { _, _, _ -> null } as CashDao
+        val fakePayableDao = Proxy.newProxyInstance(SupplierPayableDao::class.java.classLoader, arrayOf(SupplierPayableDao::class.java)) { _, _, _ -> null } as SupplierPayableDao
+        val fakeMovementDao = Proxy.newProxyInstance(StockMovementDao::class.java.classLoader, arrayOf(StockMovementDao::class.java)) { _, _, _ -> null } as StockMovementDao
 
         val mockDb = Proxy.newProxyInstance(
             SupportSQLiteDatabase::class.java.classLoader,
@@ -204,6 +212,10 @@ class PurchaseOrderLifecycleUnitTest {
             prodDao = fakeProductDao,
             suppDao = fakeSupplierDao,
             syncDao = fakeSyncQueueDao,
+            purDao = fakePurchaseDao,
+            cashDao = fakeCashDao,
+            payableDao = fakePayableDao,
+            movementDao = fakeMovementDao,
             helper = mockHelper
         )
 

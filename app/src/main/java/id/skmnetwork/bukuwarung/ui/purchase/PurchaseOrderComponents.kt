@@ -409,6 +409,9 @@ fun PurchaseOrderDetailDialog(
     var isLoading by remember { mutableStateOf(true) }
     var showCancelConfirmDialog by remember { mutableStateOf(false) }
     var showMarkOrderedConfirmDialog by remember { mutableStateOf(false) }
+    var showReceiveGoodsDialog by remember { mutableStateOf(false) }
+    var receivePaymentMethod by remember { mutableStateOf("CASH") }
+    var isReceiving by remember { mutableStateOf(false) }
 
     LaunchedEffect(orderId) {
         isLoading = true
@@ -698,6 +701,17 @@ fun PurchaseOrderDetailDialog(
                             Text("Batalkan Pesanan", color = Color(0xFFC62828), fontWeight = FontWeight.SemiBold, fontSize = 12.5.sp)
                         }
                     } else if (order.status == PurchaseOrderStatus.ORDERED.name) {
+                        Button(
+                            onClick = { showReceiveGoodsDialog = true },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(10.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = AppColors.GreenPrimary)
+                        ) {
+                            Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(16.dp), tint = Color.White)
+                            Spacer(Modifier.width(6.dp))
+                            Text("Terima Barang", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                        }
+
                         TextButton(
                             onClick = { showCancelConfirmDialog = true },
                             modifier = Modifier.fillMaxWidth()
@@ -782,6 +796,130 @@ fun PurchaseOrderDetailDialog(
             dismissButton = {
                 TextButton(onClick = { showCancelConfirmDialog = false }) {
                     Text("Kembali", color = AppColors.TextSecondary)
+                }
+            }
+        )
+    }
+
+    // Goods Receipt Confirmation Dialog (Gate G13.6)
+    if (showReceiveGoodsDialog) {
+        AlertDialog(
+            onDismissRequest = { if (!isReceiving) showReceiveGoodsDialog = false },
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.CheckCircle, contentDescription = null, tint = AppColors.GreenPrimary, modifier = Modifier.size(22.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("Terima Barang & Selesaikan", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                }
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(
+                        text = "Konfirmasi penerimaan barang untuk Pesanan #${order.orderNumber}. Tindakan ini akan menyelesaikan pesanan menjadi transaksi pembelian resmi.",
+                        fontSize = 12.5.sp,
+                        color = AppColors.TextSecondary
+                    )
+
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = Color(0xFFF8FAF8),
+                        border = BorderStroke(1.dp, Color(0xFFE8EDE9)),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("$supplierLabel:", fontSize = 12.sp, color = AppColors.TextSecondary)
+                                Text(order.supplierNameSnapshot, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            }
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("Total Barang:", fontSize = 12.sp, color = AppColors.TextSecondary)
+                                Text("${items.size} jenis produk", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                            }
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("Total Pembelian:", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = AppColors.GreenPrimary)
+                                Text(formatRupiah(order.totalEstimatedAmount), fontSize = 13.5.sp, fontWeight = FontWeight.Bold, color = AppColors.GreenPrimary)
+                            }
+                        }
+                    }
+
+                    Text("Pilih Metode Pembayaran:", fontWeight = FontWeight.SemiBold, fontSize = 12.5.sp)
+
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = if (receivePaymentMethod == "CASH") AppColors.GreenPrimary.copy(alpha = 0.12f) else Color.White,
+                            border = BorderStroke(1.dp, if (receivePaymentMethod == "CASH") AppColors.GreenPrimary else Color(0xFFE0E0E0)),
+                            modifier = Modifier
+                                .weight(1f)
+                                .clickable { receivePaymentMethod = "CASH" }
+                        ) {
+                            Column(modifier = Modifier.padding(8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text("Tunai (CASH)", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = if (receivePaymentMethod == "CASH") AppColors.GreenPrimary else AppColors.TextPrimary)
+                                Text("Kas berkurang", fontSize = 10.sp, color = AppColors.TextSecondary)
+                            }
+                        }
+
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = if (receivePaymentMethod == "CREDIT") Color(0xFFE65100).copy(alpha = 0.12f) else Color.White,
+                            border = BorderStroke(1.dp, if (receivePaymentMethod == "CREDIT") Color(0xFFE65100) else Color(0xFFE0E0E0)),
+                            modifier = Modifier
+                                .weight(1f)
+                                .clickable { receivePaymentMethod = "CREDIT" }
+                        ) {
+                            Column(modifier = Modifier.padding(8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text("Hutang (CREDIT)", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = if (receivePaymentMethod == "CREDIT") Color(0xFFE65100) else AppColors.TextPrimary)
+                                Text("Catat hutang", fontSize = 10.sp, color = AppColors.TextSecondary)
+                            }
+                        }
+                    }
+
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = Color(0xFFE8F5E9),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = "✓ Stok produk fisik/BBM akan otomatis bertambah.\n✓ Transaksi belanja akan tercatat resmi di laporan.",
+                            fontSize = 11.sp,
+                            color = Color(0xFF2E7D32),
+                            modifier = Modifier.padding(8.dp)
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        scope.launch {
+                            isReceiving = true
+                            val res = poViewModel.receiveOrder(order.id, receivePaymentMethod)
+                            isReceiving = false
+                            if (res.isSuccess) {
+                                Toast.makeText(context, "Barang berhasil diterima & pembelian selesai!", Toast.LENGTH_SHORT).show()
+                                showReceiveGoodsDialog = false
+                                orderData = poViewModel.loadOrderDetails(order.id)
+                            } else {
+                                Toast.makeText(context, res.exceptionOrNull()?.message ?: "Gagal menerima barang", Toast.LENGTH_LONG).show()
+                            }
+                        }
+                    },
+                    enabled = !isReceiving,
+                    colors = ButtonDefaults.buttonColors(containerColor = AppColors.GreenPrimary)
+                ) {
+                    if (isReceiving) {
+                        CircularProgressIndicator(modifier = Modifier.size(16.dp), color = Color.White, strokeWidth = 2.dp)
+                    } else {
+                        Text("Konfirmasi Terima", fontWeight = FontWeight.Bold)
+                    }
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showReceiveGoodsDialog = false },
+                    enabled = !isReceiving
+                ) {
+                    Text("Batal", color = AppColors.TextSecondary)
                 }
             }
         )

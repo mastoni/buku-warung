@@ -161,6 +161,21 @@ class PurchaseOrderViewModel(
         }
     }
 
+    suspend fun receiveOrder(orderId: Long, paymentMethod: String = "CASH"): Result<Long> {
+        isLoading.value = true
+        return try {
+            val result = purchaseOrderRepository.receiveOrder(orderId, paymentMethod)
+            if (result.isSuccess) {
+                loadOrderDetails(orderId)
+            } else {
+                errorMessage.value = result.exceptionOrNull()?.message ?: "Gagal memproses penerimaan barang"
+            }
+            result
+        } finally {
+            isLoading.value = false
+        }
+    }
+
     fun shareWhatsApp(
         context: Context,
         order: PurchaseOrderEntity,
