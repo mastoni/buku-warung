@@ -142,6 +142,20 @@ export async function registerLicenseProxyRoutes(fastify: FastifyInstance) {
     }
   );
 
+  // GET /api/orders/:id/delivery-license
+  fastify.get(
+    '/api/orders/:id/delivery-license',
+    async (request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
+      const id = parseInt(request.params.id, 10);
+      if (isNaN(id)) {
+        return reply.status(400).send({ success: false, error: { code: 'INVALID_ID', message: 'Order ID must be a number.' } });
+      }
+
+      const res = await licenseClient.getOrderDeliveryLicense(id);
+      return reply.status(res.status).send(res.data);
+    }
+  );
+
   // POST /api/orders/:id/verify-payment
   fastify.post(
     '/api/orders/:id/verify-payment',

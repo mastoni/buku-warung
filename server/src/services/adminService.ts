@@ -17,7 +17,9 @@ import {
   generateUuid,
   hashEmail,
   hashLicenseCode,
-  normalizeEmail
+  normalizeEmail,
+  encryptDeliveryLicenseCode,
+  decryptDeliveryLicenseCode
 } from '../utils/crypto.js';
 
 export class AdminService {
@@ -85,12 +87,13 @@ export class AdminService {
 
       if (customerName || customerContact) {
         orderNumber = `BW-ORD-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+        const encryptedDeliveryCode = encryptDeliveryLicenseCode(licenseCode);
         this.db
           .prepare(`
             INSERT INTO orders (
               order_number, customer_name, customer_contact, owner_email, product, amount,
-              status, payment_status, license_id, verified_at, verified_by, created_at, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, 'LICENSE_CREATED', 'PAID', ?, ?, ?, ?, ?)
+              status, payment_status, license_id, verified_at, verified_by, encrypted_delivery_license_code, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, 'LICENSE_CREATED', 'PAID', ?, ?, ?, ?, ?, ?)
           `)
           .run(
             orderNumber,
@@ -102,6 +105,7 @@ export class AdminService {
             licenseId,
             now,
             actor,
+            encryptedDeliveryCode,
             now,
             now
           );
@@ -758,14 +762,15 @@ export class AdminService {
       );
 
       const licenseId = Number(result.lastInsertRowid);
+      const encryptedDeliveryCode = encryptDeliveryLicenseCode(licenseCode);
 
       this.db
         .prepare(`
           UPDATE orders
-          SET license_id = ?, status = 'LICENSE_CREATED', updated_at = ?
+          SET license_id = ?, status = 'LICENSE_CREATED', encrypted_delivery_license_code = ?, updated_at = ?
           WHERE id = ?
         `)
-        .run(licenseId, now, orderId);
+        .run(licenseId, encryptedDeliveryCode, now, orderId);
 
       this.db
         .prepare(`
@@ -801,6 +806,109 @@ export class AdminService {
   }
 
   /**
+   * Retrieves the decrypted delivery license code for an order (for Admin fulfillment).
+   * Generates an audit log entry without exposing the plaintext code in the log.
+   */
+  getOrderDeliveryLicense(
+    orderId: number,
+    actor: string = 'ADMIN'
+  ): {
+    success: boolean;
+    data?: {
+      orderId: number;
+      orderNumber: string;
+      licenseId: number | null;
+      licenseCode: string | null;
+      customerName: string;
+      customerWhatsapp: string;
+      ownerEmail: string;
+      hasDeliveryCode: boolean;
+    };
+    error?: { code: string; message: string };
+  } {
+    const order = this.db.prepare('SELECT * FROM orders WHERE id = ?').get(orderId) as OrderRecord | undefined;
+
+    if (!order) {
+      return { success: false, error: { code: 'NOT_FOUND', message: 'Order not found.' } };
+    }
+
+    let licenseCode: string | null = null;
+    let hasDeliveryCode = false;
+
+    if (order.encrypted_delivery_license_code) {
+      const decrypted = decryptDeliveryLicenseCode(order.encrypted_delivery_license_code);
+      if (decrypted) {
+        licenseCode = decrypted;
+        hasDeliveryCode = true;
+      }
+    }
+
+    const now = Date.now();
+    this.db
+      .prepare(`
+        INSERT INTO audit_logs (action, license_id, old_state, new_state, actor, reason, created_at)
+        VALUES ('GET_DELIVERY_LICENSE', ?, NULL, NULL, ?, ?, ?)
+      `)
+      .run(order.license_id || null, actor, `Delivery license retrieved for Order #${orderId} (${order.order_number})`, now);
+
+    return {
+      success: true,
+      data: {
+        orderId: order.id,
+        orderNumber: order.order_number,
+        licenseId: order.license_id,
+        licenseCode,
+        customerName: order.customer_name,
+        customerWhatsapp: order.customer_contact,
+        ownerEmail: order.owner_email,
+        hasDeliveryCode
+      }
+    };
+  }
+
+  /**
+   * Reconciles an existing order's encrypted delivery license code with a known plaintext code.
+   * Strictly verifies that hashLicenseCode(knownPlaintextCode) === licenses.license_code_hash.
+   */
+  reconcileOrderDeliveryLicense(
+    orderId: number,
+    knownPlaintextCode: string,
+    actor: string = 'ADMIN'
+  ): {
+    success: boolean;
+    data?: { orderId: number; reconciled: boolean };
+    error?: { code: string; message: string };
+  } {
+    const order = this.db.prepare('SELECT * FROM orders WHERE id = ?').get(orderId) as OrderRecord | undefined;
+    if (!order || !order.license_id) {
+      return { success: false, error: { code: 'ORDER_NOT_FOUND_OR_NO_LICENSE', message: 'Order or linked license not found.' } };
+    }
+
+    const lic = this.db.prepare('SELECT * FROM licenses WHERE id = ?').get(order.license_id) as LicenseRecord | undefined;
+    if (!lic) {
+      return { success: false, error: { code: 'LICENSE_NOT_FOUND', message: 'Linked license not found.' } };
+    }
+
+    const computedHash = hashLicenseCode(knownPlaintextCode);
+    if (computedHash !== lic.license_code_hash) {
+      return { success: false, error: { code: 'HASH_MISMATCH', message: 'Provided plaintext code does not match the stored license hash.' } };
+    }
+
+    const encryptedCode = encryptDeliveryLicenseCode(knownPlaintextCode);
+    const now = Date.now();
+    this.db.prepare('UPDATE orders SET encrypted_delivery_license_code = ?, updated_at = ? WHERE id = ?').run(encryptedCode, now, orderId);
+
+    this.db
+      .prepare(`
+        INSERT INTO audit_logs (action, license_id, old_state, new_state, actor, reason, created_at)
+        VALUES ('RECONCILE_DELIVERY_LICENSE', ?, NULL, 'RECONCILED', ?, ?, ?)
+      `)
+      .run(order.license_id, actor, `Delivery license reconciled for Order #${orderId} (${order.order_number})`, now);
+
+    return { success: true, data: { orderId, reconciled: true } };
+  }
+
+  /**
    * Marks an order as DELIVERED to customer.
    */
   markOrderDelivered(
@@ -821,7 +929,7 @@ export class AdminService {
         return { success: false, error: { code: 'NOT_FOUND', message: 'Order not found.' } };
       }
 
-      if (!order.license_id) {
+      if (order.status !== 'LICENSE_CREATED' && order.status !== 'PAID') {
         return {
           success: false,
           error: { code: 'LICENSE_NOT_CREATED', message: 'Cannot mark delivered before license is generated.' }

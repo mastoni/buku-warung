@@ -959,14 +959,25 @@ function handleGenerateLicenseForOrder(orderId, customerName, ownerEmail) {
 async function openDeliveryPreparationModal(orderId, directLicenseCode) {
   try {
     let order = cachedOrders.find((o) => o.id === orderId);
-    let licenseCode = directLicenseCode || (order ? order.license_code : '');
+    let licenseCode = directLicenseCode || '';
 
-    if (!order || !licenseCode) {
+    if (!order) {
       const res = await fetch(`/api/orders/${orderId}`);
       if (res.ok) {
         const d = await res.json();
-        order = d.data.order;
-        licenseCode = licenseCode || order.license_code;
+        order = d.data?.order || d.data;
+      }
+    }
+
+    if (!licenseCode) {
+      try {
+        const delivRes = await fetch(`/api/orders/${orderId}/delivery-license`);
+        if (delivRes.ok) {
+          const delivData = await delivRes.json();
+          licenseCode = delivData.data?.licenseCode || '';
+        }
+      } catch {
+        licenseCode = '';
       }
     }
 
@@ -980,6 +991,9 @@ async function openDeliveryPreparationModal(orderId, directLicenseCode) {
     // Display recipient info
     document.getElementById('waRecipientInfo').textContent = `${order.customer_name} (${order.customer_whatsapp || order.customer_contact}) — ${order.owner_email}`;
 
+    const displayLicenseText = licenseCode || '(Kode lisensi historis tidak tersimpan)';
+    const waLicenseCodeText = licenseCode || '[Hubungi Admin untuk Kode Lisensi]';
+
     // Display delivery package info
     const deliveryInfoEl = document.getElementById('deliveryPackageInfo');
     if (deliveryInfoEl) {
@@ -988,7 +1002,7 @@ async function openDeliveryPreparationModal(orderId, directLicenseCode) {
           <div style="margin-bottom:6px;"><strong>📦 Delivery Package</strong></div>
           <div>👤 <strong>Customer:</strong> ${escapeHtml(order.customer_name)}</div>
           <div>📋 <strong>Order:</strong> ${escapeHtml(order.order_code || order.order_number)}</div>
-          <div>🔑 <strong>License:</strong> ${escapeHtml(licenseCode || order.license_code || '-')}</div>
+          <div>🔑 <strong>License:</strong> ${escapeHtml(displayLicenseText)}</div>
           <div>📱 <strong>APK:</strong> <a href="https://license.skmnetwork.com/download/buku-warung" target="_blank">Download Page</a></div>
           <div>📄 <strong>Panduan:</strong> <a href="https://license.skmnetwork.com/download/buku-warung/panduan" target="_blank">PDF Guide</a></div>
           <div>📊 <strong>Status:</strong> ${escapeHtml(order.status)}</div>
@@ -1007,7 +1021,7 @@ https://license.skmnetwork.com/download/buku-warung
 https://license.skmnetwork.com/download/buku-warung/panduan
 
 🔑 License Code:
-${licenseCode || order.license_code || 'BW-XXXX-XXXX-XXXX'}
+${waLicenseCodeText}
 
 Setelah instalasi, buka Buku Warung dan lakukan aktivasi menggunakan License Code tersebut.
 

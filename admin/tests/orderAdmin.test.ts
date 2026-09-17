@@ -1,10 +1,16 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { FastifyInstance } from 'fastify';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { buildAdminApp } from '../src/app.js';
 import { buildApp as buildLicenseServerApp } from '../../server/src/app.js';
 import { getDatabase as getLicenseDb, closeDatabase as closeLicenseDb } from '../../server/src/db/database.js';
 import { config as adminConfig } from '../src/config/index.js';
 import { config as licenseServerConfig } from '../../server/src/config/index.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 describe('Buku Warung Sales & Order Management Admin BFF (C.10.1)', () => {
   let adminApp: FastifyInstance;
@@ -205,5 +211,39 @@ describe('Buku Warung Sales & Order Management Admin BFF (C.10.1)', () => {
       url: '/api/orders'
     });
     expect(res.statusCode).toBe(401);
+  });
+
+  it('10. Authenticated Admin retrieves delivery license code via /api/orders/:id/delivery-license', async () => {
+    const res = await adminApp.inject({
+      method: 'GET',
+      url: `/api/orders/${testOrderId}/delivery-license`,
+      headers: { cookie: sessionCookie }
+    });
+
+    expect(res.statusCode).toBe(200);
+    const body = JSON.parse(res.body);
+    expect(body.success).toBe(true);
+    expect(body.data.orderId).toBe(testOrderId);
+    expect(body.data.licenseCode).toBe(generatedLicenseCode);
+    expect(body.data.hasDeliveryCode).toBe(true);
+  });
+
+  it('11. Unauthenticated request to /api/orders/:id/delivery-license is rejected with 401', async () => {
+    const res = await adminApp.inject({
+      method: 'GET',
+      url: `/api/orders/${testOrderId}/delivery-license`
+    });
+    expect(res.statusCode).toBe(401);
+  });
+
+  it('12. Frontend app.js correctly invokes /api/orders/:id/delivery-license and never emits fake BW-XXXX-XXXX-XXXX placeholder', () => {
+    const appJsPath = path.resolve(__dirname, '../public/app.js');
+    const appJs = fs.readFileSync(appJsPath, 'utf8');
+
+    expect(appJs).toContain('/delivery-license');
+    expect(appJs).toContain('openDeliveryPreparationModal');
+    expect(appJs).not.toContain('BW-XXXX-XXXX-XXXX');
+    expect(appJs).toContain('[Hubungi Admin untuk Kode Lisensi]');
+    expect(appJs).toContain('(Kode lisensi historis tidak tersimpan)');
   });
 });

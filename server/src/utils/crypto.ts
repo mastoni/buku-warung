@@ -68,3 +68,68 @@ export function timingSafeCompare(a: string, b: string): boolean {
   }
   return crypto.timingSafeEqual(bufA, bufB);
 }
+
+const DELIVERY_CIPHER_ALGORITHM = 'aes-256-gcm';
+const DELIVERY_KEY_DOMAIN = 'license_delivery_v1';
+
+/**
+ * Derives a 32-byte AES-256 key from SERVER_PEPPER with domain separation.
+ * NOTE: Changing SERVER_PEPPER in the environment invalidates existing encrypted delivery values.
+ */
+function getDeliveryDerivedKey(): Buffer {
+  const pepper = getServerPepper();
+  return crypto.createHash('sha256').update(`${pepper}:${DELIVERY_KEY_DOMAIN}`).digest();
+}
+
+/**
+ * Encrypts plaintext license code for secure storage at rest in orders table.
+ * Uses AES-256-GCM with a fresh random 96-bit IV per encryption.
+ * Output format: base64url(IV [12 bytes] + AuthTag [16 bytes] + Ciphertext).
+ * Plaintext license code is never logged.
+ */
+export function encryptDeliveryLicenseCode(licenseCode: string): string {
+  if (!licenseCode || typeof licenseCode !== 'string') {
+    throw new Error('Valid licenseCode string is required for delivery encryption.');
+  }
+
+  const key = getDeliveryDerivedKey();
+  const iv = crypto.randomBytes(12); // 96-bit random IV
+  const cipher = crypto.createCipheriv(DELIVERY_CIPHER_ALGORITHM, key, iv);
+  const ciphertext = Buffer.concat([cipher.update(licenseCode.trim().toUpperCase(), 'utf8'), cipher.final()]);
+  const authTag = cipher.getAuthTag(); // 128-bit authentication tag
+
+  const combined = Buffer.concat([iv, authTag, ciphertext]);
+  return combined.toString('base64url');
+}
+
+/**
+ * Decrypts an encrypted delivery license code with authentication tag verification.
+ * Returns the plaintext license code if valid, or null if missing, malformed, or tampered.
+ */
+export function decryptDeliveryLicenseCode(encryptedData: string | null | undefined): string | null {
+  if (!encryptedData || typeof encryptedData !== 'string') {
+    return null;
+  }
+
+  try {
+    const combined = Buffer.from(encryptedData, 'base64url');
+    // Minimum 12 bytes IV + 16 bytes AuthTag + 1 byte ciphertext = 29 bytes
+    if (combined.length < 29) {
+      return null;
+    }
+
+    const iv = combined.subarray(0, 12);
+    const authTag = combined.subarray(12, 28);
+    const ciphertext = combined.subarray(28);
+
+    const key = getDeliveryDerivedKey();
+    const decipher = crypto.createDecipheriv(DELIVERY_CIPHER_ALGORITHM, key, iv);
+    decipher.setAuthTag(authTag);
+
+    const decrypted = Buffer.concat([decipher.update(ciphertext), decipher.final()]).toString('utf8');
+    return decrypted || null;
+  } catch {
+    return null;
+  }
+}
+

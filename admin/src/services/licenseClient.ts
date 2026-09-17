@@ -177,6 +177,12 @@ export class LicenseClient {
     });
   }
 
+  async getOrderDeliveryLicense(id: number) {
+    return this.request(`/v1/admin/orders/${id}/delivery-license`, {
+      method: 'GET'
+    });
+  }
+
   async verifyOrderPayment(id: number, payload: VerifyPaymentPayload) {
     return this.request(`/v1/admin/orders/${id}/verify-payment`, {
       method: 'POST',

@@ -54,6 +54,7 @@ function initSchema(db: Database.Database): void {
     if (!colNames.has('utm_medium')) db.exec("ALTER TABLE orders ADD COLUMN utm_medium TEXT");
     if (!colNames.has('utm_campaign')) db.exec("ALTER TABLE orders ADD COLUMN utm_campaign TEXT");
     if (!colNames.has('utm_content')) db.exec("ALTER TABLE orders ADD COLUMN utm_content TEXT");
+    if (!colNames.has('encrypted_delivery_license_code')) db.exec("ALTER TABLE orders ADD COLUMN encrypted_delivery_license_code TEXT");
   } catch {
     // Ignore migration error if table just created
   }
@@ -117,6 +118,7 @@ function initSchema(db: Database.Database): void {
       utm_medium TEXT,
       utm_campaign TEXT,
       utm_content TEXT,
+      encrypted_delivery_license_code TEXT,
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL
     );

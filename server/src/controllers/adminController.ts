@@ -172,8 +172,9 @@ export async function registerAdminRoutes(fastify: FastifyInstance) {
 
   function formatOrderResponse(order: any) {
     if (!order) return null;
+    const { encrypted_delivery_license_code, ...cleanOrder } = order;
     return {
-      ...order,
+      ...cleanOrder,
       id: order.id,
       orderId: order.id,
       orderNumber: order.order_number,
@@ -188,19 +189,19 @@ export async function registerAdminRoutes(fastify: FastifyInstance) {
       paymentMethod: order.payment_method,
       paymentReference: order.payment_reference,
       licenseId: order.license_id,
-       notes: order.notes,
-       verifiedAt: order.verified_at,
-       verifiedBy: order.verified_by,
-       deliveredAt: order.delivered_at,
-       deliveredBy: order.delivered_by,
-       createdAt: order.created_at,
-       updatedAt: order.updated_at,
-       leadToken: order.lead_token,
-       utmSource: order.utm_source,
-       utmMedium: order.utm_medium,
-       utmCampaign: order.utm_campaign,
-       utmContent: order.utm_content,
-       order: order
+      notes: order.notes,
+      verifiedAt: order.verified_at,
+      verifiedBy: order.verified_by,
+      deliveredAt: order.delivered_at,
+      deliveredBy: order.delivered_by,
+      createdAt: order.created_at,
+      updatedAt: order.updated_at,
+      leadToken: order.lead_token,
+      utmSource: order.utm_source,
+      utmMedium: order.utm_medium,
+      utmCampaign: order.utm_campaign,
+      utmContent: order.utm_content,
+      order: cleanOrder
     };
   }
 
@@ -293,6 +294,24 @@ export async function registerAdminRoutes(fastify: FastifyInstance) {
           order: formatOrderResponse(result.order)
         }
       });
+    }
+  );
+
+  // GET /v1/admin/orders/:id/delivery-license
+  fastify.get(
+    '/v1/admin/orders/:id/delivery-license',
+    async (request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
+      const id = parseInt(request.params.id, 10);
+      if (isNaN(id)) {
+        return reply.status(400).send({ success: false, error: { code: 'INVALID_ID', message: 'Order ID must be a number.' } });
+      }
+
+      const result = adminService.getOrderDeliveryLicense(id, 'ADMIN_API');
+      if (!result.success) {
+        return reply.status(404).send(result);
+      }
+
+      return reply.status(200).send(result);
     }
   );
 

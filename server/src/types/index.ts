@@ -71,6 +71,7 @@ export interface OrderRecord {
   utm_medium: string | null;
   utm_campaign: string | null;
   utm_content: string | null;
+  encrypted_delivery_license_code?: string | null;
 }
 
 export interface AuditLogRecord {
