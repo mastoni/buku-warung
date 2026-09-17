@@ -105,15 +105,15 @@ class PlainTextReceiptFormatter {
 
         // 2. Transaction Metadata
         sb.appendLine(ReceiptTextFormatterUtils.twoColumns(
-            "No: ${receipt.receiptNumber}",
+            "${receipt.shopProfile.transactionNumberLabel}: ${receipt.receiptNumber}",
             ReceiptTextFormatterUtils.formatDate(receipt.dateTimeMillis),
             width
         ))
         if (receipt.cashierName.isNotBlank()) {
-            sb.appendLine("Kasir: ${receipt.cashierName}")
+            sb.appendLine("${receipt.shopProfile.cashierLabel}: ${receipt.cashierName}")
         }
         if (!receipt.paymentInfo.customerName.isNullOrBlank()) {
-            sb.appendLine("Pelanggan: ${receipt.paymentInfo.customerName}")
+            sb.appendLine("${receipt.shopProfile.customerLabel}: ${receipt.paymentInfo.customerName}")
         }
 
         sb.appendLine(ReceiptTextFormatterUtils.dividerLine('-', width))
@@ -181,9 +181,15 @@ class PlainTextReceiptFormatter {
     }
 
     private fun centerText(text: String, width: Int): String {
-        if (text.length >= width) return text.take(width)
-        val leftPadding = (width - text.length) / 2
-        return " ".repeat(leftPadding) + text
+        if (text.length <= width) {
+            val leftPadding = (width - text.length) / 2
+            return " ".repeat(leftPadding) + text
+        }
+        val lines = ReceiptTextFormatterUtils.wrapText(text, width)
+        return lines.joinToString("\n") { line ->
+            val leftPadding = (width - line.length).coerceAtLeast(0) / 2
+            " ".repeat(leftPadding) + line
+        }
     }
 }
 
@@ -222,15 +228,15 @@ class EscPosReceiptFormatter {
 
         // 3. Metadata
         builder.textLine(ReceiptTextFormatterUtils.twoColumns(
-            "No: ${receipt.receiptNumber}",
+            "${receipt.shopProfile.transactionNumberLabel}: ${receipt.receiptNumber}",
             ReceiptTextFormatterUtils.formatDate(receipt.dateTimeMillis),
             width
         ))
         if (receipt.cashierName.isNotBlank()) {
-            builder.textLine("Kasir: ${receipt.cashierName}")
+            builder.textLine("${receipt.shopProfile.cashierLabel}: ${receipt.cashierName}")
         }
         if (!receipt.paymentInfo.customerName.isNullOrBlank()) {
-            builder.textLine("Pelanggan: ${receipt.paymentInfo.customerName}")
+            builder.textLine("${receipt.shopProfile.customerLabel}: ${receipt.paymentInfo.customerName}")
         }
 
         builder.textLine(ReceiptTextFormatterUtils.dividerLine('-', width))

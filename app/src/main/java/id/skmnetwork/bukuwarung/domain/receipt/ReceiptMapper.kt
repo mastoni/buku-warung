@@ -16,6 +16,15 @@ object ReceiptMapper {
         userSettings: UserSettings? = null,
         cashGiven: Long? = null
     ): ReceiptData {
+        val resolvedProfile = if (userSettings != null) {
+            id.skmnetwork.bukuwarung.domain.business.BusinessTaxonomyRegistry.resolve(
+                userSettings.primaryBusinessType,
+                userSettings.secondaryActivities
+            )
+        } else {
+            null
+        }
+
         val shopProfile = if (userSettings != null) {
             ShopProfile(
                 shopName = userSettings.shopName,
@@ -27,7 +36,8 @@ object ReceiptMapper {
                 showAddress = userSettings.showAddressOnReceipt,
                 showPhone = userSettings.showPhoneOnReceipt,
                 showPaymentMethod = userSettings.showPaymentMethodOnReceipt,
-                showChange = userSettings.showChangeOnReceipt
+                showChange = userSettings.showChangeOnReceipt,
+                customerLabel = resolvedProfile?.terminology?.customerLabel ?: "Pelanggan"
             )
         } else {
             ShopProfile()

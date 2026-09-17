@@ -57,6 +57,14 @@ import id.skmnetwork.bukuwarung.ui.theme.AppSpacing
 import id.skmnetwork.bukuwarung.util.formatRupiah
 import java.text.SimpleDateFormat
 import java.util.Date
+import android.widget.Toast
+import androidx.compose.material.icons.filled.Print
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.platform.LocalContext
+import id.skmnetwork.bukuwarung.data.preferences.UserSettings
+import id.skmnetwork.bukuwarung.printer.PrinterService
+import kotlinx.coroutines.launch
 import java.util.Locale
 
 @Composable
@@ -64,9 +72,14 @@ fun SaleDetailDialog(
     sale: SaleTransactionEntity,
     customers: List<CustomerEntity> = emptyList(),
     viewModel: ProductViewModel,
+    userSettings: UserSettings? = null,
+    printerService: PrinterService? = null,
     onDismiss: () -> Unit,
     onRequestReturn: () -> Unit
 ) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var isPrinting by remember { mutableStateOf(false) }
     var saleItems by remember { mutableStateOf<List<SaleItemEntity>>(emptyList()) }
     var returnTransactions by remember { mutableStateOf<List<SaleReturnTransactionEntity>>(emptyList()) }
     var returnItemsMap by remember { mutableStateOf<Map<Long, List<SaleReturnItemEntity>>>(emptyMap()) }
@@ -316,8 +329,44 @@ fun SaleDetailDialog(
                         }
                     }
 
-                    // Bottom Action Button
+                    // Bottom Action Buttons
                     Spacer(Modifier.height(AppSpacing.sm))
+                    if (printerService != null) {
+                        OutlinedButton(
+                            onClick = {
+                                if (isPrinting) return@OutlinedButton
+                                scope.launch {
+                                    isPrinting = true
+                                    val receiptData = viewModel.getReceiptData(sale.id, userSettings)
+                                    if (receiptData != null) {
+                                        val printResult = printerService.printReceipt(receiptData)
+                                        if (printResult.isSuccess) {
+                                            Toast.makeText(context, "Struk berhasil dicetak ulang", Toast.LENGTH_SHORT).show()
+                                        } else {
+                                            val err = printResult.exceptionOrNull()?.localizedMessage ?: "Printer tidak terhubung"
+                                            Toast.makeText(context, "Gagal mencetak struk: $err", Toast.LENGTH_LONG).show()
+                                        }
+                                    } else {
+                                        Toast.makeText(context, "Data struk transaksi tidak ditemukan", Toast.LENGTH_SHORT).show()
+                                    }
+                                    isPrinting = false
+                                }
+                            },
+                            enabled = !isPrinting,
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = AppShapes.ButtonShape
+                        ) {
+                            Icon(Icons.Default.Print, contentDescription = null, modifier = Modifier.size(18.dp), tint = AppColors.GreenPrimary)
+                            Spacer(Modifier.width(AppSpacing.xs))
+                            Text(
+                                if (isPrinting) "Mencetak Ulang..." else "Cetak Ulang Struk",
+                                fontWeight = FontWeight.Bold,
+                                color = AppColors.GreenPrimary
+                            )
+                        }
+                        Spacer(Modifier.height(AppSpacing.xs))
+                    }
+
                     if (!hasAnyReturnableItem) {
                         Surface(
                             shape = AppShapes.CardShape,

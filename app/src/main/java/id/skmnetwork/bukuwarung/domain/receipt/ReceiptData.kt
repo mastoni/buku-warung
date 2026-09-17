@@ -23,7 +23,10 @@ data class ShopProfile(
     val showAddress: Boolean = true,
     val showPhone: Boolean = true,
     val showPaymentMethod: Boolean = true,
-    val showChange: Boolean = true
+    val showChange: Boolean = true,
+    val customerLabel: String = "Pelanggan",
+    val cashierLabel: String = "Kasir",
+    val transactionNumberLabel: String = "No"
 )
 
 data class ReceiptPaymentInfo(

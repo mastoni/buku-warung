@@ -177,6 +177,8 @@ fun PosScreen(
             sale = selectedSaleForDetail!!,
             customers = customers,
             viewModel = viewModel,
+            userSettings = userSettings,
+            printerService = printerService,
             onDismiss = { selectedSaleForDetail = null },
             onRequestReturn = {
                 val targetSale = selectedSaleForDetail
