@@ -232,9 +232,17 @@ fun BukuWarungApp() {
             )
         } else {
             FirstSetupScreen(
-                onCompleteSetup = { shopName, ownerName, phone, address ->
+                onCompleteSetup = { shopName, ownerName, phone, address, primaryBusinessType, secondaryActivities ->
                     scope.launch {
-                        userPreferencesRepository.saveShopProfile(shopName, ownerName, phone, address)
+                        userPreferencesRepository.saveInitialSetupProfile(
+                            shopName = shopName,
+                            ownerName = ownerName,
+                            phone = phone,
+                            address = address,
+                            primaryBusinessType = primaryBusinessType,
+                            secondaryActivities = secondaryActivities,
+                            profileVersion = 1
+                        )
                     }
                 }
             )

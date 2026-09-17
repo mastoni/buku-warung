@@ -484,6 +484,30 @@ class UserPreferencesRepository(
         }
     }
 
+    suspend fun saveInitialSetupProfile(
+        shopName: String,
+        ownerName: String,
+        phone: String,
+        address: String,
+        primaryBusinessType: String,
+        secondaryActivities: Set<String>,
+        profileVersion: Int = 1
+    ) {
+        val businessId = getOrCreateBusinessId()
+        getOrCreateDeviceId()
+        dataStore.edit { prefs ->
+            prefs[Keys.IS_SETUP_COMPLETED] = true
+            prefs[Keys.BUSINESS_ID] = businessId
+            prefs[Keys.SHOP_NAME] = shopName.trim().ifEmpty { "Warung Saya" }
+            prefs[Keys.OWNER_NAME] = ownerName.trim()
+            prefs[Keys.PHONE] = phone.trim()
+            prefs[Keys.ADDRESS] = address.trim()
+            prefs[Keys.PRIMARY_BUSINESS_TYPE] = primaryBusinessType.trim()
+            prefs[Keys.SECONDARY_ACTIVITIES] = secondaryActivities
+            prefs[Keys.PROFILE_VERSION] = profileVersion
+        }
+    }
+
     suspend fun updatePaymentSettings(
         cashEnabled: Boolean,
         qrisEnabled: Boolean,
