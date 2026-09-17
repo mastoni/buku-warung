@@ -33,12 +33,13 @@ export function buildApp(): FastifyInstance {
       const allowedOrigins = [
         'https://skmnetwork.com',
         'https://www.skmnetwork.com',
+        'https://bukuwarung.skmnetwork.com',
         'https://license.skmnetwork.com'
       ];
       if (allowedOrigins.includes(origin)) {
         return cb(null, true);
       }
-      return cb(new Error('Not allowed by CORS'), false);
+      return cb(null, false);
     }
   });
 
