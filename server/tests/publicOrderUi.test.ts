@@ -24,7 +24,7 @@ describe('M.3.2-G2 Customer-Facing Public Order UI Tests', () => {
    * 1. GET /beli/buku-warung — Page Load & HTML Shell
    * ========================================================================= */
   describe('GET /beli/buku-warung (Page Load)', () => {
-    it('returns HTTP 200 with HTML content-type', async () => {
+    it('returns HTTP 200 with HTML content-type and valid CSP nonce', async () => {
       const res = await app.inject({
         method: 'GET',
         url: '/beli/buku-warung'
@@ -32,6 +32,35 @@ describe('M.3.2-G2 Customer-Facing Public Order UI Tests', () => {
 
       expect(res.statusCode).toBe(200);
       expect(res.headers['content-type']).toContain('text/html');
+
+      const csp = (res.headers['content-security-policy'] as string) || '';
+      expect(csp).toBeDefined();
+      expect(csp).toContain("script-src 'self' 'nonce-");
+      expect(csp).not.toContain("script-src 'self' 'unsafe-inline'");
+
+      // Extract nonce from CSP header
+      const match = csp.match(/script-src 'self' 'nonce-([^']+)'/);
+      expect(match).not.toBeNull();
+      const nonce = match![1];
+      expect(nonce.length).toBeGreaterThan(10);
+
+      // Verify script tag in body uses the exact matching nonce
+      expect(res.body).toContain(`<script nonce="${nonce}">`);
+    });
+
+    it('generates unique cryptographic nonces on consecutive requests', async () => {
+      const res1 = await app.inject({ method: 'GET', url: '/beli/buku-warung' });
+      const res2 = await app.inject({ method: 'GET', url: '/beli/buku-warung' });
+
+      const csp1 = (res1.headers['content-security-policy'] as string) || '';
+      const csp2 = (res2.headers['content-security-policy'] as string) || '';
+
+      const nonce1 = csp1.match(/nonce-([^']+)/)?.[1];
+      const nonce2 = csp2.match(/nonce-([^']+)/)?.[1];
+
+      expect(nonce1).toBeDefined();
+      expect(nonce2).toBeDefined();
+      expect(nonce1).not.toBe(nonce2);
     });
 
     it('contains mobile-first viewport meta tag', async () => {

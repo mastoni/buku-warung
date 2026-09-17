@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { AdminService } from '../services/adminService.js';
 import { getDatabase } from '../db/database.js';
@@ -267,10 +268,13 @@ export async function registerPublicOrderRoutes(fastify: FastifyInstance) {
   fastify.get(
     '/beli/buku-warung',
     async (_request: FastifyRequest, reply: FastifyReply) => {
-      const html = renderPublicOrderPage();
+      const nonce = crypto.randomBytes(16).toString('base64');
+      const csp = `default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data: https:;object-src 'none';script-src 'self' 'nonce-${nonce}';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests`;
+      const html = renderPublicOrderPage(nonce);
       return reply
         .type('text/html; charset=utf-8')
-        .header('Cache-Control', 'public, max-age=120')
+        .header('Content-Security-Policy', csp)
+        .header('Cache-Control', 'no-cache, no-store, must-revalidate')
         .send(html);
     }
   );
@@ -278,9 +282,9 @@ export async function registerPublicOrderRoutes(fastify: FastifyInstance) {
 
 /**
  * Self-contained HTML renderer for /beli/buku-warung
- * Clean, mobile-first, zero framework, CSP-compatible.
+ * Clean, mobile-first, zero framework, CSP-compatible with per-response nonce.
  */
-function renderPublicOrderPage(): string {
+function renderPublicOrderPage(nonce: string): string {
   return `<!DOCTYPE html>
 <html lang="id">
 <head>
@@ -756,7 +760,7 @@ function renderPublicOrderPage(): string {
   </div>
 </div>
 
-<script>
+<script nonce="${nonce}">
 (function() {
   var ADMIN_WA = '6285157056604';
   var currentPublicToken = '';
