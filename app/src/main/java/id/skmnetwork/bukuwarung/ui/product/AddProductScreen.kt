@@ -3,8 +3,10 @@ package id.skmnetwork.bukuwarung.ui.product
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,6 +22,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -36,12 +39,16 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -58,7 +65,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import id.skmnetwork.bukuwarung.data.local.entity.ItemType
+import id.skmnetwork.bukuwarung.data.preferences.UserSettings
+import id.skmnetwork.bukuwarung.domain.business.BusinessTaxonomyRegistry
 import id.skmnetwork.bukuwarung.ui.components.AppCard
 import id.skmnetwork.bukuwarung.ui.components.AppTextField
 import id.skmnetwork.bukuwarung.ui.components.CameraBarcodeScannerDialog
@@ -76,6 +87,7 @@ import java.io.FileOutputStream
 @Composable
 fun AddProductScreen(
     viewModel: ProductViewModel,
+    userSettings: UserSettings? = null,
     productIdToEdit: Long? = null,
     defaultLowStockLimit: Int = 2,
     onBack: () -> Unit,
@@ -85,6 +97,16 @@ fun AddProductScreen(
     val isEditMode = productIdToEdit != null
     val dbCategories by viewModel.categories.collectAsStateWithLifecycle()
 
+    val resolvedProfile = remember(userSettings?.primaryBusinessType, userSettings?.secondaryActivities) {
+        BusinessTaxonomyRegistry.resolve(
+            primaryType = userSettings?.primaryBusinessType,
+            secondaryActivities = userSettings?.secondaryActivities
+        )
+    }
+    val productLabel = resolvedProfile.terminology.productLabel
+    val preferredUnits = resolvedProfile.preferredUnits
+    val defaultCategories = resolvedProfile.defaultCategories
+
     var name by remember { mutableStateOf("") }
     var selectedCategoryId by remember { mutableStateOf<Long?>(null) }
     var category by remember { mutableStateOf("") }
@@ -92,7 +114,8 @@ fun AddProductScreen(
     var sellingPrice by remember { mutableStateOf("") }
     var stock by remember { mutableStateOf("") }
     var minimumStock by remember { mutableStateOf(if (isEditMode) "" else defaultLowStockLimit.toString()) }
-    var unit by remember { mutableStateOf("pcs") }
+    var unit by remember { mutableStateOf(preferredUnits.firstOrNull() ?: "pcs") }
+    var selectedItemType by remember { mutableStateOf(ItemType.PHYSICAL) }
     var barcode by remember { mutableStateOf("") }
     var imageUri by remember { mutableStateOf<String?>(null) }
 
@@ -135,11 +158,16 @@ fun AddProductScreen(
                 category = viewModel.getCategoryNameById(product.categoryId)
                 purchasePrice = product.purchasePrice.toString()
                 sellingPrice = product.sellingPrice.toString()
-                stock = product.stock.toString()
-                minimumStock = product.minimumStock.toString()
+                stock = if (product.stock % 1.0 == 0.0) product.stock.toLong().toString() else product.stock.toString()
+                minimumStock = if (product.minimumStock % 1.0 == 0.0) product.minimumStock.toLong().toString() else product.minimumStock.toString()
                 unit = product.unit
                 barcode = product.barcode ?: ""
                 imageUri = product.imageUri
+                selectedItemType = try {
+                    ItemType.valueOf(product.itemType)
+                } catch (e: Exception) {
+                    ItemType.PHYSICAL
+                }
             }
         }
     }
@@ -188,7 +216,7 @@ fun AddProductScreen(
                         },
                         shape = AppShapes.ButtonShape,
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = AppColors.GreenPrimary),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, AppColors.GreenPrimary),
+                        border = BorderStroke(1.dp, AppColors.GreenPrimary),
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(48.dp)
@@ -198,11 +226,54 @@ fun AddProductScreen(
                         Text("Buat Kategori Baru", fontWeight = FontWeight.Bold)
                     }
 
+                    // Suggested Categories from Taxonomy
+                    if (defaultCategories.isNotEmpty()) {
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text(
+                                text = "Saran Kategori Usaha:",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = AppColors.TextSecondary,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .horizontalScroll(rememberScrollState()),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                defaultCategories.forEach { suggestedCat ->
+                                    val matchedExisting = dbCategories.find { it.name.equals(suggestedCat, ignoreCase = true) }
+                                    FilterChip(
+                                        selected = category.equals(suggestedCat, ignoreCase = true),
+                                        onClick = {
+                                            if (matchedExisting != null) {
+                                                selectedCategoryId = matchedExisting.id
+                                                category = matchedExisting.name
+                                            } else {
+                                                selectedCategoryId = null
+                                                category = suggestedCat
+                                            }
+                                            errorMessage = null
+                                            showCategorySelectionDialog = false
+                                        },
+                                        label = { Text(suggestedCat, fontSize = 12.sp) },
+                                        colors = FilterChipDefaults.filterChipColors(
+                                            selectedContainerColor = AppColors.GreenLight,
+                                            selectedLabelColor = AppColors.GreenDark
+                                        )
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    HorizontalDivider(color = Color(0xFFEFEFEF))
+
                     if (dbCategories.isEmpty()) {
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(vertical = AppSpacing.lg),
+                                .padding(vertical = AppSpacing.sm),
                             contentAlignment = Alignment.Center
                         ) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -210,14 +281,14 @@ fun AddProductScreen(
                                     imageVector = Icons.Default.Category,
                                     contentDescription = null,
                                     tint = AppColors.CardBorder,
-                                    modifier = Modifier.size(48.dp)
+                                    modifier = Modifier.size(36.dp)
                                 )
-                                Spacer(Modifier.height(AppSpacing.sm))
+                                Spacer(Modifier.height(AppSpacing.xs))
                                 Text(
-                                    text = "Belum ada kategori",
+                                    text = "Belum ada kategori tersimpan",
                                     fontWeight = FontWeight.SemiBold,
                                     color = AppColors.TextSecondary,
-                                    style = MaterialTheme.typography.bodyMedium
+                                    style = MaterialTheme.typography.bodySmall
                                 )
                             }
                         }
@@ -225,7 +296,7 @@ fun AddProductScreen(
                         LazyColumn(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .heightIn(max = 280.dp),
+                                .heightIn(max = 240.dp),
                             verticalArrangement = Arrangement.spacedBy(AppSpacing.xs)
                         ) {
                             items(dbCategories, key = { it.id }) { cat ->
@@ -297,7 +368,7 @@ fun AddProductScreen(
                     verticalArrangement = Arrangement.spacedBy(AppSpacing.sm)
                 ) {
                     Text(
-                        text = "Masukkan nama kategori baru untuk produk Anda.",
+                        text = "Masukkan nama kategori baru untuk $productLabel Anda.",
                         style = MaterialTheme.typography.bodySmall,
                         color = AppColors.TextSecondary
                     )
@@ -369,8 +440,8 @@ fun AddProductScreen(
     if (showDeleteDialog && productIdToEdit != null) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
-            title = { Text("Hapus Produk", fontWeight = FontWeight.Bold) },
-            text = { Text("Apakah Anda yakin ingin menghapus produk '$name'?") },
+            title = { Text("Hapus $productLabel", fontWeight = FontWeight.Bold) },
+            text = { Text("Apakah Anda yakin ingin menghapus $productLabel '$name'?") },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -403,7 +474,7 @@ fun AddProductScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(if (isEditMode) "Edit Produk" else "Tambah Produk", fontWeight = FontWeight.Bold) },
+                title = { Text(if (isEditMode) "Edit $productLabel" else "Tambah $productLabel", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(
                         onClick = onBack,
@@ -463,7 +534,7 @@ fun AddProductScreen(
                         Spacer(Modifier.width(AppSpacing.md))
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = if (imageUri.isNullOrEmpty()) "Foto Produk (opsional)" else "Foto Tersimpan",
+                                text = if (imageUri.isNullOrEmpty()) "Foto $productLabel (opsional)" else "Foto Tersimpan",
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
@@ -508,13 +579,48 @@ fun AddProductScreen(
                 }
             }
 
+            // Item Type Selection (Barang Fisik, Jasa / Layanan, Produk Digital, Bahan Bakar)
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    text = "Tipe $productLabel",
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = AppColors.TextSecondary
+                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    val types = listOf(
+                        ItemType.PHYSICAL to "Barang Fisik",
+                        ItemType.SERVICE to "Jasa / Layanan",
+                        ItemType.DIGITAL to "Produk Digital",
+                        ItemType.FUEL to "Bahan Bakar"
+                    )
+                    types.forEach { (type, label) ->
+                        val isSelected = selectedItemType == type
+                        FilterChip(
+                            selected = isSelected,
+                            onClick = { selectedItemType = type },
+                            label = { Text(label, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal) },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = AppColors.GreenLight,
+                                selectedLabelColor = AppColors.GreenDark
+                            )
+                        )
+                    }
+                }
+            }
+
             AppTextField(
                 value = name,
                 onValueChange = {
                     name = it
                     errorMessage = null
                 },
-                label = "Nama Produk *",
+                label = "Nama $productLabel *",
                 isError = errorMessage == "Tulis nama produk"
             )
 
@@ -598,43 +704,83 @@ fun AddProductScreen(
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
             )
 
-            AppTextField(
-                value = stock,
-                onValueChange = {
-                    stock = it
-                    errorMessage = null
-                },
-                label = "Stok Awal",
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
-            )
+            // Stock Fields: Active for PHYSICAL and FUEL; hidden/untracked for SERVICE
+            if (selectedItemType == ItemType.PHYSICAL || selectedItemType == ItemType.FUEL) {
+                AppTextField(
+                    value = stock,
+                    onValueChange = {
+                        stock = it
+                        errorMessage = null
+                    },
+                    label = "Stok Awal",
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
+                )
 
-            AppTextField(
-                value = minimumStock,
-                onValueChange = {
-                    minimumStock = it
-                    errorMessage = null
-                },
-                label = "Stok Minimum",
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
-            )
+                AppTextField(
+                    value = minimumStock,
+                    onValueChange = {
+                        minimumStock = it
+                        errorMessage = null
+                    },
+                    label = "Stok Minimum",
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
+                )
+            }
 
-            AppTextField(
-                value = unit,
-                onValueChange = {
-                    unit = it
-                    errorMessage = null
-                },
-                label = "Satuan (misal: pcs, kg, sachet)"
-            )
+            // Unit Field with Suggested Quick Chips
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                if (preferredUnits.isNotEmpty()) {
+                    Text(
+                        text = "Saran Satuan:",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = AppColors.TextSecondary,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        preferredUnits.forEach { unitSuggestion ->
+                            val isSelected = unit.equals(unitSuggestion, ignoreCase = true)
+                            FilterChip(
+                                selected = isSelected,
+                                onClick = {
+                                    unit = unitSuggestion
+                                    errorMessage = null
+                                },
+                                label = { Text(unitSuggestion, fontSize = 12.sp) },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = AppColors.GreenLight,
+                                    selectedLabelColor = AppColors.GreenDark
+                                )
+                            )
+                        }
+                    }
+                }
+
+                AppTextField(
+                    value = unit,
+                    onValueChange = {
+                        unit = it
+                        errorMessage = null
+                    },
+                    label = "Satuan (misal: pcs, kg, porsi, dsb.)"
+                )
+            }
 
             Spacer(modifier = Modifier.height(AppSpacing.sm))
 
             PrimaryButton(
-                text = if (isSaving) "Menyimpan..." else if (isEditMode) "Simpan Perubahan" else "Simpan Produk",
+                text = if (isSaving) "Menyimpan..." else if (isEditMode) "Simpan Perubahan" else "Simpan $productLabel",
                 onClick = {
                     if (isSaving) return@PrimaryButton
                     isSaving = true
                     errorMessage = null
+
+                    val finalStockStr = if (selectedItemType == ItemType.SERVICE) "0" else stock
+                    val finalMinStockStr = if (selectedItemType == ItemType.SERVICE) "0" else minimumStock
 
                     if (isEditMode && productIdToEdit != null) {
                         viewModel.updateProduct(
@@ -643,12 +789,13 @@ fun AddProductScreen(
                             categoryName = category,
                             purchasePriceStr = purchasePrice,
                             sellingPriceStr = sellingPrice,
-                            stockStr = stock,
-                            minimumStockStr = minimumStock,
+                            stockStr = finalStockStr,
+                            minimumStockStr = finalMinStockStr,
                             unitStr = unit,
                             barcodeStr = barcode,
                             imageUriStr = imageUri,
                             categoryId = selectedCategoryId,
+                            itemType = selectedItemType,
                             onSuccess = {
                                 isSaving = false
                                 onBack()
@@ -664,12 +811,13 @@ fun AddProductScreen(
                             categoryName = category,
                             purchasePriceStr = purchasePrice,
                             sellingPriceStr = sellingPrice,
-                            stockStr = stock,
-                            minimumStockStr = minimumStock,
+                            stockStr = finalStockStr,
+                            minimumStockStr = finalMinStockStr,
                             unitStr = unit,
                             barcodeStr = barcode,
                             imageUriStr = imageUri,
                             categoryId = selectedCategoryId,
+                            itemType = selectedItemType,
                             onSuccess = {
                                 isSaving = false
                                 onBack()
@@ -686,7 +834,7 @@ fun AddProductScreen(
 
             if (isEditMode) {
                 SecondaryButton(
-                    text = "Hapus Produk",
+                    text = "Hapus $productLabel",
                     onClick = { showDeleteDialog = true },
                     enabled = !isSaving
                 )
@@ -696,4 +844,3 @@ fun AddProductScreen(
         }
     }
 }
-

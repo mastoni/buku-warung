@@ -177,7 +177,8 @@ class ProductRepository(
         unit: String,
         barcode: String? = null,
         imageUri: String? = null,
-        categoryId: Long? = null
+        categoryId: Long? = null,
+        itemType: ItemType? = null
     ) = withContext(Dispatchers.IO) {
         val resolvedCategoryId = if (categoryId != null && categoryId > 0 && categoryDao.getCategoryById(categoryId) != null) {
             categoryId
@@ -201,6 +202,7 @@ class ProductRepository(
             stock = stock,
             minimumStock = minimumStock,
             unit = unit.trim().ifEmpty { "pcs" },
+            itemType = itemType?.name ?: existingProduct.itemType,
             barcode = barcode?.trim()?.ifEmpty { null },
             imageUri = imageUri?.trim()?.ifEmpty { null },
             updatedAt = now

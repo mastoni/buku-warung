@@ -181,6 +181,7 @@ class ProductViewModel(
         barcodeStr: String? = null,
         imageUriStr: String? = null,
         categoryId: Long? = null,
+        itemType: id.skmnetwork.bukuwarung.data.local.entity.ItemType = id.skmnetwork.bukuwarung.data.local.entity.ItemType.PHYSICAL,
         onSuccess: () -> Unit,
         onError: (String) -> Unit
     ) {
@@ -228,6 +229,7 @@ class ProductViewModel(
                     unit = unit,
                     barcode = barcodeStr,
                     imageUri = imageUriStr,
+                    itemType = itemType,
                     categoryId = categoryId
                 )
                 withContext(Dispatchers.Main) {
@@ -253,6 +255,7 @@ class ProductViewModel(
         barcodeStr: String? = null,
         imageUriStr: String? = null,
         categoryId: Long? = null,
+        itemType: id.skmnetwork.bukuwarung.data.local.entity.ItemType? = null,
         onSuccess: () -> Unit,
         onError: (String) -> Unit
     ) {
@@ -301,7 +304,8 @@ class ProductViewModel(
                     unit = unit,
                     barcode = barcodeStr,
                     imageUri = imageUriStr,
-                    categoryId = categoryId
+                    categoryId = categoryId,
+                    itemType = itemType
                 )
                 withContext(Dispatchers.Main) {
                     onSuccess()

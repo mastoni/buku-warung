@@ -314,6 +314,7 @@ fun BukuWarungApp() {
                 )
                 AppScreen.PRODUCTS -> ProductsScreen(
                     viewModel = productViewModel,
+                    userSettings = userSettings,
                     onAddProduct = {
                         navigateToAddProduct(fromScreen = AppScreen.PRODUCTS)
                     },
@@ -334,6 +335,7 @@ fun BukuWarungApp() {
                 )
                 AppScreen.ADD_PRODUCT -> AddProductScreen(
                     viewModel = productViewModel,
+                    userSettings = userSettings,
                     productIdToEdit = selectedProductId,
                     defaultLowStockLimit = userSettings.defaultLowStockLimit,
                     onBack = {

@@ -56,6 +56,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import id.skmnetwork.bukuwarung.data.local.entity.ProductEntity
+import id.skmnetwork.bukuwarung.data.preferences.UserSettings
+import id.skmnetwork.bukuwarung.domain.business.BusinessTaxonomyRegistry
 import id.skmnetwork.bukuwarung.ui.components.ProductImageThumbnail
 import id.skmnetwork.bukuwarung.ui.theme.AppColors
 import id.skmnetwork.bukuwarung.util.formatRupiah
@@ -63,10 +65,19 @@ import id.skmnetwork.bukuwarung.util.formatRupiah
 @Composable
 fun ProductsScreen(
     viewModel: ProductViewModel,
+    userSettings: UserSettings? = null,
     onAddProduct: () -> Unit = {},
     onEditProduct: (Long) -> Unit = {},
     onNavigateToCatalog: () -> Unit = {}
 ) {
+    val resolvedProfile = remember(userSettings?.primaryBusinessType, userSettings?.secondaryActivities) {
+        BusinessTaxonomyRegistry.resolve(
+            primaryType = userSettings?.primaryBusinessType,
+            secondaryActivities = userSettings?.secondaryActivities
+        )
+    }
+    val productLabel = resolvedProfile.terminology.productLabel
+
     val dbProducts by viewModel.products.collectAsStateWithLifecycle()
     val dbCategories by viewModel.categories.collectAsStateWithLifecycle()
 
@@ -88,6 +99,7 @@ fun ProductsScreen(
     Scaffold(
         topBar = {
             ProductsHeader(
+                productLabel = productLabel,
                 productCount = dbProducts.size,
                 onNavigateToCatalog = onNavigateToCatalog
             )
@@ -110,13 +122,13 @@ fun ProductsScreen(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Add,
-                            contentDescription = "Tambah Produk",
+                            contentDescription = "Tambah $productLabel",
                             tint = Color.White,
                             modifier = Modifier.size(18.dp)
                         )
                         Spacer(Modifier.width(6.dp))
                         Text(
-                            text = "Tambah Produk",
+                            text = "Tambah $productLabel",
                             fontWeight = FontWeight.SemiBold,
                             fontSize = 12.5.sp,
                             color = Color.White
@@ -147,7 +159,7 @@ fun ProductsScreen(
                     onValueChange = { query = it },
                     placeholder = {
                         Text(
-                            text = "Cari nama produk / barcode...",
+                            text = "Cari $productLabel / barcode...",
                             fontSize = 13.5.sp,
                             color = AppColors.TextSecondary
                         )
@@ -221,10 +233,14 @@ fun ProductsScreen(
             // ==========================================
             if (dbProducts.isEmpty()) {
                 // Global Empty State (No products added yet)
-                ProductsEmptyState(onAddProduct = onAddProduct)
+                ProductsEmptyState(
+                    productLabel = productLabel,
+                    onAddProduct = onAddProduct
+                )
             } else if (filteredProducts.isEmpty()) {
                 // Filter / Search Empty State
                 ProductsSearchEmptyState(
+                    productLabel = productLabel,
                     query = query,
                     onResetFilter = {
                         query = ""
@@ -264,6 +280,7 @@ fun ProductsScreen(
  */
 @Composable
 private fun ProductsHeader(
+    productLabel: String,
     productCount: Int,
     onNavigateToCatalog: () -> Unit
 ) {
@@ -299,7 +316,7 @@ private fun ProductsHeader(
                 }
                 Column {
                     Text(
-                        text = "Produk & Stok",
+                        text = "$productLabel & Stok",
                         style = MaterialTheme.typography.titleMedium.copy(
                             fontWeight = FontWeight.Bold,
                             fontSize = 16.5.sp,
@@ -326,7 +343,7 @@ private fun ProductsHeader(
                         color = Color(0xFFE8F5E9)
                     ) {
                         Text(
-                            text = "$productCount Produk",
+                            text = "$productCount $productLabel",
                             color = AppColors.GreenPrimary,
                             fontWeight = FontWeight.SemiBold,
                             fontSize = 11.5.sp,
@@ -516,6 +533,7 @@ private fun StockStatusBadge(
  */
 @Composable
 private fun ProductsEmptyState(
+    productLabel: String = "Produk",
     onAddProduct: () -> Unit
 ) {
     Box(
@@ -545,7 +563,7 @@ private fun ProductsEmptyState(
             Spacer(Modifier.height(16.dp))
 
             Text(
-                text = "Belum Ada Produk",
+                text = "Belum Ada $productLabel",
                 style = MaterialTheme.typography.titleMedium.copy(
                     fontWeight = FontWeight.Bold,
                     fontSize = 16.5.sp,
@@ -556,7 +574,7 @@ private fun ProductsEmptyState(
             Spacer(Modifier.height(6.dp))
 
             Text(
-                text = "Tambahkan produk jualan untuk mulai mencatat stok dan transaksi kasir.",
+                text = "Tambahkan $productLabel jualan untuk mulai mencatat stok dan transaksi kasir.",
                 style = MaterialTheme.typography.bodyMedium.copy(
                     fontSize = 13.sp,
                     color = AppColors.TextSecondary,
@@ -583,7 +601,7 @@ private fun ProductsEmptyState(
                 )
                 Spacer(Modifier.width(6.dp))
                 Text(
-                    text = "Tambah Produk Pertama",
+                    text = "Tambah $productLabel Pertama",
                     fontWeight = FontWeight.Bold,
                     fontSize = 13.5.sp
                 )
@@ -597,6 +615,7 @@ private fun ProductsEmptyState(
  */
 @Composable
 private fun ProductsSearchEmptyState(
+    productLabel: String = "Produk",
     query: String,
     onResetFilter: () -> Unit
 ) {
@@ -627,7 +646,7 @@ private fun ProductsSearchEmptyState(
             Spacer(Modifier.height(14.dp))
 
             Text(
-                text = "Produk Tidak Ditemukan",
+                text = "$productLabel Tidak Ditemukan",
                 style = MaterialTheme.typography.titleMedium.copy(
                     fontWeight = FontWeight.Bold,
                     fontSize = 15.5.sp,
@@ -638,7 +657,7 @@ private fun ProductsSearchEmptyState(
             Spacer(Modifier.height(4.dp))
 
             Text(
-                text = if (query.isNotEmpty()) "Tidak ada produk yang cocok dengan \"$query\"" else "Tidak ada produk di kategori ini",
+                text = if (query.isNotEmpty()) "Tidak ada $productLabel yang cocok dengan \"$query\"" else "Tidak ada $productLabel di kategori ini",
                 style = MaterialTheme.typography.bodySmall.copy(
                     fontSize = 12.5.sp,
                     color = AppColors.TextSecondary,
