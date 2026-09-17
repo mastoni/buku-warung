@@ -24,17 +24,23 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Assessment
+import androidx.compose.material.icons.filled.Business
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.CloudSync
 import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.Lock
@@ -51,12 +57,18 @@ import androidx.compose.material.icons.filled.VerifiedUser
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
@@ -89,6 +101,11 @@ import id.skmnetwork.bukuwarung.backup.BackupRestoreManager
 import id.skmnetwork.bukuwarung.data.local.database.AppDatabase
 import id.skmnetwork.bukuwarung.data.preferences.UserPreferencesRepository
 import id.skmnetwork.bukuwarung.data.preferences.UserSettings
+import id.skmnetwork.bukuwarung.domain.business.BusinessActivity
+import id.skmnetwork.bukuwarung.domain.business.BusinessCategory
+import id.skmnetwork.bukuwarung.domain.business.BusinessType
+import id.skmnetwork.bukuwarung.domain.business.BusinessTaxonomyRegistry
+import id.skmnetwork.bukuwarung.domain.business.ResolvedBusinessProfile
 import id.skmnetwork.bukuwarung.license.LicenseManager
 import id.skmnetwork.bukuwarung.license.LicenseStatus
 import id.skmnetwork.bukuwarung.license.ValidationResult
@@ -134,9 +151,27 @@ fun SettingsScreen(
     val licenseStatus by licManager.licenseStatus.collectAsStateWithLifecycle()
     val licenseTier by licManager.licenseTier.collectAsStateWithLifecycle()
 
+    val resolvedProfile = remember(settingsState.primaryBusinessType, settingsState.secondaryActivities) {
+        BusinessTaxonomyRegistry.resolve(
+            primaryType = settingsState.primaryBusinessType,
+            secondaryActivities = settingsState.secondaryActivities
+        )
+    }
+    val terminology = resolvedProfile.terminology
+    val shopLabel = "Usaha"
+    val productLabel = terminology.productLabel
+    val stockLabel = terminology.stockLabel
+    val transactionLabel = terminology.transactionLabel
+    val receiptLabel = "Struk"
+    val debtLabel = terminology.debtLabel
+    val customerLabel = terminology.customerLabel
+    val supplierLabel = terminology.supplierLabel
+    val purchaseLabel = terminology.purchaseLabel
+
+    var showBusinessProfileDialog by remember { mutableStateOf(false) }
     var isCheckingLicense by remember { mutableStateOf(false) }
 
-    // 1. Profil Warung
+    // 1. Profil Warung / Usaha
     var shopNameInput by remember { mutableStateOf("") }
     var ownerNameInput by remember { mutableStateOf("") }
     var phoneInput by remember { mutableStateOf("") }
@@ -360,11 +395,134 @@ fun SettingsScreen(
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             // ==========================================
-            // 1. PROFIL WARUNG
+            // 0. TIPE USAHA & MODEL OPERASIONAL
             // ==========================================
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(
-                    text = "PROFIL WARUNG",
+                    text = "TIPE USAHA & MODEL OPERASIONAL",
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 11.sp,
+                        color = AppColors.GreenPrimary,
+                        letterSpacing = 0.5.sp
+                    )
+                )
+                Surface(
+                    shape = RoundedCornerShape(14.dp),
+                    color = Color.White,
+                    border = BorderStroke(1.dp, Color(0xFFEFF3F0)),
+                    shadowElevation = 0.5.dp,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(14.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(40.dp)
+                                        .clip(RoundedCornerShape(10.dp))
+                                        .background(AppColors.GreenLight),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Business,
+                                        contentDescription = null,
+                                        tint = AppColors.GreenPrimary,
+                                        modifier = Modifier.size(22.dp)
+                                    )
+                                }
+                                Column {
+                                    Text(
+                                        text = resolvedProfile.businessType.displayName,
+                                        style = MaterialTheme.typography.titleSmall.copy(
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 14.5.sp,
+                                            color = AppColors.TextPrimary
+                                        )
+                                    )
+                                    Text(
+                                        text = "Kategori: ${resolvedProfile.businessType.category.displayName}",
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            fontSize = 11.sp,
+                                            color = AppColors.TextSecondary
+                                        )
+                                    )
+                                }
+                            }
+                        }
+
+                        Text(
+                            text = resolvedProfile.businessType.description,
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                fontSize = 11.5.sp,
+                                color = AppColors.TextSecondary
+                            )
+                        )
+
+                        if (resolvedProfile.activities.isNotEmpty()) {
+                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Text(
+                                    text = "Fitur & Aktivitas Operasional Aktif:",
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        fontWeight = FontWeight.SemiBold,
+                                        fontSize = 11.sp,
+                                        color = AppColors.TextPrimary
+                                    )
+                                )
+                                Text(
+                                    text = resolvedProfile.activities.joinToString(", ") { it.displayName },
+                                    style = MaterialTheme.typography.bodySmall.copy(
+                                        fontSize = 11.sp,
+                                        color = AppColors.GreenDark,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                )
+                            }
+                        }
+
+                        Spacer(Modifier.height(2.dp))
+
+                        OutlinedButton(
+                            onClick = { showBusinessProfileDialog = true },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(10.dp),
+                            border = BorderStroke(1.dp, AppColors.GreenPrimary)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Edit,
+                                contentDescription = null,
+                                tint = AppColors.GreenPrimary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(Modifier.width(6.dp))
+                            Text(
+                                text = "Ubah Tipe & Model Usaha",
+                                color = AppColors.GreenPrimary,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 12.5.sp
+                            )
+                        }
+                    }
+                }
+            }
+
+            // ==========================================
+            // 1. PROFIL USAHA
+            // ==========================================
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(
+                    text = "PROFIL ${shopLabel.uppercase()}",
                     style = MaterialTheme.typography.labelSmall.copy(
                         fontWeight = FontWeight.Bold,
                         fontSize = 11.sp,
@@ -386,7 +544,7 @@ fun SettingsScreen(
                         AppTextField(
                             value = shopNameInput,
                             onValueChange = { shopNameInput = it },
-                            label = "Nama Warung *"
+                            label = "Nama $shopLabel *"
                         )
                         AppTextField(
                             value = ownerNameInput,
@@ -402,11 +560,11 @@ fun SettingsScreen(
                         AppTextField(
                             value = addressInput,
                             onValueChange = { addressInput = it },
-                            label = "Alamat Warung"
+                            label = "Alamat $shopLabel"
                         )
                         Spacer(Modifier.height(2.dp))
                         PrimaryButton(
-                            text = "Simpan Profil Warung",
+                            text = "Simpan Profil $shopLabel",
                             onClick = {
                                 scope.launch {
                                     prefsRepo.saveShopProfile(
@@ -415,7 +573,7 @@ fun SettingsScreen(
                                         phone = phoneInput,
                                         address = addressInput
                                     )
-                                    Toast.makeText(context, "Profil warung berhasil disimpan", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(context, "Profil $shopLabel berhasil disimpan", Toast.LENGTH_SHORT).show()
                                 }
                             }
                         )
@@ -428,7 +586,7 @@ fun SettingsScreen(
             // ==========================================
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(
-                    text = "PENJUALAN & KASIR",
+                    text = "${transactionLabel.uppercase()} & KASIR",
                     style = MaterialTheme.typography.labelSmall.copy(
                         fontWeight = FontWeight.Bold,
                         fontSize = 11.sp,
@@ -447,14 +605,14 @@ fun SettingsScreen(
                         modifier = Modifier.padding(14.dp),
                         verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        SettingSwitchRow("Tampilkan Foto Produk di Kasir", showProductImage) {
+                        SettingSwitchRow("Tampilkan Foto $productLabel di Kasir", showProductImage) {
                             showProductImage = it
                             scope.launch {
                                 prefsRepo.updatePosSettings(showProductImage, showStock, showBarcode, confirmCheckout)
                             }
                         }
                         HorizontalDivider(color = Color(0xFFF0F4F0))
-                        SettingSwitchRow("Tampilkan Jumlah Stok di Kasir", showStock) {
+                        SettingSwitchRow("Tampilkan Jumlah $stockLabel di Kasir", showStock) {
                             showStock = it
                             scope.launch {
                                 prefsRepo.updatePosSettings(showProductImage, showStock, showBarcode, confirmCheckout)
@@ -528,7 +686,7 @@ fun SettingsScreen(
                             }
                         }
                         HorizontalDivider(color = Color(0xFFF0F4F0))
-                        SettingSwitchRow("Terima Pembayaran Hutang (Piutang)", creditEnabled) {
+                        SettingSwitchRow("Terima Pembayaran $debtLabel", creditEnabled) {
                             creditEnabled = it
                             scope.launch {
                                 prefsRepo.updatePaymentSettings(
@@ -571,11 +729,11 @@ fun SettingsScreen(
             }
 
             // ==========================================
-            // 4. QRIS WARUNG
+            // 4. QRIS WARUNG / USAHA
             // ==========================================
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(
-                    text = "QRIS PEMBAYARAN",
+                    text = "QRIS STATIS ${shopLabel.uppercase()}",
                     style = MaterialTheme.typography.labelSmall.copy(
                         fontWeight = FontWeight.Bold,
                         fontSize = 11.sp,
@@ -636,7 +794,7 @@ fun SettingsScreen(
 
                         if (isConfigured) {
                             Text(
-                                text = "QRIS resmi warung Anda aktif dan akan ditampilkan saat checkout QRIS di kasir.",
+                                text = "QRIS resmi $shopLabel Anda aktif dan akan ditampilkan saat checkout QRIS di kasir.",
                                 style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.5.sp),
                                 color = AppColors.TextSecondary
                             )
@@ -653,7 +811,7 @@ fun SettingsScreen(
                             ) {
                                 Image(
                                     bitmap = qrisBitmap!!.asImageBitmap(),
-                                    contentDescription = "Preview QRIS Warung",
+                                    contentDescription = "Preview QRIS $shopLabel",
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .heightIn(max = 200.dp),
@@ -722,7 +880,7 @@ fun SettingsScreen(
             // ==========================================
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(
-                    text = "STOK & PERINGATAN",
+                    text = "${stockLabel.uppercase()} & PERINGATAN",
                     style = MaterialTheme.typography.labelSmall.copy(
                         fontWeight = FontWeight.Bold,
                         fontSize = 11.sp,
@@ -741,7 +899,7 @@ fun SettingsScreen(
                         modifier = Modifier.padding(14.dp),
                         verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        SettingSwitchRow("Peringatan Barang Hampir Habis", lowStockAlertEnabled) {
+                        SettingSwitchRow("Peringatan $productLabel Hampir Habis", lowStockAlertEnabled) {
                             lowStockAlertEnabled = it
                             scope.launch {
                                 prefsRepo.updateStockSettings(
@@ -764,7 +922,7 @@ fun SettingsScreen(
                                     )
                                 }
                             },
-                            label = "Batas Default Stok Menipis Produk Baru",
+                            label = "Batas Default $stockLabel Menipis $productLabel Baru",
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                         )
                     }
@@ -776,7 +934,7 @@ fun SettingsScreen(
             // ==========================================
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(
-                    text = "PRINTER & STRUK",
+                    text = "PRINTER & ${receiptLabel.uppercase()}",
                     style = MaterialTheme.typography.labelSmall.copy(
                         fontWeight = FontWeight.Bold,
                         fontSize = 11.sp,
@@ -809,7 +967,7 @@ fun SettingsScreen(
                             ) {
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(
-                                        text = "Printer Struk (Thermal)",
+                                        text = "Printer $receiptLabel (Thermal)",
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 13.5.sp,
                                         color = AppColors.TextPrimary
@@ -848,7 +1006,7 @@ fun SettingsScreen(
 
                         HorizontalDivider(color = Color(0xFFF0F4F0))
 
-                        SettingSwitchRow("Tampilkan Nama Warung di Struk", showShopNameOnReceipt) {
+                        SettingSwitchRow("Tampilkan Nama $shopLabel di $receiptLabel", showShopNameOnReceipt) {
                             showShopNameOnReceipt = it
                             scope.launch {
                                 prefsRepo.updateReceiptSettings(
@@ -862,7 +1020,7 @@ fun SettingsScreen(
                             }
                         }
                         HorizontalDivider(color = Color(0xFFF0F4F0))
-                        SettingSwitchRow("Tampilkan Alamat di Struk", showAddressOnReceipt) {
+                        SettingSwitchRow("Tampilkan Alamat di $receiptLabel", showAddressOnReceipt) {
                             showAddressOnReceipt = it
                             scope.launch {
                                 prefsRepo.updateReceiptSettings(
@@ -876,7 +1034,7 @@ fun SettingsScreen(
                             }
                         }
                         HorizontalDivider(color = Color(0xFFF0F4F0))
-                        SettingSwitchRow("Tampilkan Nomor HP di Struk", showPhoneOnReceipt) {
+                        SettingSwitchRow("Tampilkan Nomor HP di $receiptLabel", showPhoneOnReceipt) {
                             showPhoneOnReceipt = it
                             scope.launch {
                                 prefsRepo.updateReceiptSettings(
@@ -904,7 +1062,7 @@ fun SettingsScreen(
                                     )
                                 }
                             },
-                            label = "Teks Catatan Kaki Struk"
+                            label = "Teks Catatan Kaki $receiptLabel"
                         )
                     }
                 }
@@ -934,7 +1092,7 @@ fun SettingsScreen(
                         modifier = Modifier.padding(14.dp),
                         verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        SettingSwitchRow("Notifikasi Stok Menipis", lowStockNotificationEnabled) {
+                        SettingSwitchRow("Notifikasi $stockLabel Menipis", lowStockNotificationEnabled) {
                             lowStockNotificationEnabled = it
                             scope.launch {
                                 prefsRepo.updateNotificationSettings(
@@ -944,7 +1102,7 @@ fun SettingsScreen(
                             }
                         }
                         HorizontalDivider(color = Color(0xFFF0F4F0))
-                        SettingSwitchRow("Pengingat Jatuh Tempo Hutang", debtReminderEnabled) {
+                        SettingSwitchRow("Pengingat Jatuh Tempo $debtLabel", debtReminderEnabled) {
                             debtReminderEnabled = it
                             scope.launch {
                                 prefsRepo.updateNotificationSettings(
@@ -1056,13 +1214,13 @@ fun SettingsScreen(
                         verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         Text(
-                            text = "Amankan data warung Anda di Google Sheets.",
+                            text = "Amankan data $shopLabel Anda di Google Sheets.",
                             style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp),
                             fontWeight = FontWeight.SemiBold,
                             color = AppColors.TextPrimary
                         )
                         Text(
-                            text = "Data transaksi, produk, pelanggan, dan kas dapat dicadangkan dan dipulihkan secara aman.",
+                            text = "Data transaksi, $productLabel, $customerLabel, dan kas dapat dicadangkan dan dipulihkan secara aman.",
                             style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.5.sp),
                             color = AppColors.TextSecondary
                         )
@@ -1862,6 +2020,314 @@ fun SettingsScreen(
                     }
                 }
             )
+        }
+
+        if (showBusinessProfileDialog) {
+            ChangeBusinessProfileDialog(
+                currentPrimaryType = settingsState.primaryBusinessType,
+                currentSecondaryActivities = settingsState.secondaryActivities,
+                onDismiss = { showBusinessProfileDialog = false },
+                onSave = { selectedType, selectedActivities ->
+                    showBusinessProfileDialog = false
+                    scope.launch {
+                        prefsRepo.updateBusinessProfile(
+                            primaryType = selectedType.id,
+                            secondaryActivities = selectedActivities.map { it.id }.toSet()
+                        )
+                        Toast.makeText(context, "Tipe usaha diperbarui: ${selectedType.displayName}", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ChangeBusinessProfileDialog(
+    currentPrimaryType: String,
+    currentSecondaryActivities: Set<String>,
+    onDismiss: () -> Unit,
+    onSave: (BusinessType, Set<BusinessActivity>) -> Unit
+) {
+    var selectedCategory by remember { mutableStateOf<BusinessCategory?>(null) }
+    var selectedType by remember {
+        mutableStateOf(
+            BusinessType.fromId(currentPrimaryType) ?: BusinessTaxonomyRegistry.DEFAULT_BUSINESS_TYPE
+        )
+    }
+    var selectedActivities by remember {
+        mutableStateOf(
+            currentSecondaryActivities.mapNotNull { BusinessActivity.fromId(it) }.toSet().ifEmpty {
+                BusinessTaxonomyRegistry.getPreset(selectedType).defaultActivities
+            }
+        )
+    }
+
+    val availableTypes = remember(selectedCategory) {
+        if (selectedCategory != null) {
+            BusinessTaxonomyRegistry.getBusinessTypesByCategory(selectedCategory!!)
+        } else {
+            BusinessType.entries
+        }
+    }
+
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Surface(
+            shape = RoundedCornerShape(16.dp),
+            color = Color.White,
+            modifier = Modifier
+                .fillMaxWidth(0.95f)
+                .heightIn(max = 680.dp)
+        ) {
+            Column(
+                modifier = Modifier.padding(18.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column {
+                        Text(
+                            text = "Ubah Tipe & Model Usaha",
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = AppColors.TextPrimary,
+                                fontSize = 16.sp
+                            )
+                        )
+                        Text(
+                            text = "Sesuaikan terminologi & model operasional",
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                color = AppColors.TextSecondary,
+                                fontSize = 11.5.sp
+                            )
+                        )
+                    }
+                }
+
+                Spacer(Modifier.height(12.dp))
+
+                // Scrollable Body
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    // Category Filter Chips
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(
+                            text = "PILIH KATEGORI",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = AppColors.GreenPrimary,
+                                fontSize = 10.5.sp,
+                                letterSpacing = 0.5.sp
+                            )
+                        )
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            FilterChip(
+                                selected = selectedCategory == null,
+                                onClick = { selectedCategory = null },
+                                label = { Text("Semua (19)", fontSize = 11.sp) },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = AppColors.GreenPrimary,
+                                    selectedLabelColor = Color.White
+                                )
+                            )
+                            BusinessCategory.entries.forEach { cat ->
+                                FilterChip(
+                                    selected = selectedCategory == cat,
+                                    onClick = { selectedCategory = cat },
+                                    label = { Text(cat.displayName, fontSize = 11.sp) },
+                                    colors = FilterChipDefaults.filterChipColors(
+                                        selectedContainerColor = AppColors.GreenPrimary,
+                                        selectedLabelColor = Color.White
+                                    )
+                                )
+                            }
+                        }
+                    }
+
+                    // Business Type Presets List
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text(
+                            text = "PILIH PRESET USAHA",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = AppColors.GreenPrimary,
+                                fontSize = 10.5.sp,
+                                letterSpacing = 0.5.sp
+                            )
+                        )
+
+                        availableTypes.forEach { type ->
+                            val isSelected = selectedType == type
+                            Surface(
+                                shape = RoundedCornerShape(10.dp),
+                                color = if (isSelected) Color(0xFFF0FDF4) else Color(0xFFF8FAF8),
+                                border = BorderStroke(
+                                    1.dp,
+                                    if (isSelected) AppColors.GreenPrimary else Color(0xFFE2E8F0)
+                                ),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        selectedType = type
+                                        // Auto-load preset default activities when switching primary type
+                                        val preset = BusinessTaxonomyRegistry.getPreset(type)
+                                        selectedActivities = preset.defaultActivities
+                                    }
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(10.dp),
+                                    verticalAlignment = Alignment.Top
+                                ) {
+                                    RadioButton(
+                                        selected = isSelected,
+                                        onClick = {
+                                            selectedType = type
+                                            val preset = BusinessTaxonomyRegistry.getPreset(type)
+                                            selectedActivities = preset.defaultActivities
+                                        },
+                                        colors = RadioButtonDefaults.colors(
+                                            selectedColor = AppColors.GreenPrimary
+                                        ),
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                    Spacer(Modifier.width(8.dp))
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = type.displayName,
+                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold,
+                                            fontSize = 13.sp,
+                                            color = if (isSelected) AppColors.GreenDark else AppColors.TextPrimary
+                                        )
+                                        Text(
+                                            text = type.description,
+                                            fontSize = 11.sp,
+                                            color = AppColors.TextSecondary
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    HorizontalDivider(color = Color(0xFFEFF3F0))
+
+                    // Secondary Activities Customization
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text(
+                            text = "AKTIVITAS OPERASIONAL & FITUR TAMBAHAN",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = AppColors.GreenPrimary,
+                                fontSize = 10.5.sp,
+                                letterSpacing = 0.5.sp
+                            )
+                        )
+                        Text(
+                            text = "Pilih aktivitas operasional yang dijalankan bisnis Anda:",
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                fontSize = 11.sp,
+                                color = AppColors.TextSecondary
+                            )
+                        )
+
+                        BusinessActivity.entries.forEach { activity ->
+                            val isChecked = selectedActivities.contains(activity)
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = if (isChecked) Color(0xFFF9FCF9) else Color.White,
+                                border = BorderStroke(
+                                    0.5.dp,
+                                    if (isChecked) AppColors.GreenPrimary.copy(alpha = 0.5f) else Color(0xFFE5E7EB)
+                                ),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        selectedActivities = if (isChecked) {
+                                            selectedActivities - activity
+                                        } else {
+                                            selectedActivities + activity
+                                        }
+                                    }
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Checkbox(
+                                        checked = isChecked,
+                                        onCheckedChange = { checked ->
+                                            selectedActivities = if (checked) {
+                                                selectedActivities + activity
+                                            } else {
+                                                selectedActivities - activity
+                                            }
+                                        },
+                                        colors = CheckboxDefaults.colors(
+                                            checkedColor = AppColors.GreenPrimary
+                                        ),
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                    Spacer(Modifier.width(8.dp))
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = activity.displayName,
+                                            fontWeight = if (isChecked) FontWeight.SemiBold else FontWeight.Normal,
+                                            fontSize = 12.sp,
+                                            color = AppColors.TextPrimary
+                                        )
+                                        Text(
+                                            text = activity.description,
+                                            fontSize = 10.5.sp,
+                                            color = AppColors.TextSecondary
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Spacer(Modifier.height(12.dp))
+
+                // Action Buttons
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = onDismiss,
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Text("Batal", fontSize = 12.5.sp)
+                    }
+                    Button(
+                        onClick = {
+                            onSave(selectedType, selectedActivities)
+                        },
+                        modifier = Modifier.weight(1.5f),
+                        shape = RoundedCornerShape(10.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = AppColors.GreenPrimary)
+                    ) {
+                        Text("Simpan Tipe Usaha", fontWeight = FontWeight.Bold, fontSize = 12.5.sp)
+                    }
+                }
+            }
         }
     }
 }
