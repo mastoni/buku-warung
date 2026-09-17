@@ -18,6 +18,7 @@ import id.skmnetwork.bukuwarung.data.local.database.MIGRATION_7_8
 import id.skmnetwork.bukuwarung.data.local.database.MIGRATION_8_9
 import id.skmnetwork.bukuwarung.data.local.database.MIGRATION_9_10
 import id.skmnetwork.bukuwarung.data.local.database.MIGRATION_10_11
+import id.skmnetwork.bukuwarung.data.local.database.MIGRATION_11_12
 import id.skmnetwork.bukuwarung.data.local.entity.SyncQueueEntity
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -115,7 +116,7 @@ class RoomMigrationTest {
             AppDatabase::class.java,
             dbName
         )
-            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11)
+            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12)
             .allowMainThreadQueries()
             .build()
 
@@ -233,13 +234,13 @@ class RoomMigrationTest {
         v7Db.close()
         helper.close()
 
-        // Step 4: Upgrade from Version 8 to Version 11 using Migrations
+        // Step 4: Upgrade from Version 8 to Version 12 using Migrations
         val v11Database = Room.databaseBuilder(
             context,
             AppDatabase::class.java,
             dbNameV8V9
         )
-            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11)
+            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12)
             .allowMainThreadQueries()
             .build()
 
@@ -338,19 +339,19 @@ class RoomMigrationTest {
         v7Db.close()
         helper.close()
 
-        // Step 4: Upgrade from Version 9 to Version 11 using MIGRATION_9_10 and MIGRATION_10_11
+        // Step 4: Upgrade from Version 9 to Version 12 using MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12
         val v11Database = Room.databaseBuilder(
             context,
             AppDatabase::class.java,
             dbNameV9V10
         )
-            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11)
+            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12)
             .allowMainThreadQueries()
             .build()
 
         // Step 5: Verify Product & Category data intact
         val prod = v11Database.productDao().getProductById(1)
-        assertNotNull("Product must exist after v11 upgrade", prod)
+        assertNotNull("Product must exist after v12 upgrade", prod)
         assertEquals("Biskuit", prod?.name)
         assertEquals(10.0, prod?.stock ?: 0.0, 0.001)
 
@@ -432,13 +433,13 @@ class RoomMigrationTest {
         v7Db.close()
         helper.close()
 
-        // Step 4: Upgrade from Version 10 to Version 11 using MIGRATION_10_11
+        // Step 4: Upgrade from Version 10 to Version 12 using MIGRATION_10_11 and MIGRATION_11_12
         val v11Database = Room.databaseBuilder(
             context,
             AppDatabase::class.java,
             dbNameV10V11
         )
-            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11)
+            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12)
             .allowMainThreadQueries()
             .build()
 
@@ -460,8 +461,99 @@ class RoomMigrationTest {
     }
 
     @Test
-    fun testFullMigrationChainV7ThroughV11() : Unit = runBlocking {
-        val dbNameChain = "real_v7_v11_full_chain_migration_test_db"
+    fun testRealMigrationV11ToV12AddsDiscountColumnAndPreservesData() : Unit = runBlocking {
+        val dbNameV11V12 = "real_v11_v12_migration_test_db"
+        context.deleteDatabase(dbNameV11V12)
+
+        // Step 1: Create a REAL File-Backed Database at Version 7
+        val factory = FrameworkSQLiteOpenHelperFactory()
+        val config = SupportSQLiteOpenHelper.Configuration.builder(context)
+            .name(dbNameV11V12)
+            .callback(object : SupportSQLiteOpenHelper.Callback(7) {
+                override fun onCreate(db: SupportSQLiteDatabase) {
+                    db.execSQL("CREATE TABLE IF NOT EXISTS `categories` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL, `created_at` INTEGER NOT NULL)")
+                    db.execSQL("CREATE TABLE IF NOT EXISTS `products` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `category_id` INTEGER NOT NULL, `name` TEXT NOT NULL, `purchase_price` INTEGER NOT NULL, `selling_price` INTEGER NOT NULL, `stock` REAL NOT NULL, `minimum_stock` REAL NOT NULL, `unit` TEXT NOT NULL, `created_at` INTEGER NOT NULL, `updated_at` INTEGER NOT NULL, `barcode` TEXT, `image_uri` TEXT, FOREIGN KEY(`category_id`) REFERENCES `categories`(`id`) ON UPDATE NO ACTION ON DELETE RESTRICT)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_products_category_id` ON `products` (`category_id`)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_products_barcode` ON `products` (`barcode`)")
+                    db.execSQL("CREATE TABLE IF NOT EXISTS `customers` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL, `phone` TEXT, `address` TEXT, `created_at` INTEGER NOT NULL, `updated_at` INTEGER NOT NULL)")
+                    db.execSQL("CREATE TABLE IF NOT EXISTS `sales_transactions` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `transaction_number` TEXT NOT NULL, `transaction_date` INTEGER NOT NULL, `total_amount` INTEGER NOT NULL, `payment_method` TEXT NOT NULL, `created_at` INTEGER NOT NULL, `customer_id` INTEGER, FOREIGN KEY(`customer_id`) REFERENCES `customers`(`id`) ON UPDATE NO ACTION ON DELETE SET NULL)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_sales_transactions_customer_id` ON `sales_transactions` (`customer_id`)")
+                    db.execSQL("CREATE TABLE IF NOT EXISTS `sale_items` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `transaction_id` INTEGER NOT NULL, `product_id` INTEGER NOT NULL, `product_name` TEXT NOT NULL, `quantity` REAL NOT NULL, `price` INTEGER NOT NULL, `subtotal` INTEGER NOT NULL, FOREIGN KEY(`transaction_id`) REFERENCES `sales_transactions`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE, FOREIGN KEY(`product_id`) REFERENCES `products`(`id`) ON UPDATE NO ACTION ON DELETE RESTRICT)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_sale_items_transaction_id` ON `sale_items` (`transaction_id`)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_sale_items_product_id` ON `sale_items` (`product_id`)")
+                    db.execSQL("CREATE TABLE IF NOT EXISTS `cash_transactions` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `type` TEXT NOT NULL, `amount` INTEGER NOT NULL, `description` TEXT NOT NULL, `ref_id` INTEGER, `created_at` INTEGER NOT NULL)")
+                    db.execSQL("CREATE TABLE IF NOT EXISTS `suppliers` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL, `phone` TEXT, `address` TEXT, `created_at` INTEGER NOT NULL, `updated_at` INTEGER NOT NULL)")
+                    db.execSQL("CREATE TABLE IF NOT EXISTS `purchase_transactions` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `transaction_number` TEXT NOT NULL, `transaction_date` INTEGER NOT NULL, `total_amount` INTEGER NOT NULL, `created_at` INTEGER NOT NULL, `supplier_id` INTEGER, `payment_method` TEXT NOT NULL DEFAULT 'CASH', FOREIGN KEY(`supplier_id`) REFERENCES `suppliers`(`id`) ON UPDATE NO ACTION ON DELETE SET NULL)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_purchase_transactions_supplier_id` ON `purchase_transactions` (`supplier_id`)")
+                    db.execSQL("CREATE TABLE IF NOT EXISTS `purchase_items` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `transaction_id` INTEGER NOT NULL, `product_id` INTEGER NOT NULL, `product_name` TEXT NOT NULL, `quantity` REAL NOT NULL, `purchase_price` INTEGER NOT NULL, `subtotal` INTEGER NOT NULL, FOREIGN KEY(`transaction_id`) REFERENCES `purchase_transactions`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE, FOREIGN KEY(`product_id`) REFERENCES `products`(`id`) ON UPDATE NO ACTION ON DELETE RESTRICT)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_purchase_items_transaction_id` ON `purchase_items` (`transaction_id`)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_purchase_items_product_id` ON `purchase_items` (`product_id`)")
+                    db.execSQL("CREATE TABLE IF NOT EXISTS `debts` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `customer_id` INTEGER NOT NULL, `sale_transaction_id` INTEGER, `total_debt` INTEGER NOT NULL, `paid_amount` INTEGER NOT NULL, `status` TEXT NOT NULL, `created_at` INTEGER NOT NULL, `updated_at` INTEGER NOT NULL, FOREIGN KEY(`customer_id`) REFERENCES `customers`(`id`) ON UPDATE NO ACTION ON DELETE RESTRICT, FOREIGN KEY(`sale_transaction_id`) REFERENCES `sales_transactions`(`id`) ON UPDATE NO ACTION ON DELETE SET NULL)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_debts_customer_id` ON `debts` (`customer_id`)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_debts_sale_transaction_id` ON `debts` (`sale_transaction_id`)")
+                    db.execSQL("CREATE TABLE IF NOT EXISTS `debt_payments` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `debt_id` INTEGER NOT NULL, `amount` INTEGER NOT NULL, `payment_date` INTEGER NOT NULL, `note` TEXT, `created_at` INTEGER NOT NULL, FOREIGN KEY(`debt_id`) REFERENCES `debts`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_debt_payments_debt_id` ON `debt_payments` (`debt_id`)")
+                    db.execSQL("CREATE TABLE IF NOT EXISTS `supplier_payables` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `supplier_id` INTEGER NOT NULL, `purchase_transaction_id` INTEGER, `total_debt` INTEGER NOT NULL, `paid_amount` INTEGER NOT NULL, `status` TEXT NOT NULL, `created_at` INTEGER NOT NULL, `updated_at` INTEGER NOT NULL, FOREIGN KEY(`supplier_id`) REFERENCES `suppliers`(`id`) ON UPDATE NO ACTION ON DELETE RESTRICT, FOREIGN KEY(`purchase_transaction_id`) REFERENCES `purchase_transactions`(`id`) ON UPDATE NO ACTION ON DELETE SET NULL)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_supplier_payables_supplier_id` ON `supplier_payables` (`supplier_id`)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_supplier_payables_purchase_transaction_id` ON `supplier_payables` (`purchase_transaction_id`)")
+                    db.execSQL("CREATE TABLE IF NOT EXISTS `supplier_payments` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `payable_id` INTEGER NOT NULL, `amount` INTEGER NOT NULL, `payment_date` INTEGER NOT NULL, `note` TEXT, `created_at` INTEGER NOT NULL, FOREIGN KEY(`payable_id`) REFERENCES `supplier_payables`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_supplier_payments_payable_id` ON `supplier_payments` (`payable_id`)")
+                }
+
+                override fun onUpgrade(db: SupportSQLiteDatabase, oldVersion: Int, newVersion: Int) {}
+            })
+            .build()
+
+        val helper = factory.create(config)
+        val v7Db = helper.writableDatabase
+
+        // Step 2: Insert product and legacy sale item
+        v7Db.execSQL("INSERT INTO categories (id, name, created_at) VALUES (1, 'Sembako', 1700000000000)")
+        v7Db.execSQL("INSERT INTO products (id, category_id, name, purchase_price, selling_price, stock, minimum_stock, unit, created_at, updated_at) VALUES (1, 1, 'Kecap Manis', 10000, 12000, 20.0, 3.0, 'botol', 1700000000000, 1700000000000)")
+        v7Db.execSQL("INSERT INTO sales_transactions (id, transaction_number, transaction_date, total_amount, payment_method, created_at) VALUES (1, 'TRX-V11-001', 1700000000000, 24000, 'CASH', 1700000000000)")
+        v7Db.execSQL("INSERT INTO sale_items (id, transaction_id, product_id, product_name, quantity, price, subtotal) VALUES (1, 1, 1, 'Kecap Manis', 2.0, 12000, 24000)")
+
+        // Step 3: Run migrations up to v11
+        MIGRATION_7_8.migrate(v7Db)
+        MIGRATION_8_9.migrate(v7Db)
+        MIGRATION_9_10.migrate(v7Db)
+        MIGRATION_10_11.migrate(v7Db)
+        v7Db.version = 11
+
+        // Close Database
+        v7Db.close()
+        helper.close()
+
+        // Step 4: Upgrade from Version 11 to Version 12 using MIGRATION_11_12
+        val v12Database = Room.databaseBuilder(
+            context,
+            AppDatabase::class.java,
+            dbNameV11V12
+        )
+            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12)
+            .allowMainThreadQueries()
+            .build()
+
+        // Step 5: Verify legacy sale transaction discount defaults to 0L
+        val legacySale = v12Database.saleDao().getTransactionById(1)
+        assertNotNull("Legacy sale transaction must exist in v12", legacySale)
+        assertEquals("TRX-V11-001", legacySale?.transactionNumber)
+        assertEquals(24000L, legacySale?.totalAmount)
+        assertEquals(0L, legacySale?.discountAmount)
+
+        // Step 6: Verify PRAGMA foreign key check
+        val cursorFk = v12Database.openHelper.writableDatabase.query("PRAGMA foreign_key_check;")
+        val fkViolationCount = cursorFk.count
+        cursorFk.close()
+        assertEquals("Foreign key violations count must be 0", 0, fkViolationCount)
+
+        v12Database.close()
+        context.deleteDatabase(dbNameV11V12)
+    }
+
+    @Test
+    fun testFullMigrationChainV7ThroughV12() : Unit = runBlocking {
+        val dbNameChain = "real_v7_v12_full_chain_migration_test_db"
         context.deleteDatabase(dbNameChain)
 
         // Step 1: Create a REAL File-Backed Database at Version 7
@@ -515,25 +607,28 @@ class RoomMigrationTest {
         v7Db.close()
         helper.close()
 
-        // Apply complete migration chain 7 -> 8 -> 9 -> 10 -> 11 directly through Room
-        val v11Database = Room.databaseBuilder(
+        // Apply complete migration chain 7 -> 8 -> 9 -> 10 -> 11 -> 12 directly through Room
+        val v12Database = Room.databaseBuilder(
             context,
             AppDatabase::class.java,
             dbNameChain
         )
-            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11)
+            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12)
             .allowMainThreadQueries()
             .build()
 
-        val item = v11Database.saleDao().getItemsForTransaction(1)[0]
+        val item = v12Database.saleDao().getItemsForTransaction(1)[0]
         assertEquals(20000L, item.purchasePrice)
         assertEquals(25000L, item.price)
 
-        val cursorFk = v11Database.openHelper.writableDatabase.query("PRAGMA foreign_key_check;")
+        val sale = v12Database.saleDao().getTransactionById(1)
+        assertEquals(0L, sale?.discountAmount)
+
+        val cursorFk = v12Database.openHelper.writableDatabase.query("PRAGMA foreign_key_check;")
         assertEquals(0, cursorFk.count)
         cursorFk.close()
 
-        v11Database.close()
+        v12Database.close()
         context.deleteDatabase(dbNameChain)
     }
 }

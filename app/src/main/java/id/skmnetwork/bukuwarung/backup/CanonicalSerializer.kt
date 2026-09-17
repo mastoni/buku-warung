@@ -11,7 +11,7 @@ import java.util.Locale
 object CanonicalSerializer {
 
     const val BACKUP_FORMAT_VERSION = "1.0"
-    const val ROOM_SCHEMA_VERSION = 11
+    const val ROOM_SCHEMA_VERSION = 12
 
     const val README_TAB_NAME = "00_README"
     const val METADATA_TAB_NAME = "00_Metadata"

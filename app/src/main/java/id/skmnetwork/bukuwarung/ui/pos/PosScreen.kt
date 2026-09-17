@@ -47,6 +47,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -66,6 +68,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -77,6 +80,9 @@ import id.skmnetwork.bukuwarung.data.preferences.UserSettings
 import id.skmnetwork.bukuwarung.domain.business.BusinessCapability
 import id.skmnetwork.bukuwarung.domain.business.BusinessTaxonomyRegistry
 import id.skmnetwork.bukuwarung.domain.business.ResolvedBusinessProfile
+import id.skmnetwork.bukuwarung.domain.discount.DiscountCalculator
+import id.skmnetwork.bukuwarung.domain.discount.DiscountInput
+import id.skmnetwork.bukuwarung.domain.discount.DiscountType
 import id.skmnetwork.bukuwarung.ui.components.AppCard
 import id.skmnetwork.bukuwarung.ui.components.AppEmptyState
 import id.skmnetwork.bukuwarung.ui.components.AppTextField
@@ -161,11 +167,25 @@ fun PosScreen(
         matchesNumber || matchesCust
     }
 
+    var discountType by remember { mutableStateOf(DiscountType.FIXED) }
+    var discountInputText by remember { mutableStateOf("") }
+
     val totalItemCount = cart.values.sum().toInt()
     val totalPrice = cart.entries.sumOf { (productId, qty) ->
         val prod = dbProducts.find { it.id == productId }
         (prod?.sellingPrice ?: 0L) * qty.toLong()
     }
+
+    val parsedDiscountValue = discountInputText.trim().toDoubleOrNull() ?: 0.0
+    val discountCalcResult = remember(totalPrice, discountType, parsedDiscountValue) {
+        DiscountCalculator.calculate(
+            grossSubtotal = totalPrice,
+            discountInput = DiscountInput(discountType, parsedDiscountValue)
+        )
+    }
+    val grossSubtotal = discountCalcResult.grossSubtotal
+    val discountAmount = discountCalcResult.discountAmount
+    val netTotal = discountCalcResult.netTotal
 
     val cartSummaryList = cart.entries.mapNotNull { (prodId, qty) ->
         val prod = dbProducts.find { it.id == prodId }
@@ -282,7 +302,7 @@ fun PosScreen(
 
     if (showCashPaymentDialog) {
         CashPaymentDialog(
-            totalPrice = totalPrice,
+            totalPrice = netTotal,
             isCheckingOut = isCheckingOut,
             cashReceivedEnabled = userSettings.cashReceivedEnabled,
             onDismiss = { showCashPaymentDialog = false },
@@ -292,6 +312,7 @@ fun PosScreen(
                 viewModel.checkoutCart(
                     cartItems = cart.toMap(),
                     paymentMethod = "CASH",
+                    discountAmount = discountAmount,
                     onSuccess = { saleId ->
                         scope.launch {
                             val receiptData = viewModel.getReceiptData(saleId, userSettings, cashReceived)
@@ -300,7 +321,7 @@ fun PosScreen(
                             showPaymentSelectorDialog = false
                             lastCheckoutData = CheckoutSuccessData(
                                 items = cartSummaryList,
-                                totalAmount = totalPrice,
+                                totalAmount = netTotal,
                                 paymentMethodLabel = "Tunai (Cash)",
                                 cashReceivedAmount = cashReceived,
                                 changeAmount = change,
@@ -308,6 +329,7 @@ fun PosScreen(
                                 receiptData = receiptData
                             )
                             cart.clear()
+                            discountInputText = ""
                             printerStatusMessage = null
                             showCheckoutSuccessDialog = true
 
@@ -335,7 +357,7 @@ fun PosScreen(
 
     if (showQrisPaymentDialog) {
         QrisPaymentDialog(
-            totalPrice = totalPrice,
+            totalPrice = netTotal,
             isCheckingOut = isCheckingOut,
             qrisImagePath = userSettings.qrisImagePath,
             onNavigateToSettings = onNavigateToSettings,
@@ -346,6 +368,7 @@ fun PosScreen(
                 viewModel.checkoutCart(
                     cartItems = cart.toMap(),
                     paymentMethod = "QRIS",
+                    discountAmount = discountAmount,
                     onSuccess = { saleId ->
                         scope.launch {
                             val receiptData = viewModel.getReceiptData(saleId, userSettings)
@@ -354,12 +377,13 @@ fun PosScreen(
                             showPaymentSelectorDialog = false
                             lastCheckoutData = CheckoutSuccessData(
                                 items = cartSummaryList,
-                                totalAmount = totalPrice,
+                                totalAmount = netTotal,
                                 paymentMethodLabel = "QRIS",
                                 saleId = saleId,
                                 receiptData = receiptData
                             )
                             cart.clear()
+                            discountInputText = ""
                             printerStatusMessage = null
                             showCheckoutSuccessDialog = true
 
@@ -405,7 +429,7 @@ fun PosScreen(
                             verticalArrangement = Arrangement.spacedBy(AppSpacing.xs),
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(130.dp)
+                                .height(110.dp)
                                 .padding(AppSpacing.sm)
                         ) {
                             items(cart.entries.toList()) { (prodId, qty) ->
@@ -426,13 +450,103 @@ fun PosScreen(
                         }
                     }
 
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth().padding(vertical = AppSpacing.xs)
+                    // Universal Discount Section
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text("TOTAL ($totalItemCount ${terminology.productLabel.lowercase()})", fontWeight = FontWeight.Bold)
-                        Spacer(Modifier.weight(1f))
-                        Text(formatRupiah(totalPrice), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = AppColors.GreenPrimary)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("Diskon Transaksi:", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelMedium)
+                            Spacer(Modifier.weight(1f))
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = if (discountType == DiscountType.FIXED) AppColors.GreenLight else AppColors.SurfaceGray,
+                                modifier = Modifier.clickable { discountType = DiscountType.FIXED }
+                            ) {
+                                Text(
+                                    "Nominal (Rp)",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (discountType == DiscountType.FIXED) AppColors.GreenPrimary else AppColors.TextSecondary,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                )
+                            }
+                            Spacer(Modifier.width(4.dp))
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = if (discountType == DiscountType.PERCENTAGE) AppColors.GreenLight else AppColors.SurfaceGray,
+                                modifier = Modifier.clickable { discountType = DiscountType.PERCENTAGE }
+                            ) {
+                                Text(
+                                    "Persen (%)",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (discountType == DiscountType.PERCENTAGE) AppColors.GreenPrimary else AppColors.TextSecondary,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                )
+                            }
+                        }
+
+                        AppTextField(
+                            value = discountInputText,
+                            onValueChange = { discountInputText = it },
+                            label = if (discountType == DiscountType.FIXED) "Nominal Diskon (Rp)" else "Persentase Diskon (0 - 100%)",
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        if (discountAmount > 0) {
+                            Text(
+                                text = "Potongan diskon: ${formatRupiah(discountAmount)}",
+                                color = AppColors.RedExpense,
+                                fontWeight = FontWeight.SemiBold,
+                                style = MaterialTheme.typography.labelSmall
+                            )
+                        }
+                    }
+
+                    // Financial Summary Breakdown
+                    Surface(
+                        shape = AppShapes.CardShape,
+                        color = Color(0xFFF9FBFA),
+                        border = BorderStroke(1.dp, Color(0xFFE2EBE5)),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(AppSpacing.sm),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text("Subtotal ($totalItemCount ${terminology.productLabel.lowercase()})", style = MaterialTheme.typography.bodySmall, color = AppColors.TextSecondary)
+                                Spacer(Modifier.weight(1f))
+                                Text(formatRupiah(grossSubtotal), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold)
+                            }
+                            if (discountAmount > 0) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text("Diskon", style = MaterialTheme.typography.bodySmall, color = AppColors.RedExpense)
+                                    Spacer(Modifier.weight(1f))
+                                    Text("-${formatRupiah(discountAmount)}", style = MaterialTheme.typography.bodySmall, color = AppColors.RedExpense, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                            HorizontalDivider(modifier = Modifier.padding(vertical = 2.dp), color = Color(0xFFE2EBE5))
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text("TOTAL BAYAR", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
+                                Spacer(Modifier.weight(1f))
+                                Text(formatRupiah(netTotal), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = AppColors.GreenPrimary)
+                            }
+                        }
                     }
 
                     val availablePaymentMethods = remember(userSettings.cashEnabled, userSettings.qrisEnabled, userSettings.creditEnabled) {
@@ -529,6 +643,7 @@ fun PosScreen(
                                 customerViewModel.checkoutCreditSale(
                                     cartItems = cart.toMap(),
                                     customerId = selectedCustomerForCredit!!.id,
+                                    discountAmount = discountAmount,
                                     onSuccess = { saleId ->
                                         scope.launch {
                                             val receiptData = customerViewModel.getReceiptData(saleId, userSettings)
@@ -536,13 +651,14 @@ fun PosScreen(
                                             showPaymentSelectorDialog = false
                                             lastCheckoutData = CheckoutSuccessData(
                                                 items = cartSummaryList,
-                                                totalAmount = totalPrice,
+                                                totalAmount = netTotal,
                                                 paymentMethodLabel = "Hutang (${selectedCustomerForCredit?.name ?: terminology.customerLabel})",
                                                 customerName = selectedCustomerForCredit?.name,
                                                 saleId = saleId,
                                                 receiptData = receiptData
                                             )
                                             cart.clear()
+                                            discountInputText = ""
                                             selectedCustomerForCredit = null
                                             printerStatusMessage = null
                                             showCheckoutSuccessDialog = true

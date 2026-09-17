@@ -152,12 +152,14 @@ class CustomerRepository(
 
     suspend fun processAtomicCreditCheckout(
         cartItems: Map<Long, Double>,
-        customerId: Long
+        customerId: Long,
+        discountAmount: Long = 0L
     ): Result<Long> = withContext(Dispatchers.IO) {
         saleRepository.completeSale(
             cartItems = cartItems,
             paymentMethod = "CREDIT",
-            customerId = customerId
+            customerId = customerId,
+            discountAmount = discountAmount
         )
     }
 

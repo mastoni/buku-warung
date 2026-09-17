@@ -131,6 +131,12 @@ class PlainTextReceiptFormatter {
         sb.appendLine(ReceiptTextFormatterUtils.dividerLine('-', width))
 
         // 4. Financial Summary
+        if (receipt.paymentInfo.discountAmount != null && receipt.paymentInfo.discountAmount > 0) {
+            val subtotal = receipt.paymentInfo.subtotalAmount ?: (receipt.paymentInfo.totalAmount + receipt.paymentInfo.discountAmount)
+            sb.appendLine(ReceiptTextFormatterUtils.twoColumns("Subtotal", ReceiptTextFormatterUtils.formatRupiah(subtotal), width))
+            sb.appendLine(ReceiptTextFormatterUtils.twoColumns("Diskon", "-${ReceiptTextFormatterUtils.formatRupiah(receipt.paymentInfo.discountAmount)}", width))
+        }
+
         sb.appendLine(ReceiptTextFormatterUtils.twoColumns("TOTAL", ReceiptTextFormatterUtils.formatRupiah(receipt.paymentInfo.totalAmount), width))
 
         if (receipt.shopProfile.showPaymentMethod) {
@@ -254,6 +260,12 @@ class EscPosReceiptFormatter {
         builder.textLine(ReceiptTextFormatterUtils.dividerLine('-', width))
 
         // 5. Financial Summary
+        if (receipt.paymentInfo.discountAmount != null && receipt.paymentInfo.discountAmount > 0) {
+            val subtotal = receipt.paymentInfo.subtotalAmount ?: (receipt.paymentInfo.totalAmount + receipt.paymentInfo.discountAmount)
+            builder.textLine(ReceiptTextFormatterUtils.twoColumns("Subtotal", ReceiptTextFormatterUtils.formatRupiah(subtotal), width))
+            builder.textLine(ReceiptTextFormatterUtils.twoColumns("Diskon", "-${ReceiptTextFormatterUtils.formatRupiah(receipt.paymentInfo.discountAmount)}", width))
+        }
+
         builder.bold(true)
         builder.textLine(ReceiptTextFormatterUtils.twoColumns("TOTAL", ReceiptTextFormatterUtils.formatRupiah(receipt.paymentInfo.totalAmount), width))
         builder.bold(false)

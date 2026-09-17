@@ -95,6 +95,7 @@ class SaleRepository(
         cartItems: Map<Long, Double>,
         paymentMethod: String = "CASH",
         customerId: Long? = null,
+        discountAmount: Long = 0L,
         now: Long = System.currentTimeMillis()
     ): Result<Long> = withContext(Dispatchers.IO) {
         if (cartItems.isEmpty()) {
@@ -128,15 +129,22 @@ class SaleRepository(
                     productMap[productId] = product
                 }
 
-                // 3. Calculate Total Amount
-                val totalAmount = cartItems.entries.sumOf { (prodId, qty) ->
+                // 3. Calculate Gross Subtotal and Net Total Amount via Single Calculation Authority
+                val grossSubtotal = cartItems.entries.sumOf { (prodId, qty) ->
                     val prod = productMap[prodId]!!
-                    prod.sellingPrice * qty.toLong()
+                    (prod.sellingPrice * qty).toLong()
                 }
 
-                if (totalAmount <= 0) {
+                if (grossSubtotal <= 0) {
                     throw IllegalStateException("Total transaksi harus lebih dari 0")
                 }
+
+                val discountResult = id.skmnetwork.bukuwarung.domain.discount.DiscountCalculator.calculateFixed(
+                    grossSubtotal = grossSubtotal,
+                    fixedAmount = discountAmount
+                )
+                val safeDiscount = discountResult.discountAmount
+                val netTotal = discountResult.netTotal
 
                 val trxNumber = "TRX-$now"
                 val trxUuid = UUID.randomUUID().toString()
@@ -146,7 +154,8 @@ class SaleRepository(
                     uuid = trxUuid,
                     transactionNumber = trxNumber,
                     transactionDate = now,
-                    totalAmount = totalAmount,
+                    totalAmount = netTotal,
+                    discountAmount = safeDiscount,
                     paymentMethod = methodUpper,
                     customerId = customer?.id,
                     createdAt = now
@@ -165,7 +174,7 @@ class SaleRepository(
                         quantity = qty,
                         price = prod.sellingPrice,
                         purchasePrice = prod.purchasePrice,
-                        subtotal = prod.sellingPrice * qty.toLong()
+                        subtotal = (prod.sellingPrice * qty).toLong()
                     )
                 }
                 saleDao.insertSaleItems(saleItems)
@@ -193,15 +202,17 @@ class SaleRepository(
                 // 7. Payment method routing
                 when (methodUpper) {
                     "CASH" -> {
-                        val cashIncome = CashTransactionEntity(
-                            type = "INCOME",
-                            amount = totalAmount,
-                            description = "Penjualan $trxNumber",
-                            refId = saleId,
-                            refUuid = trxUuid,
-                            createdAt = now
-                        )
-                        cashDao.insertCashTransaction(cashIncome)
+                        if (netTotal > 0L) {
+                            val cashIncome = CashTransactionEntity(
+                                type = "INCOME",
+                                amount = netTotal,
+                                description = "Penjualan $trxNumber",
+                                refId = saleId,
+                                refUuid = trxUuid,
+                                createdAt = now
+                            )
+                            cashDao.insertCashTransaction(cashIncome)
+                        }
                     }
                     "CREDIT" -> {
                         val debt = DebtEntity(
@@ -210,9 +221,9 @@ class SaleRepository(
                             saleTransactionId = saleId,
                             customerUuid = customer.uuid,
                             saleUuid = trxUuid,
-                            totalDebt = totalAmount,
+                            totalDebt = netTotal,
                             paidAmount = 0L,
-                            status = "OPEN",
+                            status = if (netTotal == 0L) "PAID" else "OPEN",
                             createdAt = now,
                             updatedAt = now
                         )
@@ -245,6 +256,7 @@ class SaleRepository(
      * Executes atomic sale return for partial or full items.
      * Guaranteed invariant preservation:
      * - Physical items returned increment stock & record StockMovement(RETURN, +qty)
+     * - Refund amount strictly <= amount actually paid (net total)
      * - CASH and QRIS sales refund CASH EXPENSE
      * - CREDIT sales reduce debt; overpaid portion refunded in CASH EXPENSE
      * - SyncQueue aggregate RETURN event
@@ -270,7 +282,7 @@ class SaleRepository(
                 val originalSaleItems = saleDao.getItemsForTransaction(saleId)
                 val saleItemMap = originalSaleItems.associateBy { it.id }
 
-                var totalRefundAmount = 0L
+                var calculatedItemRefund = 0L
                 val validatedReturnItems = mutableListOf<Pair<SaleItemEntity, Double>>()
 
                 for ((saleItemId, returnQty) in itemsToReturn) {
@@ -289,12 +301,18 @@ class SaleRepository(
                     }
 
                     val itemRefund = (saleItem.price * returnQty).toLong()
-                    totalRefundAmount += itemRefund
+                    calculatedItemRefund += itemRefund
                     validatedReturnItems.add(Pair(saleItem, returnQty))
                 }
 
+                // Invariant: refund <= amount actually paid (net total of sale)
+                val previousReturns = saleReturnDao.getReturnsListForSale(saleId)
+                val totalAlreadyRefunded = previousReturns.sumOf { it.totalRefundAmount }
+                val maxRemainingRefundable = (sale.totalAmount - totalAlreadyRefunded).coerceAtLeast(0L)
+                val totalRefundAmount = calculatedItemRefund.coerceAtMost(maxRemainingRefundable)
+
                 if (totalRefundAmount <= 0L) {
-                    throw IllegalStateException("Total pengembalian dana harus lebih dari 0")
+                    throw IllegalStateException("Total pengembalian dana harus lebih dari 0 atau sudah mencapai batas maksimal")
                 }
 
                 val returnNumber = "RET-$now"

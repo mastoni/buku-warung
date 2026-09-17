@@ -265,11 +265,13 @@ class ProductRepository(
 
     suspend fun processAtomicCheckout(
         cartItems: Map<Long, Double>,
-        paymentMethod: String = "CASH"
+        paymentMethod: String = "CASH",
+        discountAmount: Long = 0L
     ): Result<Long> = withContext(Dispatchers.IO) {
         saleRepository.completeSale(
             cartItems = cartItems,
-            paymentMethod = paymentMethod
+            paymentMethod = paymentMethod,
+            discountAmount = discountAmount
         )
     }
 

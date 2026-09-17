@@ -261,20 +261,45 @@ fun SaleDetailDialog(
                                 color = AppColors.GreenLight,
                                 modifier = Modifier.fillMaxWidth()
                             ) {
-                                Row(
+                                Column(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .padding(AppSpacing.md),
-                                    verticalAlignment = Alignment.CenterVertically
+                                    verticalArrangement = Arrangement.spacedBy(4.dp)
                                 ) {
-                                    Text("TOTAL TRANSAKSI", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
-                                    Spacer(Modifier.weight(1f))
-                                    Text(
-                                        formatRupiah(sale.totalAmount),
-                                        fontWeight = FontWeight.Bold,
-                                        style = MaterialTheme.typography.titleLarge,
-                                        color = AppColors.GreenPrimary
-                                    )
+                                    if (sale.discountAmount > 0) {
+                                        val grossSubtotal = sale.totalAmount + sale.discountAmount
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text("Subtotal", style = MaterialTheme.typography.bodyMedium, color = AppColors.TextSecondary)
+                                            Spacer(Modifier.weight(1f))
+                                            Text(formatRupiah(grossSubtotal), style = MaterialTheme.typography.bodyMedium)
+                                        }
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text("Diskon", style = MaterialTheme.typography.bodyMedium, color = AppColors.RedExpense)
+                                            Spacer(Modifier.weight(1f))
+                                            Text("-${formatRupiah(sale.discountAmount)}", style = MaterialTheme.typography.bodyMedium, color = AppColors.RedExpense, fontWeight = FontWeight.SemiBold)
+                                        }
+                                        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), color = AppColors.GreenPrimary.copy(alpha = 0.2f))
+                                    }
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text("TOTAL TRANSAKSI", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                                        Spacer(Modifier.weight(1f))
+                                        Text(
+                                            formatRupiah(sale.totalAmount),
+                                            fontWeight = FontWeight.Bold,
+                                            style = MaterialTheme.typography.titleLarge,
+                                            color = AppColors.GreenPrimary
+                                        )
+                                    }
                                 }
                             }
                         }

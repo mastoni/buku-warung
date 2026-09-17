@@ -248,7 +248,7 @@ class BackupRestoreManager(
 
         // 4. Tab 06_Sales
         val saleRows = mutableListOf<List<String>>()
-        db.query("SELECT id, uuid, business_id, device_id, transaction_number, transaction_date, total_amount, payment_method, created_at, customer_id FROM sales_transactions").use { cursor ->
+        db.query("SELECT id, uuid, business_id, device_id, transaction_number, transaction_date, total_amount, payment_method, created_at, customer_id, discount_amount FROM sales_transactions").use { cursor ->
             while (cursor.moveToNext()) {
                 val uuid = cursor.getString(1)
                 val bId = cursor.getString(2)
@@ -260,6 +260,7 @@ class BackupRestoreManager(
                 val createdAt = cursor.getLong(8)
                 val customerId = if (cursor.isNull(9)) null else cursor.getLong(9)
                 val customerUuid = if (customerId != null) customerIdToUuid[customerId] ?: "NULL" else "NULL"
+                val discountAmount = if (cursor.columnCount > 10 && !cursor.isNull(10)) cursor.getLong(10) else 0L
 
                 saleRows.add(
                     listOf(
@@ -271,14 +272,15 @@ class BackupRestoreManager(
                         totalAmount.toString(),
                         CanonicalSerializer.sanitize(paymentMethod),
                         createdAt.toString(),
-                        customerUuid
+                        customerUuid,
+                        discountAmount.toString()
                     )
                 )
             }
         }
         val tab06 = SheetTab(
             name = "06_Sales",
-            headers = listOf("uuid", "business_id", "device_id", "transaction_number", "transaction_date", "total_amount", "payment_method", "created_at", "customer_uuid"),
+            headers = listOf("uuid", "business_id", "device_id", "transaction_number", "transaction_date", "total_amount", "payment_method", "created_at", "customer_uuid", "discount_amount"),
             rows = CanonicalSerializer.sortTabRows("06_Sales", saleRows)
         )
 
@@ -908,6 +910,7 @@ class BackupRestoreManager(
                     val createdAt = row[7].toLongOrNull() ?: System.currentTimeMillis()
                     val customerUuid = if (row[8] == "NULL") null else row[8]
                     val customerId = if (customerUuid != null) customerUuidToId[customerUuid] else null
+                    val discountAmount = if (row.size > 9) row[9].toLongOrNull() ?: 0L else 0L
 
                     val cv = ContentValues().apply {
                         put("uuid", uuid)
@@ -917,6 +920,7 @@ class BackupRestoreManager(
                         put("transaction_date", txDate)
                         put("total_amount", totalAmount)
                         put("payment_method", paymentMethod)
+                        put("discount_amount", discountAmount)
                         put("created_at", createdAt)
                         if (customerId != null) put("customer_id", customerId) else putNull("customer_id")
                     }

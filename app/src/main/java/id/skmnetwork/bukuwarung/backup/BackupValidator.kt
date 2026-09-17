@@ -18,10 +18,10 @@ object BackupValidator {
             )
         }
 
-        // 2. Exact Room Schema Version check
-        if (metadata.roomSchemaVersion != CanonicalSerializer.ROOM_SCHEMA_VERSION) {
+        // 2. Room Schema Version check
+        if (metadata.roomSchemaVersion < 9 || metadata.roomSchemaVersion > CanonicalSerializer.ROOM_SCHEMA_VERSION) {
             throw IncompatibleSchemaVersionException(
-                "Unsupported Room schema version: expected ${CanonicalSerializer.ROOM_SCHEMA_VERSION}, got '${metadata.roomSchemaVersion}'"
+                "Unsupported Room schema version: expected between 9 and ${CanonicalSerializer.ROOM_SCHEMA_VERSION}, got '${metadata.roomSchemaVersion}'"
             )
         }
 

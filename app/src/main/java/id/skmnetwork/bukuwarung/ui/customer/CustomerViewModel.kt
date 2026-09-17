@@ -140,6 +140,7 @@ class CustomerViewModel(
     fun checkoutCreditSale(
         cartItems: Map<Long, Double>,
         customerId: Long,
+        discountAmount: Long = 0L,
         onSuccess: (Long) -> Unit,
         onError: (String) -> Unit
     ) {
@@ -149,7 +150,7 @@ class CustomerViewModel(
         }
 
         viewModelScope.launch(Dispatchers.IO) {
-            val result = repository.processAtomicCreditCheckout(cartItems, customerId)
+            val result = repository.processAtomicCreditCheckout(cartItems, customerId, discountAmount)
             withContext(Dispatchers.Main) {
                 result.fold(
                     onSuccess = { saleId -> onSuccess(saleId) },

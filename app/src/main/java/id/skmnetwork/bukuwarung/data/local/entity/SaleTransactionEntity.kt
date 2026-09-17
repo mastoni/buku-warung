@@ -49,6 +49,9 @@ data class SaleTransactionEntity(
     @ColumnInfo(name = "payment_method")
     val paymentMethod: String = "CASH",
 
+    @ColumnInfo(name = "discount_amount")
+    val discountAmount: Long = 0L,
+
     @ColumnInfo(name = "created_at")
     val createdAt: Long = System.currentTimeMillis(),
 

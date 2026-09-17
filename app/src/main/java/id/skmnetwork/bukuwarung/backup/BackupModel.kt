@@ -7,7 +7,7 @@ package id.skmnetwork.bukuwarung.backup
 
 data class BackupMetadata(
     val backupFormatVersion: String = "1.0",
-    val roomSchemaVersion: Int = 9,
+    val roomSchemaVersion: Int = 12,
     val exportedAt: Long = System.currentTimeMillis(),
     val businessId: String = "",
     val deviceId: String = "",

@@ -340,6 +340,7 @@ class ProductViewModel(
     fun checkoutCart(
         cartItems: Map<Long, Double>,
         paymentMethod: String = "CASH",
+        discountAmount: Long = 0L,
         onSuccess: (Long) -> Unit,
         onError: (String) -> Unit
     ) {
@@ -349,7 +350,7 @@ class ProductViewModel(
         }
 
         viewModelScope.launch(Dispatchers.IO) {
-            val result = repository.processAtomicCheckout(cartItems, paymentMethod)
+            val result = repository.processAtomicCheckout(cartItems, paymentMethod, discountAmount)
             withContext(Dispatchers.Main) {
                 result.fold(
                     onSuccess = { saleId -> onSuccess(saleId) },

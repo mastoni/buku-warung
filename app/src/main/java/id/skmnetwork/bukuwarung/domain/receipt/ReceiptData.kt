@@ -32,6 +32,8 @@ data class ShopProfile(
 data class ReceiptPaymentInfo(
     val method: String, // CASH, QRIS, CREDIT
     val totalAmount: Long,
+    val subtotalAmount: Long? = null,
+    val discountAmount: Long? = null,
     val payAmount: Long? = null,
     val changeAmount: Long? = null,
     val customerName: String? = null,

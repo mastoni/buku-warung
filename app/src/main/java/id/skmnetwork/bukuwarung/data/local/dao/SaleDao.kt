@@ -30,6 +30,7 @@ interface SaleDao {
             s.transaction_date AS transactionDate,
             s.total_amount AS totalAmount,
             s.payment_method AS paymentMethod,
+            s.discount_amount AS discountAmount,
             s.created_at AS createdAt,
             s.customer_id AS customerId,
             c.name AS customerName
@@ -121,6 +122,7 @@ data class SaleWithCustomerItem(
     val transactionDate: Long,
     val totalAmount: Long,
     val paymentMethod: String,
+    val discountAmount: Long = 0L,
     val createdAt: Long,
     val customerId: Long?,
     val customerName: String?
