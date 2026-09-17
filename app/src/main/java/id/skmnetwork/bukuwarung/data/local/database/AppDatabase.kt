@@ -31,7 +31,10 @@ import id.skmnetwork.bukuwarung.data.local.entity.StockMovementEntity
 import id.skmnetwork.bukuwarung.data.local.entity.SupplierEntity
 import id.skmnetwork.bukuwarung.data.local.entity.SupplierPayableEntity
 import id.skmnetwork.bukuwarung.data.local.entity.SupplierPaymentEntity
+import id.skmnetwork.bukuwarung.data.local.dao.PurchaseOrderDao
 import id.skmnetwork.bukuwarung.data.local.dao.SaleReturnDao
+import id.skmnetwork.bukuwarung.data.local.entity.PurchaseOrderEntity
+import id.skmnetwork.bukuwarung.data.local.entity.PurchaseOrderItemEntity
 import id.skmnetwork.bukuwarung.data.local.entity.SaleReturnItemEntity
 import id.skmnetwork.bukuwarung.data.local.entity.SaleReturnTransactionEntity
 import id.skmnetwork.bukuwarung.data.local.entity.SyncQueueEntity
@@ -611,6 +614,69 @@ val MIGRATION_11_12 = object : Migration(11, 12) {
     }
 }
 
+val MIGRATION_12_13 = object : Migration(12, 13) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS `purchase_orders` (
+                `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                `uuid` TEXT NOT NULL,
+                `business_id` TEXT NOT NULL,
+                `device_id` TEXT NOT NULL,
+                `order_number` TEXT NOT NULL,
+                `supplier_id` INTEGER NOT NULL,
+                `supplier_name_snapshot` TEXT NOT NULL,
+                `supplier_phone_snapshot` TEXT,
+                `status` TEXT NOT NULL,
+                `total_estimated_amount` INTEGER NOT NULL,
+                `notes` TEXT,
+                `created_at` INTEGER NOT NULL,
+                `updated_at` INTEGER NOT NULL,
+                `sent_at` INTEGER,
+                `received_at` INTEGER,
+                `final_purchase_id` INTEGER,
+                FOREIGN KEY(`supplier_id`) REFERENCES `suppliers`(`id`) ON UPDATE NO ACTION ON DELETE RESTRICT
+            )
+            """.trimIndent()
+        )
+        db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_purchase_orders_uuid` ON `purchase_orders` (`uuid`)")
+        db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_purchase_orders_order_number` ON `purchase_orders` (`order_number`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_purchase_orders_supplier_id` ON `purchase_orders` (`supplier_id`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_purchase_orders_status` ON `purchase_orders` (`status`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_purchase_orders_business_id` ON `purchase_orders` (`business_id`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_purchase_orders_created_at` ON `purchase_orders` (`created_at`)")
+
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS `purchase_order_items` (
+                `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                `uuid` TEXT NOT NULL,
+                `business_id` TEXT NOT NULL,
+                `purchase_order_id` INTEGER NOT NULL,
+                `po_uuid` TEXT NOT NULL,
+                `product_id` INTEGER NOT NULL,
+                `product_uuid` TEXT NOT NULL,
+                `product_name` TEXT NOT NULL,
+                `ordered_quantity` REAL NOT NULL,
+                `unit` TEXT NOT NULL,
+                `estimated_price` INTEGER NOT NULL,
+                `estimated_subtotal` INTEGER NOT NULL,
+                `received_quantity` REAL NOT NULL,
+                `notes` TEXT,
+                FOREIGN KEY(`purchase_order_id`) REFERENCES `purchase_orders`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE,
+                FOREIGN KEY(`product_id`) REFERENCES `products`(`id`) ON UPDATE NO ACTION ON DELETE RESTRICT
+            )
+            """.trimIndent()
+        )
+        db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_purchase_order_items_uuid` ON `purchase_order_items` (`uuid`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_purchase_order_items_purchase_order_id` ON `purchase_order_items` (`purchase_order_id`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_purchase_order_items_po_uuid` ON `purchase_order_items` (`po_uuid`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_purchase_order_items_product_id` ON `purchase_order_items` (`product_id`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_purchase_order_items_product_uuid` ON `purchase_order_items` (`product_uuid`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_purchase_order_items_business_id` ON `purchase_order_items` (`business_id`)")
+    }
+}
+
 @Database(
     entities = [
         CategoryEntity::class,
@@ -629,9 +695,11 @@ val MIGRATION_11_12 = object : Migration(11, 12) {
         StockMovementEntity::class,
         SyncQueueEntity::class,
         SaleReturnTransactionEntity::class,
-        SaleReturnItemEntity::class
+        SaleReturnItemEntity::class,
+        PurchaseOrderEntity::class,
+        PurchaseOrderItemEntity::class
     ],
-    version = 12,
+    version = 13,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -648,6 +716,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun stockMovementDao(): StockMovementDao
     abstract fun syncQueueDao(): SyncQueueDao
     abstract fun saleReturnDao(): SaleReturnDao
+    abstract fun purchaseOrderDao(): PurchaseOrderDao
 
     companion object {
         @Volatile
@@ -671,7 +740,8 @@ abstract class AppDatabase : RoomDatabase() {
                         MIGRATION_8_9,
                         MIGRATION_9_10,
                         MIGRATION_10_11,
-                        MIGRATION_11_12
+                        MIGRATION_11_12,
+                        MIGRATION_12_13
                     )
                     .build()
                 INSTANCE = instance

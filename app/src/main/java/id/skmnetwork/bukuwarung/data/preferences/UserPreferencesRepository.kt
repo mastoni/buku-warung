@@ -329,7 +329,9 @@ class UserPreferencesRepository(
                 "suppliers",
                 "supplier_payables",
                 "supplier_payments",
-                "stock_movements"
+                "stock_movements",
+                "purchase_orders",
+                "purchase_order_items"
             )
             for (table in tables) {
                 sdb.execSQL("UPDATE `$table` SET `business_id` = ? WHERE `business_id` = 'LEGACY_BUSINESS'", arrayOf(businessId))
