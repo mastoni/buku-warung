@@ -346,11 +346,15 @@ fun BukuWarungApp() {
                 AppScreen.PURCHASE -> PurchaseScreen(
                     viewModel = productViewModel,
                     supplierViewModel = supplierViewModel,
+                    userSettings = userSettings,
                     onNavigateToAddProduct = {
                         navigateToAddProduct(fromScreen = AppScreen.PURCHASE)
                     }
                 )
-                AppScreen.CASH -> CashScreen(viewModel = productViewModel)
+                AppScreen.CASH -> CashScreen(
+                    viewModel = productViewModel,
+                    userSettings = userSettings
+                )
                 AppScreen.REPORTS -> ReportsScreen(
                     reportViewModel = reportViewModel,
                     userPreferencesRepository = userPreferencesRepository

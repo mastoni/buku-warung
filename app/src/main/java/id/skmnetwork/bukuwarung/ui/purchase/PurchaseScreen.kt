@@ -39,8 +39,6 @@ import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -50,6 +48,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -72,6 +71,8 @@ import id.skmnetwork.bukuwarung.data.local.entity.ProductEntity
 import id.skmnetwork.bukuwarung.data.local.entity.PurchaseItemEntity
 import id.skmnetwork.bukuwarung.data.local.entity.PurchaseTransactionEntity
 import id.skmnetwork.bukuwarung.data.local.entity.SupplierEntity
+import id.skmnetwork.bukuwarung.data.preferences.UserSettings
+import id.skmnetwork.bukuwarung.domain.business.BusinessTaxonomyRegistry
 import id.skmnetwork.bukuwarung.ui.components.ProductImageThumbnail
 import id.skmnetwork.bukuwarung.ui.product.ProductViewModel
 import id.skmnetwork.bukuwarung.ui.supplier.SupplierViewModel
@@ -86,12 +87,26 @@ import java.util.Locale
 fun PurchaseScreen(
     viewModel: ProductViewModel,
     supplierViewModel: SupplierViewModel,
+    userSettings: UserSettings? = null,
     onNavigateToAddProduct: () -> Unit = {}
 ) {
     val dbProducts by viewModel.products.collectAsStateWithLifecycle()
     val suppliers by supplierViewModel.suppliers.collectAsStateWithLifecycle()
     val purchases by viewModel.purchases.collectAsStateWithLifecycle()
     val purchaseCart = remember { mutableStateMapOf<Long, Double>() }
+
+    val resolvedProfile = remember(userSettings) {
+        BusinessTaxonomyRegistry.resolve(
+            userSettings?.primaryBusinessType,
+            userSettings?.secondaryActivities
+        )
+    }
+
+    val terminology = resolvedProfile.terminology
+    val purchaseLabel = terminology.purchaseLabel
+    val supplierLabel = terminology.supplierLabel
+    val productLabel = terminology.productLabel
+    val debtLabel = terminology.debtLabel
 
     var selectedTab by remember { mutableStateOf(0) } // 0: Belanja Baru, 1: Riwayat Belanja
 
@@ -138,7 +153,7 @@ fun PurchaseScreen(
                         )
                     }
                     Spacer(Modifier.width(10.dp))
-                    Text("Pilih Supplier", fontWeight = FontWeight.Bold, fontSize = 16.5.sp)
+                    Text("Pilih $supplierLabel", fontWeight = FontWeight.Bold, fontSize = 16.5.sp)
                 }
             },
             text = {
@@ -152,7 +167,7 @@ fun PurchaseScreen(
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = "Belum ada supplier tersimpan.\nTambahkan supplier di menu Pengaturan / Supplier.",
+                                text = "Belum ada $supplierLabel tersimpan.\nTambahkan $supplierLabel di menu $supplierLabel.",
                                 color = AppColors.TextSecondary,
                                 textAlign = TextAlign.Center,
                                 fontSize = 13.sp
@@ -250,12 +265,12 @@ fun PurchaseScreen(
                         )
                     }
                     Spacer(Modifier.width(10.dp))
-                    Text("Pembelian Berhasil!", fontWeight = FontWeight.Bold, fontSize = 16.5.sp)
+                    Text("$purchaseLabel Berhasil!", fontWeight = FontWeight.Bold, fontSize = 16.5.sp)
                 }
             },
             text = {
                 Text(
-                    "Stok produk telah otomatis bertambah dan status transaksi pembelian berhasil dicatat.",
+                    "Stok $productLabel telah otomatis bertambah dan status transaksi $purchaseLabel berhasil dicatat.",
                     fontSize = 13.5.sp,
                     color = AppColors.TextPrimary
                 )
@@ -302,7 +317,7 @@ fun PurchaseScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column {
-                        Text("Detail Pembelian", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                        Text("Detail $purchaseLabel", fontWeight = FontWeight.Bold, fontSize = 16.sp)
                         Text(
                             purchase.transactionNumber,
                             style = MaterialTheme.typography.labelMedium,
@@ -314,7 +329,7 @@ fun PurchaseScreen(
                         color = if (purchase.paymentMethod == "CREDIT") Color(0xFFFFEBEE) else Color(0xFFE8F5E9)
                     ) {
                         Text(
-                            text = if (purchase.paymentMethod == "CREDIT") "HUTANG" else "TUNAI",
+                            text = if (purchase.paymentMethod == "CREDIT") debtLabel.uppercase() else "TUNAI",
                             color = if (purchase.paymentMethod == "CREDIT") Color(0xFFD32F2F) else AppColors.GreenPrimary,
                             fontWeight = FontWeight.Bold,
                             fontSize = 11.sp,
@@ -341,18 +356,18 @@ fun PurchaseScreen(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text("Supplier", color = AppColors.TextSecondary, style = MaterialTheme.typography.bodySmall)
+                        Text(supplierLabel, color = AppColors.TextSecondary, style = MaterialTheme.typography.bodySmall)
                         Text(supplierName, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodySmall)
                     }
 
                     HorizontalDivider(Modifier.padding(vertical = 4.dp), color = Color(0xFFE2E8F0))
 
-                    Text("Rincian Barang:", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelMedium)
+                    Text("Rincian $productLabel:", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelMedium)
 
                     if (isLoadingItems) {
-                        Text("Memuat rincian barang...", color = AppColors.TextSecondary)
+                        Text("Memuat rincian $productLabel...", color = AppColors.TextSecondary)
                     } else if (detailItems.isEmpty()) {
-                        Text("Tidak ada data barang", color = AppColors.TextSecondary)
+                        Text("Tidak ada data $productLabel", color = AppColors.TextSecondary)
                     } else {
                         LazyColumn(
                             verticalArrangement = Arrangement.spacedBy(6.dp),
@@ -415,6 +430,7 @@ fun PurchaseScreen(
         topBar = {
             PurchaseHeader(
                 selectedTab = selectedTab,
+                purchaseLabel = purchaseLabel,
                 onTabSelected = { selectedTab = it }
             )
         },
@@ -466,7 +482,7 @@ fun PurchaseScreen(
                                 color = Color(0xFFF1F5F2)
                             ) {
                                 Text(
-                                    text = "Periode Belanja",
+                                    text = "Periode $purchaseLabel",
                                     fontSize = 11.sp,
                                     color = AppColors.TextSecondary,
                                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
@@ -477,7 +493,10 @@ fun PurchaseScreen(
 
                     if (dbProducts.isEmpty()) {
                         // Empty State when no products exist in catalog
-                        PurchaseEmptyProductsState(onAddProduct = onNavigateToAddProduct)
+                        PurchaseEmptyProductsState(
+                            productLabel = productLabel,
+                            onAddProduct = onNavigateToAddProduct
+                        )
                     } else {
                         // Product Restock List
                         LazyColumn(
@@ -545,13 +564,13 @@ fun PurchaseScreen(
                             ) {
                                 Column {
                                     Text(
-                                        text = "Total Belanja",
+                                        text = "Total $purchaseLabel",
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 13.sp,
                                         color = AppColors.TextSecondary
                                     )
                                     Text(
-                                        text = "${purchaseCart.size} jenis barang",
+                                        text = "${purchaseCart.size} jenis $productLabel",
                                         fontSize = 11.5.sp,
                                         color = AppColors.TextSecondary
                                     )
@@ -599,7 +618,7 @@ fun PurchaseScreen(
                                 ) {
                                     Box(contentAlignment = Alignment.Center) {
                                         Text(
-                                            text = "Hutang Supplier",
+                                            text = "$debtLabel $supplierLabel",
                                             color = if (paymentMethod == "CREDIT") Color.White else AppColors.TextSecondary,
                                             fontWeight = FontWeight.Bold,
                                             fontSize = 13.sp
@@ -636,9 +655,9 @@ fun PurchaseScreen(
                                     Spacer(Modifier.width(10.dp))
                                     Text(
                                         text = if (paymentMethod == "CASH") {
-                                            selectedSupplierForCash?.name ?: "Pilih Supplier (Opsional)"
+                                            selectedSupplierForCash?.name ?: "Pilih $supplierLabel (Opsional)"
                                         } else {
-                                            selectedSupplierForCredit?.name ?: "+ Pilih Supplier (Wajib)*"
+                                            selectedSupplierForCredit?.name ?: "+ Pilih $supplierLabel (Wajib)*"
                                         },
                                         fontWeight = FontWeight.SemiBold,
                                         fontSize = 13.sp,
@@ -656,7 +675,7 @@ fun PurchaseScreen(
                                         ) {
                                             Icon(
                                                 imageVector = Icons.Default.Close,
-                                                contentDescription = "Hapus Supplier",
+                                                contentDescription = "Hapus $supplierLabel",
                                                 tint = AppColors.TextSecondary,
                                                 modifier = Modifier.size(16.dp)
                                             )
@@ -677,7 +696,7 @@ fun PurchaseScreen(
                                 onClick = {
                                     if (isSaving) return@Button
                                     if (paymentMethod == "CREDIT" && selectedSupplierForCredit == null) {
-                                        Toast.makeText(context, "Pilih supplier untuk pembelian kredit", Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(context, "Pilih $supplierLabel untuk $purchaseLabel kredit", Toast.LENGTH_SHORT).show()
                                         isPickerForCash = false
                                         showSupplierPickerSheet = true
                                         return@Button
@@ -731,7 +750,7 @@ fun PurchaseScreen(
                                     horizontalArrangement = Arrangement.Center
                                 ) {
                                     Text(
-                                        text = if (paymentMethod == "CREDIT") "Simpan Belanja Kredit" else "Simpan Belanja Tunai",
+                                        text = if (paymentMethod == "CREDIT") "Simpan $purchaseLabel Kredit" else "Simpan $purchaseLabel Tunai",
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 14.5.sp
                                     )
@@ -751,7 +770,10 @@ fun PurchaseScreen(
                 // TAB 1: RIWAYAT BELANJA (PURCHASE HISTORY)
                 // ==========================================
                 if (purchases.isEmpty()) {
-                    PurchaseEmptyHistoryState(onNewPurchase = { selectedTab = 0 })
+                    PurchaseEmptyHistoryState(
+                        purchaseLabel = purchaseLabel,
+                        onNewPurchase = { selectedTab = 0 }
+                    )
                 } else {
                     LazyColumn(
                         verticalArrangement = Arrangement.spacedBy(10.dp),
@@ -773,6 +795,7 @@ fun PurchaseScreen(
                                 supplierName = supName,
                                 dateStr = dateStr,
                                 isCredit = isCredit,
+                                debtLabel = debtLabel,
                                 onClick = { selectedPurchaseForDetail = purchase }
                             )
                         }
@@ -789,6 +812,7 @@ fun PurchaseScreen(
 @Composable
 private fun PurchaseHeader(
     selectedTab: Int,
+    purchaseLabel: String = "Pembelian",
     onTabSelected: (Int) -> Unit
 ) {
     Surface(
@@ -827,7 +851,7 @@ private fun PurchaseHeader(
                     }
                     Column {
                         Text(
-                            text = if (selectedTab == 0) "Pembelian (Kulakan)" else "Riwayat Belanja",
+                            text = if (selectedTab == 0) "$purchaseLabel (Kulakan)" else "Riwayat $purchaseLabel",
                             style = MaterialTheme.typography.titleMedium.copy(
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 16.5.sp,
@@ -835,7 +859,7 @@ private fun PurchaseHeader(
                             )
                         )
                         Text(
-                            text = if (selectedTab == 0) "Catat stok masuk & belanja barang" else "Daftar transaksi belanja produk",
+                            text = if (selectedTab == 0) "Catat stok masuk & $purchaseLabel barang" else "Daftar transaksi $purchaseLabel produk",
                             style = MaterialTheme.typography.bodySmall.copy(
                                 fontSize = 11.5.sp,
                                 color = AppColors.TextSecondary
@@ -849,7 +873,7 @@ private fun PurchaseHeader(
                     color = Color(0xFFE8F5E9)
                 ) {
                     Text(
-                        text = if (selectedTab == 0) "Belanja Baru" else "Riwayat",
+                        text = if (selectedTab == 0) "$purchaseLabel Baru" else "Riwayat",
                         color = AppColors.GreenPrimary,
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 11.sp,
@@ -897,7 +921,7 @@ private fun PurchaseHeader(
                             )
                             Spacer(Modifier.width(6.dp))
                             Text(
-                                text = "Belanja Baru",
+                                text = "$purchaseLabel Baru",
                                 color = if (selectedTab == 0) Color.White else AppColors.TextSecondary,
                                 fontWeight = if (selectedTab == 0) FontWeight.Bold else FontWeight.Medium,
                                 fontSize = 13.sp
@@ -928,7 +952,7 @@ private fun PurchaseHeader(
                             )
                             Spacer(Modifier.width(6.dp))
                             Text(
-                                text = "Riwayat Belanja",
+                                text = "Riwayat $purchaseLabel",
                                 color = if (selectedTab == 1) Color.White else AppColors.TextSecondary,
                                 fontWeight = if (selectedTab == 1) FontWeight.Bold else FontWeight.Medium,
                                 fontSize = 13.sp
@@ -1099,6 +1123,7 @@ private fun PurchaseHistoryCard(
     supplierName: String,
     dateStr: String,
     isCredit: Boolean,
+    debtLabel: String = "Hutang",
     onClick: () -> Unit
 ) {
     Surface(
@@ -1153,7 +1178,7 @@ private fun PurchaseHistoryCard(
                         color = if (isCredit) Color(0xFFFFEBEE) else Color(0xFFE8F5E9)
                     ) {
                         Text(
-                            text = if (isCredit) "HUTANG" else "TUNAI",
+                            text = if (isCredit) debtLabel.uppercase() else "TUNAI",
                             color = if (isCredit) Color(0xFFD32F2F) else AppColors.GreenPrimary,
                             fontSize = 10.5.sp,
                             fontWeight = FontWeight.Bold,
@@ -1194,6 +1219,7 @@ private fun PurchaseHistoryCard(
  */
 @Composable
 private fun PurchaseEmptyProductsState(
+    productLabel: String = "Produk",
     onAddProduct: () -> Unit
 ) {
     Box(
@@ -1223,7 +1249,7 @@ private fun PurchaseEmptyProductsState(
             Spacer(Modifier.height(16.dp))
 
             Text(
-                text = "Belum Ada Produk Untuk Dibeli",
+                text = "Belum Ada $productLabel Untuk Dibeli",
                 style = MaterialTheme.typography.titleMedium.copy(
                     fontWeight = FontWeight.Bold,
                     fontSize = 16.5.sp,
@@ -1234,7 +1260,7 @@ private fun PurchaseEmptyProductsState(
             Spacer(Modifier.height(6.dp))
 
             Text(
-                text = "Tambahkan produk terlebih dahulu agar dapat mencatat pembelian & stok masuk.",
+                text = "Tambahkan $productLabel terlebih dahulu agar dapat mencatat pembelian & stok masuk.",
                 style = MaterialTheme.typography.bodyMedium.copy(
                     fontSize = 13.sp,
                     color = AppColors.TextSecondary,
@@ -1261,7 +1287,7 @@ private fun PurchaseEmptyProductsState(
                 )
                 Spacer(Modifier.width(6.dp))
                 Text(
-                    text = "Tambah Barang",
+                    text = "Tambah $productLabel",
                     fontWeight = FontWeight.Bold,
                     fontSize = 13.5.sp
                 )
@@ -1275,6 +1301,7 @@ private fun PurchaseEmptyProductsState(
  */
 @Composable
 private fun PurchaseEmptyHistoryState(
+    purchaseLabel: String = "Pembelian",
     onNewPurchase: () -> Unit
 ) {
     Box(
@@ -1304,7 +1331,7 @@ private fun PurchaseEmptyHistoryState(
             Spacer(Modifier.height(16.dp))
 
             Text(
-                text = "Belum Ada Riwayat Belanja",
+                text = "Belum Ada Riwayat $purchaseLabel",
                 style = MaterialTheme.typography.titleMedium.copy(
                     fontWeight = FontWeight.Bold,
                     fontSize = 16.sp,
@@ -1315,7 +1342,7 @@ private fun PurchaseEmptyHistoryState(
             Spacer(Modifier.height(6.dp))
 
             Text(
-                text = "Semua transaksi pembelian dan restock produk akan dicatat di sini.",
+                text = "Semua transaksi $purchaseLabel dan restock produk akan dicatat di sini.",
                 style = MaterialTheme.typography.bodyMedium.copy(
                     fontSize = 13.sp,
                     color = AppColors.TextSecondary,
@@ -1342,7 +1369,7 @@ private fun PurchaseEmptyHistoryState(
                 )
                 Spacer(Modifier.width(6.dp))
                 Text(
-                    text = "Belanja Baru",
+                    text = "$purchaseLabel Baru",
                     fontWeight = FontWeight.Bold,
                     fontSize = 13.5.sp
                 )
