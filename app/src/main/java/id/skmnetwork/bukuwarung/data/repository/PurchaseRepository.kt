@@ -116,10 +116,10 @@ class PurchaseRepository(
                 }
                 purchaseDao.insertPurchaseItems(itemsList)
 
-                // 6. Add Product Stock in Room & Record StockMovement ONLY for PHYSICAL products
+                // 6. Add Product Stock in Room & Record StockMovement for stockable products (PHYSICAL and FUEL)
                 for ((prodId, qty) in purchaseItems) {
                     val prod = productMap[prodId]!!
-                    if (prod.itemType == ItemType.PHYSICAL.name) {
+                    if (ItemType.isStockable(prod.itemType)) {
                         val newStock = prod.stock + qty
                         productDao.addProductStock(prodId, qty, now)
                         stockMovementDao.insertMovement(

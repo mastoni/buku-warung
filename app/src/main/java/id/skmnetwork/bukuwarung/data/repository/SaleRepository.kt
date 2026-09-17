@@ -123,7 +123,7 @@ class SaleRepository(
                     }
                     val product = productDao.getProductById(productId)
                         ?: throw IllegalStateException("Produk tidak ditemukan")
-                    if (product.itemType == ItemType.PHYSICAL.name && product.stock < qty) {
+                    if (ItemType.isStockable(product.itemType) && product.stock < qty) {
                         throw IllegalStateException("Stok ${product.name} tidak mencukupi")
                     }
                     productMap[productId] = product
@@ -179,10 +179,10 @@ class SaleRepository(
                 }
                 saleDao.insertSaleItems(saleItems)
 
-                // 6. Mutate Stock & Append Stock Movement ONLY for PHYSICAL products
+                // 6. Mutate Stock & Append Stock Movement for stockable products (PHYSICAL and FUEL)
                 for ((prodId, qty) in cartItems) {
                     val prod = productMap[prodId]!!
-                    if (prod.itemType == ItemType.PHYSICAL.name) {
+                    if (ItemType.isStockable(prod.itemType)) {
                         val newStock = if (prod.stock - qty < 0) 0.0 else prod.stock - qty
                         productDao.deductProductStock(prodId, qty, now)
                         stockMovementDao.insertMovement(
@@ -363,10 +363,10 @@ class SaleRepository(
                 }
                 saleReturnDao.insertReturnItems(returnEntities)
 
-                // 5. Restock Physical Products & append StockMovement RETURN
+                // 5. Restock Physical & Fuel Products & append StockMovement RETURN
                 for ((saleItem, returnQty) in validatedReturnItems) {
                     val product = productDao.getProductByIdRaw(saleItem.productId)
-                    if (product != null && product.itemType == ItemType.PHYSICAL.name) {
+                    if (product != null && ItemType.isStockable(product.itemType)) {
                         productDao.addProductStock(product.id, returnQty, now)
                         val newStock = product.stock + returnQty
                         stockMovementDao.insertMovement(

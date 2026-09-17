@@ -4,5 +4,14 @@ enum class ItemType {
     PHYSICAL,
     SERVICE,
     DIGITAL,
-    FUEL
+    FUEL;
+
+    val isStockable: Boolean
+        get() = this == PHYSICAL || this == FUEL
+
+    companion object {
+        fun isStockable(typeName: String?): Boolean {
+            return typeName == PHYSICAL.name || typeName == FUEL.name
+        }
+    }
 }

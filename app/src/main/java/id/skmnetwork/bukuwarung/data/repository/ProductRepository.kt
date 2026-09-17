@@ -139,7 +139,7 @@ class ProductRepository(
 
         appDatabase.withTransaction {
             val prodId = productDao.insertProduct(product)
-            if (itemType == ItemType.PHYSICAL && stock != 0.0) {
+            if (itemType.isStockable && stock != 0.0) {
                 stockMovementDao.insertMovement(
                     StockMovementEntity(
                         productUuid = prodUuid,
@@ -210,7 +210,7 @@ class ProductRepository(
 
         appDatabase.withTransaction {
             val stockDiff = stock - existingProduct.stock
-            if (stockDiff != 0.0 && existingProduct.itemType == ItemType.PHYSICAL.name) {
+            if (stockDiff != 0.0 && ItemType.isStockable(existingProduct.itemType)) {
                 stockMovementDao.insertMovement(
                     StockMovementEntity(
                         productUuid = existingProduct.uuid,
