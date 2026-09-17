@@ -46,11 +46,17 @@ interface PurchaseOrderDao {
     @Query("SELECT * FROM purchase_order_items WHERE po_uuid = :poUuid")
     suspend fun getItemsForPurchaseOrderByUuid(poUuid: String): List<PurchaseOrderItemEntity>
 
+    @Query("DELETE FROM purchase_order_items WHERE purchase_order_id = :purchaseOrderId")
+    suspend fun deleteItemsForPurchaseOrder(purchaseOrderId: Long)
+
     @Update
     suspend fun updatePurchaseOrder(order: PurchaseOrderEntity)
 
     @Query("UPDATE purchase_orders SET status = :status, updated_at = :updatedAt WHERE id = :id")
     suspend fun updatePurchaseOrderStatus(id: Long, status: String, updatedAt: Long = System.currentTimeMillis())
+
+    @Query("UPDATE purchase_orders SET status = :status, sent_at = :sentAt, updated_at = :updatedAt WHERE id = :id")
+    suspend fun updatePurchaseOrderToOrdered(id: Long, status: String, sentAt: Long, updatedAt: Long = System.currentTimeMillis())
 
     @Delete
     suspend fun deletePurchaseOrder(order: PurchaseOrderEntity)

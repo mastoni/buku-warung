@@ -170,13 +170,17 @@ class LicenseValidationUnitTest {
     // ==========================================
     // Test 2: refreshLicense with unlicensed returns UNLICENSED
     // ==========================================
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
     @Test
     fun testRefreshLicense_WithUnlicensed_ReturnsUnlicensed() = runBlocking {
+        val testScope = kotlinx.coroutines.test.TestScope(kotlinx.coroutines.test.UnconfinedTestDispatcher())
         val manager = LicenseManager(
             userPreferencesRepository = testRepo,
-            apiClient = apiClient
+            apiClient = apiClient,
+            scope = testScope
         )
         manager.refreshLicense()
+        testScope.runCurrent()
         assertEquals(LicenseStatus.UNLICENSED, manager.licenseStatus.value)
     }
 
