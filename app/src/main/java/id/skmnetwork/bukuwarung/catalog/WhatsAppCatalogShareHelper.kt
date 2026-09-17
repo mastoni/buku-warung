@@ -20,12 +20,14 @@ object WhatsAppCatalogShareHelper {
         return isPackageInstalled(pm, PACKAGE_WHATSAPP) || isPackageInstalled(pm, PACKAGE_WHATSAPP_BUSINESS)
     }
 
-    private fun isPackageInstalled(pm: PackageManager, packageName: String): Boolean {
+    internal fun isPackageInstalled(pm: PackageManager, packageName: String): Boolean {
         return try {
             @Suppress("DEPRECATION")
             pm.getPackageInfo(packageName, 0)
             true
         } catch (_: PackageManager.NameNotFoundException) {
+            false
+        } catch (_: Exception) {
             false
         }
     }
@@ -79,6 +81,10 @@ object WhatsAppCatalogShareHelper {
         chooserTitle: String = "Bagikan Katalog via WhatsApp"
     ) {
         val chooserIntent = createShareChooserIntent(context, catalogText, chooserTitle)
-        context.startActivity(chooserIntent)
+        try {
+            context.startActivity(chooserIntent)
+        } catch (_: Exception) {
+            // Safe fallback if activity launch fails on headless or restricted environments
+        }
     }
 }

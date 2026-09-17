@@ -19,21 +19,22 @@ object WhatsAppCatalogFormatter {
         address: String = "",
         products: List<ProductEntity>,
         includeStock: Boolean = false,
-        catalogTitle: String = "KATALOG PRODUK"
+        productLabel: String = "Produk",
+        catalogTitle: String = "KATALOG ${productLabel.uppercase()}"
     ): String {
         val builder = StringBuilder()
 
-        val displayShopName = shopName.trim().ifBlank { "Warung Kami" }
+        val displayShopName = shopName.trim().ifBlank { "Toko Kami" }
         builder.append("*$catalogTitle*\n")
         builder.append("*$displayShopName*\n\n")
 
         if (products.isEmpty()) {
-            builder.append("Belum ada produk yang dipilih dalam katalog ini.\n")
+            builder.append("Belum ada ${productLabel.lowercase()} yang dipilih dalam katalog ini.\n")
         } else {
-            builder.append("Berikut daftar produk & harga kami:\n\n")
+            builder.append("Berikut daftar ${productLabel.lowercase()} & harga kami:\n\n")
             products.forEach { product ->
                 builder.append("• *${product.name.trim()}* — ${formatRupiah(product.sellingPrice)}")
-                if (includeStock && product.stock > 0) {
+                if (includeStock) {
                     val stockLabel = if (product.stock % 1.0 == 0.0) {
                         product.stock.toInt().toString()
                     } else {

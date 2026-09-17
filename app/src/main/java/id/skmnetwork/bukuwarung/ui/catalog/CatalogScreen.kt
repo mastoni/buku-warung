@@ -67,6 +67,7 @@ import id.skmnetwork.bukuwarung.catalog.WhatsAppCatalogFormatter
 import id.skmnetwork.bukuwarung.catalog.WhatsAppCatalogShareHelper
 import id.skmnetwork.bukuwarung.data.local.entity.ProductEntity
 import id.skmnetwork.bukuwarung.data.preferences.UserSettings
+import id.skmnetwork.bukuwarung.domain.business.BusinessTaxonomyRegistry
 import id.skmnetwork.bukuwarung.ui.components.AppCard
 import id.skmnetwork.bukuwarung.ui.components.AppEmptyState
 import id.skmnetwork.bukuwarung.ui.components.AppTextField
@@ -87,6 +88,14 @@ fun CatalogScreen(
     val context = LocalContext.current
     val dbProducts by viewModel.products.collectAsStateWithLifecycle()
     val dbCategories by viewModel.categories.collectAsStateWithLifecycle()
+
+    val resolvedProfile = remember(userSettings.primaryBusinessType, userSettings.secondaryActivities) {
+        BusinessTaxonomyRegistry.resolve(
+            primaryType = userSettings.primaryBusinessType,
+            secondaryActivities = userSettings.secondaryActivities
+        )
+    }
+    val productLabel = resolvedProfile.terminology.productLabel
 
     var searchQuery by remember { mutableStateOf("") }
     var selectedCategoryName by remember { mutableStateOf("Semua") }
@@ -109,7 +118,7 @@ fun CatalogScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Katalog WhatsApp", fontWeight = FontWeight.Bold) },
+                title = { Text("Katalog $productLabel", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBack, modifier = Modifier.testTag("btn_catalog_back")) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Kembali")
@@ -152,7 +161,7 @@ fun CatalogScreen(
                 ) {
                     Column {
                         Text(
-                            text = "${selectedProductIds.size} produk dipilih",
+                            text = "${selectedProductIds.size} $productLabel dipilih",
                             fontWeight = FontWeight.Bold,
                             style = MaterialTheme.typography.titleMedium,
                             modifier = Modifier.testTag("txt_catalog_selected_count")
@@ -193,7 +202,7 @@ fun CatalogScreen(
                 AppTextField(
                     value = searchQuery,
                     onValueChange = { searchQuery = it },
-                    label = "Cari produk untuk katalog...",
+                    label = "Cari $productLabel untuk katalog...",
                     modifier = Modifier.testTag("input_catalog_search")
                 )
 
@@ -227,8 +236,8 @@ fun CatalogScreen(
             if (dbProducts.isEmpty()) {
                 AppEmptyState(
                     icon = Icons.Default.Inventory2,
-                    title = "Belum ada produk",
-                    description = "Tambahkan produk terlebih dahulu sebelum membuat katalog WhatsApp.",
+                    title = "Belum ada $productLabel",
+                    description = "Tambahkan $productLabel terlebih dahulu sebelum membuat katalog WhatsApp.",
                     actionText = null,
                     onActionClick = null,
                     modifier = Modifier.weight(1f)
@@ -241,7 +250,7 @@ fun CatalogScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "Produk tidak ditemukan",
+                        text = "$productLabel tidak ditemukan",
                         color = AppColors.TextSecondary,
                         style = MaterialTheme.typography.bodyMedium
                     )
@@ -282,20 +291,23 @@ fun CatalogScreen(
             phone = userSettings.phone,
             address = userSettings.address,
             products = selectedProductsList,
-            includeStock = includeStockInCatalog
+            includeStock = includeStockInCatalog,
+            productLabel = productLabel
         )
 
         CatalogPreviewDialog(
             catalogText = catalogText,
             productCount = selectedProductsList.size,
+            productLabel = productLabel,
             includeStock = includeStockInCatalog,
             onToggleStock = { includeStockInCatalog = it },
             onShare = {
                 showPreviewDialog = false
+                val shopDisplay = userSettings.shopName.trim().ifBlank { "Toko Kami" }
                 WhatsAppCatalogShareHelper.shareCatalog(
                     context = context,
                     catalogText = catalogText,
-                    chooserTitle = "Bagikan Katalog Produk (${userSettings.shopName})"
+                    chooserTitle = "Bagikan Katalog $productLabel ($shopDisplay)"
                 )
             },
             onDismiss = { showPreviewDialog = false }
@@ -357,8 +369,14 @@ fun CatalogProductItemRow(
                     fontWeight = FontWeight.Bold,
                     color = AppColors.GreenPrimary
                 )
+                val stockText = if (product.stock % 1.0 == 0.0) {
+                    product.stock.toInt().toString()
+                } else {
+                    product.stock.toString()
+                }
+                val unitText = product.unit.trim().ifBlank { "pcs" }
                 Text(
-                    text = "Stok: ${product.stock.toInt()} ${product.unit}",
+                    text = "Stok: $stockText $unitText",
                     style = MaterialTheme.typography.labelSmall,
                     color = AppColors.TextSecondary
                 )
@@ -371,6 +389,7 @@ fun CatalogProductItemRow(
 fun CatalogPreviewDialog(
     catalogText: String,
     productCount: Int,
+    productLabel: String = "Produk",
     includeStock: Boolean,
     onToggleStock: (Boolean) -> Unit,
     onShare: () -> Unit,
@@ -388,7 +407,7 @@ fun CatalogPreviewDialog(
                 )
                 Spacer(Modifier.width(AppSpacing.sm))
                 Text(
-                    text = "Pratinjau Katalog ($productCount Produk)",
+                    text = "Pratinjau Katalog ($productCount $productLabel)",
                     fontWeight = FontWeight.Bold,
                     style = MaterialTheme.typography.titleMedium
                 )
