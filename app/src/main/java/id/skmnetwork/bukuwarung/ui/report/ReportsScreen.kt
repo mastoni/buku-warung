@@ -77,6 +77,7 @@ import id.skmnetwork.bukuwarung.pdf.reports.SalesReportPdfBuilder
 import id.skmnetwork.bukuwarung.ui.theme.AppColors
 import id.skmnetwork.bukuwarung.ui.theme.AppSpacing
 import id.skmnetwork.bukuwarung.util.formatRupiah
+import id.skmnetwork.bukuwarung.domain.business.BusinessTaxonomyRegistry
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.io.File
@@ -84,12 +85,28 @@ import java.io.File
 @Composable
 fun ReportsScreen(
     reportViewModel: ReportViewModel,
-    userPreferencesRepository: UserPreferencesRepository? = null
+    userPreferencesRepository: UserPreferencesRepository? = null,
+    userSettings: UserSettings? = null
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val selectedPeriod by reportViewModel.selectedPeriod.collectAsStateWithLifecycle()
     var isRincianLabaExpanded by remember { mutableStateOf(false) }
+
+    val resolvedProfile = remember(userSettings?.primaryBusinessType, userSettings?.secondaryActivities) {
+        BusinessTaxonomyRegistry.resolve(
+            userSettings?.primaryBusinessType,
+            userSettings?.secondaryActivities
+        )
+    }
+    val terminology = resolvedProfile.terminology
+    val productLabel = terminology.productLabel
+    val transactionLabel = terminology.transactionLabel
+    val purchaseLabel = terminology.purchaseLabel
+    val customerLabel = terminology.customerLabel
+    val supplierLabel = terminology.supplierLabel
+    val debtLabel = terminology.debtLabel
+    val stockLabel = terminology.stockLabel
 
     // PDF Export State
     var isGeneratingPdf by remember { mutableStateOf(false) }
@@ -105,7 +122,7 @@ fun ReportsScreen(
         currentPdfTitle = "Ringkasan Usaha"
         scope.launch {
             try {
-                val settings = userPreferencesRepository?.userSettings?.first() ?: UserSettings()
+                val settings = userSettings ?: (userPreferencesRepository?.userSettings?.first() ?: UserSettings())
                 val summaryData = reportViewModel.buildBusinessSummaryData(settings, selectedPeriod)
                 val doc = BusinessSummaryPdfBuilder.build(summaryData)
                 val generator = PdfReportGenerator(context)
@@ -127,10 +144,10 @@ fun ReportsScreen(
     fun generateSalesReportPdf() {
         if (isGeneratingPdf) return
         isGeneratingPdf = true
-        currentPdfTitle = "Laporan Penjualan"
+        currentPdfTitle = "Laporan $transactionLabel"
         scope.launch {
             try {
-                val settings = userPreferencesRepository?.userSettings?.first() ?: UserSettings()
+                val settings = userSettings ?: (userPreferencesRepository?.userSettings?.first() ?: UserSettings())
                 val salesData = reportViewModel.buildSalesReportData(settings, selectedPeriod)
                 val doc = SalesReportPdfBuilder.build(salesData)
                 val generator = PdfReportGenerator(context)
@@ -152,10 +169,10 @@ fun ReportsScreen(
     fun generateProductReportPdf() {
         if (isGeneratingPdf) return
         isGeneratingPdf = true
-        currentPdfTitle = "Laporan Produk"
+        currentPdfTitle = "Laporan $productLabel"
         scope.launch {
             try {
-                val settings = userPreferencesRepository?.userSettings?.first() ?: UserSettings()
+                val settings = userSettings ?: (userPreferencesRepository?.userSettings?.first() ?: UserSettings())
                 val productData = reportViewModel.buildProductReportData(settings, selectedPeriod)
                 val doc = ProductReportPdfBuilder.build(productData)
                 val generator = PdfReportGenerator(context)
@@ -177,10 +194,10 @@ fun ReportsScreen(
     fun generatePurchaseReportPdf() {
         if (isGeneratingPdf) return
         isGeneratingPdf = true
-        currentPdfTitle = "Laporan Pembelian"
+        currentPdfTitle = "Laporan $purchaseLabel"
         scope.launch {
             try {
-                val settings = userPreferencesRepository?.userSettings?.first() ?: UserSettings()
+                val settings = userSettings ?: (userPreferencesRepository?.userSettings?.first() ?: UserSettings())
                 val purchaseData = reportViewModel.buildPurchaseReportData(settings, selectedPeriod)
                 val doc = PurchaseReportPdfBuilder.build(purchaseData)
                 val generator = PdfReportGenerator(context)
@@ -205,7 +222,7 @@ fun ReportsScreen(
         currentPdfTitle = if (mode == DebtReportMode.CURRENT_OUTSTANDING) "Piutang Aktif" else "Mutasi Piutang"
         scope.launch {
             try {
-                val settings = userPreferencesRepository?.userSettings?.first() ?: UserSettings()
+                val settings = userSettings ?: (userPreferencesRepository?.userSettings?.first() ?: UserSettings())
                 val debtData = reportViewModel.buildCustomerDebtReportData(settings, mode = mode, period = selectedPeriod)
                 val doc = CustomerDebtReportPdfBuilder.build(debtData)
                 val generator = PdfReportGenerator(context)
@@ -411,7 +428,7 @@ fun ReportsScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                "Penjualan Bersih",
+                                "$transactionLabel Bersih",
                                 style = MaterialTheme.typography.bodyMedium.copy(
                                     fontWeight = FontWeight.SemiBold,
                                     fontSize = 13.sp,
@@ -437,7 +454,7 @@ fun ReportsScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                "HPP / Modal Barang Terjual",
+                                "HPP / Modal $productLabel Terjual",
                                 style = MaterialTheme.typography.bodyMedium.copy(
                                     fontSize = 12.sp,
                                     color = AppColors.TextSecondary
@@ -594,14 +611,14 @@ fun ReportsScreen(
 
                                         // Penjualan Bruto
                                         Row(Modifier.fillMaxWidth()) {
-                                            Text("Penjualan Bruto", style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp), modifier = Modifier.weight(1f))
+                                            Text("$transactionLabel Bruto", style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp), modifier = Modifier.weight(1f))
                                             Text(formatRupiah(grossSalesVal), style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp, fontWeight = FontWeight.SemiBold))
                                         }
 
                                         // Retur Penjualan
                                         Row(Modifier.fillMaxWidth()) {
                                             Column(modifier = Modifier.weight(1f)) {
-                                                Text("Retur Penjualan", style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp, color = AppColors.RedExpense))
+                                                Text("Retur $transactionLabel", style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp, color = AppColors.RedExpense))
                                                 if (salesReturnCount > 0) {
                                                     Text("$salesReturnCount kali retur", style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.5.sp, color = AppColors.TextSecondary))
                                                 }
@@ -620,7 +637,7 @@ fun ReportsScreen(
 
                                         // Penjualan Bersih
                                         Row(Modifier.fillMaxWidth()) {
-                                            Text("Penjualan Bersih", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp), modifier = Modifier.weight(1f))
+                                            Text("$transactionLabel Bersih", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp), modifier = Modifier.weight(1f))
                                             Text(formatRupiah(netSalesTotal), fontWeight = FontWeight.Bold, color = AppColors.GreenDark, style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp))
                                         }
 
@@ -629,8 +646,8 @@ fun ReportsScreen(
                                         // HPP / Modal Barang Terjual
                                         Row(Modifier.fillMaxWidth()) {
                                             Column(modifier = Modifier.weight(1f)) {
-                                                Text("HPP / Modal Barang Terjual", style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp, color = AppColors.TextSecondary))
-                                                Text("HPP Penjualan - HPP Retur", style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.5.sp, color = AppColors.TextSecondary))
+                                                Text("HPP / Modal $productLabel Terjual", style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp, color = AppColors.TextSecondary))
+                                                Text("HPP $transactionLabel - HPP Retur", style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.5.sp, color = AppColors.TextSecondary))
                                             }
                                             Text(
                                                 if (netCogsTotal > 0) "-${formatRupiah(netCogsTotal)}" else formatRupiah(0L),
@@ -746,7 +763,7 @@ fun ReportsScreen(
                         modifier = Modifier.weight(1f)
                     ) {
                         Column(Modifier.padding(10.dp)) {
-                            Text("Nilai Stok Modal", style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp, color = AppColors.TextSecondary))
+                            Text("Nilai $stockLabel Modal", style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp, color = AppColors.TextSecondary))
                             Spacer(Modifier.height(3.dp))
                             Text(
                                 formatRupiah(totalStockValue ?: 0L),
@@ -774,7 +791,7 @@ fun ReportsScreen(
                         modifier = Modifier.weight(1f)
                     ) {
                         Column(Modifier.padding(10.dp)) {
-                            Text("Piutang Pelanggan", style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp, color = AppColors.TextSecondary))
+                            Text("Piutang $customerLabel", style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp, color = AppColors.TextSecondary))
                             Spacer(Modifier.height(3.dp))
                             Text(
                                 formatRupiah(totalOutstandingDebt ?: 0L),
@@ -795,7 +812,7 @@ fun ReportsScreen(
                         modifier = Modifier.weight(1f)
                     ) {
                         Column(Modifier.padding(10.dp)) {
-                            Text("Hutang Supplier", style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp, color = AppColors.TextSecondary))
+                            Text("$debtLabel $supplierLabel", style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp, color = AppColors.TextSecondary))
                             Spacer(Modifier.height(3.dp))
                             Text(
                                 formatRupiah(totalOutstandingPayable ?: 0L),
@@ -860,21 +877,21 @@ fun ReportsScreen(
                                 Icon(Icons.Default.Receipt, null, tint = AppColors.GreenPrimary, modifier = Modifier.size(16.dp))
                             }
                             Spacer(Modifier.width(10.dp))
-                            Text("Aktivitas Penjualan", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelLarge.copy(fontSize = 13.5.sp))
+                            Text("Aktivitas $transactionLabel", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelLarge.copy(fontSize = 13.5.sp))
                             Spacer(Modifier.weight(1f))
                             Text(formatRupiah(grossSalesVal), fontWeight = FontWeight.Bold, color = AppColors.GreenPrimary, fontSize = 14.sp)
                         }
                         Spacer(Modifier.height(10.dp))
                         Row {
-                            Text("Transaksi: $salesCount kali", style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp, color = AppColors.TextSecondary), modifier = Modifier.weight(1f))
+                            Text("$transactionLabel: $salesCount kali", style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp, color = AppColors.TextSecondary), modifier = Modifier.weight(1f))
                             val soldQty = itemsSoldTotal ?: 0.0
                             val qtyText = if (soldQty % 1.0 == 0.0) "${soldQty.toInt()} pcs" else "$soldQty pcs"
-                            Text("Item Terjual: $qtyText", style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp, color = AppColors.TextSecondary))
+                            Text("$productLabel Terjual: $qtyText", style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp, color = AppColors.TextSecondary))
                         }
                         Spacer(Modifier.height(4.dp))
                         Row {
                             Text("Tunai: ${formatRupiah(cashSales)}", style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp, color = AppColors.GreenDark), modifier = Modifier.weight(1f))
-                            Text("Hutang: ${formatRupiah(creditSales)}", style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp, color = AppColors.RedExpense))
+                            Text("$debtLabel: ${formatRupiah(creditSales)}", style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp, color = AppColors.RedExpense))
                         }
                         if (qrisSales > 0L) {
                             Spacer(Modifier.height(4.dp))
@@ -896,7 +913,7 @@ fun ReportsScreen(
                         ) {
                             Icon(Icons.Default.Description, null, modifier = Modifier.size(16.dp))
                             Spacer(Modifier.width(6.dp))
-                            Text("Cetak PDF Laporan Penjualan", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.labelMedium)
+                            Text("Cetak PDF Laporan $transactionLabel", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.labelMedium)
                         }
                     }
                 }
@@ -923,7 +940,7 @@ fun ReportsScreen(
                                 Icon(Icons.Default.ShoppingCart, null, tint = AppColors.RedExpense, modifier = Modifier.size(16.dp))
                             }
                             Spacer(Modifier.width(10.dp))
-                            Text("Aktivitas Pembelian (Kulakan)", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelLarge.copy(fontSize = 13.5.sp))
+                            Text("Aktivitas $purchaseLabel", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelLarge.copy(fontSize = 13.5.sp))
                             Spacer(Modifier.weight(1f))
                             Text(formatRupiah(purchaseTotal ?: 0L), fontWeight = FontWeight.Bold, color = AppColors.RedExpense, fontSize = 14.sp)
                         }
@@ -932,7 +949,7 @@ fun ReportsScreen(
                             Text("Transaksi: $purchaseCount kali", style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp, color = AppColors.TextSecondary), modifier = Modifier.weight(1f))
                             val purchasedQty = itemsPurchasedTotal ?: 0.0
                             val qtyText = if (purchasedQty % 1.0 == 0.0) "${purchasedQty.toInt()} pcs" else "$purchasedQty pcs"
-                            Text("Item Dibeli: $qtyText", style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp, color = AppColors.TextSecondary))
+                            Text("$productLabel Dibeli: $qtyText", style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp, color = AppColors.TextSecondary))
                         }
                         Spacer(Modifier.height(12.dp))
                         OutlinedButton(
@@ -946,7 +963,7 @@ fun ReportsScreen(
                         ) {
                             Icon(Icons.Default.ShoppingCart, null, modifier = Modifier.size(16.dp))
                             Spacer(Modifier.width(6.dp))
-                            Text("Cetak PDF Laporan Pembelian", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.labelMedium)
+                            Text("Cetak PDF Laporan $purchaseLabel", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.labelMedium)
                         }
                     }
                 }
@@ -995,7 +1012,7 @@ fun ReportsScreen(
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(Modifier.width(8.dp))
-                    Text("Produk Terlaris", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold, fontSize = 15.sp, color = AppColors.TextPrimary))
+                    Text("$productLabel Terlaris", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold, fontSize = 15.sp, color = AppColors.TextPrimary))
                 }
                 Spacer(Modifier.height(4.dp))
 
@@ -1015,7 +1032,7 @@ fun ReportsScreen(
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
-                                    text = "Belum ada produk terjual pada periode ini.",
+                                    text = "Belum ada ${productLabel.lowercase()} terjual pada periode ini.",
                                     style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp, color = AppColors.TextSecondary)
                                 )
                             }
@@ -1045,7 +1062,7 @@ fun ReportsScreen(
                         ) {
                             Icon(Icons.Default.Inventory2, null, modifier = Modifier.size(16.dp))
                             Spacer(Modifier.width(6.dp))
-                            Text("Cetak PDF Laporan Produk", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.labelMedium)
+                            Text("Cetak PDF Laporan $productLabel", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.labelMedium)
                         }
                     }
                 }
@@ -1089,7 +1106,7 @@ fun ReportsScreen(
                     ReportChooserItem(
                         icon = Icons.Default.Assessment,
                         title = "Ringkasan Usaha",
-                        subtitle = "Laba rugi, posisi kas, stok, hutang/piutang",
+                        subtitle = "Laba rugi, posisi kas, $stockLabel, $debtLabel/piutang",
                         onClick = {
                             showReportTypeDialog = false
                             generateBusinessSummaryPdf()
@@ -1098,8 +1115,8 @@ fun ReportsScreen(
 
                     ReportChooserItem(
                         icon = Icons.Default.Receipt,
-                        title = "Laporan Penjualan",
-                        subtitle = "Daftar detail transaksi penjualan periode ini",
+                        title = "Laporan $transactionLabel",
+                        subtitle = "Daftar detail transaksi ${transactionLabel.lowercase()} periode ini",
                         onClick = {
                             showReportTypeDialog = false
                             generateSalesReportPdf()
@@ -1108,8 +1125,8 @@ fun ReportsScreen(
 
                     ReportChooserItem(
                         icon = Icons.Default.Inventory2,
-                        title = "Laporan Produk",
-                        subtitle = "Omzet, HPP historical snapshot, laba kotor per produk",
+                        title = "Laporan $productLabel",
+                        subtitle = "Omzet, HPP historical snapshot, laba kotor per ${productLabel.lowercase()}",
                         onClick = {
                             showReportTypeDialog = false
                             generateProductReportPdf()
@@ -1118,8 +1135,8 @@ fun ReportsScreen(
 
                     ReportChooserItem(
                         icon = Icons.Default.ShoppingCart,
-                        title = "Laporan Pembelian",
-                        subtitle = "Daftar transaksi pembelian & kulakan ke supplier",
+                        title = "Laporan $purchaseLabel",
+                        subtitle = "Daftar transaksi ${purchaseLabel.lowercase()} ke ${supplierLabel.lowercase()}",
                         onClick = {
                             showReportTypeDialog = false
                             generatePurchaseReportPdf()

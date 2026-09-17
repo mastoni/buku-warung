@@ -212,6 +212,10 @@ class ReportViewModel(
 
         val sdf = java.text.SimpleDateFormat("dd MMM yyyy, HH:mm", java.util.Locale.forLanguageTag("id-ID"))
         val printedAt = sdf.format(java.util.Date())
+        val terminology = id.skmnetwork.bukuwarung.domain.business.BusinessTaxonomyRegistry.resolve(
+            userSettings.primaryBusinessType,
+            userSettings.secondaryActivities
+        ).terminology
 
         return id.skmnetwork.bukuwarung.pdf.reports.BusinessSummaryReportData(
             shopName = userSettings.shopName.ifBlank { "Warung Saya" },
@@ -231,7 +235,8 @@ class ReportViewModel(
             cashBalance = cashBalance,
             stockValue = stockVal,
             outstandingDebt = debt,
-            outstandingPayable = payable
+            outstandingPayable = payable,
+            terminology = terminology
         )
     }
 
@@ -280,6 +285,10 @@ class ReportViewModel(
         }
 
         val sdfPrinted = java.text.SimpleDateFormat("dd MMM yyyy, HH:mm", java.util.Locale.forLanguageTag("id-ID"))
+        val terminology = id.skmnetwork.bukuwarung.domain.business.BusinessTaxonomyRegistry.resolve(
+            userSettings.primaryBusinessType,
+            userSettings.secondaryActivities
+        ).terminology
 
         return id.skmnetwork.bukuwarung.pdf.reports.SalesReportData(
             shopName = userSettings.shopName.ifBlank { "Warung Saya" },
@@ -291,7 +300,8 @@ class ReportViewModel(
             grossSales = grossSales,
             totalRefund = totalRefunds,
             netSales = netSales,
-            totalTransactions = salesList.size
+            totalTransactions = salesList.size,
+            terminology = terminology
         )
     }
 
@@ -351,6 +361,10 @@ class ReportViewModel(
         val totalGrossProfit = totalNetRevenue - totalNetCogs
 
         val sdfPrinted = java.text.SimpleDateFormat("dd MMM yyyy, HH:mm", java.util.Locale.forLanguageTag("id-ID"))
+        val terminology = id.skmnetwork.bukuwarung.domain.business.BusinessTaxonomyRegistry.resolve(
+            userSettings.primaryBusinessType,
+            userSettings.secondaryActivities
+        ).terminology
 
         return id.skmnetwork.bukuwarung.pdf.reports.ProductReportData(
             shopName = userSettings.shopName.ifBlank { "Warung Saya" },
@@ -363,7 +377,8 @@ class ReportViewModel(
             totalNetQuantity = totalNetQuantity,
             totalNetRevenue = totalNetRevenue,
             totalNetCogs = totalNetCogs,
-            totalGrossProfit = totalGrossProfit
+            totalGrossProfit = totalGrossProfit,
+            terminology = terminology
         )
     }
 
@@ -399,6 +414,10 @@ class ReportViewModel(
         }
 
         val sdfPrinted = java.text.SimpleDateFormat("dd MMM yyyy, HH:mm", java.util.Locale.forLanguageTag("id-ID"))
+        val terminology = id.skmnetwork.bukuwarung.domain.business.BusinessTaxonomyRegistry.resolve(
+            userSettings.primaryBusinessType,
+            userSettings.secondaryActivities
+        ).terminology
 
         return id.skmnetwork.bukuwarung.pdf.reports.PurchaseReportData(
             shopName = userSettings.shopName.ifBlank { "Warung Saya" },
@@ -410,7 +429,8 @@ class ReportViewModel(
             totalPurchases = totalPurchases,
             cashPurchasesTotal = cashPurchases,
             creditPurchasesTotal = creditPurchases,
-            totalTransactions = purchaseList.size
+            totalTransactions = purchaseList.size,
+            terminology = terminology
         )
     }
 
@@ -459,6 +479,10 @@ class ReportViewModel(
         }
 
         val sdfPrinted = java.text.SimpleDateFormat("dd MMM yyyy, HH:mm", java.util.Locale.forLanguageTag("id-ID"))
+        val terminology = id.skmnetwork.bukuwarung.domain.business.BusinessTaxonomyRegistry.resolve(
+            userSettings.primaryBusinessType,
+            userSettings.secondaryActivities
+        ).terminology
 
         return id.skmnetwork.bukuwarung.pdf.reports.DebtReportData(
             mode = mode,
@@ -472,7 +496,8 @@ class ReportViewModel(
             totalPaid = totalPaid,
             totalDebtCreated = totalCreated,
             activeDebtorsCount = activeDebtors,
-            totalTransactions = debtList.size
+            totalTransactions = debtList.size,
+            terminology = terminology
         )
     }
 

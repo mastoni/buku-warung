@@ -1,6 +1,7 @@
 package id.skmnetwork.bukuwarung.pdf.reports
 
 import android.graphics.Paint
+import id.skmnetwork.bukuwarung.domain.business.BusinessTerminology
 import id.skmnetwork.bukuwarung.pdf.KeyValuePair
 import id.skmnetwork.bukuwarung.pdf.PdfReportDocument
 import id.skmnetwork.bukuwarung.pdf.ReportHeader
@@ -46,7 +47,8 @@ data class DebtReportData(
     val totalPaid: Long,
     val totalDebtCreated: Long,
     val activeDebtorsCount: Int,
-    val totalTransactions: Int
+    val totalTransactions: Int,
+    val terminology: BusinessTerminology = BusinessTerminology()
 )
 
 /**
@@ -56,9 +58,9 @@ object CustomerDebtReportPdfBuilder {
 
     fun build(data: DebtReportData): PdfReportDocument {
         val title = if (data.mode == DebtReportMode.CURRENT_OUTSTANDING) {
-            "LAPORAN PIUTANG PELANGGAN"
+            "LAPORAN PIUTANG ${data.terminology.customerLabel.uppercase()}"
         } else {
-            "LAPORAN MUTASI PIUTANG PELANGGAN"
+            "LAPORAN MUTASI PIUTANG ${data.terminology.customerLabel.uppercase()}"
         }
 
         val header = ReportHeader(
@@ -75,7 +77,7 @@ object CustomerDebtReportPdfBuilder {
         if (data.mode == DebtReportMode.CURRENT_OUTSTANDING) {
             summaryPairs.add(
                 KeyValuePair(
-                    label = "Total Pelanggan Berpiutang",
+                    label = "Total ${data.terminology.customerLabel} Berpiutang",
                     value = "${data.activeDebtorsCount} orang"
                 )
             )
@@ -150,7 +152,7 @@ object CustomerDebtReportPdfBuilder {
             val columns = listOf(
                 TableColumn(header = "No", weight = 0.7f, align = Paint.Align.CENTER),
                 TableColumn(header = "Tgl / No. Trx", weight = 2.8f, align = Paint.Align.LEFT),
-                TableColumn(header = "Pelanggan", weight = 2.5f, align = Paint.Align.LEFT),
+                TableColumn(header = data.terminology.customerLabel, weight = 2.5f, align = Paint.Align.LEFT),
                 TableColumn(header = "Kontak", weight = 2.0f, align = Paint.Align.LEFT),
                 TableColumn(header = "Total Piutang", weight = 2.2f, align = Paint.Align.RIGHT),
                 TableColumn(header = "Dibayar", weight = 2.0f, align = Paint.Align.RIGHT),

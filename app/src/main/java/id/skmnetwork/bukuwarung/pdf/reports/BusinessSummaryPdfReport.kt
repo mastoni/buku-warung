@@ -1,5 +1,6 @@
 package id.skmnetwork.bukuwarung.pdf.reports
 
+import id.skmnetwork.bukuwarung.domain.business.BusinessTerminology
 import id.skmnetwork.bukuwarung.pdf.KeyValuePair
 import id.skmnetwork.bukuwarung.pdf.PdfReportDocument
 import id.skmnetwork.bukuwarung.pdf.ReportHeader
@@ -34,7 +35,9 @@ data class BusinessSummaryReportData(
     val cashBalance: Long,
     val stockValue: Long,
     val outstandingDebt: Long,
-    val outstandingPayable: Long
+    val outstandingPayable: Long,
+
+    val terminology: BusinessTerminology = BusinessTerminology()
 )
 
 /**
@@ -55,21 +58,21 @@ object BusinessSummaryPdfBuilder {
         // 1. SECTION A: PENJUALAN
         val salesPairs = mutableListOf(
             KeyValuePair(
-                label = "Penjualan Kotor (Bruto)",
+                label = "${data.terminology.transactionLabel} Kotor (Bruto)",
                 value = formatRupiah(data.grossSales)
             ),
             KeyValuePair(
-                label = "Retur Penjualan",
+                label = "Retur ${data.terminology.transactionLabel}",
                 value = if (data.salesReturn > 0) "-${formatRupiah(data.salesReturn)}" else formatRupiah(0L),
                 isNegative = data.salesReturn > 0
             ),
             KeyValuePair(
-                label = "Penjualan Bersih",
+                label = "${data.terminology.transactionLabel} Bersih",
                 value = formatRupiah(data.netSales),
                 isBold = true
             ),
             KeyValuePair(
-                label = "Jumlah Transaksi Penjualan",
+                label = "Jumlah Transaksi ${data.terminology.transactionLabel}",
                 value = "${data.salesCount} transaksi"
             )
         )
@@ -83,14 +86,14 @@ object BusinessSummaryPdfBuilder {
         }
 
         val salesSection = ReportSection(
-            title = "A. PENJUALAN & PENDAPATAN",
+            title = "A. ${data.terminology.transactionLabel.uppercase()} & PENDAPATAN",
             summaryPairs = salesPairs
         )
 
         // 2. SECTION B: LABA RUGI
         val profitPairs = listOf(
             KeyValuePair(
-                label = "HPP / Modal Barang Terjual",
+                label = "HPP / Modal ${data.terminology.productLabel} Terjual",
                 value = if (data.netCogs > 0) "-${formatRupiah(data.netCogs)}" else formatRupiah(0L)
             ),
             KeyValuePair(
@@ -126,16 +129,16 @@ object BusinessSummaryPdfBuilder {
                 isBold = true
             ),
             KeyValuePair(
-                label = "Nilai Modal Stok Barang",
+                label = "Nilai Modal ${data.terminology.stockLabel} ${data.terminology.productLabel}",
                 value = formatRupiah(data.stockValue)
             ),
             KeyValuePair(
-                label = "Total Piutang Pelanggan (Belum Lunas)",
+                label = "Total Piutang ${data.terminology.customerLabel} (Belum Lunas)",
                 value = formatRupiah(data.outstandingDebt),
                 isNegative = data.outstandingDebt > 0
             ),
             KeyValuePair(
-                label = "Total Hutang ke Supplier (Belum Lunas)",
+                label = "Total ${data.terminology.debtLabel} ke ${data.terminology.supplierLabel} (Belum Lunas)",
                 value = formatRupiah(data.outstandingPayable),
                 isNegative = data.outstandingPayable > 0
             )
@@ -143,11 +146,11 @@ object BusinessSummaryPdfBuilder {
 
         val positionSection = ReportSection(
             title = "C. POSISI KEUANGAN SAAT INI",
-            description = "Posisi saldo kas, modal stok, serta kewajiban riil toko saat ini.",
+            description = "Posisi saldo kas, modal ${data.terminology.stockLabel.lowercase()}, serta kewajiban riil toko saat ini.",
             summaryPairs = positionPairs,
             notes = listOf(
-                "Nilai HPP dihitung berdasarkan snapshot harga modal riil saat transaksi penjualan terjadi.",
-                "Saldo kas dan stok barang merepresentasikan posisi saat ini dan terpisah dari laba periode berjalan.",
+                "Nilai HPP dihitung berdasarkan snapshot harga modal riil saat transaksi ${data.terminology.transactionLabel.lowercase()} terjadi.",
+                "Saldo kas dan ${data.terminology.stockLabel.lowercase()} ${data.terminology.productLabel.lowercase()} merepresentasikan posisi saat ini dan terpisah dari laba periode berjalan.",
                 "Laporan ini dibuat otomatis dari aplikasi Buku Warung."
             )
         )

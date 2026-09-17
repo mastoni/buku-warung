@@ -357,7 +357,8 @@ fun BukuWarungApp() {
                 )
                 AppScreen.REPORTS -> ReportsScreen(
                     reportViewModel = reportViewModel,
-                    userPreferencesRepository = userPreferencesRepository
+                    userPreferencesRepository = userPreferencesRepository,
+                    userSettings = userSettings
                 )
                 AppScreen.CUSTOMERS -> CustomersScreen(
                     customerViewModel = customerViewModel,

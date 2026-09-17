@@ -1,6 +1,7 @@
 package id.skmnetwork.bukuwarung.pdf.reports
 
 import android.graphics.Paint
+import id.skmnetwork.bukuwarung.domain.business.BusinessTerminology
 import id.skmnetwork.bukuwarung.pdf.KeyValuePair
 import id.skmnetwork.bukuwarung.pdf.PdfReportDocument
 import id.skmnetwork.bukuwarung.pdf.ReportHeader
@@ -34,7 +35,8 @@ data class PurchaseReportData(
     val totalPurchases: Long,
     val cashPurchasesTotal: Long,
     val creditPurchasesTotal: Long,
-    val totalTransactions: Int
+    val totalTransactions: Int,
+    val terminology: BusinessTerminology = BusinessTerminology()
 )
 
 /**
@@ -47,7 +49,7 @@ object PurchaseReportPdfBuilder {
             shopName = data.shopName.ifBlank { "Warung Saya" },
             address = data.address,
             phone = data.phone,
-            reportTitle = "LAPORAN PEMBELIAN",
+            reportTitle = "LAPORAN ${data.terminology.purchaseLabel.uppercase()}",
             periodLabel = data.periodLabel,
             printedAt = data.printedAt
         )
@@ -55,19 +57,19 @@ object PurchaseReportPdfBuilder {
         // 1. SUMMARY METRICS SECTION
         val summaryPairs = mutableListOf(
             KeyValuePair(
-                label = "Total Transaksi Pembelian",
+                label = "Total Transaksi ${data.terminology.purchaseLabel}",
                 value = "${data.totalTransactions} transaksi"
             ),
             KeyValuePair(
-                label = "Total Pembelian Tunai",
+                label = "Total ${data.terminology.purchaseLabel} Tunai",
                 value = formatRupiah(data.cashPurchasesTotal)
             ),
             KeyValuePair(
-                label = "Total Pembelian Kredit (Hutang)",
+                label = "Total ${data.terminology.purchaseLabel} Kredit (${data.terminology.debtLabel})",
                 value = formatRupiah(data.creditPurchasesTotal)
             ),
             KeyValuePair(
-                label = "Total Pembelian (Kulakan)",
+                label = "Total ${data.terminology.purchaseLabel}",
                 value = formatRupiah(data.totalPurchases),
                 isBold = true,
                 isHighlight = true
@@ -75,23 +77,23 @@ object PurchaseReportPdfBuilder {
         )
 
         val summarySection = ReportSection(
-            title = "RINGKASAN PEMBELIAN",
+            title = "RINGKASAN ${data.terminology.purchaseLabel.uppercase()}",
             summaryPairs = summaryPairs
         )
 
         // 2. PURCHASE DETAILS TABLE SECTION
         val tableSection = if (data.items.isEmpty()) {
             ReportSection(
-                title = "DAFTAR PEMBELIAN",
+                title = "DAFTAR ${data.terminology.purchaseLabel.uppercase()}",
                 notes = listOf(
-                    "Tidak ada transaksi pembelian pada periode ${data.periodLabel}."
+                    "Tidak ada transaksi ${data.terminology.purchaseLabel.lowercase()} pada periode ${data.periodLabel}."
                 )
             )
         } else {
             val columns = listOf(
                 TableColumn(header = "No", weight = 0.8f, align = Paint.Align.CENTER),
                 TableColumn(header = "Waktu / No. Trx", weight = 3.4f, align = Paint.Align.LEFT),
-                TableColumn(header = "Supplier", weight = 2.4f, align = Paint.Align.LEFT),
+                TableColumn(header = data.terminology.supplierLabel, weight = 2.4f, align = Paint.Align.LEFT),
                 TableColumn(header = "Metode", weight = 1.6f, align = Paint.Align.CENTER),
                 TableColumn(header = "Total", weight = 2.2f, align = Paint.Align.RIGHT),
                 TableColumn(header = "Status", weight = 2.0f, align = Paint.Align.RIGHT)
@@ -130,12 +132,12 @@ object PurchaseReportPdfBuilder {
             )
 
             val notes = listOf(
-                "Semua transaksi pembelian diurutkan dari yang terbaru.",
-                "Pembelian kredit (hutang supplier) tercatat secara terpisah dari arus kas keluar."
+                "Semua transaksi ${data.terminology.purchaseLabel.lowercase()} diurutkan dari yang terbaru.",
+                "${data.terminology.purchaseLabel} kredit (${data.terminology.debtLabel.lowercase()} ${data.terminology.supplierLabel.lowercase()}) tercatat secara terpisah dari arus kas keluar."
             )
 
             ReportSection(
-                title = "DAFTAR PEMBELIAN (${data.items.size} Transaksi)",
+                title = "DAFTAR ${data.terminology.purchaseLabel.uppercase()} (${data.items.size} Transaksi)",
                 tableColumns = columns,
                 tableRows = rows,
                 notes = notes

@@ -1,6 +1,7 @@
 package id.skmnetwork.bukuwarung.pdf.reports
 
 import android.graphics.Paint
+import id.skmnetwork.bukuwarung.domain.business.BusinessTerminology
 import id.skmnetwork.bukuwarung.pdf.KeyValuePair
 import id.skmnetwork.bukuwarung.pdf.PdfReportDocument
 import id.skmnetwork.bukuwarung.pdf.ReportHeader
@@ -35,7 +36,8 @@ data class SalesReportData(
     val grossSales: Long,
     val totalRefund: Long,
     val netSales: Long,
-    val totalTransactions: Int
+    val totalTransactions: Int,
+    val terminology: BusinessTerminology = BusinessTerminology()
 )
 
 /**
@@ -48,7 +50,7 @@ object SalesReportPdfBuilder {
             shopName = data.shopName.ifBlank { "Warung Saya" },
             address = data.address,
             phone = data.phone,
-            reportTitle = "LAPORAN PENJUALAN",
+            reportTitle = "LAPORAN ${data.terminology.transactionLabel.uppercase()}",
             periodLabel = data.periodLabel,
             printedAt = data.printedAt
         )
@@ -56,11 +58,11 @@ object SalesReportPdfBuilder {
         // 1. SUMMARY METRICS SECTION
         val summaryPairs = mutableListOf(
             KeyValuePair(
-                label = "Total Transaksi Penjualan",
+                label = "Total Transaksi ${data.terminology.transactionLabel}",
                 value = "${data.totalTransactions} transaksi"
             ),
             KeyValuePair(
-                label = "Total Penjualan Bruto",
+                label = "Total ${data.terminology.transactionLabel} Bruto",
                 value = formatRupiah(data.grossSales)
             )
         )
@@ -75,7 +77,7 @@ object SalesReportPdfBuilder {
         }
         summaryPairs.add(
             KeyValuePair(
-                label = "Total Penjualan Bersih (Net)",
+                label = "Total ${data.terminology.transactionLabel} Bersih (Net)",
                 value = formatRupiah(data.netSales),
                 isBold = true,
                 isHighlight = true
@@ -83,7 +85,7 @@ object SalesReportPdfBuilder {
         )
 
         val summarySection = ReportSection(
-            title = "RINGKASAN PENJUALAN",
+            title = "RINGKASAN ${data.terminology.transactionLabel.uppercase()}",
             summaryPairs = summaryPairs
         )
 
@@ -92,14 +94,14 @@ object SalesReportPdfBuilder {
             ReportSection(
                 title = "DAFTAR TRANSAKSI",
                 notes = listOf(
-                    "Tidak ada transaksi penjualan pada periode ${data.periodLabel}."
+                    "Tidak ada transaksi ${data.terminology.transactionLabel.lowercase()} pada periode ${data.periodLabel}."
                 )
             )
         } else {
             val columns = listOf(
                 TableColumn(header = "No", weight = 0.8f, align = Paint.Align.CENTER),
                 TableColumn(header = "Waktu / No. Trx", weight = 3.4f, align = Paint.Align.LEFT),
-                TableColumn(header = "Pelanggan", weight = 2.4f, align = Paint.Align.LEFT),
+                TableColumn(header = data.terminology.customerLabel, weight = 2.4f, align = Paint.Align.LEFT),
                 TableColumn(header = "Metode", weight = 1.6f, align = Paint.Align.CENTER),
                 TableColumn(header = "Total", weight = 2.2f, align = Paint.Align.RIGHT),
                 TableColumn(header = "Status", weight = 2.0f, align = Paint.Align.RIGHT)
@@ -139,7 +141,7 @@ object SalesReportPdfBuilder {
 
             val notes = mutableListOf(
                 "Semua transaksi diurutkan dari yang terbaru.",
-                "Transaksi dengan retur tidak mengubah nilai penjualan asli dan ditampilkan pada status."
+                "Transaksi dengan retur tidak mengubah nilai ${data.terminology.transactionLabel.lowercase()} asli dan ditampilkan pada status."
             )
 
             ReportSection(
