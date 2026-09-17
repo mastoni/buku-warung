@@ -6,7 +6,7 @@ export const ScreenshotShowcase: React.FC = () => {
   const activeScreenshot = SCREENSHOTS.find((s) => s.id === selectedId) || SCREENSHOTS[0];
 
   return (
-    <section id="tampilan" className="py-16 md:py-24 bg-slate-50">
+    <section id="tampilan" className="py-16 md:py-24 bg-slate-50 reveal-on-scroll">
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
         {/* Section Header */}
         <div className="text-center max-w-2xl mx-auto space-y-3 mb-12 sm:mb-16">

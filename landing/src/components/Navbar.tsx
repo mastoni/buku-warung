@@ -42,9 +42,12 @@ export const Navbar: React.FC = () => {
         </a>
 
         {/* Desktop Nav */}
-        <nav className="hidden md:flex items-center gap-8 text-sm font-semibold text-slate-600">
+        <nav className="hidden md:flex items-center gap-7 text-sm font-semibold text-slate-600">
           <a href="#fitur" className="hover:text-emerald-600 transition-colors">
             Fitur Utama
+          </a>
+          <a href="#adaptif" className="hover:text-emerald-600 transition-colors">
+            Tipe Usaha
           </a>
           <a href="#tampilan" className="hover:text-emerald-600 transition-colors">
             Tampilan Layar
@@ -97,6 +100,13 @@ export const Navbar: React.FC = () => {
               className="px-3 py-2 rounded-lg hover:bg-slate-50"
             >
               Fitur Utama
+            </a>
+            <a
+              href="#adaptif"
+              onClick={() => setMobileMenuOpen(false)}
+              className="px-3 py-2 rounded-lg hover:bg-slate-50"
+            >
+              Tipe Usaha
             </a>
             <a
               href="#tampilan"

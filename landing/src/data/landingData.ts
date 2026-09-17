@@ -21,6 +21,18 @@ export interface FaqItem {
   answer: string;
 }
 
+export interface AdaptiveBusinessProfile {
+  id: string;
+  name: string;
+  iconName: string;
+  badge: string;
+  productTerm: string;
+  catalogTerm: string;
+  summary: string;
+  sampleProducts: Array<{ name: string; price: string; unit: string; stock: string; type?: string }>;
+  keyHighlights: string[];
+}
+
 export const LANDING_CONFIG = {
   appName: 'Buku Warung',
   tagline: 'Aplikasi Kasir POS & Pembukuan UMKM',
@@ -255,5 +267,88 @@ export const FAQS: FaqItem[] = [
     question: 'Bagaimana cara backup dan mengamankan data pembukuan saya?',
     answer:
       'Data pembukuan tersimpan aman di penyimpanan internal HP Anda. Buku Warung juga dilengkapi fitur pencadangan otomatis (Backup & Restore) ke Google Sheets pribadi milik Anda sendiri, sehingga data Anda tidak pernah hilang dan tidak bisa diintip pihak lain.',
+  },
+];
+
+export const ADAPTIVE_BUSINESS_PROFILES: AdaptiveBusinessProfile[] = [
+  {
+    id: 'WARUNG_SEMBAKO',
+    name: 'Warung Sembako & Kelontong',
+    iconName: 'Store',
+    badge: 'Paling Populer',
+    productTerm: 'Produk',
+    catalogTerm: 'Katalog Produk',
+    summary: 'Optimal untuk pencatatan barang kebutuhan pokok sehari-hari dengan transaksi cepat dan barcode scanner.',
+    sampleProducts: [
+      { name: 'Minyak Goreng 1L', price: 'Rp 18.000', unit: 'liter', stock: '24 liter' },
+      { name: 'Beras Premium 5kg', price: 'Rp 72.000', unit: 'karung', stock: '15 karung' },
+      { name: 'Gula Pasir 1kg', price: 'Rp 17.500', unit: 'kg', stock: '40 kg' },
+    ],
+    keyHighlights: [
+      'Terminologi standar: Produk & Stok',
+      'Scan barcode instan saat kasir',
+      'Peringatan otomatis saat sembako menipis',
+      'Katalog WhatsApp: *KATALOG PRODUK*',
+    ],
+  },
+  {
+    id: 'APOTEK_OBAT',
+    name: 'Apotek & Toko Obat',
+    iconName: 'Pill',
+    badge: 'Farmasi & Alkes',
+    productTerm: 'Obat / Alkes',
+    catalogTerm: 'Katalog Obat / Alkes',
+    summary: 'Terminologi otomatis beralih menjadi Obat / Alkes untuk pelacakan obat strip, botol, dan peralatan medis.',
+    sampleProducts: [
+      { name: 'Paracetamol 500mg', price: 'Rp 6.500', unit: 'strip', stock: '50 strip' },
+      { name: 'Amoxicillin 500mg', price: 'Rp 12.000', unit: 'strip', stock: '30 strip' },
+      { name: 'Vitamin C 1000mg', price: 'Rp 35.000', unit: 'botol', stock: '20 botol' },
+    ],
+    keyHighlights: [
+      'Terminologi adaptif: Obat / Alkes & Stok',
+      'Dukungan satuan strip, blister, botol, box',
+      'Catatan pemakaian & struk obat untuk pasien',
+      'Katalog WhatsApp: *KATALOG OBAT / ALKES*',
+    ],
+  },
+  {
+    id: 'TOKO_BANGUNAN',
+    name: 'Toko Bangunan & Material',
+    iconName: 'Hammer',
+    badge: 'Material & Konstruksi',
+    productTerm: 'Material',
+    catalogTerm: 'Katalog Material',
+    summary: 'Mendukung ragam satuan material proyek seperti sak, batang, lembar, meter, dan piutang tukang.',
+    sampleProducts: [
+      { name: 'Semen Tiga Roda 50kg', price: 'Rp 65.000', unit: 'sak', stock: '80 sak' },
+      { name: 'Cat Tembok Putih 5kg', price: 'Rp 115.000', unit: 'kaleng', stock: '12 kaleng' },
+      { name: 'Paku Kayu 5cm', price: 'Rp 22.000', unit: 'kg', stock: '25 kg' },
+    ],
+    keyHighlights: [
+      'Terminologi adaptif: Material & Stok',
+      'Dukungan satuan proyek (sak, kaleng, batang, kg)',
+      'Buku piutang khusus langganan kontraktor/tukang',
+      'Katalog WhatsApp: *KATALOG MATERIAL*',
+    ],
+  },
+  {
+    id: 'BENGKEL_MOTOR_MOBIL',
+    name: 'Bengkel Motor & Mobil',
+    iconName: 'Wrench',
+    badge: 'Oli, Sparepart & Servis',
+    productTerm: 'Sparepart & Oli',
+    catalogTerm: 'Katalog Sparepart & Oli',
+    summary: 'Mengkombinasikan barang fisik (sparepart, oli) dan jasa servis non-stok dalam satu nota struk kasir.',
+    sampleProducts: [
+      { name: 'Oli MPX2 0.8L', price: 'Rp 55.000', unit: 'botol', stock: '15 botol', type: 'Fisik' },
+      { name: 'Busi NGK CR6HSA', price: 'Rp 25.000', unit: 'pcs', stock: '20 pcs', type: 'Fisik' },
+      { name: 'Jasa Ganti Oli & Servis Ringan', price: 'Rp 25.000', unit: 'jasa', stock: 'Tanpa Stok', type: 'Jasa' },
+    ],
+    keyHighlights: [
+      'Terminologi adaptif: Sparepart & Oli & Jasa Servis',
+      'Dukungan item Fisik (berkurang stok) & Jasa (tanpa stok)',
+      'Struk kasir mencantumkan jasa montir & onderdil',
+      'Katalog WhatsApp: *KATALOG SPAREPART & OLI*',
+    ],
   },
 ];

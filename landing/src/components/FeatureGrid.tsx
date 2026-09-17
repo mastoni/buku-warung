@@ -26,7 +26,7 @@ const iconMap: Record<string, React.ElementType> = {
 
 export const FeatureGrid: React.FC = () => {
   return (
-    <section id="fitur" className="py-16 md:py-24 bg-white border-y border-slate-200/80">
+    <section id="fitur" className="py-16 md:py-24 bg-white border-y border-slate-200/80 reveal-on-scroll">
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
         {/* Section Header */}
         <div className="text-center max-w-2xl mx-auto space-y-3 mb-12 sm:mb-16">

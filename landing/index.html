@@ -45,6 +45,33 @@
       href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
+
+    <!-- JSON-LD Structured Data for SoftwareApplication -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "Buku Warung",
+      "applicationCategory": "BusinessApplication",
+      "operatingSystem": "Android 7.0 and up",
+      "description": "Aplikasi kasir POS offline-first, manajemen stok barang, buku hutang piutang, dan pembukuan praktis UMKM untuk Warung Sembako, Apotek, Toko Bangunan, dan Bengkel.",
+      "offers": {
+        "@type": "Offer",
+        "price": "50000",
+        "priceCurrency": "IDR",
+        "priceValidUntil": "2027-12-31",
+        "availability": "https://schema.org/InStock",
+        "url": "https://bukuwarung.skmnetwork.com/"
+      },
+      "url": "https://bukuwarung.skmnetwork.com/",
+      "image": "https://bukuwarung.skmnetwork.com/img/feature-graphic.png",
+      "author": {
+        "@type": "Organization",
+        "name": "SKM Network",
+        "url": "https://skmnetwork.com"
+      }
+    }
+    </script>
   </head>
   <body class="bg-slate-50 text-slate-900 font-sans antialiased selection:bg-emerald-500 selection:text-white pb-20 md:pb-0">
     <div id="root"></div>

@@ -4,7 +4,7 @@ import { LANDING_CONFIG, COMPARISON_POINTS } from '../data/landingData';
 
 export const PricingSection: React.FC = () => {
   return (
-    <section id="harga" className="py-16 md:py-24 bg-white border-t border-slate-200">
+    <section id="harga" className="py-16 md:py-24 bg-white border-t border-slate-200 reveal-on-scroll">
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
         {/* Section Header */}
         <div className="text-center max-w-2xl mx-auto space-y-3 mb-12 sm:mb-16">
