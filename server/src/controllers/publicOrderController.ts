@@ -1,12 +1,13 @@
 import crypto from 'crypto';
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { AdminService } from '../services/adminService.js';
+import { PricingService } from '../services/pricingService.js';
 import { getDatabase } from '../db/database.js';
 import { normalizeIndonesianPhone } from '../utils/phone.js';
 import { normalizeEmail } from '../utils/crypto.js';
 import { maskCustomerName, maskPhone, maskEmail } from '../utils/masking.js';
 import { generatePublicOrderToken, verifyPublicOrderToken } from '../utils/token.js';
-import { OrderRecord } from '../types/index.js';
+import { OrderRecord, PricingResult } from '../types/index.js';
 
 export const OFFICIAL_QRIS = {
   merchant: 'KIOS KIARA',
@@ -31,9 +32,73 @@ export interface PublicCreateOrderBody {
   [key: string]: unknown;
 }
 
+function formatRupiahServer(num: number): string {
+  return 'Rp ' + Number(num || 0).toLocaleString('id-ID');
+}
+
 export async function registerPublicOrderRoutes(fastify: FastifyInstance) {
   const adminService = new AdminService();
+  const pricingService = new PricingService();
   const db = getDatabase();
+
+  /**
+   * GET /v1/public/pricing
+   * Customer/Client fetches authoritative public commercial pricing.
+   * Rate limited: 60 requests per minute per IP.
+   */
+  fastify.get(
+    '/v1/public/pricing',
+    {
+      config: {
+        rateLimit: {
+          max: 60,
+          timeWindow: 60 * 1000
+        }
+      },
+      schema: {
+        querystring: {
+          type: 'object',
+          properties: {
+            product: { type: 'string', maxLength: 50 }
+          }
+        }
+      }
+    },
+    async (request: FastifyRequest<{ Querystring: { product?: string } }>, reply: FastifyReply) => {
+      const product = (request.query.product || 'BUKU_WARUNG').trim();
+      const promo = pricingService.getPromotion(product);
+
+      if (!promo) {
+        return reply.status(404).send({
+          success: false,
+          error: {
+            code: 'PRODUCT_NOT_FOUND',
+            message: 'Produk tidak ditemukan.'
+          }
+        });
+      }
+
+      const pricing = pricingService.resolvePrice(product);
+
+      return reply.status(200).send({
+        success: true,
+        data: {
+          product: pricing.product,
+          isPromoActive: pricing.isPromoActive,
+          effectivePrice: pricing.effectivePrice,
+          normalPrice: pricing.normalPrice,
+          promoPrice: pricing.promoPrice,
+          currency: 'IDR',
+          promoName: pricing.promoName,
+          startsAt: pricing.startsAt,
+          expiresAt: pricing.expiresAt,
+          timezone: pricing.timezone,
+          showCountdown: pricing.showCountdown,
+          serverTime: pricing.serverTime
+        }
+      });
+    }
+  );
 
   /**
    * POST /v1/public/orders
@@ -138,16 +203,20 @@ export async function registerPublicOrderRoutes(fastify: FastifyInstance) {
             paymentMethod: existingPending.payment_method || 'QRIS — KIOS KIARA',
             publicToken,
             qrisImageUrl: OFFICIAL_QRIS.imageUrl,
-            qris: OFFICIAL_QRIS,
+            qris: {
+              ...OFFICIAL_QRIS,
+              nominal: existingPending.amount
+            },
             idempotent: true
           }
         });
       }
 
-      // 6. Security Enforcement: Hardcode authoritative commercial price and product
-      // Never trust client-supplied product or amount
+      // 6. Security Enforcement: Resolve authoritative commercial price from PricingService
+      // Never trust client-supplied product, amount, or promo
       const AUTHORITATIVE_PRODUCT = 'BUKU_WARUNG';
-      const AUTHORITATIVE_AMOUNT = 50000;
+      const pricing = pricingService.resolvePrice(AUTHORITATIVE_PRODUCT, Date.now());
+      const AUTHORITATIVE_AMOUNT = pricing.effectivePrice;
       const DEFAULT_PAYMENT_METHOD = 'QRIS — KIOS KIARA';
 
       // 7. Reuse existing AdminService.createOrder()
@@ -194,7 +263,10 @@ export async function registerPublicOrderRoutes(fastify: FastifyInstance) {
           paymentMethod: DEFAULT_PAYMENT_METHOD,
           publicToken,
           qrisImageUrl: OFFICIAL_QRIS.imageUrl,
-          qris: OFFICIAL_QRIS
+          qris: {
+            ...OFFICIAL_QRIS,
+            nominal: AUTHORITATIVE_AMOUNT
+          }
         }
       });
     }
@@ -255,7 +327,10 @@ export async function registerPublicOrderRoutes(fastify: FastifyInstance) {
           createdAt: order.created_at,
           verifiedAt: order.verified_at,
           qrisImageUrl: OFFICIAL_QRIS.imageUrl,
-          qris: OFFICIAL_QRIS
+          qris: {
+            ...OFFICIAL_QRIS,
+            nominal: order.amount
+          }
         }
       });
     }
@@ -270,7 +345,8 @@ export async function registerPublicOrderRoutes(fastify: FastifyInstance) {
     async (_request: FastifyRequest, reply: FastifyReply) => {
       const nonce = crypto.randomBytes(16).toString('base64');
       const csp = `default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data: https:;object-src 'none';script-src 'self' 'nonce-${nonce}';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests`;
-      const html = renderPublicOrderPage(nonce);
+      const pricing = pricingService.resolvePrice('BUKU_WARUNG');
+      const html = renderPublicOrderPage(nonce, pricing);
       return reply
         .type('text/html; charset=utf-8')
         .header('Content-Security-Policy', csp)
@@ -284,14 +360,19 @@ export async function registerPublicOrderRoutes(fastify: FastifyInstance) {
  * Self-contained HTML renderer for /beli/buku-warung
  * Clean, mobile-first, zero framework, CSP-compatible with per-response nonce.
  */
-function renderPublicOrderPage(nonce: string): string {
+function renderPublicOrderPage(nonce: string, pricing?: PricingResult): string {
+  const effectivePrice = pricing ? pricing.effectivePrice : 50000;
+  const effectivePriceFormatted = formatRupiahServer(effectivePrice);
+  const normalPriceFormatted = formatRupiahServer(pricing ? pricing.normalPrice : 100000);
+  const isPromoActive = pricing ? pricing.isPromoActive : true;
+
   return `<!DOCTYPE html>
 <html lang="id">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Buku Warung v0.1.0 — Pesan Aplikasi Kasir Warung</title>
-<meta name="description" content="Pesan aplikasi kasir Buku Warung Rp50.000 sekali beli tanpa langganan. 100% offline, cetak struk thermal, catat hutang piutang.">
+<meta name="description" content="Pesan aplikasi kasir Buku Warung ${effectivePriceFormatted} sekali beli tanpa langganan. 100% offline, cetak struk thermal, catat hutang piutang.">
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
@@ -649,8 +730,11 @@ function renderPublicOrderPage(nonce: string): string {
         <div class="product-tag">1 Lisensi = 1 Email = 1 HP Android</div>
       </div>
       <div class="product-price">
-        <div class="price-amount" id="displayAmount">Rp 50.000</div>
-        <div class="price-type">Sekali Beli</div>
+        ${isPromoActive && pricing && pricing.normalPrice > pricing.effectivePrice ? `
+        <div style="font-size: 13px; color: #94a3b8; text-decoration: line-through;">${normalPriceFormatted}</div>
+        ` : ''}
+        <div class="price-amount" id="displayAmount">${effectivePriceFormatted}</div>
+        <div class="price-type">${isPromoActive && pricing?.promoName ? pricing.promoName + ' · ' : ''}Sekali Beli</div>
       </div>
     </div>
 
@@ -686,7 +770,7 @@ function renderPublicOrderPage(nonce: string): string {
         </div>
 
         <button type="submit" class="btn btn-primary" id="submitBtn">
-          <span>Lanjutkan Pesanan (Rp 50.000)</span>
+          <span>Lanjutkan Pesanan (${effectivePriceFormatted})</span>
         </button>
       </form>
 
@@ -710,7 +794,7 @@ function renderPublicOrderPage(nonce: string): string {
         </div>
         <div class="meta-row">
           <span class="meta-label">Total Pembayaran</span>
-          <span class="meta-value" style="color: #059669;" id="amountVal">Rp 50.000</span>
+          <span class="meta-value" style="color: #059669;" id="amountVal">${effectivePriceFormatted}</span>
         </div>
         <div class="meta-row">
           <span class="meta-label">Status Pesanan</span>
@@ -730,8 +814,8 @@ function renderPublicOrderPage(nonce: string): string {
         <div class="qris-merchant">KIOS KIARA</div>
         <div class="qris-nmid">NMID: ID1026512762125</div>
         <img src="https://license.skmnetwork.com/img/qris-kios-kiara.png" alt="QRIS Kios Kiara" class="qris-image" id="qrisImg">
-        <div class="qris-instruction">
-          Buka aplikasi BCA, Mandiri, BRI, GoPay, OVO, Dana, atau ShopeePay lalu scan QRIS di atas sebesar <strong>Rp 50.000</strong>.
+        <div class="qris-instruction" id="qrisInstruction">
+          Buka aplikasi BCA, Mandiri, BRI, GoPay, OVO, Dana, atau ShopeePay lalu scan QRIS di atas sebesar <strong>${effectivePriceFormatted}</strong>.
         </div>
       </div>
 
@@ -763,6 +847,7 @@ function renderPublicOrderPage(nonce: string): string {
 <script nonce="${nonce}">
 (function() {
   var ADMIN_WA = '6285157056604';
+  var initialEffectivePrice = ${effectivePrice};
   var currentPublicToken = '';
   var currentOrderData = null;
   var pollIntervalId = null;
@@ -793,7 +878,7 @@ function renderPublicOrderPage(nonce: string): string {
 
   // Helper formatting
   function formatRupiah(num) {
-    return 'Rp ' + (num || 50000).toLocaleString('id-ID');
+    return 'Rp ' + (num !== undefined && num !== null ? num : initialEffectivePrice).toLocaleString('id-ID');
   }
 
   // Token recovery from URL Hash (#token=...) or Session
@@ -846,6 +931,11 @@ function renderPublicOrderPage(nonce: string): string {
     paymentMethodVal.textContent = order.paymentMethod || 'QRIS — KIOS KIARA';
     customerNameVal.textContent = order.customerNameMasked || nameInput.value.trim() || 'Pelanggan';
 
+    var instructionEl = document.getElementById('qrisInstruction');
+    if (instructionEl) {
+      instructionEl.innerHTML = 'Buka aplikasi BCA, Mandiri, BRI, GoPay, OVO, Dana, atau ShopeePay lalu scan QRIS di atas sebesar <strong>' + formatRupiah(order.amount) + '</strong>.';
+    }
+
     // Status mapping
     var status = order.status || 'PENDING_PAYMENT';
     var paymentStatus = order.paymentStatus || 'UNPAID';
@@ -866,7 +956,7 @@ function renderPublicOrderPage(nonce: string): string {
       'saya sudah melakukan pembayaran Buku Warung.\\n\\n' +
       'Order: ' + (order.orderNumber || '') + '\\n' +
       'Nama: ' + custName + '\\n' +
-      'Nominal: Rp 50.000\\n\\n' +
+      'Nominal: ' + formatRupiah(order.amount) + '\\n\\n' +
       'Mohon dibantu verifikasi pembayaran.';
 
     var waUrl = 'https://wa.me/' + ADMIN_WA + '?text=' + encodeURIComponent(waMessage);
@@ -1041,7 +1131,7 @@ function renderPublicOrderPage(nonce: string): string {
     })
     .finally(function() {
       submitBtn.disabled = false;
-      submitBtn.textContent = 'Lanjutkan Pesanan (Rp 50.000)';
+      submitBtn.textContent = 'Lanjutkan Pesanan (' + formatRupiah(initialEffectivePrice) + ')';
     });
   });
 
