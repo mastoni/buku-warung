@@ -931,7 +931,8 @@ function handleGenerateLicenseForOrder(orderId, customerName, ownerEmail) {
     try {
       const res = await fetch(`/api/orders/${orderId}/generate-license`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({})
       });
 
       const result = await res.json();
@@ -945,7 +946,7 @@ function handleGenerateLicenseForOrder(orderId, customerName, ownerEmail) {
         // Open WhatsApp delivery preparation modal immediately
         openDeliveryPreparationModal(orderId, result.data?.licenseCode);
       } else {
-        showToast(result.error?.message || 'Gagal generate lisensi.');
+        showToast(result.error?.message || result.message || 'Gagal generate lisensi.');
       }
     } catch {
       showToast('Terjadi kesalahan saat memproses lisensi.');
@@ -1058,7 +1059,8 @@ async function handleMarkDelivered(orderId) {
   try {
     const res = await fetch(`/api/orders/${orderId}/mark-delivered`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' }
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({})
     });
 
     const data = await res.json();
@@ -1068,7 +1070,7 @@ async function handleMarkDelivered(orderId) {
       loadSales();
       loadDashboard();
     } else {
-      showToast(data.error?.message || 'Gagal menandai status pengiriman.');
+      showToast(data.error?.message || data.message || 'Gagal menandai status pengiriman.');
     }
   } catch {
     showToast('Terjadi kesalahan jaringan.');
