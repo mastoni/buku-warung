@@ -55,6 +55,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import id.skmnetwork.bukuwarung.data.local.entity.ItemType
 import id.skmnetwork.bukuwarung.data.local.entity.ProductEntity
 import id.skmnetwork.bukuwarung.data.preferences.UserSettings
 import id.skmnetwork.bukuwarung.domain.business.BusinessTaxonomyRegistry
@@ -262,6 +263,7 @@ fun ProductsScreen(
                     items(filteredProducts, key = { it.id }) { product ->
                         ProductItemCard(
                             product = product,
+                            serviceLabel = resolvedProfile.terminology.serviceLabel,
                             onEdit = {
                                 if (product.id > 0) {
                                     onEditProduct(product.id)
@@ -384,6 +386,7 @@ private fun ProductsHeader(
 @Composable
 private fun ProductItemCard(
     product: ProductEntity,
+    serviceLabel: String = "Layanan",
     onEdit: () -> Unit
 ) {
     val stock = product.stock
@@ -447,11 +450,13 @@ private fun ProductItemCard(
 
                 Spacer(Modifier.height(4.dp))
 
-                // Stock Status Pill
+                // Stock Status Pill / Non-Stock Identity Badge
                 StockStatusBadge(
                     stock = stock,
                     minStock = minStock,
-                    unit = product.unit
+                    unit = product.unit,
+                    itemType = product.itemType,
+                    serviceLabel = serviceLabel
                 )
             }
 
@@ -472,57 +477,92 @@ private fun ProductItemCard(
 }
 
 /**
- * Stock Status indicator pill (Out of stock, Low stock, Normal).
+ * Stock Status indicator pill (Out of stock, Low stock, Normal) for stockable items,
+ * or non-stock identity badge for DIGITAL and SERVICE items.
  */
 @Composable
 private fun StockStatusBadge(
     stock: Double,
     minStock: Double,
-    unit: String
+    unit: String,
+    itemType: String = ItemType.PHYSICAL.name,
+    serviceLabel: String = "Layanan"
 ) {
-    val displayStock = if (stock % 1.0 == 0.0) stock.toInt().toString() else stock.toString()
-
-    when {
-        stock <= 0 -> {
+    when (itemType) {
+        ItemType.SERVICE.name -> {
             Surface(
                 shape = RoundedCornerShape(6.dp),
-                color = Color(0xFFFFEBEE)
+                color = Color(0xFFE8F3FF)
             ) {
                 Text(
-                    text = "Stok Habis",
-                    color = Color(0xFFD32F2F),
+                    text = serviceLabel,
+                    color = Color(0xFF096DD9),
                     fontWeight = FontWeight.Bold,
                     fontSize = 11.sp,
                     modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                 )
             }
         }
-        minStock > 0 && stock <= minStock -> {
+        ItemType.DIGITAL.name -> {
             Surface(
                 shape = RoundedCornerShape(6.dp),
-                color = Color(0xFFFFF3E0)
+                color = Color(0xFFF6FFED)
             ) {
                 Text(
-                    text = "Sisa $displayStock $unit (Menipis)",
-                    color = Color(0xFFE65100),
-                    fontWeight = FontWeight.SemiBold,
+                    text = "Produk Digital",
+                    color = Color(0xFF389E0D),
+                    fontWeight = FontWeight.Bold,
                     fontSize = 11.sp,
                     modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                 )
             }
         }
         else -> {
-            Surface(
-                shape = RoundedCornerShape(6.dp),
-                color = Color(0xFFF1F5F2)
-            ) {
-                Text(
-                    text = "Stok: $displayStock $unit",
-                    color = AppColors.TextSecondary,
-                    fontWeight = FontWeight.Medium,
-                    fontSize = 11.sp,
-                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                )
+            val displayStock = if (stock % 1.0 == 0.0) stock.toInt().toString() else stock.toString()
+
+            when {
+                stock <= 0 -> {
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = Color(0xFFFFEBEE)
+                    ) {
+                        Text(
+                            text = "Stok Habis",
+                            color = Color(0xFFD32F2F),
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 11.sp,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
+                    }
+                }
+                minStock > 0 && stock <= minStock -> {
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = Color(0xFFFFF3E0)
+                    ) {
+                        Text(
+                            text = "Sisa $displayStock $unit (Menipis)",
+                            color = Color(0xFFE65100),
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 11.sp,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
+                    }
+                }
+                else -> {
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = Color(0xFFF1F5F2)
+                    ) {
+                        Text(
+                            text = "Stok: $displayStock $unit",
+                            color = AppColors.TextSecondary,
+                            fontWeight = FontWeight.Medium,
+                            fontSize = 11.sp,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
+                    }
+                }
             }
         }
     }

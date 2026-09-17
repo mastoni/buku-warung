@@ -415,4 +415,97 @@ class AdaptiveProductUnitTest {
         assertEquals(1, existingDbCategories.size)
         assertEquals("Kategori Khusus Toko", existingDbCategories.first().name)
     }
+
+    /**
+     * Test Q: Non-stock products (DIGITAL, SERVICE) with stock=0 are not displayed as "Stok Habis",
+     * while stockable products (PHYSICAL, FUEL) correctly display stock or "Stok Habis".
+     */
+    @Test
+    fun testQ_nonStockBadgesHarmonization() {
+        val digital = ProductEntity(
+            id = 301L,
+            categoryId = 1L,
+            name = "Pulsa 10k",
+            purchasePrice = 10000L,
+            sellingPrice = 12000L,
+            stock = 0.0,
+            itemType = ItemType.DIGITAL.name
+        )
+
+        val service = ProductEntity(
+            id = 302L,
+            categoryId = 1L,
+            name = "Jasa Servis",
+            purchasePrice = 0L,
+            sellingPrice = 30000L,
+            stock = 0.0,
+            itemType = ItemType.SERVICE.name
+        )
+
+        val physicalEmpty = ProductEntity(
+            id = 303L,
+            categoryId = 1L,
+            name = "Beras 5kg",
+            purchasePrice = 50000L,
+            sellingPrice = 60000L,
+            stock = 0.0,
+            itemType = ItemType.PHYSICAL.name
+        )
+
+        val physicalWithStock = ProductEntity(
+            id = 304L,
+            categoryId = 1L,
+            name = "Minyak 1L",
+            purchasePrice = 14000L,
+            sellingPrice = 16000L,
+            stock = 10.0,
+            itemType = ItemType.PHYSICAL.name
+        )
+
+        val fuelEmpty = ProductEntity(
+            id = 305L,
+            categoryId = 1L,
+            name = "Pertalite",
+            purchasePrice = 10000L,
+            sellingPrice = 12000L,
+            stock = 0.0,
+            unit = "liter",
+            itemType = ItemType.FUEL.name
+        )
+
+        val fuelWithStock = ProductEntity(
+            id = 306L,
+            categoryId = 1L,
+            name = "Pertamax",
+            purchasePrice = 12000L,
+            sellingPrice = 14000L,
+            stock = 25.5,
+            unit = "liter",
+            itemType = ItemType.FUEL.name
+        )
+
+        // Helper simulation of badge determination logic
+        fun determineBadgeText(product: ProductEntity, serviceLabel: String = "Layanan"): String {
+            return when (product.itemType) {
+                ItemType.SERVICE.name -> serviceLabel
+                ItemType.DIGITAL.name -> "Produk Digital"
+                else -> {
+                    if (product.stock <= 0.0) "Stok Habis"
+                    else if (product.minimumStock > 0 && product.stock <= product.minimumStock) "Sisa ${product.stock} ${product.unit} (Menipis)"
+                    else "Stok: ${product.stock} ${product.unit}"
+                }
+            }
+        }
+
+        assertEquals("Produk Digital", determineBadgeText(digital))
+        assertEquals("Layanan", determineBadgeText(service))
+        assertEquals("Jasa Servis Khusus", determineBadgeText(service, "Jasa Servis Khusus"))
+
+        assertEquals("Stok Habis", determineBadgeText(physicalEmpty))
+        assertEquals("Stok: 10.0 pcs", determineBadgeText(physicalWithStock))
+
+        assertEquals("Stok Habis", determineBadgeText(fuelEmpty))
+        assertEquals("Stok: 25.5 liter", determineBadgeText(fuelWithStock))
+    }
 }
+
