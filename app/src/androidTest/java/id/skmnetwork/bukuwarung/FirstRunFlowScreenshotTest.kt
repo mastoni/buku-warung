@@ -109,7 +109,7 @@ class FirstRunFlowScreenshotTest {
         composeTestRule.setContent {
             BukuWarungTheme {
                 FirstSetupScreen(
-                    onCompleteSetup = { shop, owner, phone, address ->
+                    onCompleteSetup = { shop, owner, phone, address, _, _ ->
                         submittedShopName = shop
                         submittedOwnerName = owner
                         submittedPhone = phone
