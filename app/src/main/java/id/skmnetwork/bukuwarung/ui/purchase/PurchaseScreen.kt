@@ -55,7 +55,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -87,6 +89,8 @@ import java.util.Locale
 fun PurchaseScreen(
     viewModel: ProductViewModel,
     supplierViewModel: SupplierViewModel,
+    poViewModel: PurchaseOrderViewModel? = null,
+    printerService: id.skmnetwork.bukuwarung.printer.PrinterService? = null,
     userSettings: UserSettings? = null,
     onNavigateToAddProduct: () -> Unit = {}
 ) {
@@ -108,7 +112,8 @@ fun PurchaseScreen(
     val productLabel = terminology.productLabel
     val debtLabel = terminology.debtLabel
 
-    var selectedTab by remember { mutableStateOf(0) } // 0: Belanja Baru, 1: Riwayat Belanja
+    var selectedTab by remember { mutableStateOf(0) } // 0: Belanja Baru, 1: Pesanan Supplier (PO), 2: Riwayat Belanja
+    var showCreatePoDialog by remember { mutableStateOf(false) }
 
     var paymentMethod by remember { mutableStateOf("CASH") } // "CASH" or "CREDIT"
     var selectedSupplierForCredit by remember { mutableStateOf<SupplierEntity?>(null) }
@@ -431,6 +436,7 @@ fun PurchaseScreen(
             PurchaseHeader(
                 selectedTab = selectedTab,
                 purchaseLabel = purchaseLabel,
+                supplierLabel = supplierLabel,
                 onTabSelected = { selectedTab = it }
             )
         },
@@ -765,9 +771,36 @@ fun PurchaseScreen(
                         }
                     }
                 }
+            } else if (selectedTab == 1) {
+                // ==========================================
+                // TAB 1: PESANAN SUPPLIER (PURCHASE ORDERS)
+                // ==========================================
+                if (poViewModel != null) {
+                    PurchaseOrderTabContent(
+                        poViewModel = poViewModel,
+                        dbProducts = dbProducts,
+                        suppliers = suppliers,
+                        shopName = userSettings?.shopName ?: "Usaha Kami",
+                        printerService = printerService,
+                        supplierLabel = supplierLabel,
+                        purchaseLabel = purchaseLabel,
+                        onOpenCreatePo = { showCreatePoDialog = true }
+                    )
+                } else {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "Purchase Order tidak tersedia",
+                            color = AppColors.TextSecondary,
+                            fontSize = 13.sp
+                        )
+                    }
+                }
             } else {
                 // ==========================================
-                // TAB 1: RIWAYAT BELANJA (PURCHASE HISTORY)
+                // TAB 2: RIWAYAT BELANJA (PURCHASE HISTORY)
                 // ==========================================
                 if (purchases.isEmpty()) {
                     PurchaseEmptyHistoryState(
@@ -804,6 +837,32 @@ fun PurchaseScreen(
             }
         }
     }
+
+    // Create Purchase Order Dialog
+    if (showCreatePoDialog && poViewModel != null) {
+        val scope = rememberCoroutineScope()
+        CreateEditPurchaseOrderDialog(
+            dbProducts = dbProducts,
+            suppliers = suppliers,
+            supplierLabel = supplierLabel,
+            onDismiss = { showCreatePoDialog = false },
+            onSave = { supplierId, items, notes ->
+                scope.launch {
+                    val res = poViewModel.createDraftOrder(
+                        supplierId = supplierId,
+                        items = items,
+                        notes = notes
+                    )
+                    if (res.isSuccess) {
+                        Toast.makeText(context, "Draft pesanan berhasil dibuat", Toast.LENGTH_SHORT).show()
+                        showCreatePoDialog = false
+                    } else {
+                        Toast.makeText(context, res.exceptionOrNull()?.message ?: "Gagal membuat draft", Toast.LENGTH_LONG).show()
+                    }
+                }
+            }
+        )
+    }
 }
 
 /**
@@ -813,6 +872,7 @@ fun PurchaseScreen(
 private fun PurchaseHeader(
     selectedTab: Int,
     purchaseLabel: String = "Pembelian",
+    supplierLabel: String = "Supplier",
     onTabSelected: (Int) -> Unit
 ) {
     Surface(
@@ -843,7 +903,11 @@ private fun PurchaseHeader(
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            imageVector = if (selectedTab == 0) Icons.Default.LocalShipping else Icons.Default.ReceiptLong,
+                            imageVector = when (selectedTab) {
+                                0 -> Icons.Default.LocalShipping
+                                1 -> Icons.Default.ReceiptLong
+                                else -> Icons.Default.History
+                            },
                             contentDescription = null,
                             tint = Color.White,
                             modifier = Modifier.size(22.dp)
@@ -851,17 +915,25 @@ private fun PurchaseHeader(
                     }
                     Column {
                         Text(
-                            text = if (selectedTab == 0) "$purchaseLabel (Kulakan)" else "Riwayat $purchaseLabel",
+                            text = when (selectedTab) {
+                                0 -> "$purchaseLabel (Kulakan)"
+                                1 -> "Pesanan $supplierLabel"
+                                else -> "Riwayat $purchaseLabel"
+                            },
                             style = MaterialTheme.typography.titleMedium.copy(
                                 fontWeight = FontWeight.Bold,
-                                fontSize = 16.5.sp,
+                                fontSize = 16.sp,
                                 color = AppColors.TextPrimary
                             )
                         )
                         Text(
-                            text = if (selectedTab == 0) "Catat stok masuk & $purchaseLabel barang" else "Daftar transaksi $purchaseLabel produk",
+                            text = when (selectedTab) {
+                                0 -> "Catat stok masuk & $purchaseLabel barang"
+                                1 -> "Daftar Purchase Order ke $supplierLabel"
+                                else -> "Daftar transaksi $purchaseLabel produk"
+                            },
                             style = MaterialTheme.typography.bodySmall.copy(
-                                fontSize = 11.5.sp,
+                                fontSize = 11.sp,
                                 color = AppColors.TextSecondary
                             )
                         )
@@ -873,7 +945,11 @@ private fun PurchaseHeader(
                     color = Color(0xFFE8F5E9)
                 ) {
                     Text(
-                        text = if (selectedTab == 0) "$purchaseLabel Baru" else "Riwayat",
+                        text = when (selectedTab) {
+                            0 -> "$purchaseLabel Baru"
+                            1 -> "Pesanan $supplierLabel"
+                            else -> "Riwayat"
+                        },
                         color = AppColors.GreenPrimary,
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 11.sp,
@@ -886,7 +962,7 @@ private fun PurchaseHeader(
 
             Spacer(Modifier.height(10.dp))
 
-            // Segmented Capsule Tab Bar
+            // Segmented Capsule Tab Bar (3 Tabs)
             Surface(
                 shape = RoundedCornerShape(24.dp),
                 color = Color(0xFFF1F4F2),
@@ -917,25 +993,26 @@ private fun PurchaseHeader(
                                 imageVector = Icons.Default.ShoppingCart,
                                 contentDescription = null,
                                 tint = if (selectedTab == 0) Color.White else AppColors.TextSecondary,
-                                modifier = Modifier.size(16.dp)
+                                modifier = Modifier.size(15.dp)
                             )
-                            Spacer(Modifier.width(6.dp))
+                            Spacer(Modifier.width(4.dp))
                             Text(
                                 text = "$purchaseLabel Baru",
                                 color = if (selectedTab == 0) Color.White else AppColors.TextSecondary,
                                 fontWeight = if (selectedTab == 0) FontWeight.Bold else FontWeight.Medium,
-                                fontSize = 13.sp
+                                fontSize = 11.5.sp,
+                                maxLines = 1
                             )
                         }
                     }
 
-                    // Tab 1: Riwayat Belanja
+                    // Tab 1: Pesanan Supplier (PO)
                     Surface(
                         shape = RoundedCornerShape(20.dp),
                         color = if (selectedTab == 1) AppColors.GreenPrimary else Color.Transparent,
                         shadowElevation = if (selectedTab == 1) 1.dp else 0.dp,
                         modifier = Modifier
-                            .weight(1f)
+                            .weight(1.1f)
                             .padding(3.dp)
                             .clickable { onTabSelected(1) }
                     ) {
@@ -945,17 +1022,50 @@ private fun PurchaseHeader(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Icon(
-                                imageVector = Icons.Default.History,
+                                imageVector = Icons.Default.ReceiptLong,
                                 contentDescription = null,
                                 tint = if (selectedTab == 1) Color.White else AppColors.TextSecondary,
-                                modifier = Modifier.size(16.dp)
+                                modifier = Modifier.size(15.dp)
                             )
-                            Spacer(Modifier.width(6.dp))
+                            Spacer(Modifier.width(4.dp))
                             Text(
-                                text = "Riwayat $purchaseLabel",
+                                text = "Pesanan $supplierLabel",
                                 color = if (selectedTab == 1) Color.White else AppColors.TextSecondary,
                                 fontWeight = if (selectedTab == 1) FontWeight.Bold else FontWeight.Medium,
-                                fontSize = 13.sp
+                                fontSize = 11.5.sp,
+                                maxLines = 1
+                            )
+                        }
+                    }
+
+                    // Tab 2: Riwayat Belanja
+                    Surface(
+                        shape = RoundedCornerShape(20.dp),
+                        color = if (selectedTab == 2) AppColors.GreenPrimary else Color.Transparent,
+                        shadowElevation = if (selectedTab == 2) 1.dp else 0.dp,
+                        modifier = Modifier
+                            .weight(0.9f)
+                            .padding(3.dp)
+                            .clickable { onTabSelected(2) }
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxSize(),
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.History,
+                                contentDescription = null,
+                                tint = if (selectedTab == 2) Color.White else AppColors.TextSecondary,
+                                modifier = Modifier.size(15.dp)
+                            )
+                            Spacer(Modifier.width(4.dp))
+                            Text(
+                                text = "Riwayat",
+                                color = if (selectedTab == 2) Color.White else AppColors.TextSecondary,
+                                fontWeight = if (selectedTab == 2) FontWeight.Bold else FontWeight.Medium,
+                                fontSize = 11.5.sp,
+                                maxLines = 1
                             )
                         }
                     }

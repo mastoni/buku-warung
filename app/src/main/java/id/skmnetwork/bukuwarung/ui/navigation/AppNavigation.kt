@@ -195,6 +195,12 @@ fun BukuWarungApp() {
     val backupViewModel: BackupViewModel = viewModel(
         factory = BackupViewModelFactory(backupRestoreManager, userPreferencesRepository, authCredentialProvider)
     )
+    val purchaseOrderRepository = remember {
+        id.skmnetwork.bukuwarung.data.repository.PurchaseOrderRepository(database)
+    }
+    val purchaseOrderViewModel: id.skmnetwork.bukuwarung.ui.purchase.PurchaseOrderViewModel = viewModel(
+        factory = id.skmnetwork.bukuwarung.ui.purchase.PurchaseOrderViewModelFactory(purchaseOrderRepository, userPreferencesRepository)
+    )
     val notificationViewModel: id.skmnetwork.bukuwarung.notification.NotificationViewModel = viewModel(
         factory = id.skmnetwork.bukuwarung.notification.NotificationViewModelFactory(notificationRepository)
     )
@@ -346,6 +352,8 @@ fun BukuWarungApp() {
                 AppScreen.PURCHASE -> PurchaseScreen(
                     viewModel = productViewModel,
                     supplierViewModel = supplierViewModel,
+                    poViewModel = purchaseOrderViewModel,
+                    printerService = printerService,
                     userSettings = userSettings,
                     onNavigateToAddProduct = {
                         navigateToAddProduct(fromScreen = AppScreen.PURCHASE)
