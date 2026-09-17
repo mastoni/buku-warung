@@ -16,7 +16,7 @@ if (localPropertiesFile.exists()) {
 
 val releaseKeystorePath: String = localProperties.getProperty("RELEASE_KEYSTORE_PATH")
     ?: System.getenv("RELEASE_KEYSTORE_PATH")
-    ?: "C:\\Users\\kangtoni\\AndroidSigning\\bukuwarung-release.jks"
+    ?: "C:\\Users\\kangtoni\\AndroidSigning\\bukuwarung-release-v2.jks"
 
 val releaseKeystorePassword: String? = localProperties.getProperty("RELEASE_KEYSTORE_PASSWORD")
     ?: System.getenv("RELEASE_KEYSTORE_PASSWORD")
@@ -45,8 +45,8 @@ android {
         applicationId = "id.skmnetwork.bukuwarung"
         minSdk = 24
         targetSdk = 37
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = 2
+        versionName = "0.2.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
