@@ -379,7 +379,11 @@ async function loadAnalytics() {
     if (res.ok) {
       const result = await res.json();
       if (result.success && result.data) {
-        renderFunnelAnalytics(result.data);
+        const funnelData = result.data?.funnel;
+        if (!funnelData) {
+          throw new Error('Invalid funnel analytics response');
+        }
+        renderFunnelAnalytics(funnelData);
       }
     } else {
       showToast('Gagal memuat data analitik.');
