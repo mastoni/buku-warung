@@ -197,4 +197,37 @@ export class LicenseClient {
       body: JSON.stringify(payload)
     });
   }
+
+  /* Commercial Pricing & Promotion methods */
+
+  async listPromotions() {
+    return this.request('/v1/admin/promotions', {
+      method: 'GET'
+    });
+  }
+
+  async getPromotion(product: string) {
+    return this.request(`/v1/admin/promotions/${encodeURIComponent(product)}`, {
+      method: 'GET'
+    });
+  }
+
+  async updatePromotion(product: string, payload: UpdatePromotionPayload) {
+    return this.request(`/v1/admin/promotions/${encodeURIComponent(product)}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload)
+    });
+  }
 }
+
+export interface UpdatePromotionPayload {
+  name?: string;
+  enabled?: boolean | number;
+  normalPrice?: number;
+  promoPrice?: number;
+  startsAt?: number | string;
+  expiresAt?: number | string;
+  timezone?: string;
+  showCountdown?: boolean | number;
+}
+

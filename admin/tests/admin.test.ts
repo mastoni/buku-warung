@@ -517,4 +517,108 @@ describe('Buku Warung License Admin Dashboard MVP (C.3)', () => {
       expect(stage.count).toBe(0);
     }
   });
+
+  /* -------------------------------------------------------------------------
+   * Commercial Pricing & Promotions BFF Proxy Tests
+   * ------------------------------------------------------------------------- */
+  it('TEST C3-PRICING-01: /api/promotions rejected without session auth', async () => {
+    const res = await adminApp.inject({
+      method: 'GET',
+      url: '/api/promotions'
+    });
+    expect(res.statusCode).toBe(401);
+  });
+
+  it('TEST C3-PRICING-02: /api/promotions returns list of promotions with session auth', async () => {
+    const loginRes = await adminApp.inject({
+      method: 'POST',
+      url: '/api/auth/login',
+      payload: {
+        username: adminConfig.adminUsername,
+        password: adminConfig.adminPassword
+      }
+    });
+    const setCookie = loginRes.headers['set-cookie'] as string | string[];
+    const cookie = (Array.isArray(setCookie) ? setCookie[0] : setCookie).split(';')[0];
+
+    const res = await adminApp.inject({
+      method: 'GET',
+      url: '/api/promotions',
+      headers: { cookie }
+    });
+    expect(res.statusCode).toBe(200);
+    const body = JSON.parse(res.body);
+    expect(body.success).toBe(true);
+    expect(Array.isArray(body.data)).toBe(true);
+    expect(body.data.some((p: any) => p.product === 'BUKU_WARUNG')).toBe(true);
+  });
+
+  it('TEST C3-PRICING-03: /api/promotions/:product returns single product promotion', async () => {
+    const loginRes = await adminApp.inject({
+      method: 'POST',
+      url: '/api/auth/login',
+      payload: {
+        username: adminConfig.adminUsername,
+        password: adminConfig.adminPassword
+      }
+    });
+    const setCookie = loginRes.headers['set-cookie'] as string | string[];
+    const cookie = (Array.isArray(setCookie) ? setCookie[0] : setCookie).split(';')[0];
+
+    const res = await adminApp.inject({
+      method: 'GET',
+      url: '/api/promotions/BUKU_WARUNG',
+      headers: { cookie }
+    });
+    expect(res.statusCode).toBe(200);
+    const body = JSON.parse(res.body);
+    expect(body.success).toBe(true);
+    expect(body.data.product).toBe('BUKU_WARUNG');
+  });
+
+  it('TEST C3-PRICING-04: /api/promotions/:product updates promo config and returns updated state', async () => {
+    const loginRes = await adminApp.inject({
+      method: 'POST',
+      url: '/api/auth/login',
+      payload: {
+        username: adminConfig.adminUsername,
+        password: adminConfig.adminPassword
+      }
+    });
+    const setCookie = loginRes.headers['set-cookie'] as string | string[];
+    const cookie = (Array.isArray(setCookie) ? setCookie[0] : setCookie).split(';')[0];
+
+    const now = Date.now();
+    const res = await adminApp.inject({
+      method: 'PUT',
+      url: '/api/promotions/BUKU_WARUNG',
+      headers: { cookie },
+      payload: {
+        name: 'Promo Merdeka',
+        normalPrice: 100000,
+        promoPrice: 45000,
+        enabled: true,
+        showCountdown: true,
+        startsAt: now - 5000,
+        expiresAt: now + 7200000
+      }
+    });
+    expect(res.statusCode).toBe(200);
+    const body = JSON.parse(res.body);
+    expect(body.success).toBe(true);
+    expect(body.data.promoName).toBe('Promo Merdeka');
+    expect(body.data.effectivePrice).toBe(45000);
+  });
+
+  it('TEST C3-PRICING-05: index.html contains Promosi & Harga nav tab and tab-pricing section', () => {
+    const htmlPath = path.resolve(__dirname, '../public/index.html');
+    const html = fs.readFileSync(htmlPath, 'utf8');
+    expect(html).toContain('data-tab="pricing"');
+    expect(html).toContain('id="tab-pricing"');
+    expect(html).toContain('id="pricingConfigForm"');
+    expect(html).toContain('id="pricingNormalPriceInput"');
+    expect(html).toContain('id="pricingPromoPriceInput"');
+  });
 });
+
+

@@ -93,6 +93,18 @@ function setupEventListeners() {
   document.getElementById('createOrderForm').addEventListener('submit', handleCreateOrder);
   document.getElementById('verifyPaymentForm').addEventListener('submit', handleVerifyPayment);
 
+  const pricingConfigForm = document.getElementById('pricingConfigForm');
+  if (pricingConfigForm) {
+    pricingConfigForm.addEventListener('submit', handleSavePricing);
+  }
+
+  const refreshPricingBtn = document.getElementById('refreshPricingBtn');
+  if (refreshPricingBtn) {
+    refreshPricingBtn.addEventListener('click', () => {
+      loadPricing();
+    });
+  }
+
   const markDeliveredBtn = document.getElementById('markDeliveredBtn');
   if (markDeliveredBtn) {
     markDeliveredBtn.addEventListener('click', () => {
@@ -293,6 +305,7 @@ function switchTab(tab) {
     analytics: 'Funnel Analytics',
     sales: 'Penjualan Buku Warung (Order & Sales Management)',
     licenses: 'Daftar Lisensi Komersial',
+    pricing: 'Konfigurasi Promosi & Harga Komersial',
     recovery: 'Permintaan Recovery & Rebind Perangkat',
     audit: 'Audit Trail Log'
   };
@@ -302,6 +315,7 @@ function switchTab(tab) {
   if (tab === 'analytics') loadAnalytics();
   if (tab === 'sales') loadSales();
   if (tab === 'licenses') loadLicenses();
+  if (tab === 'pricing') loadPricing();
   if (tab === 'recovery') loadRecoveries();
   if (tab === 'audit') loadAuditLogs();
 }
@@ -1630,3 +1644,199 @@ function showToast(msg) {
     toast.classList.add('hidden');
   }, 3500);
 }
+
+/* =========================================================================
+ * Commercial Pricing & Promotion Handlers
+ * ========================================================================= */
+
+function formatDateForInput(timestamp) {
+  if (!timestamp) return '';
+  const d = new Date(timestamp);
+  const pad = (n) => String(n).padStart(2, '0');
+  const year = d.getFullYear();
+  const month = pad(d.getMonth() + 1);
+  const day = pad(d.getDate());
+  const hours = pad(d.getHours());
+  const minutes = pad(d.getMinutes());
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+}
+
+async function loadPricing() {
+  const alertEl = document.getElementById('pricingAlert');
+  if (alertEl) alertEl.classList.add('hidden');
+
+  try {
+    const res = await fetch('/api/promotions/BUKU_WARUNG');
+    if (!res.ok) {
+      throw new Error(`Failed to load promotion (HTTP ${res.status})`);
+    }
+
+    const json = await res.json();
+    if (!json.success || !json.data) {
+      throw new Error(json.error?.message || 'Data promo tidak valid.');
+    }
+
+    const promo = json.data;
+    const raw = json.raw || {};
+
+    // Update Overview Cards
+    document.getElementById('pricingProductDisplay').textContent = promo.product;
+    const statusBadge = document.getElementById('pricingStatusBadgeDisplay');
+    const statusDesc = document.getElementById('pricingStatusDetailDisplay');
+
+    if (promo.isPromoActive) {
+      statusBadge.textContent = 'PROMO AKTIF';
+      statusBadge.className = 'metric-value text-success font-bold';
+      statusDesc.textContent = `Promo '${promo.promoName}' sedang berlaku hingga ${new Date(promo.expiresAt).toLocaleDateString('id-ID')}`;
+    } else {
+      statusBadge.textContent = 'PROMO NONAKTIF';
+      statusBadge.className = 'metric-value text-warning font-bold';
+      statusDesc.textContent = 'Harga normal berlaku untuk semua order baru.';
+    }
+
+    document.getElementById('pricingEffectiveDisplay').textContent = `Rp ${formatNumber(promo.effectivePrice)}`;
+    document.getElementById('pricingEffectiveDescDisplay').textContent = promo.isPromoActive
+      ? `Diskon dari Rp ${formatNumber(promo.normalPrice)}`
+      : 'Harga dasar (tanpa promo)';
+
+    // Populate Form Inputs
+    document.getElementById('pricingProductInput').value = promo.product;
+    document.getElementById('pricingNameInput').value = promo.promoName || raw.name || '';
+    document.getElementById('pricingNormalPriceInput').value = promo.normalPrice;
+    document.getElementById('pricingPromoPriceInput').value = promo.promoPrice;
+    document.getElementById('pricingStartsAtInput').value = formatDateForInput(promo.startsAt);
+    document.getElementById('pricingExpiresAtInput').value = formatDateForInput(promo.expiresAt);
+    document.getElementById('pricingEnabledSelect').value = raw.enabled !== undefined ? String(raw.enabled) : '1';
+    document.getElementById('pricingShowCountdownSelect').value = promo.showCountdown ? '1' : '0';
+    document.getElementById('pricingTimezoneInput').value = promo.timezone || 'Asia/Jakarta';
+  } catch (err) {
+    if (alertEl) {
+      alertEl.textContent = `Gagal memuat konfigurasi harga: ${err.message}`;
+      alertEl.className = 'alert-banner alert-danger';
+      alertEl.classList.remove('hidden');
+    }
+    showToast('Gagal memuat promosi & harga.');
+  }
+}
+
+async function handleSavePricing(e) {
+  e.preventDefault();
+  const alertEl = document.getElementById('pricingAlert');
+  const saveBtn = document.getElementById('savePricingBtn');
+  if (alertEl) alertEl.classList.add('hidden');
+
+  const product = document.getElementById('pricingProductInput').value.trim();
+  const name = document.getElementById('pricingNameInput').value.trim();
+  const normalPrice = parseInt(document.getElementById('pricingNormalPriceInput').value, 10);
+  const promoPrice = parseInt(document.getElementById('pricingPromoPriceInput').value, 10);
+  const startsAtVal = document.getElementById('pricingStartsAtInput').value;
+  const expiresAtVal = document.getElementById('pricingExpiresAtInput').value;
+  const enabled = parseInt(document.getElementById('pricingEnabledSelect').value, 10);
+  const showCountdown = parseInt(document.getElementById('pricingShowCountdownSelect').value, 10);
+  const timezone = document.getElementById('pricingTimezoneInput').value.trim();
+
+  // Client-side UX pre-validation
+  if (!name) {
+    if (alertEl) {
+      alertEl.textContent = 'Nama promo wajib diisi.';
+      alertEl.className = 'alert-banner alert-danger';
+      alertEl.classList.remove('hidden');
+    }
+    return;
+  }
+
+  if (isNaN(normalPrice) || normalPrice <= 0) {
+    if (alertEl) {
+      alertEl.textContent = 'Harga normal harus lebih besar dari Rp 0.';
+      alertEl.className = 'alert-banner alert-danger';
+      alertEl.classList.remove('hidden');
+    }
+    return;
+  }
+
+  if (isNaN(promoPrice) || promoPrice <= 0) {
+    if (alertEl) {
+      alertEl.textContent = 'Harga promo harus lebih besar dari Rp 0.';
+      alertEl.className = 'alert-banner alert-danger';
+      alertEl.classList.remove('hidden');
+    }
+    return;
+  }
+
+  if (promoPrice > normalPrice) {
+    if (alertEl) {
+      alertEl.textContent = 'Harga promo tidak boleh lebih mahal dari harga normal.';
+      alertEl.className = 'alert-banner alert-danger';
+      alertEl.classList.remove('hidden');
+    }
+    return;
+  }
+
+  const startsAtMs = new Date(startsAtVal).getTime();
+  const expiresAtMs = new Date(expiresAtVal).getTime();
+
+  if (isNaN(startsAtMs) || isNaN(expiresAtMs)) {
+    if (alertEl) {
+      alertEl.textContent = 'Format tanggal & waktu mulai/berakhir tidak valid.';
+      alertEl.className = 'alert-banner alert-danger';
+      alertEl.classList.remove('hidden');
+    }
+    return;
+  }
+
+  if (startsAtMs >= expiresAtMs) {
+    if (alertEl) {
+      alertEl.textContent = 'Waktu mulai promo harus lebih awal daripada waktu berakhir.';
+      alertEl.className = 'alert-banner alert-danger';
+      alertEl.classList.remove('hidden');
+    }
+    return;
+  }
+
+  const payload = {
+    name,
+    normalPrice,
+    promoPrice,
+    startsAt: startsAtMs,
+    expiresAt: expiresAtMs,
+    enabled,
+    showCountdown,
+    timezone
+  };
+
+  try {
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Menyimpan...';
+
+    const res = await fetch(`/api/promotions/${encodeURIComponent(product)}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    const result = await res.json();
+    if (!res.ok || !result.success) {
+      throw new Error(result.error?.message || 'Gagal menyimpan konfigurasi ke server.');
+    }
+
+    if (alertEl) {
+      alertEl.textContent = '✓ Konfigurasi promosi & harga berhasil diperbarui!';
+      alertEl.className = 'alert-banner alert-success';
+      alertEl.classList.remove('hidden');
+    }
+
+    showToast('Konfigurasi harga berhasil disimpan!');
+    await loadPricing();
+  } catch (err) {
+    if (alertEl) {
+      alertEl.textContent = `Gagal menyimpan: ${err.message}`;
+      alertEl.className = 'alert-banner alert-danger';
+      alertEl.classList.remove('hidden');
+    }
+    showToast('Gagal menyimpan konfigurasi.');
+  } finally {
+    saveBtn.disabled = false;
+    saveBtn.textContent = '💾 Simpan Konfigurasi Harga';
+  }
+}
+

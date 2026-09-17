@@ -238,3 +238,44 @@ export interface FunnelAnalytics {
     activatedPaidCustomers: number;
   };
 }
+
+export interface PromotionRecord {
+  id: number;
+  product: string;
+  name: string;
+  enabled: number; // 0 or 1
+  normal_price: number;
+  promo_price: number;
+  starts_at: number;
+  expires_at: number;
+  timezone: string;
+  show_countdown: number; // 0 or 1
+  created_at: number;
+  updated_at: number;
+}
+
+export interface PricingResult {
+  product: string;
+  isPromoActive: boolean;
+  effectivePrice: number;
+  normalPrice: number;
+  promoPrice: number;
+  promoName: string;
+  startsAt: number;
+  expiresAt: number;
+  timezone: string;
+  showCountdown: boolean;
+  serverTime: number;
+}
+
+export interface UpdatePromotionRequest {
+  name?: string;
+  enabled?: boolean | number;
+  normalPrice?: number;
+  promoPrice?: number;
+  startsAt?: number | string;
+  expiresAt?: number | string;
+  timezone?: string;
+  showCountdown?: boolean | number;
+}
+

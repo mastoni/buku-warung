@@ -166,5 +166,52 @@ function initSchema(db: Database.Database): void {
     );
 
     CREATE INDEX IF NOT EXISTS idx_recovery_license_id ON recovery_requests(license_id);
+
+    CREATE TABLE IF NOT EXISTS promotions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      product TEXT NOT NULL UNIQUE,
+      name TEXT NOT NULL,
+      enabled INTEGER NOT NULL DEFAULT 1,
+      normal_price INTEGER NOT NULL,
+      promo_price INTEGER NOT NULL,
+      starts_at INTEGER NOT NULL,
+      expires_at INTEGER NOT NULL,
+      timezone TEXT NOT NULL DEFAULT 'Asia/Jakarta',
+      show_countdown INTEGER NOT NULL DEFAULT 1,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
+
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_promotions_product ON promotions(product);
   `);
+
+  // Seed default BUKU_WARUNG promotion if not exists
+  try {
+    const existingPromo = db.prepare('SELECT id FROM promotions WHERE product = ?').get('BUKU_WARUNG');
+    if (!existingPromo) {
+      const now = Date.now();
+      const defaultExpiry = new Date('2027-12-31T23:59:59+07:00').getTime();
+      db.prepare(`
+        INSERT INTO promotions (
+          product, name, enabled, normal_price, promo_price, starts_at, expires_at,
+          timezone, show_countdown, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        'BUKU_WARUNG',
+        'Promo Peluncuran',
+        1,
+        100000,
+        50000,
+        now,
+        defaultExpiry,
+        'Asia/Jakarta',
+        1,
+        now,
+        now
+      );
+    }
+  } catch {
+    // Ignore seed error if during concurrent init
+  }
 }
+

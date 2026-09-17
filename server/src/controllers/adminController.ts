@@ -1,16 +1,19 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { AdminService } from '../services/adminService.js';
+import { PricingService } from '../services/pricingService.js';
 import { adminAuthMiddleware } from '../middleware/auth.js';
 import {
   AdminCreateLicenseRequest,
   AdminRebindRequest,
   CreateOrderRequest,
   VerifyPaymentRequest,
-  MarkDeliveredRequest
+  MarkDeliveredRequest,
+  UpdatePromotionRequest
 } from '../types/index.js';
 
 export async function registerAdminRoutes(fastify: FastifyInstance) {
   const adminService = new AdminService();
+  const pricingService = new PricingService();
 
   // Protect all /v1/admin/* routes with adminAuthMiddleware
   fastify.addHook('preHandler', async (request, reply) => {
@@ -363,4 +366,77 @@ export async function registerAdminRoutes(fastify: FastifyInstance) {
       });
     }
   );
+
+  /* =========================================================================
+   * PROMOTION & COMMERCIAL PRICING ENDPOINTS
+   * ========================================================================= */
+
+  // GET /v1/admin/promotions
+  fastify.get('/v1/admin/promotions', async (_request: FastifyRequest, reply: FastifyReply) => {
+    const promotions = pricingService.listPromotions();
+    const now = Date.now();
+    const resolvedPromotions = promotions.map((p) => pricingService.resolvePrice(p.product, now));
+    return reply.status(200).send({
+      success: true,
+      data: resolvedPromotions,
+      raw: promotions
+    });
+  });
+
+  // GET /v1/admin/promotions/:product
+  fastify.get(
+    '/v1/admin/promotions/:product',
+    async (request: FastifyRequest<{ Params: { product: string } }>, reply: FastifyReply) => {
+      const { product } = request.params;
+      const promo = pricingService.getPromotion(product);
+      if (!promo) {
+        return reply.status(404).send({
+          success: false,
+          error: { code: 'PROMOTION_NOT_FOUND', message: `Promotion for product '${product}' not found.` }
+        });
+      }
+
+      const resolved = pricingService.resolvePrice(product, Date.now());
+      return reply.status(200).send({
+        success: true,
+        data: resolved,
+        raw: promo
+      });
+    }
+  );
+
+  // PUT /v1/admin/promotions/:product
+  fastify.put(
+    '/v1/admin/promotions/:product',
+    {
+      schema: {
+        body: {
+          type: 'object',
+          properties: {
+            name: { type: 'string', minLength: 1 },
+            enabled: { anyOf: [{ type: 'boolean' }, { type: 'integer' }] },
+            normalPrice: { type: 'number' },
+            promoPrice: { type: 'number' },
+            startsAt: { anyOf: [{ type: 'number' }, { type: 'string' }] },
+            expiresAt: { anyOf: [{ type: 'number' }, { type: 'string' }] },
+            timezone: { type: 'string' },
+            showCountdown: { anyOf: [{ type: 'boolean' }, { type: 'integer' }] }
+          }
+        }
+      }
+    },
+    async (
+      request: FastifyRequest<{ Params: { product: string }; Body: UpdatePromotionRequest }>,
+      reply: FastifyReply
+    ) => {
+      const { product } = request.params;
+      const result = pricingService.updatePromotion(product, request.body || {}, 'ADMIN_API');
+      if (!result.success) {
+        return reply.status(400).send(result);
+      }
+
+      return reply.status(200).send(result);
+    }
+  );
 }
+

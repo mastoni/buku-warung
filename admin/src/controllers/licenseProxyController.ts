@@ -5,21 +5,23 @@ import {
   RebindPayload,
   CreateOrderPayload,
   VerifyPaymentPayload,
-  MarkDeliveredPayload
+  MarkDeliveredPayload,
+  UpdatePromotionPayload
 } from '../services/licenseClient.js';
 import { sessionAuthMiddleware } from '../middleware/sessionAuth.js';
 
 export async function registerLicenseProxyRoutes(fastify: FastifyInstance) {
   const licenseClient = new LicenseClient();
 
-  // Protect all /api/licenses*, /api/devices*, /api/license/rebind, /api/audit-logs, /api/orders* routes
+  // Protect all /api/licenses*, /api/devices*, /api/license/rebind, /api/audit-logs, /api/orders*, /api/promotions* routes
   fastify.addHook('preHandler', async (request, reply) => {
     if (
       request.url.startsWith('/api/licenses') ||
       request.url.startsWith('/api/devices') ||
       request.url.startsWith('/api/license/rebind') ||
       request.url.startsWith('/api/audit-logs') ||
-      request.url.startsWith('/api/orders')
+      request.url.startsWith('/api/orders') ||
+      request.url.startsWith('/api/promotions')
     ) {
       await sessionAuthMiddleware(request, reply);
     }
@@ -181,4 +183,38 @@ export async function registerLicenseProxyRoutes(fastify: FastifyInstance) {
       return reply.status(res.status).send(res.data);
     }
   );
+
+  /* =========================================================================
+   * PROMOTIONS & COMMERCIAL PRICING PROXY ROUTES
+   * ========================================================================= */
+
+  // GET /api/promotions
+  fastify.get('/api/promotions', async (_request: FastifyRequest, reply: FastifyReply) => {
+    const res = await licenseClient.listPromotions();
+    return reply.status(res.status).send(res.data);
+  });
+
+  // GET /api/promotions/:product
+  fastify.get(
+    '/api/promotions/:product',
+    async (request: FastifyRequest<{ Params: { product: string } }>, reply: FastifyReply) => {
+      const { product } = request.params;
+      const res = await licenseClient.getPromotion(product);
+      return reply.status(res.status).send(res.data);
+    }
+  );
+
+  // PUT /api/promotions/:product
+  fastify.put(
+    '/api/promotions/:product',
+    async (
+      request: FastifyRequest<{ Params: { product: string }; Body: UpdatePromotionPayload }>,
+      reply: FastifyReply
+    ) => {
+      const { product } = request.params;
+      const res = await licenseClient.updatePromotion(product, request.body || {});
+      return reply.status(res.status).send(res.data);
+    }
+  );
 }
+

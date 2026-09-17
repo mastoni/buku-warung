@@ -64,6 +64,10 @@
           <span class="nav-icon">🔑</span>
           <span>Daftar Lisensi</span>
         </button>
+        <button class="nav-item" data-tab="pricing">
+          <span class="nav-icon">🏷️</span>
+          <span>Promosi & Harga</span>
+        </button>
         <button class="nav-item" data-tab="recovery">
           <span class="nav-icon">🔄</span>
           <span>Permintaan Recovery</span>
@@ -397,6 +401,111 @@
                 <tr><td colspan="7" class="text-center text-muted">Memuat lisensi...</td></tr>
               </tbody>
             </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- View: Commercial Pricing & Promotions -->
+      <section id="tab-pricing" class="tab-view hidden">
+        <div class="metrics-grid mb-4">
+          <div class="metric-card">
+            <span class="metric-label">Produk Terpilih</span>
+            <span class="metric-value" id="pricingProductDisplay">BUKU_WARUNG</span>
+            <span class="metric-desc">Aplikasi Kasir & Pembukuan</span>
+          </div>
+          <div class="metric-card">
+            <span class="metric-label">Status Promo</span>
+            <span class="metric-value" id="pricingStatusBadgeDisplay">MEMUAT...</span>
+            <span class="metric-desc" id="pricingStatusDetailDisplay">Pengecekan server...</span>
+          </div>
+          <div class="metric-card">
+            <span class="metric-label">Harga Efektif Transaksi</span>
+            <span class="metric-value text-success" id="pricingEffectiveDisplay">Rp 0</span>
+            <span class="metric-desc" id="pricingEffectiveDescDisplay">Harga yang berlaku saat ini</span>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h3>Konfigurasi Promosi & Harga Komersial</h3>
+            <span class="badge badge-info">Authoritative Server Config</span>
+          </div>
+          <div class="card-body">
+            <form id="pricingConfigForm" class="p-3">
+              <div id="pricingAlert" class="alert-banner hidden mb-3"></div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="pricingProductInput">Kode Produk</label>
+                  <input type="text" id="pricingProductInput" value="BUKU_WARUNG" readonly class="input-readonly">
+                  <small class="text-muted">Identifier produk kanonikal di sistem.</small>
+                </div>
+                <div class="form-group">
+                  <label for="pricingNameInput">Nama Promo / Kampanye</label>
+                  <input type="text" id="pricingNameInput" required placeholder="Contoh: Promo Peluncuran">
+                  <small class="text-muted">Nama promo yang ditampilkan kepada pembeli.</small>
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="pricingNormalPriceInput">Harga Normal (Rp)</label>
+                  <input type="number" id="pricingNormalPriceInput" required min="1000" step="1000" placeholder="100000">
+                  <small class="text-muted">Harga dasar ketika promo nonaktif / kadaluarsa.</small>
+                </div>
+                <div class="form-group">
+                  <label for="pricingPromoPriceInput">Harga Promo (Rp)</label>
+                  <input type="number" id="pricingPromoPriceInput" required min="1000" step="1000" placeholder="50000">
+                  <small class="text-muted">Harga diskon saat promo aktif (&le; Harga Normal).</small>
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="pricingStartsAtInput">Waktu Mulai Promo (WIB)</label>
+                  <input type="datetime-local" id="pricingStartsAtInput" required>
+                  <small class="text-muted">Promo mulai berlaku pada waktu ini.</small>
+                </div>
+                <div class="form-group">
+                  <label for="pricingExpiresAtInput">Waktu Berakhir Promo (WIB)</label>
+                  <input type="datetime-local" id="pricingExpiresAtInput" required>
+                  <small class="text-muted">Promo otomatis berakhir pada waktu ini.</small>
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="pricingEnabledSelect">Status Promo (Enable / Disable)</label>
+                  <select id="pricingEnabledSelect">
+                    <option value="1">Aktif (Enabled)</option>
+                    <option value="0">Nonaktif (Disabled)</option>
+                  </select>
+                  <small class="text-muted">Kill-switch instan untuk mematikan promo.</small>
+                </div>
+                <div class="form-group">
+                  <label for="pricingShowCountdownSelect">Tampilkan Countdown Timer</label>
+                  <select id="pricingShowCountdownSelect">
+                    <option value="1">Ya, Tampilkan Countdown</option>
+                    <option value="0">Tidak, Sembunyikan Countdown</option>
+                  </select>
+                  <small class="text-muted">Instruksi ke presentasi UI untuk menampilkan timer.</small>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="pricingTimezoneInput">Timezone</label>
+                <input type="text" id="pricingTimezoneInput" value="Asia/Jakarta" readonly class="input-readonly">
+              </div>
+
+              <div class="card-footer mt-4 pt-3 flex justify-between items-center">
+                <button type="button" id="refreshPricingBtn" class="btn btn-secondary">
+                  🔄 Muat Ulang Data
+                </button>
+                <button type="submit" id="savePricingBtn" class="btn btn-primary">
+                  💾 Simpan Konfigurasi Harga
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       </section>
