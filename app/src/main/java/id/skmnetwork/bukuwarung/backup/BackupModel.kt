@@ -35,7 +35,10 @@ data class BusinessProfileBackup(
     val ownerName: String,
     val phone: String,
     val address: String,
-    val createdAt: Long = System.currentTimeMillis()
+    val createdAt: Long = System.currentTimeMillis(),
+    val primaryBusinessType: String = "WARUNG_SEMBAKO",
+    val secondaryActivities: Set<String> = setOf("ACTIVITY_GOODS_SELLING"),
+    val profileVersion: Int = 1
 )
 
 data class DeviceProfileBackup(

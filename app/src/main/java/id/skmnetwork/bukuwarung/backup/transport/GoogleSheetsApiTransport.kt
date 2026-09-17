@@ -47,6 +47,28 @@ class GoogleSheetsApiTransport(
         // 2. Formulate Batch Data Payload
         val valueRangesJson = JSONArray()
 
+        // Tab 00_README
+        val readmeTab = snapshot.getTab(CanonicalSerializer.README_TAB_NAME)
+        if (readmeTab != null) {
+            val readmeRange = JSONObject().apply {
+                put("range", "${CanonicalSerializer.README_TAB_NAME}!A1")
+                val rowsArray = JSONArray().apply {
+                    // Header row
+                    put(JSONArray().apply {
+                        readmeTab.headers.forEach { put(it) }
+                    })
+                    // Data rows
+                    readmeTab.rows.forEach { row ->
+                        put(JSONArray().apply {
+                            row.forEach { put(it) }
+                        })
+                    }
+                }
+                put("values", rowsArray)
+            }
+            valueRangesJson.put(readmeRange)
+        }
+
         // Tab 00_Metadata
         val metadataRange = JSONObject().apply {
             put("range", "$METADATA_TAB_NAME!A1")
@@ -70,7 +92,7 @@ class GoogleSheetsApiTransport(
         }
         valueRangesJson.put(metadataRange)
 
-        // Data Tabs 01_Business to 16_StockMovements
+        // Data Tabs 01_Business to 18_SaleReturnItems
         CanonicalSerializer.DATA_TAB_NAMES.forEach { tabName ->
             val tab = snapshot.getTab(tabName)
             if (tab != null) {
@@ -110,7 +132,11 @@ class GoogleSheetsApiTransport(
 
         val response = responseResult.getOrThrow()
         when (response.statusCode) {
-            in 200..299 -> Result.success(Unit)
+            in 200..299 -> {
+                // Apply visual formatting & protection metadata (non-fatal)
+                applyFormattingAndProtection(spreadsheetId, authHeaders)
+                Result.success(Unit)
+            }
             401, 403 -> Result.failure(SecurityException("Google API autentikasi ditolak (HTTP ${response.statusCode})"))
             404 -> Result.failure(id.skmnetwork.bukuwarung.backup.SpreadsheetNotFoundException(spreadsheetId))
             else -> Result.failure(IOException("Google Sheets API error HTTP ${response.statusCode}: ${response.body}"))
@@ -291,6 +317,156 @@ class GoogleSheetsApiTransport(
             Result.success(spreadsheetId)
         } catch (e: Exception) {
             Result.failure(IOException("Gagal membaca ID spreadsheet baru: ${e.message}", e))
+        }
+    }
+
+    /**
+     * Builds Google Sheets v4 formatting requests:
+     * - Freezes row 1 on all tabs
+     * - Dark header background styling with bold white text and centered alignment
+     * - Auto-resizes columns to fit content cleanly
+     */
+    fun buildFormattingRequests(sheetIdMap: Map<String, Int>): JSONArray {
+        val requests = JSONArray()
+        sheetIdMap.forEach { (tabName, sheetId) ->
+            // 1. Freeze Row 1
+            requests.put(JSONObject().apply {
+                put("updateSheetProperties", JSONObject().apply {
+                    put("properties", JSONObject().apply {
+                        put("sheetId", sheetId)
+                        put("gridProperties", JSONObject().apply {
+                            put("frozenRowCount", 1)
+                        })
+                    })
+                    put("fields", "gridProperties.frozenRowCount")
+                })
+            })
+
+            // 2. Header styling (Row 0)
+            val isReadme = tabName == CanonicalSerializer.README_TAB_NAME
+            val headerColor = if (isReadme) {
+                // Dark Slate for README overview
+                JSONObject().apply { put("red", 0.09); put("green", 0.13); put("blue", 0.24) }
+            } else {
+                // Elegant Emerald / Dark Teal for Domain Data Tabs
+                JSONObject().apply { put("red", 0.06); put("green", 0.40); put("blue", 0.38) }
+            }
+
+            requests.put(JSONObject().apply {
+                put("repeatCell", JSONObject().apply {
+                    put("range", JSONObject().apply {
+                        put("sheetId", sheetId)
+                        put("startRowIndex", 0)
+                        put("endRowIndex", 1)
+                    })
+                    put("cell", JSONObject().apply {
+                        put("userEnteredFormat", JSONObject().apply {
+                            put("backgroundColor", headerColor)
+                            put("textFormat", JSONObject().apply {
+                                put("bold", true)
+                                put("foregroundColor", JSONObject().apply {
+                                    put("red", 1.0)
+                                    put("green", 1.0)
+                                    put("blue", 1.0)
+                                })
+                                put("fontSize", 10)
+                            })
+                            put("horizontalAlignment", "CENTER")
+                        })
+                    })
+                    put("fields", "userEnteredFormat(backgroundColor,textFormat,horizontalAlignment)")
+                })
+            })
+
+            // 3. Auto resize columns
+            requests.put(JSONObject().apply {
+                put("autoResizeDimensions", JSONObject().apply {
+                    put("dimensions", JSONObject().apply {
+                        put("sheetId", sheetId)
+                        put("dimension", "COLUMNS")
+                        put("startIndex", 0)
+                        put("endIndex", 20)
+                    })
+                })
+            })
+        }
+        return requests
+    }
+
+    /**
+     * Builds Google Sheets v4 protection requests:
+     * - Adds ProtectedRange on all data tabs (01_Business .. 18_SaleReturnItems) and 00_Metadata
+     * - Sets warningOnly = false to prevent accidental/manual modification via Google Sheets UI
+     */
+    fun buildProtectionRequests(sheetIdMap: Map<String, Int>): JSONArray {
+        val requests = JSONArray()
+        val protectedTabs = listOf(CanonicalSerializer.METADATA_TAB_NAME) + CanonicalSerializer.DATA_TAB_NAMES
+        protectedTabs.forEach { tabName ->
+            val sheetId = sheetIdMap[tabName]
+            if (sheetId != null) {
+                requests.put(JSONObject().apply {
+                    put("addProtectedRange", JSONObject().apply {
+                        put("protectedRange", JSONObject().apply {
+                            put("range", JSONObject().apply {
+                                put("sheetId", sheetId)
+                            })
+                            put("description", "Tab data Buku Warung dilindungi secara otomatis")
+                            put("warningOnly", false)
+                        })
+                    })
+                })
+            }
+        }
+        return requests
+    }
+
+    /**
+     * Queries sheet IDs and executes batch formatting & protection updates.
+     * Guaranteed non-fatal so data backup persistence is never blocked.
+     */
+    suspend fun applyFormattingAndProtection(
+        spreadsheetId: String,
+        authHeaders: Map<String, String>
+    ): Result<Unit> = withContext(Dispatchers.IO) {
+        try {
+            val getUrl = "$baseUrl/$spreadsheetId?fields=sheets.properties(sheetId,title)"
+            val metaResponse = httpEngine.execute("GET", getUrl, authHeaders, null)
+            if (metaResponse.isFailure || !metaResponse.getOrThrow().isSuccessful) {
+                return@withContext Result.success(Unit)
+            }
+
+            val metaJson = JSONObject(metaResponse.getOrThrow().body)
+            val sheetsArray = metaJson.optJSONArray("sheets") ?: return@withContext Result.success(Unit)
+            val sheetIdMap = mutableMapOf<String, Int>()
+            for (i in 0 until sheetsArray.length()) {
+                val prop = sheetsArray.getJSONObject(i).getJSONObject("properties")
+                val title = prop.getString("title")
+                val id = prop.getInt("sheetId")
+                sheetIdMap[title] = id
+            }
+
+            val formattingRequests = buildFormattingRequests(sheetIdMap)
+            val protectionRequests = buildProtectionRequests(sheetIdMap)
+
+            val combinedRequests = JSONArray()
+            for (i in 0 until formattingRequests.length()) {
+                combinedRequests.put(formattingRequests.getJSONObject(i))
+            }
+            for (i in 0 until protectionRequests.length()) {
+                combinedRequests.put(protectionRequests.getJSONObject(i))
+            }
+
+            if (combinedRequests.length() == 0) return@withContext Result.success(Unit)
+
+            val batchUpdateUrl = "$baseUrl/$spreadsheetId:batchUpdate"
+            val requestBody = JSONObject().apply {
+                put("requests", combinedRequests)
+            }.toString()
+
+            httpEngine.execute("POST", batchUpdateUrl, authHeaders, requestBody)
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.success(Unit)
         }
     }
 }

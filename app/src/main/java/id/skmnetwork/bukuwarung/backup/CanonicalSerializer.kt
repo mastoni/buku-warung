@@ -13,6 +13,9 @@ object CanonicalSerializer {
     const val BACKUP_FORMAT_VERSION = "1.0"
     const val ROOM_SCHEMA_VERSION = 11
 
+    const val README_TAB_NAME = "00_README"
+    const val METADATA_TAB_NAME = "00_Metadata"
+
     val DATA_TAB_NAMES = listOf(
         "01_Business",
         "02_Device",
@@ -34,7 +37,52 @@ object CanonicalSerializer {
         "18_SaleReturnItems"
     )
 
-    val ALL_TAB_NAMES = listOf("00_Metadata") + DATA_TAB_NAMES
+    val ALL_TAB_NAMES = listOf(README_TAB_NAME, METADATA_TAB_NAME) + DATA_TAB_NAMES
+
+    /**
+     * Generates a user-friendly overview sheet tab (00_README) in Indonesian.
+     * Note: 00_README is a human layer and is excluded from canonical SHA-256 checksum calculation.
+     */
+    fun generateReadmeTab(
+        metadata: BackupMetadata,
+        shopName: String,
+        ownerName: String,
+        primaryBusinessType: String,
+        totalRecords: Int
+    ): SheetTab {
+        val dateFormat = java.text.SimpleDateFormat("dd MMMM yyyy HH:mm:ss", Locale.forLanguageTag("id-ID"))
+        val formattedDate = try {
+            dateFormat.format(java.util.Date(metadata.exportedAt))
+        } catch (e: Exception) {
+            metadata.exportedAt.toString()
+        }
+
+        val rows = listOf(
+            listOf("BUKU WARUNG - SALINAN CADANGAN (BACKUP)", ""),
+            listOf("PERINGATAN", "File spreadsheet ini dikelola otomatis oleh aplikasi Buku Warung. JANGAN mengedit, menghapus, atau mengubah struktur sel data secara manual agar proses pemulihan (restore) data tetap aman dan akurat."),
+            listOf("---", "---"),
+            listOf("PROFIL USAHA", ""),
+            listOf("Nama Usaha", sanitize(shopName)),
+            listOf("Nama Pemilik", sanitize(ownerName)),
+            listOf("Tipe Usaha", sanitize(primaryBusinessType)),
+            listOf("---", "---"),
+            listOf("INFORMASI CADANGAN", ""),
+            listOf("Waktu Cadangan", formattedDate),
+            listOf("Versi Format", metadata.backupFormatVersion),
+            listOf("Versi Skema DB", metadata.roomSchemaVersion.toString()),
+            listOf("Versi Aplikasi", metadata.appVersion),
+            listOf("Total Baris Data", totalRecords.toString()),
+            listOf("Integritas Data", "SHA-256 Terverifikasi"),
+            listOf("---", "---"),
+            listOf("PANDUAN PEMULIHAN", "Buka Buku Warung -> Pengaturan -> Cadangan & Pemulihan -> Pulihkan Data.")
+        )
+
+        return SheetTab(
+            name = README_TAB_NAME,
+            headers = listOf("Informasi", "Keterangan"),
+            rows = rows
+        )
+    }
 
     /**
      * Sanitizes string cell for tab-delimited matrix format.

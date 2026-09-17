@@ -42,6 +42,7 @@ class BackupRestoreManager(
         val db = database.openHelper.readableDatabase
 
         // 1. Tab 01_Business
+        val secondaryActivitiesStr = userSettings.secondaryActivities.sorted().joinToString(",")
         val businessRows = listOf(
             listOf(
                 businessId,
@@ -49,12 +50,25 @@ class BackupRestoreManager(
                 CanonicalSerializer.sanitize(userSettings.ownerName),
                 CanonicalSerializer.sanitize(userSettings.phone),
                 CanonicalSerializer.sanitize(userSettings.address),
-                "0"
+                "0",
+                CanonicalSerializer.sanitize(userSettings.primaryBusinessType),
+                CanonicalSerializer.sanitize(secondaryActivitiesStr),
+                userSettings.profileVersion.toString()
             )
         )
         val tab01 = SheetTab(
             name = "01_Business",
-            headers = listOf("business_id", "shop_name", "owner_name", "phone", "address", "created_at"),
+            headers = listOf(
+                "business_id",
+                "shop_name",
+                "owner_name",
+                "phone",
+                "address",
+                "created_at",
+                "primary_business_type",
+                "secondary_activities",
+                "profile_version"
+            ),
             rows = CanonicalSerializer.sortTabRows("01_Business", businessRows)
         )
 
@@ -705,13 +719,22 @@ class BackupRestoreManager(
             listOf("checksum", metadata.checksum)
         )
         val tab00 = SheetTab(
-            name = "00_Metadata",
+            name = CanonicalSerializer.METADATA_TAB_NAME,
             headers = listOf("key", "value"),
             rows = metadataRows
         )
 
+        val tab00Readme = CanonicalSerializer.generateReadmeTab(
+            metadata = metadata,
+            shopName = userSettings.shopName,
+            ownerName = userSettings.ownerName,
+            primaryBusinessType = userSettings.primaryBusinessType,
+            totalRecords = totalRecords
+        )
+
         val allTabs = mutableMapOf<String, SheetTab>()
-        allTabs["00_Metadata"] = tab00
+        allTabs[CanonicalSerializer.README_TAB_NAME] = tab00Readme
+        allTabs[CanonicalSerializer.METADATA_TAB_NAME] = tab00
         allTabs.putAll(dataTabs)
 
         BackupSnapshot(metadata = metadata, tabs = allTabs)
@@ -1273,12 +1296,29 @@ class BackupRestoreManager(
                     val phone = row.getOrElse(3) { "" }
                     val address = row.getOrElse(4) { "" }
 
+                    // v0.2.0 Business Profile extension (with backward-compatible fallbacks)
+                    val primaryBusinessType = row.getOrElse(6) { "WARUNG_SEMBAKO" }.ifBlank { "WARUNG_SEMBAKO" }
+                    val secondaryActivitiesRaw = row.getOrElse(7) { "ACTIVITY_GOODS_SELLING" }.ifBlank { "ACTIVITY_GOODS_SELLING" }
+                    val secondaryActivities = if (secondaryActivitiesRaw == "NULL" || secondaryActivitiesRaw.isBlank()) {
+                        setOf("ACTIVITY_GOODS_SELLING")
+                    } else {
+                        secondaryActivitiesRaw.split(",").map { it.trim() }.filter { it.isNotEmpty() }.toSet().ifEmpty {
+                            setOf("ACTIVITY_GOODS_SELLING")
+                        }
+                    }
+                    val profileVersion = row.getOrElse(8) { "1" }.toIntOrNull() ?: 1
+
                     if (businessId.isNotBlank()) {
                         userPreferencesRepository.saveShopProfile(
                             shopName = if (shopName == "NULL") "Warung Saya" else shopName,
                             ownerName = if (ownerName == "NULL") "" else ownerName,
                             phone = if (phone == "NULL") "" else phone,
                             address = if (address == "NULL") "" else address
+                        )
+                        userPreferencesRepository.updateBusinessProfile(
+                            primaryType = if (primaryBusinessType == "NULL") "WARUNG_SEMBAKO" else primaryBusinessType,
+                            secondaryActivities = secondaryActivities,
+                            version = profileVersion
                         )
                     }
                 }
