@@ -87,6 +87,49 @@ class PrinterService(
         }
     }
 
+    suspend fun printPurchaseOrder(
+        order: id.skmnetwork.bukuwarung.data.local.entity.PurchaseOrderEntity,
+        items: List<id.skmnetwork.bukuwarung.data.local.entity.PurchaseOrderItemEntity>,
+        shopName: String,
+        shopAddress: String = "",
+        shopPhone: String = "",
+        width: ReceiptPaperWidth = paperWidth,
+        poTitle: String = "PURCHASE ORDER",
+        autoConnect: Boolean = true
+    ): Result<Unit> = withContext(Dispatchers.IO) {
+        val connection = activeConnection
+            ?: return@withContext Result.failure(IllegalStateException("Printer belum dikonfigurasi"))
+
+        try {
+            if (!connection.isConnected && autoConnect) {
+                val connectResult = connection.connect()
+                if (connectResult.isFailure) {
+                    return@withContext Result.failure(
+                        connectResult.exceptionOrNull() ?: IllegalStateException("Gagal menghubungkan ke printer")
+                    )
+                }
+            }
+
+            if (!connection.isConnected) {
+                return@withContext Result.failure(IllegalStateException("Gagal cetak: Printer belum terhubung"))
+            }
+
+            val escPosBytes = id.skmnetwork.bukuwarung.purchase.PurchaseOrderReceiptFormatter.formatEscPos(
+                order = order,
+                items = items,
+                shopName = shopName,
+                shopAddress = shopAddress,
+                shopPhone = shopPhone,
+                paperWidth = width,
+                poTitle = poTitle
+            )
+            val sendResult = connection.send(escPosBytes)
+            sendResult
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     suspend fun printTestReceipt(
         shopName: String = "BUKU WARUNG",
         width: ReceiptPaperWidth = paperWidth,
