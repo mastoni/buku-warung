@@ -11,6 +11,7 @@ import {
   ShieldCheck,
   HelpCircle,
   ArrowRight,
+  Download,
   FileText,
 } from 'lucide-react';
 import {
@@ -27,6 +28,7 @@ interface DocsPortalHomeProps {
 }
 
 const CATEGORY_ICONS: Record<DocCategoryKey, React.FC<{ className?: string }>> = {
+  instalasi: Download,
   mulai: Compass,
   inventori: Package,
   pos: ShoppingCart,
@@ -41,12 +43,12 @@ export const DocsPortalHome: React.FC<DocsPortalHomeProps> = ({ onOpenSearch }) 
   const { navigateTo } = useDocsRouter();
 
   const quickLinks = [
+    { title: 'Bab 0: Instalasi APK', slug: 'instalasi', icon: Download },
     { title: 'Mulai Setup Toko', slug: 'mulai', icon: Compass },
     { title: 'Kasir POS & Barcode', slug: 'pos', icon: ShoppingCart },
     { title: 'Purchase Order (PO)', slug: 'purchase-order', icon: Truck },
     { title: 'Printer Thermal', slug: 'printer', icon: Printer },
     { title: 'Backup Google Sheets', slug: 'backup-restore', icon: ShieldCheck },
-    { title: 'Tanya Jawab (FAQ)', slug: 'faq', icon: HelpCircle },
   ];
 
   return (

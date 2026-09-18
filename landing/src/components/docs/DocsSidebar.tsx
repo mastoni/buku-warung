@@ -11,6 +11,7 @@ import {
   HelpCircle,
   ChevronRight,
   X,
+  Download,
 } from 'lucide-react';
 import {
   DOC_CATEGORIES,
@@ -26,6 +27,7 @@ interface DocsSidebarProps {
 }
 
 const CATEGORY_ICONS: Record<DocCategoryKey, React.FC<{ className?: string }>> = {
+  instalasi: Download,
   mulai: Compass,
   inventori: Package,
   pos: ShoppingCart,

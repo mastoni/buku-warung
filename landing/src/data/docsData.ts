@@ -1,4 +1,5 @@
 export type DocCategoryKey =
+  | 'instalasi'
   | 'mulai'
   | 'inventori'
   | 'pos'
@@ -38,21 +39,30 @@ export interface DocSection {
   listItems?: string[];
 }
 
+export interface DocScreenshot {
+  src: string;
+  caption: string;
+}
+
 export interface DocArticle {
   slug: string;
   title: string;
   category: DocCategoryKey;
   categoryName: string;
-  order: number;
+  order: number; // 0 for Bab 0, 1..24 for Chapters 1..24
+  chapterLabel?: string;
   description: string;
   version: string;
   updatedAt: string;
   readTime: string;
   summary: string;
+  targetAudience?: string;
+  features?: string[];
   sections: DocSection[];
   steps?: DocStep[];
   callouts?: DocCallout[];
   example?: DocExample;
+  screenshot?: DocScreenshot;
   limitations?: string[];
   relatedSlugs: string[];
   keywords: string[];
@@ -60,9 +70,15 @@ export interface DocArticle {
 
 export const DOC_CATEGORIES: DocCategoryMeta[] = [
   {
+    key: 'instalasi',
+    name: 'Instalasi & Aktivasi',
+    description: 'Panduan pemasangan file APK resmi Android dan aktivasi lisensi.',
+    iconName: 'Download',
+  },
+  {
     key: 'mulai',
     name: 'Mulai Menggunakan',
-    description: 'Aktivasi lisensi, profil usaha, dan adaptasi jenis bisnis.',
+    description: 'Setup awal, profil toko, dan adaptasi jenis bisnis.',
     iconName: 'Compass',
   },
   {
@@ -111,849 +127,1432 @@ export const DOC_CATEGORIES: DocCategoryMeta[] = [
 
 export const DOC_VERSION = 'Buku Warung v0.2.0 (Build 2)';
 export const DOC_LAST_UPDATED = '18 September 2026';
+export const OFFICIAL_APK_SHA256 = '9f2b282f924cd2c5388759c4c0f6feef5ec52a5bd55cd434f128b28b15a05d2b';
 
 export const DOC_ARTICLES: DocArticle[] = [
-  // 1. Mulai
+  // =========================================================================
+  // BAB 0 — INSTALASI & AKTIVASI
+  // =========================================================================
   {
-    slug: 'mulai',
-    title: 'Mulai Menggunakan Buku Warung',
-    category: 'mulai',
-    categoryName: 'Mulai Menggunakan',
-    order: 1,
-    description: 'Langkah awal menjalankan aplikasi Buku Warung, aktivasi lisensi, dan mengatur profil toko.',
+    slug: 'instalasi',
+    title: 'BAB 0 — Instalasi & Aktivasi APK Resmi',
+    category: 'instalasi',
+    categoryName: 'Instalasi & Aktivasi',
+    order: 0,
+    chapterLabel: 'BAB 0',
+    description:
+      'Panduan lengkap mendownload file APK resmi Buku Warung, mengizinkan instalasi di HP Android, dan aktivasi lisensi resmi.',
     version: DOC_VERSION,
     updatedAt: DOC_LAST_UPDATED,
-    readTime: '3 menit baca',
+    readTime: '4 menit baca',
     summary:
-      'Panduan lengkap memulai aplikasi Buku Warung saat pertama kali diinstal di HP Android, mengatur identitas toko, serta aktivasi lisensi resmi.',
+      'Buku Warung v0.2.0 didistribusikan secara langsung dalam format paket APK Android resmi melalui website SKMNetwork. Ikuti panduan mudah ini untuk memasang dan mengaktifkan aplikasi di HP Anda.',
+    targetAudience:
+      'Semua pengguna baru Buku Warung yang baru saja membeli lisensi atau ingin menginstal aplikasi di HP Android.',
+    features: [
+      'Download paket APK resmi langsung dari website https://bukuwarung.skmnetwork.com',
+      'Panduan perizinan instalasi untuk berbagai merek HP Android (Samsung, Xiaomi, Oppo, Vivo, Realme, Infinix)',
+      'Aktivasi lisensi resmi seumur hidup (Lifetime 1 Perangkat)',
+      'Verifikasi keamanan berkas APK (SHA-256 Checksum)',
+    ],
     sections: [
       {
-        title: 'Filosofi 100% Offline-First',
+        title: '1. Alur Perjalanan Pengguna (Customer Journey)',
         paragraphs: [
-          'Buku Warung dirancang dengan arsitektur 100% Offline-First. Semua data transaksi kasir, stok, kas, dan buku hutang tersimpan secara aman di memori internal HP Anda.',
-          'Koneksi internet hanya dibutuhkan satu kali saat aktivasi lisensi awal atau saat Anda memilih mencadangkan data ke Google Drive.',
+          'Untuk mulai menggunakan Buku Warung, Anda melewati langkah sederhana berikut:',
+        ],
+        listItems: [
+          'Website: Kunjungi https://bukuwarung.skmnetwork.com',
+          'Beli Lisensi: Buka formulir pemesanan resmi (Public Order)',
+          'Pembayaran: Bayar sekali seumur hidup (Rp 50.000 selama promo)',
+          'Terima Lisensi: Dapatkan Kode Lisensi resmi (format: BW-XXXX-XXXX-XXXX) via layar dan email konfirmasi',
+          'Download APK: Unduh file app-release.apk resmi dari tautan unduhan',
+          'Install APK: Pasang file aplikasi di smartphone Android Anda',
+          'Setup Awal: Pilih jenis usaha dan lengkapi nama warung/toko',
+          'Aktivasi: Masukkan email pemilik dan kode lisensi resmi',
+          'Gunakan: Aplikasi siap beroperasi 100% offline selamanya!',
         ],
       },
       {
-        title: 'Pengaturan Identitas Usaha',
+        title: '2. Persiapan Sebelum Memasang APK di Android',
         paragraphs: [
-          'Identitas usaha seperti nama toko, nama pemilik, nomor telepon, dan alamat yang Anda masukkan saat setup awal akan otomatis dicetak pada header struk kasir thermal dan lembar laporan PDF resmi.',
+          'Karena aplikasi didistribusikan langsung dalam format APK resmi (bukan via Google Play Store), Android akan meminta izin keamanan satu kali untuk menginstal aplikasi dari browser atau pengelola berkas.',
+          'Catatan: Nama menu dapat berbeda tergantung merek dan versi Android yang Anda gunakan.',
+        ],
+        listItems: [
+          'Samsung: Pengaturan -> Keamanan dan Privasi -> Pasang Aplikasi yang Tidak Dikenal -> Pilih Browser (misal Chrome) -> Izinkan.',
+          'Xiaomi / Redmi / Poco: Setelan -> Privasi & Keamanan -> Izin Khusus -> Pasang Aplikasi Tak Dikenal -> Pilih Pengelola Berkas / Chrome -> Izinkan sumber ini.',
+          'Oppo / Realme: Pengaturan -> Keamanan -> Sumber Tidak Dikenal -> Aktifkan untuk Browser / File Manager.',
+          'Vivo: Pengaturan -> Keamanan & Privasi -> Instal Aplikasi Tidak Dikenal -> Izinkan.',
+        ],
+      },
+      {
+        title: '3. Verifikasi Keamanan File APK (Opsional untuk Pengguna Mahir)',
+        paragraphs: [
+          'Untuk memastikan file APK yang Anda pasang 100% asli dan tidak dimodifikasi oleh pihak lain, Anda dapat mencocokkan nilai SHA-256 Checksum file:',
+          `SHA-256 Resmi: ${OFFICIAL_APK_SHA256}`,
+          'Pengecekan ini bersifat opsional bagi pengguna tingkat lanjut dan tidak wajib bagi pengguna awam.',
         ],
       },
     ],
     steps: [
       {
-        title: 'Buka Aplikasi & Masukkan Lisensi',
+        title: 'Unduh File APK Resmi',
         description:
-          'Masukkan email pemilik dan kode lisensi resmi Anda (format: BW-XXXX-XXXX-XXXX) lalu tekan tombol Aktivasi Lisensi.',
+          'Buka tautan unduhan dari website resmi https://bukuwarung.skmnetwork.com. File tersimpan di folder Download HP Anda dengan nama app-release.apk.',
       },
       {
-        title: 'Pilih Jenis Usaha Utama',
+        title: 'Buka File APK & Izinkan Instalasi',
         description:
-          'Pilih dari 19 kategori usaha (Warung Sembako, Apotek, Bengkel, Toko Bangunan, Laundry, dsb) agar istilah aplikasi otomatis menyesuaikan.',
+          'Buka menu Notifikasi atau File Manager -> Download, lalu ketuk file app-release.apk. Jika muncul jendela "Izinkan instalasi dari sumber ini", tekan Izinkan / Lanjutkan.',
       },
       {
-        title: 'Pilih Aktivitas Tambahan (Opsional)',
+        title: 'Tekan Pasang / Install',
         description:
-          'Jika warung Anda juga melayani isi pulsa atau ganti oli, centang aktivitas tambahan untuk membuka fitur multi-produk.',
+          'Tekan tombol Install pada layar konfirmasi Android dan tunggu beberapa detik hingga muncul keterangan "Aplikasi terpasang".',
       },
       {
-        title: 'Konfirmasi Profil Toko',
+        title: 'Buka Aplikasi Buku Warung',
         description:
-          'Lengkapi nama warung, nomor kontak WhatsApp, dan alamat toko, lalu tekan Selesai & Masuk ke Beranda.',
+          'Ketuk Buka. Pada layar Selamat Datang, masukkan Email Pemilik dan Kode Lisensi resmi yang Anda terima saat pembelian.',
+      },
+      {
+        title: 'Tekan Tombol "Aktivasi Lisensi"',
+        description:
+          'Pastikan HP terkoneksi internet satu kali saat menekan tombol Aktivasi. Aplikasi akan memverifikasi lisensi ke server lisensi resmi SKMNetwork dan mengikat lisensi ke HP Anda.',
       },
     ],
     callouts: [
       {
         type: 'info',
-        title: 'Lisensi 1 Perangkat Seumur Hidup',
-        text: 'Satu lisensi berlaku selamanya untuk 1 perangkat Android aktif. Jika ganti HP, hubungi admin resmi untuk verifikasi pemindahan.',
+        title: 'Koneksi Internet Hanya 1 Kali',
+        text: 'Setelah tombol Aktivasi Lisensi berhasil, aplikasi 100% tidak membutuhkan internet lagi untuk transaksi kasir harian.',
+      },
+      {
+        type: 'warning',
+        title: 'Apa yang Dilakukan Jika Aktivasi Gagal?',
+        text: 'Periksa kembali apakah penulisan email dan kode lisensi sudah persis sama (perhatikan huruf besar/kecil dan tanda strip). Jika masih gagal, pastikan koneksi internet HP stabil atau hubungi CS resmi SKMNetwork.',
       },
     ],
     example: {
-      title: 'Contoh Setup Warung Sembako Berkah',
-      scenario: 'Ibu Siti membuka usaha warung kelontong yang juga melayani jualan pulsa & token listrik.',
+      title: 'Contoh Aktivasi di HP Android Toko Kelontong',
+      scenario: 'Pak Slamet baru saja membeli lisensi Buku Warung dan mengunduh APK di HP Android miliknya.',
       details: [
-        'Jenis Usaha Utama: Warung Sembako / Kelontong',
-        'Aktivitas Tambahan: Konter Pulsa & Token',
-        'Hasil: Aplikasi menampilkan menu stok sembako fisik sekaligus mendukung produk digital tanpa stok.',
+        'Email Terdaftar: slamet.sembako@gmail.com',
+        'Kode Lisensi: BW-ET72-CCPY-ZAYN',
+        'Langkah: Pak Slamet memasang APK -> Membuka aplikasi -> Memasukkan email & kode -> Tekan Aktivasi.',
+        'Hasil: Layar menampilkan status "Lisensi Aktif Seumur Hidup", dan aplikasi langsung masuk ke Beranda.',
       ],
     },
+    screenshot: {
+      src: '/img/screenshots/01_welcome.png',
+      caption: 'Layar Selamat Datang & Pemasangan Lisensi Resmi Buku Warung v0.2.0',
+    },
     limitations: [
-      'Aplikasi beroperasi secara mandiri di 1 perangkat (bukan sistem multi-kasir realtime cloud tanpa backup).',
+      'Satu kode lisensi hanya dapat diaktifkan pada 1 perangkat HP Android aktif.',
+      'Jika berganti HP baru, aktivasi di perangkat lama harus dilepaskan melalui bantuan CS resmi SKMNetwork.',
     ],
-    relatedSlugs: ['beranda', 'produk', 'lisensi', 'pin'],
-    keywords: ['mulai', 'onboarding', 'aktivasi lisensi', 'profil toko', 'offline', 'setup'],
+    relatedSlugs: ['mulai', 'lisensi', 'pin', 'faq'],
+    keywords: [
+      'instalasi',
+      'install apk',
+      'download apk',
+      'aktivasi lisensi',
+      'sumber tidak dikenal',
+      'sumber diizinkan',
+      'sha256',
+      'setup awal',
+    ],
   },
 
-  // 2. Beranda & Navigasi
+  // =========================================================================
+  // BAB 1 — MULAI MENGGUNAKAN BUKU WARUNG
+  // =========================================================================
   {
-    slug: 'beranda',
-    title: 'Mengenal Beranda & Navigasi',
+    slug: 'mulai',
+    title: 'BAB 1 — Mulai Menggunakan Buku Warung',
     category: 'mulai',
     categoryName: 'Mulai Menggunakan',
-    order: 2,
-    description: 'Memahami tampilan ringkasan usaha di layar utama dan navigasi 7 modul operasional.',
+    order: 1,
+    chapterLabel: 'BAB 1',
+    description: 'Langkah awal mengatur identitas toko, memilih jenis usaha adaptif, dan konfigurasi profil.',
     version: DOC_VERSION,
     updatedAt: DOC_LAST_UPDATED,
     readTime: '3 menit baca',
     summary:
-      'Layar Beranda menyajikan ringkasan omzet harian, saldo kas aktif, peringatan stok menipis, dan akses cepat ke seluruh menu.',
+      'Panduan setup awal saat pertama kali menjalankan Buku Warung. Atur nama toko, pemilik, dan jenis usaha Anda agar aplikasi otomatis menyesuaikan istilah dan fiturnya.',
+    targetAudience: 'Pemilik usaha yang baru menyelesaikan aktivasi lisensi.',
+    features: [
+      'Pengaturan identitas toko: Nama Toko, Nama Pemilik, Nomor WhatsApp, dan Alamat',
+      'Pemilihan 1 dari 19 kategori jenis usaha adaptif UMKM',
+      'Dukungan aktivitas tambahan (misal: Warung yang juga menjual Pulsa atau Servis)',
+      'Otomatisasi pencetakan identitas toko pada struk printer dan laporan PDF',
+    ],
     sections: [
       {
-        title: 'Kartu Ringkasan Real-Time',
+        title: '1. Filosofi 100% Offline-First',
         paragraphs: [
-          'Beranda Buku Warung secara otomatis memperbarui angka penjualan hari ini, estimasi laba kotor, sisa kas, total piutang pelanggan, dan tagihan supplier tanpa perlu refresh manual.',
-        ],
-        listItems: [
-          'Penjualan Hari Ini: Total omzet dari kasir POS',
-          'Saldo Kas: Uang tunai yang saat ini tersedia di laci kasir',
-          'Peringatan Stok Menipis: Daftar barang yang perlu segera dikulak',
-          'Total Piutang: Uang toko yang masih dibawa pelanggan (kasbon)',
+          'Buku Warung dirancang dengan arsitektur 100% Offline-First. Semua data transaksi kasir, stok barang, buku hutang piutang, dan pencatatan kas disimpan langsung di penyimpanan internal HP Anda.',
+          'Anda tidak perlu khawatir jika sinyal internet mati atau kuota habis di toko. Semua fungsi utama kasir dan cetak struk tetap beroperasi tanpa hambatan.',
         ],
       },
       {
-        title: 'Bilah Navigasi Bawah (Bottom Navigation)',
+        title: '2. Pengaturan Profil Usaha yang Tepat',
         paragraphs: [
-          'Aplikasi dilengkapi 5 tab utama: Beranda, Kasir (POS), Produk, Laporan, dan Pengaturan. Modul Pembelian, Kas, dan Hutang dapat diakses langsung melalui kartu pintasan di Beranda.',
+          'Data nama toko, nomor telepon, dan alamat yang Anda masukkan di layar setup awal akan otomatis dicetak pada header struk kasir thermal dan lembar laporan PDF resmi.',
+          'Anda dapat mengubah data profil toko ini kapan saja melalui menu Pengaturan -> Profil Usaha.',
+        ],
+      },
+    ],
+    steps: [
+      {
+        title: 'Pilih Jenis Usaha Utama',
+        description:
+          'Pilih kategori bisnis Anda (Warung Sembako, Apotek, Bengkel, Toko Bangunan, dsb). Aplikasi akan otomatis menyesuaikan istilah produk dan satuan barang.',
+      },
+      {
+        title: 'Pilih Aktivitas Tambahan (Opsional)',
+        description:
+          'Jika toko Anda memiliki layanan sampingan seperti jualan pulsa atau jasa servis, centang aktivitas tambahan yang sesuai.',
+      },
+      {
+        title: 'Lengkapi Data Identitas Toko',
+        description:
+          'Ketik Nama Toko, Nama Pemilik, Nomor HP/WhatsApp untuk kontak pelanggan, dan Alamat toko Anda.',
+      },
+      {
+        title: 'Tekan Selesai & Masuk Beranda',
+        description:
+          'Simpan konfigurasi. Buku Warung langsung siap digunakan untuk mencatat transaksi dan inventori.',
+      },
+    ],
+    callouts: [
+      {
+        type: 'tip',
+        title: 'Pilih Kategori yang Sesuai',
+        text: 'Memilih kategori usaha yang tepat (misal Bengkel) akan otomatis menampilkan dukungan item jasa dan onderdil pada layar kasir.',
+      },
+    ],
+    example: {
+      title: 'Contoh Setup: Toko Sembako Berkah',
+      scenario: 'Ibu Siti membuka usaha toko kelontong di Losarang yang juga menjual pulsa & token listrik.',
+      details: [
+        'Jenis Usaha: Warung Sembako / Kelontong',
+        'Aktivitas Tambahan: Konter Pulsa & Token PLN',
+        'Hasil: Toko Sembako Berkah siap mencatat sembako fisik sekaligus transaksi pulsa tanpa stok fisik.',
+      ],
+    },
+    screenshot: {
+      src: '/img/screenshots/02_first_setup.png',
+      caption: 'Layar Pemilihan Jenis Usaha & Setup Profil Toko Pertama Kali',
+    },
+    limitations: [
+      'Aplikasi beroperasi secara mandiri di 1 perangkat aktif (bukan sistem multi-kasir cloud realtime tanpa backup).',
+    ],
+    relatedSlugs: ['instalasi', 'beranda', 'produk', 'pin'],
+    keywords: ['mulai', 'onboarding', 'profil toko', 'jenis usaha', 'setup awal', 'offline first'],
+  },
+
+  // =========================================================================
+  // BAB 2 — MENGENAL BERANDA & NAVIGASI
+  // =========================================================================
+  {
+    slug: 'beranda',
+    title: 'BAB 2 — Mengenal Beranda & Navigasi',
+    category: 'mulai',
+    categoryName: 'Mulai Menggunakan',
+    order: 2,
+    chapterLabel: 'BAB 2',
+    description: 'Memahami tampilan layar utama, kartu ringkasan keuangan harian, dan navigasi menu.',
+    version: DOC_VERSION,
+    updatedAt: DOC_LAST_UPDATED,
+    readTime: '3 menit baca',
+    summary:
+      'Layar Beranda menyajikan ringkasan omzet penjualan hari ini, saldo kas aktif, kartu peringatan stok menipis, dan akses instan ke seluruh modul operasional.',
+    targetAudience: 'Pemilik toko dan kasir yang mengoperasikan aplikasi sehari-hari.',
+    features: [
+      'Kartu Penjualan Hari Ini: Total omzet kasir secara real-time',
+      'Kartu Saldo Kas Toko: Jumlah uang tunai fisik yang ada di laci kasir',
+      'Kartu Peringatan Stok Menipis: Notifikasi barang yang harus segera dikulak',
+      'Kartu Piutang Pelanggan & Hutang Supplier: Saldo tagihan yang sedang berjalan',
+      'Bilah navigasi 5 tab: Beranda, Kasir POS, Produk, Laporan, dan Pengaturan',
+    ],
+    sections: [
+      {
+        title: '1. Membaca Kartu Ringkasan Keuangan',
+        paragraphs: [
+          'Beranda Buku Warung dirancang untuk memberikan informasi seketika mengenai kondisi warung Anda tanpa perlu membuka menu laporan:',
+        ],
+        listItems: [
+          'Penjualan Hari Ini: Menghitung seluruh transaksi kasir yang selesai pada hari ini.',
+          'Saldo Kas: Menampilkan posisi uang tunai yang bertambah dari penjualan tunai dan berkurang dari pengeluaran kas atau kulakan tunai.',
+          'Stok Menipis: Menampilkan jumlah produk yang stoknya sudah mencapai atau di bawah batas minimum.',
+          'Piutang Pelanggan: Total uang toko yang masih belum dilunasi oleh pembeli (kasbon).',
+        ],
+      },
+      {
+        title: '2. Pintasan Menu Cepat',
+        paragraphs: [
+          'Dari Beranda, Anda dapat langsung mengetuk kartu pintasan untuk masuk ke menu Kasir POS, Tambah Produk Baru, Catat Pembelian, atau Buku Kas.',
         ],
       },
     ],
     callouts: [
       {
         type: 'tip',
-        title: 'Peringatan Stok Otomatis',
-        text: 'Klik pada kartu "Stok Menipis" di Beranda untuk langsung melihat produk apa saja yang sudah di bawah batas minimum.',
+        title: 'Ketuk Kartu Stok Menipis',
+        text: 'Ketuk langsung kartu Stok Menipis di Beranda untuk melihat daftar nama barang apa saja yang hampir habis.',
       },
     ],
-    relatedSlugs: ['mulai', 'pos', 'laporan', 'kas'],
-    keywords: ['beranda', 'dashboard', 'ringkasan usaha', 'navigasi', 'stok menipis'],
+    screenshot: {
+      src: '/img/screenshots/03_beranda.png',
+      caption: 'Tampilan Beranda Utama Buku Warung dengan Kartu Ringkasan Real-Time',
+    },
+    relatedSlugs: ['mulai', 'pos', 'produk', 'kas', 'laporan'],
+    keywords: ['beranda', 'dashboard', 'ringkasan usaha', 'omzet hari ini', 'saldo kas', 'navigasi'],
   },
 
-  // 3. Produk & Stok
+  // =========================================================================
+  // BAB 3 — PRODUK & MANAJEMEN STOK
+  // =========================================================================
   {
     slug: 'produk',
-    title: 'Produk & Manajemen Stok',
+    title: 'BAB 3 — Produk & Manajemen Stok',
     category: 'inventori',
     categoryName: 'Produk & Inventori',
     order: 3,
-    description: 'Cara menambah produk fisik, mengatur harga beli/jual, stok minimum, dan scan barcode.',
+    chapterLabel: 'BAB 3',
+    description: 'Cara menambah produk fisik, mengatur harga modal dan jual, batas minimum stok, dan barcode.',
     version: DOC_VERSION,
     updatedAt: DOC_LAST_UPDATED,
     readTime: '4 menit baca',
     summary:
-      'Kelola master produk barang fisik dengan mudah. Setiap transaksi penjualan otomatis memotong stok dan setiap kulakan otomatis menambah stok.',
+      'Kelola master produk barang fisik secara mudah. Stok berkurang otomatis saat terjadi penjualan di kasir dan bertambah saat barang masuk dari kulakan.',
+    targetAudience: 'Penanggung jawab stok, pemilik toko, dan bagian pengadaan barang.',
+    features: [
+      'Master data produk: Nama barang, kategori, satuan (pcs, botol, kg, sak, strip, dll)',
+      'Pengaturan Harga Beli (modal) dan Harga Jual ke pelanggan',
+      'Stok Awal dan Batas Minimum Stok untuk peringatan dini',
+      'Scan kode barcode kemasan menggunakan kamera HP',
+      'Pencatatan mutasi riwayat stok otomatis setiap ada transaksi',
+    ],
     sections: [
       {
-        title: 'Karakteristik Produk Fisik (PHYSICAL)',
+        title: '1. Karakteristik Produk Fisik (PHYSICAL)',
         paragraphs: [
-          'Produk berjenis fisik (PHYSICAL) memiliki pelacakan stok ketat. Setiap kali terjadi penjualan di kasir, jumlah stok akan langsung berkurang secara atomik.',
-          'Anda dapat menentukan batas minimum stok agar aplikasi memberikan peringatan sebelum barang dagangan habis.',
+          'Produk bertipe fisik (PHYSICAL) memiliki pelacakan stok ketat. Setiap penjualan di kasir otomatis memotong stok barang di database lokal.',
+          'Jika Anda menetapkan batas minimum stok (misal: 3 pcs), aplikasi akan menampilkan peringatan kuning ketika sisa stok mencapai 3 pcs.',
         ],
       },
       {
-        title: 'Pengaturan Barcode',
+        title: '2. Pendaftaran Barcode Produk',
         paragraphs: [
-          'Setiap produk dapat didaftarkan kode barcode-nya dengan cara memindai (scan) langsung kemasan barang menggunakan kamera HP atau laser scanner Bluetooth.',
+          'Anda dapat memindai barcode asli pada kemasan barang (seperti sabun, makanan ringan, minuman botol) saat menambah produk. Saat melayani pembeli di kasir, Anda cukup scan barcode tersebut untuk memasukkan barang ke keranjang kasir dalam waktu kurang dari 1 detik.',
         ],
       },
     ],
     steps: [
       {
-        title: 'Buka Menu Produk',
-        description: 'Tekan tab Produk pada bilah bawah, lalu tekan tombol "+ Tambah Produk".',
+        title: 'Buka Tab Produk',
+        description: 'Pilih tab Produk pada menu bawah, lalu tekan tombol bulat "+ Tambah Produk".',
       },
       {
-        title: 'Isi Informasi Barang',
-        description: 'Masukkan nama barang, kategori (misal: Sembako / Minuman), dan satuan (pcs, botol, kg, sak).',
+        title: 'Isi Nama Barang & Kategori',
+        description: 'Ketik nama barang (misal: Minyak Goreng Bimoli 1L) dan pilih kategorinya.',
       },
       {
-        title: 'Tentukan Harga & Stok',
-        description:
-          'Isi harga modal (harga beli), harga jual ke pelanggan, jumlah stok saat ini, dan batas minimum stok.',
+        title: 'Tentukan Harga Beli & Harga Jual',
+        description: 'Masukkan harga modal kulakan (Harga Beli) dan harga jual ke pembeli.',
       },
       {
-        title: 'Scan Barcode (Opsional)',
-        description: 'Arahkan kamera ke barcode kemasan barang jika ingin mendata barcode untuk kasir cepat.',
+        title: 'Atur Stok & Batas Minimum',
+        description: 'Ketik jumlah stok yang tersedia di toko dan tentukan limit stok minimum.',
       },
       {
-        title: 'Simpan',
-        description: 'Tekan Simpan. Produk langsung muncul di katalog dan siap dijual di kasir POS.',
+        title: 'Scan Barcode & Simpan',
+        description: 'Arahkan kamera ke barcode kemasan barang (opsional), lalu tekan tombol Simpan.',
       },
     ],
     example: {
-      title: 'Contoh Input Beras Premium 5kg',
-      scenario: 'Menambah stok 20 karung beras @ Rp 68.000 dengan harga jual Rp 75.000.',
+      title: 'Contoh Input Barang: Minyak Goreng 1 Liter',
+      scenario: 'Menambah stok minyak goreng sebanyak 24 botol @ modal Rp 16.500 dan harga jual Rp 18.500.',
       details: [
-        'Nama Produk: Beras Rojolele 5kg',
-        'Harga Beli: Rp 68.000',
-        'Harga Jual: Rp 75.000',
-        'Stok Awal: 20 karung',
-        'Minimum Stok: 3 karung',
+        'Nama Produk: Minyak Goreng Bimoli 1L',
+        'Kategori: Sembako & Kebutuhan Dapur',
+        'Satuan: botol | Tipe: Fisik',
+        'Harga Beli: Rp 16.500 | Harga Jual: Rp 18.500',
+        'Stok Awal: 24 | Minimum Stok: 4',
       ],
     },
+    screenshot: {
+      src: '/img/screenshots/05_produk_stok.png',
+      caption: 'Daftar Katalog Produk & Manajemen Stok Barang di Buku Warung',
+    },
     relatedSlugs: ['fuel', 'digital', 'jasa', 'pos', 'pembelian'],
-    keywords: ['produk', 'stok', 'barcode', 'harga beli', 'harga jual', 'kategori', 'inventori'],
+    keywords: ['produk', 'stok', 'stok barang', 'stok habis', 'tambah produk', 'harga jual', 'harga beli', 'barcode', 'minimum stok'],
   },
 
-  // 4. FUEL
+  // =========================================================================
+  // BAB 4 — PRODUK KHUSUS: BAHAN BAKAR (FUEL)
+  // =========================================================================
   {
     slug: 'fuel',
-    title: 'Produk Khusus: Bahan Bakar (FUEL)',
+    title: 'BAB 4 — Produk Khusus: Bahan Bakar (FUEL)',
     category: 'inventori',
     categoryName: 'Produk & Inventori',
     order: 4,
-    description: 'Dukungan pecahan desimal (contoh: 12,5 Liter) untuk usaha bensin eceran dan Pertamini.',
+    chapterLabel: 'BAB 4',
+    description: 'Dukungan jumlah desimal (contoh: 12,5 Liter) untuk pom bensin mini, Pertamini, dan bensin eceran.',
     version: DOC_VERSION,
     updatedAt: DOC_LAST_UPDATED,
     readTime: '3 menit baca',
     summary:
-      'Produk bertipe FUEL memungkinkan pengisian jumlah desimal dengan perhitungan harga akurat dan pengurangan stok literan yang presisi.',
-    sections: [
-      {
-        title: 'Pecahan Desimal & Perhitungan Otomatis',
-        paragraphs: [
-          'Berbeda dengan produk retail biasa yang menggunakan bilangan bulat, produk FUEL mendukung input angka pecahan (contoh: 2,5 L, 10,75 L, 15 L).',
-          'Subtotal harga dihitung secara presisi sesuai rumus: Qty Desimal × Harga per Liter.',
-        ],
-      },
+      'Produk tipe FUEL dirancang khusus untuk usaha bahan bakar eceran. Mendukung pengisian jumlah pecahan desimal dengan perhitungan total harga dan pemotongan stok tangki yang presisi.',
+    targetAudience: 'Pemilik Pertamini, kios bensin eceran, pangkalan minyak tanah, atau penjual bahan bakar cair.',
+    features: [
+      'Dukungan kuantitas desimal (misal: 2,5 liter, 12,75 liter, 20,5 liter)',
+      'Perhitungan harga presisi: Kuantitas Desimal × Harga per Liter',
+      'Stok tangki berkurang tepat sesuai literan yang dikeluarkan',
+      'Mendukung cetak struk pengisian bensin rapi ke printer thermal',
     ],
-    example: {
-      title: 'Contoh Transaksi Pertalite Eceran',
-      scenario: 'Pembeli mengisi bensin Pertalite sebanyak 12,5 liter @ Rp 10.000 per liter.',
-      details: [
-        'Produk: Pertalite (Tipe FUEL)',
-        'Jumlah: 12.5 liter',
-        'Harga per Liter: Rp 10.000',
-        'Total Pembayaran: Rp 125.000',
-        'Efek Stok: Tangki berkurang tepat 12.5 liter.',
-      ],
-    },
-    relatedSlugs: ['produk', 'pos', 'jenis-usaha'],
-    keywords: ['fuel', 'bensin', 'pertalite', 'pertamini', 'desimal', 'liter'],
-  },
-
-  // 5. DIGITAL
-  {
-    slug: 'digital',
-    title: 'Produk Digital: Pulsa & Token',
-    category: 'inventori',
-    categoryName: 'Produk & Inventori',
-    order: 5,
-    description: 'Mencatat penjualan pulsa, paket data, token PLN, dan voucher game tanpa pelacakan stok fisik.',
-    version: DOC_VERSION,
-    updatedAt: DOC_LAST_UPDATED,
-    readTime: '3 menit baca',
-    summary:
-      'Produk digital ditandai badge Non-Stok sehingga Anda dapat mencatat keuntungan penjualan tanpa khawatir peringatan stok habis.',
     sections: [
       {
-        title: 'Bebas Stok Fisik',
+        title: '1. Mengapa Perlu Tipe FUEL?',
         paragraphs: [
-          'Produk dengan tipe DIGITAL tidak memotong stok inventori fisik di gudang. Keuntungan dihitung dari selisih harga modal agen dengan harga jual ke pembeli.',
-        ],
-      },
-    ],
-    relatedSlugs: ['produk', 'jasa', 'pos'],
-    keywords: ['digital', 'pulsa', 'token pln', 'paket data', 'non stok'],
-  },
-
-  // 6. JASA
-  {
-    slug: 'jasa',
-    title: 'Produk Jasa & Layanan',
-    category: 'inventori',
-    categoryName: 'Produk & Inventori',
-    order: 6,
-    description: 'Pencatatan jasa servis motor, ongkos pangkas rambut, laundry, dan biaya instalasi teknisi.',
-    version: DOC_VERSION,
-    updatedAt: DOC_LAST_UPDATED,
-    readTime: '3 menit baca',
-    summary:
-      'Produk tipe SERVICE memungkinkan bisnis jasa mencatat pendapatan tenaga kerja tanpa stok barang fisik.',
-    sections: [
-      {
-        title: 'Kombinasi Jasa & Sparepart dalam Satu Struk',
-        paragraphs: [
-          'Di bengkel atau toko servis, Anda dapat menggabungkan item fisik (seperti Oli dan Busi) dengan item jasa (seperti Jasa Servis Ringan) dalam satu keranjang belanja kasir.',
-        ],
-      },
-    ],
-    relatedSlugs: ['produk', 'pos', 'printer'],
-    keywords: ['jasa', 'servis', 'laundry', 'salon', 'ongkos kerja'],
-  },
-
-  // 7. POS / Jualan
-  {
-    slug: 'pos',
-    title: 'Transaksi Kasir (POS / Jualan)',
-    category: 'pos',
-    categoryName: 'Kasir & Penjualan',
-    order: 7,
-    description: 'Panduan lengkap transaksi kasir cepat, barcode scan, keranjang belanja, dan pembayaran.',
-    version: DOC_VERSION,
-    updatedAt: DOC_LAST_UPDATED,
-    readTime: '4 menit baca',
-    summary:
-      'Layar kasir POS yang cepat dan intuitif. Mendukung pencarian instan, scan barcode kamera, diskon, pembayaran Tunai, QRIS statis, dan Kasbon tempo.',
-    sections: [
-      {
-        title: 'Metode Pembayaran yang Didukung',
-        paragraphs: [
-          'Buku Warung menyediakan 3 metode pembayaran resmi:',
-        ],
-        listItems: [
-          'Tunai (Cash): Input nominal uang pembeli, sistem otomatis menghitung kembalian dan menambah saldo kas masuk.',
-          'QRIS: Pembeli scan QRIS merchant, transaksi tercatat resmi tanpa menambah uang fisik di laci kas.',
-          'Hutang / Kasbon: Penjualan tempo atas nama pelanggan terdaftar, otomatis masuk ke buku piutang.',
+          'Usaha bahan bakar sering melayani pembeli dengan angka literan pecahan (misal: "Beli bensin 2,5 liter" atau "Isi Rp 50.000 dapat 5 liter").',
+          'Tipe FUEL di Buku Warung menangani angka desimal ini secara presisi tanpa pembulatan yang merugikan pedagang maupun pembeli.',
         ],
       },
     ],
     steps: [
       {
-        title: 'Pilih Produk atau Scan Barcode',
-        description: 'Ketik nama barang di kolom pencarian atau tekan ikon barcode untuk memindai kemasan.',
+        title: 'Tambah Produk Baru',
+        description: 'Buka menu Produk -> Tambah Produk, lalu pilih Tipe Item: FUEL / Bahan Bakar.',
       },
       {
-        title: 'Atur Jumlah & Diskon',
-        description: 'Ubah kuantitas barang sesuai pesanan pembeli dan tambahkan diskon jika ada promo.',
+        title: 'Tentukan Satuan & Harga per Liter',
+        description: 'Pilih satuan "liter", masukkan harga modal per liter dan harga jual per liter.',
       },
       {
-        title: 'Pilih Metode Pembayaran',
-        description: 'Tekan tombol "Bayar" lalu pilih Tunai, QRIS, atau Kasbon Pelanggan.',
+        title: 'Input Kapasitas Tangki (Stok)',
+        description: 'Ketik jumlah liter bensin yang tersedia di tangki penyimpanan Anda.',
+      },
+    ],
+    example: {
+      title: 'Contoh Penjualan Pertalite 12,5 Liter',
+      scenario: 'Seorang pengendara motor mengisi bensin Pertalite sebanyak 12,5 liter @ Rp 10.000 per liter.',
+      details: [
+        'Produk: Pertalite (Tipe: FUEL)',
+        'Jumlah: 12.5 liter',
+        'Harga: Rp 10.000 / liter',
+        'Total Pembayaran: Rp 125.000',
+        'Pengurangan Stok: Stok Pertalite di tangki berkurang tepat 12.5 liter.',
+      ],
+    },
+    relatedSlugs: ['produk', 'pos', 'jenis-usaha'],
+    keywords: ['fuel', 'bahan bakar', 'pertalite', 'pertamini', 'bensin eceran', 'desimal', 'liter'],
+  },
+
+  // =========================================================================
+  // BAB 5 — PRODUK DIGITAL (PULSA, TOKEN, PAKET DATA)
+  // =========================================================================
+  {
+    slug: 'digital',
+    title: 'BAB 5 — Produk Digital: Pulsa & Token',
+    category: 'inventori',
+    categoryName: 'Produk & Inventori',
+    order: 5,
+    chapterLabel: 'BAB 5',
+    description: 'Mencatat penjualan pulsa, paket data, token listrik PLN, dan voucher tanpa stok fisik.',
+    version: DOC_VERSION,
+    updatedAt: DOC_LAST_UPDATED,
+    readTime: '3 menit baca',
+    summary:
+      'Produk digital ditandai dengan badge "Non-Stok". Anda dapat mencatat keuntungan penjualan pulsa dan token tanpa dibatasi kuota stok fisik.',
+    targetAudience: 'Konter pulsa, warung kelontong yang melayani PPOB, agen token listrik.',
+    features: [
+      'Produk Non-Stok: Bebas input penjualan tanpa batasan stok gudang',
+      'Perhitungan keuntungan instan dari selisih Harga Jual dengan Modal Agen',
+      'Struk kasir mencantumkan nomor meteran PLN atau nomor HP pembeli',
+    ],
+    sections: [
+      {
+        title: '1. Bebas Stok Fisik',
+        paragraphs: [
+          'Produk bertipe DIGITAL tidak mengurangi stok gudang. Anda dapat menjual pulsa atau token kapan saja tanpa khawatir muncul peringatan stok habis.',
+          'Pada laporan keuangan, omzet dan laba produk digital tetap dihitung secara akurat.',
+        ],
+      },
+    ],
+    example: {
+      title: 'Contoh Penjualan Token PLN Rp 50.000',
+      scenario: 'Pelanggan membeli token listrik nominal 50rb @ modal agen Rp 50.500 dan harga jual Rp 53.000.',
+      details: [
+        'Nama Produk: Token Listrik PLN 50rb',
+        'Tipe: Digital (Non-Stok)',
+        'Harga Beli (Modal): Rp 50.500',
+        'Harga Jual: Rp 53.000',
+        'Laba Bersih Kasir: Rp 2.500 per transaksi.',
+      ],
+    },
+    relatedSlugs: ['produk', 'jasa', 'pos'],
+    keywords: ['digital', 'pulsa', 'token pln', 'paket data', 'non stok', 'ppob', 'voucher'],
+  },
+
+  // =========================================================================
+  // BAB 6 — PRODUK JASA & LAYANAN
+  // =========================================================================
+  {
+    slug: 'jasa',
+    title: 'BAB 6 — Produk Jasa & Layanan',
+    category: 'inventori',
+    categoryName: 'Produk & Inventori',
+    order: 6,
+    chapterLabel: 'BAB 6',
+    description: 'Pencatatan jasa servis kendaraan, pangkas rambut, laundry kiloan, dan biaya instalasi.',
+    version: DOC_VERSION,
+    updatedAt: DOC_LAST_UPDATED,
+    readTime: '3 menit baca',
+    summary:
+      'Produk tipe SERVICE memungkinkan bisnis berbasis keahlian dan jasa mencatat penerimaan ongkos kerja tanpa memerlukan stok barang.',
+    targetAudience: 'Bengkel motor/mobil, salon, barbershop, laundry, penjahit, teknisi elektronik.',
+    features: [
+      'Produk Jasa murni tanpa pengurangan stok barang fisik',
+      'Dapat digabungkan dengan sparepart fisik dalam satu nota struk kasir',
+      'Margin laba terhitung penuh atas ongkos tenaga kerja',
+    ],
+    sections: [
+      {
+        title: '1. Menggabungkan Jasa dan Onderdil di Bengkel',
+        paragraphs: [
+          'Di bengkel motor, pelanggan sering melakukan ganti oli sekaligus servis karburator. Buku Warung memungkinkan Anda memasukkan Oli Mesin (Fisik - memotong stok) dan Jasa Servis (Jasa - tanpa stok) ke dalam satu transaksi kasir.',
+        ],
+      },
+    ],
+    example: {
+      title: 'Contoh Struk Bengkel Motor Jaya',
+      scenario: 'Pelanggan ganti oli mesin dan melakukan servis ringan.',
+      details: [
+        'Item 1: Oli MPX2 0.8L (Fisik) — Rp 55.000',
+        'Item 2: Jasa Servis Ringan (Jasa) — Rp 30.000',
+        'Total Bayar: Rp 85.000',
+        'Efek: Stok oli berkurang 1 botol, pendapatan jasa tercatat Rp 30.000.',
+      ],
+    },
+    relatedSlugs: ['produk', 'pos', 'printer', 'jenis-usaha'],
+    keywords: ['jasa', 'servis bengkel', 'laundry', 'barbershop', 'ongkos kerja', 'service'],
+  },
+
+  // =========================================================================
+  // BAB 7 — TRANSAKSI KASIR (POS / JUALAN)
+  // =========================================================================
+  {
+    slug: 'pos',
+    title: 'BAB 7 — Transaksi Kasir (POS / Jualan)',
+    category: 'pos',
+    categoryName: 'Kasir & Penjualan',
+    order: 7,
+    chapterLabel: 'BAB 7',
+    description: 'Panduan lengkap melayani pembeli di kasir, scan barcode cepat, dan memilih metode bayar.',
+    version: DOC_VERSION,
+    updatedAt: DOC_LAST_UPDATED,
+    readTime: '4 menit baca',
+    summary:
+      'Layar kasir POS dirancang super cepat dan mudah digunakan. Mendukung pencarian cepat, scan barcode kamera, diskon transaksi, pembayaran Tunai, QRIS statis, dan Kasbon tempo.',
+    targetAudience: 'Kasir, penjaga toko, dan pemilik warung saat melayani antrean pembeli.',
+    features: [
+      'Pencarian produk instan berdasarkan nama atau kategori',
+      'Scan barcode otomatis menggunakan kamera HP atau scanner Bluetooth',
+      'Keranjang belanja fleksibel (tambah/kurang kuantitas, hapus item)',
+      'Penerapan diskon per transaksi (nominal Rp atau persentase %)',
+      '3 Metode pembayaran: Tunai (Cash), QRIS Statis, dan Kasbon (Hutang Pelanggan)',
+      'Perhitungan kembalian otomatis dan pencetakan struk kasir instan',
+    ],
+    sections: [
+      {
+        title: '1. Tiga Metode Pembayaran Resmi',
+        paragraphs: [
+          'Buku Warung menyediakan 3 metode penyelesaian transaksi:',
+        ],
+        listItems: [
+          'Tunai (Cash): Masukkan nominal uang pembeli (atau gunakan tombol nominal cepat). Aplikasi menghitung uang kembalian dan otomatis menambah saldo kas laci toko.',
+          'QRIS: Pembeli memindai QRIS statis milik toko Anda. Penjualan tercatat resmi tanpa menambah uang fisik di laci kasir.',
+          'Hutang / Kasbon: Penjualan tempo atas nama pelanggan terdaftar. Transaksi selesai tanpa uang tunai dan langsung dicatat di buku piutang pelanggan.',
+        ],
+      },
+    ],
+    steps: [
+      {
+        title: 'Buka Tab Jualan / Kasir',
+        description: 'Pilih tab Jualan (POS) di bilah navigasi bawah.',
       },
       {
-        title: 'Cetak Struk Transaksi',
-        description: 'Setelah pembayaran sukses, struk dapat langsung dicetak ke printer Bluetooth thermal.',
+        title: 'Pilih Produk ke Keranjang',
+        description: 'Ketuk produk pada daftar atau tekan ikon barcode untuk memindai kemasan barang.',
+      },
+      {
+        title: 'Atur Kuantitas & Diskon (Jika Ada)',
+        description: 'Ubah jumlah barang sesuai pesanan pembeli dan tambahkan diskon jika sedang ada potongan harga.',
+      },
+      {
+        title: 'Tekan Tombol "Bayar"',
+        description: 'Pilih metode pembayaran: Tunai, QRIS, atau Kasbon (Hutang).',
+      },
+      {
+        title: 'Selesaikan & Cetak Struk',
+        description: 'Tekan Selesai Transaksi. Struk dapat langsung dicetak ke printer Bluetooth thermal.',
       },
     ],
     callouts: [
       {
         type: 'info',
         title: 'QRIS Statis Mandiri',
-        text: 'QRIS di Buku Warung adalah QRIS statis milik merchant sendiri (dana langsung masuk ke rekening bank/e-wallet Anda).',
+        text: 'Buku Warung menggunakan sistem QRIS Statis merchant Anda sendiri. Uang pembayaran langsung masuk ke rekening bank / e-wallet Anda tanpa potongan pihak ketiga.',
       },
     ],
+    example: {
+      title: 'Contoh Transaksi Kasir Pembelian Sembako',
+      scenario: 'Pembeli membeli 2 bungkus minyak goreng dan 1 kg gula pasir, dibayar tunai uang Rp 50.000.',
+      details: [
+        'Minyak Goreng: 2 × Rp 18.000 = Rp 36.000',
+        'Gula Pasir: 1 × Rp 17.500 = Rp 17.500',
+        'Total Belanja: Rp 53.500 | Diskon: Rp 3.500 | Total Tagihan: Rp 50.000',
+        'Uang Diterima: Rp 50.000 | Kembalian: Rp 0 (Pas)',
+      ],
+    },
+    screenshot: {
+      src: '/img/screenshots/04_jualan_pos.png',
+      caption: 'Layar Kasir POS Buku Warung dengan Keranjang Belanja dan Checkout',
+    },
     relatedSlugs: ['diskon', 'pelanggan', 'printer', 'beranda'],
-    keywords: ['pos', 'kasir', 'jualan', 'tunai', 'qris', 'struk', 'kembalian'],
+    keywords: ['pos', 'kasir', 'jualan', 'cara jual barang', 'checkout', 'tunai', 'qris', 'barcode', 'kembalian'],
   },
 
-  // 8. Diskon
+  // =========================================================================
+  // BAB 8 — DISKON TRANSAKSI
+  // =========================================================================
   {
     slug: 'diskon',
-    title: 'Diskon Transaksi',
+    title: 'BAB 8 — Diskon Transaksi',
     category: 'pos',
     categoryName: 'Kasir & Penjualan',
     order: 8,
-    description: 'Menerapkan potongan harga nominal (Rp) maupun persentase (%) pada kasir belanja.',
+    chapterLabel: 'BAB 8',
+    description: 'Cara memberikan potongan harga nominal rupiah maupun persentase pada kasir belanja.',
     version: DOC_VERSION,
     updatedAt: DOC_LAST_UPDATED,
     readTime: '2 menit baca',
     summary:
-      'Berikan diskon kepada pelanggan setia dengan perhitungan transparan yang langsung tercantum di struk dan laporan laba rugi.',
+      'Berikan diskon promo kepada pembeli dengan perhitungan akurat. Nilai diskon dicetak jelas di struk kasir dan otomatis diperhitungkan pada laporan laba rugi.',
+    targetAudience: 'Kasir dan pemilik toko saat mengadakan program potongan harga atau promo pelanggan.',
+    features: [
+      'Diskon Nominal (Rp): Potongan langsung dalam rupiah (misal Rp 5.000)',
+      'Diskon Persen (%): Potongan dalam persentase (misal 10%)',
+      'Pencatatan transparan pada struk cetak dan laporan penjualan bersih',
+    ],
     sections: [
       {
-        title: 'Perhitungan Diskon Universal',
+        title: '1. Pengaruh Diskon pada Laporan Finansial',
         paragraphs: [
-          'Diskon dapat diinput dalam bentuk nominal rupiah (misal Rp 5.000) atau persentase (misal 10%). Total penjualan bersih akan dikurangi diskon sebelum menghitung laba bersih.',
+          'Diskon yang diberikan akan mengurangi nilai penjualan bruto sehingga menghasilkan angka Penjualan Bersih yang sebenarnya. HPP barang modal tetap dihitung dari harga beli asli.',
         ],
       },
     ],
+    example: {
+      title: 'Contoh Diskon Belanja Hari Kemerdekaan',
+      scenario: 'Total belanjaan Rp 120.000 diberikan diskon potongan Rp 10.000.',
+      details: [
+        'Subtotal Keranjang: Rp 120.000',
+        'Diskon: Rp 10.000',
+        'Total Pembayaran Akhir: Rp 110.000',
+      ],
+    },
     relatedSlugs: ['pos', 'laporan', 'printer'],
-    keywords: ['diskon', 'potongan harga', 'promo', 'persen', 'nominal'],
+    keywords: ['diskon', 'potongan harga', 'promo', 'persen', 'nominal diskon'],
   },
 
-  // 9. Pelanggan & Piutang
+  // =========================================================================
+  // BAB 9 — PELANGGAN & BUKU PIUTANG
+  // =========================================================================
   {
     slug: 'pelanggan',
-    title: 'Pelanggan & Buku Piutang',
+    title: 'BAB 9 — Pelanggan & Buku Piutang',
     category: 'pos',
     categoryName: 'Kasir & Penjualan',
     order: 9,
-    description: 'Mencatat bon kasbon pelanggan, melihat rekap piutang, dan menerima cicilan pelunasan.',
+    chapterLabel: 'BAB 9',
+    description: 'Mencatat transaksi kasbon pembeli, memantau total piutang, dan menerima cicilan pelunasan.',
     version: DOC_VERSION,
     updatedAt: DOC_LAST_UPDATED,
     readTime: '3 menit baca',
     summary:
-      'Kelola buku piutang pelanggan secara rapi. Catat cicilan bertahap hingga lunas dengan riwayat transaksi yang jelas.',
+      'Buku Piutang mencatat siapa saja pelanggan yang berhutang (kasbon) secara tertib. Catat cicilan bertahap hingga lunas dengan riwayat pembayaran yang transparan.',
+    targetAudience: 'Pemilik warung dan kasir yang melayani sistem belanja kasbon bagi tetangga atau langganan.',
+    features: [
+      'Direktori data pelanggan: Nama, Nomor Telepon, Alamat, Catatan batas hutang',
+      'Penjualan kasbon langsung dari kasir POS',
+      'Daftar rekap piutang aktif yang belum lunas per pelanggan',
+      'Fitur bayar cicilan sebagian atau pelunasan penuh',
+      'Riwayat setoran uang cicilan otomatis menambah saldo kas toko',
+    ],
     sections: [
       {
-        title: 'Pencatatan Cicilan Piutang',
+        title: '1. Cara Mencatat Penjualan Bon / Kasbon',
         paragraphs: [
-          'Ketika pelanggan membayar sebagian bon kasbon, masukkan jumlah setoran cicilan. Status piutang akan otomatis diperbarui (UNPAID -> PARTIAL -> PAID).',
+          'Saat pembeli ingin kasbon di kasir, pilih metode pembayaran "Hutang", lalu pilih nama pelanggan terdaftar (atau tambah pelanggan baru).',
+          'Barang belanjaan tetap memotong stok toko, dan nilai belanjaan langsung dicatat sebagai piutang aktif atas nama pelanggan tersebut.',
+        ],
+      },
+      {
+        title: '2. Menerima Pembayaran Cicilan & Pelunasan',
+        paragraphs: [
+          'Ketika pelanggan datang mencicil hutang:',
+          '1. Buka menu Pelanggan & Piutang, lalu pilih nama pelanggan.',
+          '2. Tekan tombol "Bayar Hutang".',
+          '3. Masukkan nominal uang yang disetorkan pembeli.',
+          '4. Simpan. Sisa hutang pelanggan otomatis berkurang dan uang setoran otomatis menambah saldo kas laci toko.',
         ],
       },
     ],
+    example: {
+      title: 'Contoh Kasbon Pak Budi',
+      scenario: 'Pak Budi kasbon sembako Rp 75.000, lalu mencicil Rp 50.000 tiga hari kemudian.',
+      details: [
+        'Hutang Awal: Rp 75.000 (Status: UNPAID)',
+        'Cicilan Masuk: Rp 50.000 (Status berubah: PARTIAL)',
+        'Sisa Piutang: Rp 25.000 | Saldo Kas Toko: Bertambah Rp 50.000.',
+      ],
+    },
+    screenshot: {
+      src: '/img/screenshots/07_pelanggan_piutang.png',
+      caption: 'Buku Catatan Piutang Pelanggan & Riwayat Cicilan di Buku Warung',
+    },
     relatedSlugs: ['pos', 'kas', 'laporan'],
-    keywords: ['pelanggan', 'piutang', 'kasbon', 'hutang pelanggan', 'cicilan'],
+    keywords: ['pelanggan', 'piutang', 'kasbon', 'hutang pelanggan', 'cicilan', 'buku hutang'],
   },
 
-  // 10. Supplier
+  // =========================================================================
+  // BAB 10 — SUPPLIER & PEMASOK
+  // =========================================================================
   {
     slug: 'supplier',
-    title: 'Supplier & Pemasok',
+    title: 'BAB 10 — Supplier & Pemasok',
     category: 'pembelian',
     categoryName: 'Pembelian & PO',
     order: 10,
-    description: 'Mengelola direktori supplier, kontak sales, dan memantau saldo hutang kulakan.',
+    chapterLabel: 'BAB 10',
+    description: 'Mengelola daftar supplier kulakan, kontak sales, dan memantau saldo hutang usaha toko.',
     version: DOC_VERSION,
     updatedAt: DOC_LAST_UPDATED,
     readTime: '3 menit baca',
     summary:
-      'Simpan data supplier kulakan dan pantau riwayat pasokan barang serta jadwal pelunasan faktur supplier.',
+      'Kelola direktori pemasok (supplier) tempat Anda belanja kulakan. Pantau riwayat belanja barang masuk dan kelola jadwal pelunasan hutang supplier.',
+    targetAudience: 'Pemilik toko dan bagian belanja kulakan.',
+    features: [
+      'Buku kontak supplier: Nama sales/distributor, Nomor WhatsApp, Alamat gudang',
+      'Pelacakan total hutang usaha ke masing-masing supplier',
+      'Pencatatan pembayaran pelunasan faktur supplier',
+    ],
     sections: [
       {
-        title: 'Buku Hutang Supplier (Hutang Usaha)',
+        title: '1. Mengapa Perlu Mendata Supplier?',
         paragraphs: [
-          'Jika kulakan dilakukan secara tempo/kredit, saldo hutang supplier akan tercatat otomatis. Pelunasan hutang akan mengurangi saldo kas operasional toko.',
+          'Dengan mendata supplier secara rapi, Anda dapat membuat Purchase Order (PO) secara instan dan memantau faktur mana saja yang sudah jatuh tempo untuk dibayar.',
         ],
       },
     ],
+    screenshot: {
+      src: '/img/screenshots/08_supplier_hutang.png',
+      caption: 'Daftar Kontak Supplier & Buku Hutang Usaha Toko',
+    },
     relatedSlugs: ['pembelian', 'purchase-order', 'kas'],
-    keywords: ['supplier', 'pemasok', 'sales', 'hutang supplier', 'kulakan tempo'],
+    keywords: ['supplier', 'pemasok', 'distributor', 'sales', 'hutang supplier', 'kulakan tempo'],
   },
 
-  // 11. Pembelian / Kulakan
+  // =========================================================================
+  // BAB 11 — PEMBELIAN LANGSUNG (KULAKAN)
+  // =========================================================================
   {
     slug: 'pembelian',
-    title: 'Pembelian Langsung (Kulakan)',
+    title: 'BAB 11 — Pembelian Langsung (Kulakan)',
     category: 'pembelian',
     categoryName: 'Pembelian & PO',
     order: 11,
-    description: 'Mencatat barang masuk hasil belanja kulakan tunai maupun kredit dari supplier.',
+    chapterLabel: 'BAB 11',
+    description: 'Mencatat barang masuk hasil belanja kulakan tunai maupun tempo dari pasar atau distributor.',
     version: DOC_VERSION,
     updatedAt: DOC_LAST_UPDATED,
     readTime: '3 menit baca',
     summary:
-      'Pencatatan kulakan langsung otomatis menambah stok barang di etalase dan mengurangi saldo kas toko (atau mencatat hutang supplier).',
+      'Catat setiap belanjaan barang masuk. Stok produk di toko akan langsung bertambah dan kas toko (atau hutang supplier) akan diperbarui otomatis.',
+    targetAudience: 'Pemilik warung saat selesai belanja kulakan di pasar grosir atau menerima kiriman sales.',
+    features: [
+      'Pencatatan faktur barang masuk langsung',
+      'Pilihan pembayaran: Tunai (potong kas laci) atau Hutang Supplier (tempo)',
+      'Otomatisasi penambahan stok produk di master inventori',
+    ],
     sections: [
       {
-        title: 'Efek Otomatis Pembelian Langsung',
+        title: '1. Perbedaan Pembelian Tunai vs Tempo',
         paragraphs: [
-          '1. Stok produk langsung bertambah di master inventori.',
-          '2. Jika dibayar Tunai, kas keluar dicatat otomatis di Buku Kas.',
-          '3. Jika Tempo, tercatat sebagai Hutang Supplier di buku hutang usaha.',
+          'Pembelian Tunai: Saldo kas laci toko langsung terpotong sebesar total faktur belanja.',
+          'Pembelian Tempo (Kredit): Tidak memotong kas saat ini, tetapi dicatat sebagai Hutang Supplier yang harus dilunasi kemudian.',
         ],
       },
     ],
+    screenshot: {
+      src: '/img/screenshots/06_pembelian.png',
+      caption: 'Form Pencatatan Pembelian Barang Masuk / Kulakan',
+    },
     relatedSlugs: ['supplier', 'purchase-order', 'produk', 'kas'],
-    keywords: ['pembelian', 'kulakan', 'barang masuk', 'faktur beli'],
+    keywords: ['pembelian', 'kulakan', 'barang masuk', 'faktur beli', 'stok bertambah'],
   },
 
-  // 12. Purchase Order
+  // =========================================================================
+  // BAB 12 — PURCHASE ORDER (PO / PESANAN PEMBELIAN)
+  // =========================================================================
   {
     slug: 'purchase-order',
-    title: 'Purchase Order (PO / Pesanan Pembelian)',
+    title: 'BAB 12 — Purchase Order (PO / Pesanan Pembelian)',
     category: 'pembelian',
     categoryName: 'Pembelian & PO',
     order: 12,
-    description: 'Membuat dokumen pesanan pembelian resmi sebelum barang dikirim oleh supplier.',
+    chapterLabel: 'BAB 12',
+    description: 'Menyusun draf pesanan resmi sebelum barang dikirim dan memahami siklus status PO.',
     version: DOC_VERSION,
     updatedAt: DOC_LAST_UPDATED,
     readTime: '4 menit baca',
     summary:
-      'Purchase Order (PO) berfungsi sebagai surat pesanan formal ke supplier. Membuat PO belum mengubah stok maupun kas hingga barang diterima.',
+      'Purchase Order (PO) adalah dokumen pemesanan resmi dari toko Anda ke supplier. Membuat PO belum mengubah stok maupun kas hingga barang benar-benar diterima.',
+    targetAudience: 'Pemilik toko kelontong, apotek, toko bangunan, dan bengkel saat memesan stok ke distributor.',
+    features: [
+      'Pembuatan draf pesanan pembelian ke supplier terdaftar',
+      'Perhitungan estimasi nilai belanja berdasarkan harga beli terakhir',
+      'Siklus 4 status resmi PO: DRAFT, ORDERED, RECEIVED, CANCELLED',
+      'Kirim lembar PO via WhatsApp atau cetak ke printer thermal',
+    ],
     sections: [
       {
-        title: 'Siklus Status Purchase Order',
+        title: '1. Siklus 4 Status Purchase Order',
         paragraphs: [
-          'PO memiliki 4 status tahapan:',
+          'Setiap PO melewati tahapan status berikut:',
         ],
         listItems: [
-          'DRAFT: Draf pesanan yang masih bisa diedit atau dihapus.',
-          'ORDERED: Pesanan resmi yang telah dikirim ke supplier (bisa via WhatsApp/cetak).',
-          'RECEIVED: Barang telah tiba dan diterima via Goods Receipt (stok bertambah).',
-          'CANCELLED: Pesanan dibatalkan.',
+          'DRAFT: Pesanan sedang disusun dan masih bisa diubah (diedit) atau dihapus.',
+          'ORDERED: Pesanan resmi yang sudah dikirim ke sales supplier (nomor PO terkunci).',
+          'RECEIVED: Barang pesanan telah tiba di toko dan difinalisasi via menu Terima Barang (Goods Receipt).',
+          'CANCELLED: Pesanan dibatalkan karena supplier kehabisan stok atau pesanan diganti.',
         ],
       },
       {
-        title: 'Penting: PO ≠ Realisasi Pembelian',
+        title: '2. Aturan Penting: PO ≠ Realisasi Keuangan',
         paragraphs: [
-          'Membuat PO status DRAFT atau ORDERED tidak memotong kas dan tidak menambah stok. Stok dan catatan keuangan baru terealisasi saat Anda memproses "Terima Barang" (Goods Receipt).',
+          'Saat status PO masih DRAFT atau ORDERED, stok barang di toko belum bertambah dan saldo kas belum terpotong.',
+          'Stok dan catatan keuangan baru terealisasi ketika barang tiba dan Anda menekan tombol "Terima Barang" (Goods Receipt).',
         ],
       },
     ],
     steps: [
       {
         title: 'Buka Menu Purchase Order',
-        description: 'Masuk ke menu Pembelian -> Purchase Order lalu tekan "+ Buat PO".',
+        description: 'Buka menu Pembelian -> Purchase Order lalu tekan tombol "+ Buat PO".',
       },
       {
-        title: 'Pilih Supplier & Produk',
-        description: 'Pilih supplier tujuan dan tambahkan item barang beserta estimasi jumlah yang ingin dipesan.',
+        title: 'Pilih Supplier & Tambah Barang',
+        description: 'Pilih supplier tujuan, lalu tambahkan barang-barang yang ingin dipesan beserta estimasi jumlahnya.',
       },
       {
-        title: 'Simpan sebagai ORDERED',
-        description: 'Simpan pesanan dengan status ORDERED agar nomor PO resmi diterbitkan.',
-      },
-      {
-        title: 'Kirim ke Supplier',
-        description: 'Gunakan tombol Kirim WhatsApp atau Cetak PO untuk meneruskan pesanan ke pihak supplier.',
+        title: 'Simpan sebagai DRAFT atau ORDERED',
+        description: 'Pilih status ORDERED jika pesanan sudah final dan siap dikirim ke sales.',
       },
     ],
     callouts: [
       {
         type: 'warning',
-        title: 'Penerimaan Utuh di v0.2.0',
-        text: 'Pada Buku Warung v0.2.0, proses Terima Barang (Goods Receipt) mencatat penerimaan seluruh item pesanan sekaligus. Pastikan draf PO sudah sesuai sebelum finalisasi.',
+        title: 'Batasan Fitur di Buku Warung v0.2.0',
+        text: 'Pada versi v0.2.0, fitur Terima Barang mencatat penerimaan seluruh item pesanan sekaligus (full receipt). Penerimaan barang parsial/bertahap dialokasikan pada pembaruan berikutnya (G13.7).',
       },
     ],
     limitations: [
-      'Penerimaan parsial bertahap (partial receiving) dialokasikan pada pembaruan masa depan (G13.7).',
-      'Penyesuaian selisih harga faktur saat barang tiba dialokasikan pada rilis berikutnya.',
+      'Penerimaan parsial (sebagian barang datang dulu) belum didukung di v0.2.0.',
+      'Penyesuaian selisih harga faktur saat barang tiba dialokasikan pada pembaruan G13.7.',
+      'Pembuatan draf PO otomatis saat stok menipis merupakan rencana masa depan.',
     ],
     relatedSlugs: ['kirim-po', 'goods-receipt', 'supplier', 'pembelian'],
-    keywords: ['purchase order', 'po', 'pesanan pembelian', 'draft', 'ordered', 'supplier'],
+    keywords: ['purchase order', 'po', 'pesanan pembelian', 'draft', 'ordered', 'goods receipt'],
   },
 
-  // 13. Mengirim & Mencetak PO
+  // =========================================================================
+  // BAB 13 — MENGIRIM & MENCETAK PO
+  // =========================================================================
   {
     slug: 'kirim-po',
-    title: 'Mengirim & Mencetak Purchase Order',
+    title: 'BAB 13 — Mengirim & Mencetak Purchase Order',
     category: 'pembelian',
     categoryName: 'Pembelian & PO',
     order: 13,
-    description: 'Kirim format pesanan PO rapi ke WhatsApp supplier atau cetak ke printer thermal.',
+    chapterLabel: 'BAB 13',
+    description: 'Format pesan WhatsApp otomatis ke sales supplier dan cetak lembar PO ke printer thermal.',
     version: DOC_VERSION,
     updatedAt: DOC_LAST_UPDATED,
     readTime: '3 menit baca',
     summary:
-      'Bagikan lembar PO ke sales supplier melalui pesan WhatsApp berformat rapi, ekspor dokumen PDF, atau cetak ke printer thermal.',
+      'Teruskan pesanan PO ke supplier melalui format pesan WhatsApp rapi, dokumen PDF resmi, atau lembar cetak printer thermal.',
+    targetAudience: 'Pemilik toko saat meneruskan daftar pesanan ke sales distributor.',
+    features: [
+      'Pesan WhatsApp otomatis lengkap dengan nomor PO, daftar barang, jumlah, dan estimasi total',
+      'Cetak lembar PO berukuran 58mm atau 80mm di printer thermal',
+      'Ekspor dokumen PO berformat PDF untuk arsip resmi',
+    ],
     sections: [
       {
-        title: 'Format WhatsApp Rapi & Otomatis',
+        title: '1. Format Teks WhatsApp yang Bersih & Profesional',
         paragraphs: [
-          'Aplikasi secara otomatis menyusun nomor PO, nama toko, daftar item pesanan, jumlah, estimasi harga, dan catatan pesanan menjadi teks siap kirim ke WhatsApp supplier.',
+          'Aplikasi menyusun pesan dengan format standar:',
+          '*PURCHASE ORDER*',
+          '*Toko Sembako Berkah*',
+          'No. PO: PO-202609-001',
+          '1. Minyak Goreng Bimoli 1L (24 botol @ Rp 16.500 = Rp 396.000)',
+          'Estimasi Total: Rp 396.000',
+          'Mohon konfirmasi ketersediaan dan jadwal pengiriman. Terima kasih.',
         ],
       },
     ],
     relatedSlugs: ['purchase-order', 'goods-receipt', 'printer'],
-    keywords: ['kirim po', 'whatsapp po', 'cetak po', 'thermal po'],
+    keywords: ['kirim po', 'whatsapp po', 'cetak po thermal', 'pdf po'],
   },
 
-  // 14. Goods Receipt
+  // =========================================================================
+  // BAB 14 — PENERIMAAN BARANG (GOODS RECEIPT)
+  // =========================================================================
   {
     slug: 'goods-receipt',
-    title: 'Penerimaan Barang (Goods Receipt)',
+    title: 'BAB 14 — Penerimaan Barang (Goods Receipt)',
     category: 'pembelian',
     categoryName: 'Pembelian & PO',
     order: 14,
-    description: 'Proses finalisasi kedatangan barang dari PO menjadi stok aktif dan pencatatan keuangan.',
+    chapterLabel: 'BAB 14',
+    description: 'Memproses kedatangan barang dari PO menjadi stok nyata dan mencatat pembayaran kas/hutang.',
     version: DOC_VERSION,
     updatedAt: DOC_LAST_UPDATED,
     readTime: '3 menit baca',
     summary:
-      'Ketika barang pesanan tiba di toko, proses Goods Receipt untuk merealisasikan penambahan stok fisik dan pencatatan kas/hutang usaha.',
+      'Ketika truk pengiriman supplier tiba membawa barang pesanan, lakukan proses Terima Barang (Goods Receipt) untuk menambah stok aktif dan mencatat transaksi pembelian.',
+    targetAudience: 'Petugas penerima barang dan pemilik toko.',
+    features: [
+      'Realisasi otomatis penambahan stok seluruh item pesanan',
+      'Pilihan metode pembayaran: Tunai (potong kas) atau Tempo (Hutang Supplier)',
+      'Status PO otomatis beralih menjadi RECEIVED (Selesai)',
+    ],
     sections: [
       {
-        title: 'Langkah Realisasi Barang Masuk',
+        title: '1. Alur Realisasi Barang Tiba',
         paragraphs: [
-          '1. Buka detail PO yang berstatus ORDERED.',
-          '2. Tekan tombol "Terima Barang".',
-          '3. Pilih metode pembayaran: Tunai (potong kas) atau Hutang Supplier (tempo).',
-          '4. Konfirmasi: Status PO berubah menjadi RECEIVED, stok bertambah, dan transaksi pembelian tercatat resmi.',
+          'Saat kurir atau armada supplier tiba di toko membawa barang yang telah dipesan melalui Purchase Order (PO), Anda perlu memfinalisasi pesanan tersebut.',
+          'Dengan menekan Terima Barang, data transaksi pembelian langsung terbentuk dan stok produk di master inventori bertambah sesuai jumlah yang dipesan.',
+        ],
+      },
+      {
+        title: '2. Pembayaran Tunai vs Tempo saat Barang Masuk',
+        paragraphs: [
+          'Anda dapat memilih apakah pesanan dibayar tunai saat itu juga (mengurangi saldo kas toko) atau dicatat sebagai hutang supplier jatuh tempo.',
         ],
       },
     ],
+    steps: [
+      {
+        title: 'Buka Detail PO yang Berstatus ORDERED',
+        description: 'Masuk ke menu Purchase Order dan ketuk nomor PO yang barangnya baru tiba.',
+      },
+      {
+        title: 'Tekan Tombol "Terima Barang"',
+        description: 'Periksa kembali daftar barang yang datang bersama surat jalan dari supplier.',
+      },
+      {
+        title: 'Pilih Metode Pembayaran',
+        description: 'Pilih apakah faktur dibayar Tunai (mengurangi kas) atau Tempo (menambah hutang supplier).',
+      },
+      {
+        title: 'Konfirmasi Penerimaan',
+        description: 'Tekan Simpan. Stok toko langsung bertambah dan transaksi pembelian tercatat resmi.',
+      },
+    ],
+    limitations: [
+      'Penerimaan parsial (sebagian barang diterima lebih dulu) belum tersedia di v0.2.0.',
+      'Penyesuaian harga faktur otomatis / selisih harga saat penerimaan dialokasikan pada rilis berikutnya (G13.7).',
+    ],
     relatedSlugs: ['purchase-order', 'pembelian', 'produk', 'kas'],
-    keywords: ['goods receipt', 'terima barang', 'realisasi po', 'stok masuk'],
+    keywords: ['goods receipt', 'terima barang', 'realisasi po', 'stok masuk', 'finalisasi po', 'pembelian'],
   },
 
-  // 15. Buku Kas
+  // =========================================================================
+  // BAB 15 — BUKU KAS & BIAYA OPERASIONAL
+  // =========================================================================
   {
     slug: 'kas',
-    title: 'Buku Kas & Biaya Operasional',
+    title: 'BAB 15 — Buku Kas & Biaya Operasional',
     category: 'keuangan',
     categoryName: 'Buku Kas & Laporan',
     order: 15,
-    description: 'Mencatat uang masuk/keluar, biaya listrik, sewa, gaji karyawan, dan mutasi otomatis.',
+    chapterLabel: 'BAB 15',
+    description: 'Mencatat uang kas masuk/keluar, biaya listrik, sewa, gaji karyawan, dan mutasi otomatis.',
     version: DOC_VERSION,
     updatedAt: DOC_LAST_UPDATED,
     readTime: '3 menit baca',
     summary:
-      'Buku Kas memisahkan uang usaha dengan uang pribadi. Saldo kas diperbarui otomatis dari transaksi penjualan dan pelunasan piutang.',
+      'Buku Kas memisahkan uang pribadi dengan uang toko. Saldo kas diperbarui secara otomatis dari transaksi kasir dan setoran cicilan piutang.',
+    targetAudience: 'Pemilik toko yang ingin mengetahui arus kas nyata uang laci toko.',
+    features: [
+      'Pencatatan Kas Keluar untuk beban operasional: Listrik, Air, Gaji, Sewa, Plastik/Kresek',
+      'Pencatatan Kas Masuk untuk modal tambahan atau pendapatan lain',
+      'Mutasi kas otomatis dari penjualan tunai, kulakan tunai, dan pembayaran piutang',
+    ],
     sections: [
       {
-        title: 'Pencatatan Beban Operasional',
+        title: '1. Mengapa Penting Mencatat Biaya Operasional?',
         paragraphs: [
-          'Gunakan fitur Kas Keluar untuk mencatat pengeluaran operasional toko seperti tagihan listrik, air, sewa tempat, bensin kurir, dan gaji pembantu warung.',
+          'Dengan mencatat biaya listrik, gaji, dan bensin toko pada Kas Keluar, laporan laba rugi dapat menghitung Laba Bersih riil usaha Anda setelah dikurangi beban operasional.',
         ],
       },
     ],
+    screenshot: {
+      src: '/img/screenshots/09_uang_kas.png',
+      caption: 'Buku Kas Masuk & Kas Keluar Harian di Buku Warung',
+    },
     relatedSlugs: ['laporan', 'pos', 'pembelian'],
-    keywords: ['buku kas', 'arus kas', 'biaya operasional', 'kas masuk', 'kas keluar'],
+    keywords: ['buku kas', 'arus kas', 'biaya operasional', 'kas masuk', 'kas keluar', 'laba bersih'],
   },
 
-  // 16. Laporan & PDF
+  // =========================================================================
+  // BAB 16 — LAPORAN KEUANGAN & EKSPOR PDF
+  // =========================================================================
   {
     slug: 'laporan',
-    title: 'Laporan Keuangan & Ekspor PDF',
+    title: 'BAB 16 — Laporan Keuangan & Ekspor PDF',
     category: 'keuangan',
     categoryName: 'Buku Kas & Laporan',
     order: 16,
-    description: 'Menganalisis laba rugi sederhana, ringkasan omzet, modal barang (HPP), dan ekspor PDF.',
+    chapterLabel: 'BAB 16',
+    description: 'Analisis laba rugi sederhana, omzet, modal barang (HPP), dan ekspor dokumen PDF resmi.',
     version: DOC_VERSION,
     updatedAt: DOC_LAST_UPDATED,
     readTime: '4 menit baca',
     summary:
-      'Pantau kesehatan finansial toko melalui Laporan Laba Rugi Sederhana dengan filter periode fleksibel dan ekspor PDF resmi siap cetak.',
+      'Pantau kesehatan finansial toko Anda melalui Laporan Laba Rugi Sederhana dengan filter periode fleksibel (Hari Ini, 7 Hari, Bulan Ini) dan ekspor PDF resmi siap cetak.',
+    targetAudience: 'Pemilik usaha untuk evaluasi laba rugi mingguan dan bulanan.',
+    features: [
+      'Laporan Laba Rugi Sederhana: Penjualan Bersih, HPP Modal Terjual, Laba Kotor, Operasional, Laba Bersih',
+      'Laporan Nilai Stok Modal, Piutang Pelanggan, dan Hutang Supplier aktif',
+      'Filter Periode Fleksibel: Hari Ini, Kemarin, 7 Hari Terakhir, Bulan Ini, Bulan Lalu, Semua Periode',
+      'Ekspor dokumen PDF vektor standar A4 berkualitas tinggi dengan header toko resmi',
+    ],
     sections: [
       {
-        title: 'Struktur Laba Rugi Sederhana',
+        title: '1. Rumus Perhitungan Laba Rugi Sederhana',
         paragraphs: [
-          'Laporan keuangan Buku Warung menghitung:',
+          'Buku Warung menyajikan 5 baris laporan keuangan yang mudah dipahami pedagang:',
         ],
         listItems: [
-          'Penjualan Bersih: Penjualan Bruto - Retur Penjualan',
-          'HPP (Modal Terjual): Modal pokok dari barang-barang yang laku',
-          'Laba Kotor: Penjualan Bersih - HPP',
-          'Pengeluaran Operasional: Biaya listrik, gaji, dan beban toko',
-          'Laba Bersih: Laba Kotor - Pengeluaran Operasional',
-        ],
-      },
-      {
-        title: 'Ekspor Dokumen PDF Vektor',
-        paragraphs: [
-          'Laporan dapat diekspor langsung menjadi file PDF standar A4 dengan header toko, tabel rapi, dan tanda tangan cetak.',
+          'Penjualan Bersih: Total omzet kasir dikurangi retur penjualan.',
+          'HPP (Modal Barang Terjual): Modal harga beli dari barang-barang yang laku.',
+          'Laba Kotor: Penjualan Bersih dikurangi HPP Modal Terjual.',
+          'Pengeluaran Operasional: Total beban listrik, sewa, gaji, dan biaya toko.',
+          'Laba Bersih: Laba Kotor dikurangi Pengeluaran Operasional.',
         ],
       },
     ],
+    screenshot: {
+      src: '/img/screenshots/10_laporan.png',
+      caption: 'Laporan Laba Rugi Sederhana & Posisi Keuangan Toko',
+    },
     relatedSlugs: ['kas', 'pos', 'produk'],
-    keywords: ['laporan', 'laba rugi', 'hpp', 'laba bersih', 'ekspor pdf', 'omzet'],
+    keywords: ['laporan', 'laba rugi', 'omzet', 'hpp', 'modal terjual', 'laba bersih', 'ekspor pdf'],
   },
 
-  // 17. Katalog WhatsApp
+  // =========================================================================
+  // BAB 17 — KATALOG PRODUK WHATSAPP
+  // =========================================================================
   {
     slug: 'katalog-whatsapp',
-    title: 'Katalog Produk WhatsApp',
+    title: 'BAB 17 — Katalog Produk WhatsApp',
     category: 'hardware',
     categoryName: 'Hardware & WhatsApp',
     order: 17,
-    description: 'Bagikan daftar harga barang dan stok toko langsung ke WhatsApp pelanggan dalam sekali klik.',
+    chapterLabel: 'BAB 17',
+    description: 'Bagikan daftar harga barang dan stok toko ke WhatsApp pembeli dalam sekali klik.',
     version: DOC_VERSION,
     updatedAt: DOC_LAST_UPDATED,
     readTime: '2 menit baca',
     summary:
-      'Pilih produk yang ingin dipromosikan, pilih opsi tampilkan/sembunyikan stok, lalu bagikan pesan katalog rapi ke kontak atau grup WhatsApp.',
+      'Pilih barang dagangan dari etalase, pilih opsi tampilkan/sembunyikan stok, lalu bagikan pesan katalog rapi langsung ke kontak atau grup WhatsApp pembeli.',
+    targetAudience: 'Pedagang yang sering mempromosikan barang dagangan via status atau grup WhatsApp.',
+    features: [
+      'Pilih beberapa produk atau gunakan tombol "Pilih Semua"',
+      'Pencarian dan filter kategori produk',
+      'Opsi tampilkan atau sembunyikan jumlah sisa stok',
+      'Kirim ke WhatsApp atau WhatsApp Business dengan pesan otomatis rapi',
+    ],
     sections: [
       {
-        title: 'Kemudahan Promosi Pelanggan',
+        title: '1. Praktis Tanpa Perlu Mengetik Ulang',
         paragraphs: [
-          'Katalog disusun otomatis dengan nama toko, daftar harga per unit, dan kontak pemesanan. Cocok untuk broadcast promo harian warung sembako atau apotek.',
+          'Katalog disusun otomatis dengan judul sesuai jenis usaha (*KATALOG PRODUK*, *KATALOG OBAT*, atau *KATALOG MATERIAL*), nama toko, rincian harga per satuan, dan kontak pemesanan.',
         ],
       },
     ],
     relatedSlugs: ['produk', 'pos'],
-    keywords: ['katalog whatsapp', 'share katalog', 'broadcast promo', 'daftar harga wa'],
+    keywords: ['katalog whatsapp', 'share katalog', 'broadcast promo', 'daftar harga wa', 'whatsapp'],
   },
 
-  // 18. Printer Thermal
+  // =========================================================================
+  // BAB 18 — PRINTER STRUK THERMAL (BLUETOOTH & USB)
+  // =========================================================================
   {
     slug: 'printer',
-    title: 'Printer Struk Thermal (Bluetooth & USB)',
+    title: 'BAB 18 — Printer Struk Thermal (Bluetooth & USB)',
     category: 'hardware',
     categoryName: 'Hardware & WhatsApp',
     order: 18,
-    description: 'Menghubungkan printer kasir Bluetooth dan USB OTG ukuran kertas 58mm maupun 80mm.',
+    chapterLabel: 'BAB 18',
+    description: 'Panduan koneksi printer kasir Bluetooth dan USB OTG ukuran 58mm maupun 80mm serta cetak ulang.',
     version: DOC_VERSION,
     updatedAt: DOC_LAST_UPDATED,
     readTime: '4 menit baca',
     summary:
       'Cetak nota struk kasir profesional standar ESC/POS menggunakan printer thermal Bluetooth nirkabel maupun kabel USB OTG.',
+    targetAudience: 'Kasir dan pemilik toko yang menggunakan printer cetak struk kasir.',
+    features: [
+      'Koneksi nirkabel Bluetooth dan kabel USB OTG',
+      'Dukungan kertas thermal lebar 58mm (32 kolom) dan 80mm (48 kolom)',
+      'Fitur Test Print untuk memastikan printer siap pakai',
+      'Fitur Cetak Ulang (Reprint) untuk mencetak salinan struk transaksi lama',
+    ],
     sections: [
       {
-        title: 'Panduan Koneksi Printer Bluetooth',
+        title: '1. Dukungan Printer ESC/POS Standar',
         paragraphs: [
-          '1. Pastikan Bluetooth di HP Android aktif dan printer thermal sudah dipasangkan (paired) di pengaturan Bluetooth HP.',
-          '2. Buka Buku Warung -> Pengaturan -> Pengaturan Printer.',
-          '3. Pilih jenis koneksi Bluetooth, pilih nama printer Anda, lalu tentukan lebar kertas (58mm atau 80mm).',
-          '4. Tekan "Test Print" untuk memastikan kertas mencetak struk uji coba dengan sukses.',
+          'Buku Warung mendukung hampir seluruh printer thermal kasir di pasaran yang mendukung protokol standar ESC/POS Bluetooth maupun USB.',
+          'Anda dapat memilih ukuran kertas 58mm (cocok untuk printer saku portable) atau 80mm (cocok untuk printer kasir meja besar).',
+        ],
+      },
+      {
+        title: '2. Fitur Cetak Ulang (Reprint)',
+        paragraphs: [
+          'Jika kertas printer sempat macet atau pembeli meminta salinan struk kedua, Anda dapat mencetak ulang struk transaksi melalui riwayat penjualan tanpa mempengaruhi stok.',
         ],
       },
     ],
+    steps: [
+      {
+        title: 'Pasangkan (Pair) Printer di Pengaturan HP',
+        description: 'Nyalakan printer thermal. Buka Pengaturan Bluetooth di HP Android Anda dan pasangkan dengan printer (biasanya PIN: 0000 atau 1234).',
+      },
+      {
+        title: 'Buka Menu Pengaturan Printer di Buku Warung',
+        description: 'Buka Buku Warung -> Pengaturan -> Pengaturan Printer.',
+      },
+      {
+        title: 'Pilih Nama Printer & Ukuran Kertas',
+        description: 'Pilih printer Bluetooth yang sudah dipasangkan dan tentukan lebar kertas (58mm atau 80mm).',
+      },
+      {
+        title: 'Tekan "Test Print"',
+        description: 'Pastikan printer berhasil mengeluarkan kertas tes cetak.',
+      },
+    ],
+    screenshot: {
+      src: '/img/screenshots/11_pengaturan.png',
+      caption: 'Pengaturan Koneksi Printer Bluetooth Thermal & Pengaturan Toko',
+    },
     relatedSlugs: ['pos', 'kirim-po', 'beranda'],
-    keywords: ['printer', 'bluetooth', 'usb otg', 'thermal 58mm', 'thermal 80mm', 'cetak struk'],
+    keywords: ['printer', 'bluetooth', 'usb otg', 'printer thermal', '58mm', '80mm', 'cetak struk', 'reprint'],
   },
 
-  // 19. Backup & Restore Google Sheets
+  // =========================================================================
+  // BAB 19 — BACKUP & RESTORE GOOGLE SHEETS
+  // =========================================================================
   {
     slug: 'backup-restore',
-    title: 'Backup & Restore Google Sheets',
+    title: 'BAB 19 — Backup & Restore Google Sheets',
     category: 'keamanan',
     categoryName: 'Keamanan & Lisensi',
     order: 19,
-    description: 'Mencadangkan seluruh data transaksi ke Google Spreadsheet dan memulihkannya dengan aman.',
+    chapterLabel: 'BAB 19',
+    description: 'Mencadangkan seluruh data transaksi ke Google Spreadsheet dan memulihkannya secara aman.',
     version: DOC_VERSION,
     updatedAt: DOC_LAST_UPDATED,
     readTime: '4 menit baca',
     summary:
       'Amankan data pembukuan Anda ke akun Google Drive pribadi. Data disimpan dalam 18 tab tabel spreadsheet kanonikal yang dapat dipulihkan kapan saja.',
+    targetAudience: 'Pemilik toko yang ingin mengamankan data dari risiko HP hilang, rusak, atau ganti baru.',
+    features: [
+      'Pencadangan 100% data: Produk, Kategori, Pelanggan, Supplier, Penjualan, Pembelian, Hutang, Kas, dan Mutasi Stok',
+      'Tersimpan di Google Drive milik akun Google Anda sendiri',
+      'Pemulihan (Restore) aman dengan validasi integritas data dan checksum otomatis',
+    ],
     sections: [
       {
-        title: 'Keamanan Data Milik Anda Sendiri',
+        title: '1. Keamanan Data Milik Anda Sendiri',
         paragraphs: [
           'Cadangan data tersimpan langsung di Google Drive akun Google Anda sendiri, bukan di server pihak ketiga. Anda memiliki kendali penuh atas file spreadsheet cadangan.',
         ],
       },
       {
-        title: 'Proses Pemulihan (Restore) Atomik',
+        title: '2. 18 Lembar Tabel Cadangan Kanonikal',
         paragraphs: [
-          'Fitur Restore memvalidasi integritas data dan checksum sebelum mengganti data database, menjamin tidak ada data rusak atau separuh tersimpan saat proses pemulihan.',
+          'Proses pencadangan mengekspor 18 tabel Room database lokal ke lembar kerja Google Spreadsheet yang terstruktur rapi dan dapat dibuka di komputer.',
         ],
       },
     ],
+    steps: [
+      {
+        title: 'Buka Menu Backup & Restore',
+        description: 'Masuk ke menu Pengaturan -> Cadangkan & Pulihkan Data.',
+      },
+      {
+        title: 'Hubungkan Akun Google',
+        description: 'Pilih akun Google Drive Anda yang aktif.',
+      },
+      {
+        title: 'Tekan "Cadangkan Sekarang"',
+        description: 'Tunggu beberapa detik hingga muncul pesan "Pencadangan Berhasil".',
+      },
+    ],
+    limitations: [
+      'Pencadangan dilakukan secara manual atau terjadwal (bukan sinkronisasi cloud otomatis realtime multi-perangkat).',
+      'Memerlukan koneksi internet saat proses unggah cadangan ke Google Drive.',
+    ],
     relatedSlugs: ['pin', 'lisensi', 'mulai'],
-    keywords: ['backup', 'restore', 'google sheets', 'google drive', 'cadangkan data', 'pulihkan'],
+    keywords: ['backup', 'restore', 'google sheets', 'google drive', 'cadangkan data', 'pulihkan data', 'backup google sheets'],
   },
 
-  // 20. PIN Keamanan
+  // =========================================================================
+  // BAB 20 — KEAMANAN & PIN PEMILIK
+  // =========================================================================
   {
     slug: 'pin',
-    title: 'Keamanan & PIN Pemilik',
+    title: 'BAB 20 — Keamanan & PIN Pemilik',
     category: 'keamanan',
     categoryName: 'Keamanan & Lisensi',
     order: 20,
-    description: 'Mengamankan akses laporan keuangan dan kasir dengan 4 angka PIN terenkripsi.',
+    chapterLabel: 'BAB 20',
+    description: 'Mengamankan akses laporan keuangan dan aplikasi dengan 4 angka PIN pemilik toko.',
     version: DOC_VERSION,
     updatedAt: DOC_LAST_UPDATED,
     readTime: '2 menit baca',
     summary:
-      'Lindungi kerahasiaan omzet dan data pelanggan dari pihak yang tidak berhak dengan mengaktifkan proteksi PIN 4 angka pemilik.',
+      'Lindungi kerahasiaan omzet toko, laporan laba rugi, dan data pelanggan dari pihak yang tidak berwenang dengan mengaktifkan kunci PIN 4 angka.',
+    targetAudience: 'Pemilik toko yang mempekerjakan karyawan kasir.',
+    features: [
+      'Kunci PIN 4 digit angka sederhana dan mudah diingat',
+      'Enkripsi aman Salted SHA-256 pada penyimpanan internal HP',
+      'Mencegah karyawan membuka laporan laba bersih toko sembarangan',
+    ],
     sections: [
       {
-        title: 'Enkripsi Salted SHA-256',
+        title: '1. Melindungi Laporan Laba Rugi dari Karyawan',
         paragraphs: [
-          'PIN pemilik dienkripsi secara aman menggunakan algoritma Salted SHA-256 pada penyimpanan internal, sehingga tidak dapat dibaca sembarangan.',
+          'Jika Anda mempercayakan HP toko kepada kasir atau penjaga warung, Anda dapat mengunci modul Laporan dan Pengaturan menggunakan PIN 4 digit.',
+          'Kasir tetap dapat melayani penjualan dan mencetak struk tanpa bisa melihat nominal laba bersih atau modal kulakan barang.',
         ],
       },
     ],
+    steps: [
+      {
+        title: 'Buka Pengaturan Keamanan',
+        description: 'Masuk ke menu Pengaturan -> Keamanan PIN.',
+      },
+      {
+        title: 'Buat 4 Angka PIN Baru',
+        description: 'Masukkan 4 angka rahasia yang mudah Anda ingat lalu konfirmasi ulang.',
+      },
+      {
+        title: 'Simpan PIN',
+        description: 'Mulai sekarang, menu laporan akan meminta PIN sebelum dapat dibuka.',
+      },
+    ],
+    limitations: [
+      'Pastikan Anda mengingat PIN pemilik. Jika lupa PIN, pemulihan memerlukan bantuan verifikasi email pemilik resmi.',
+    ],
     relatedSlugs: ['mulai', 'lisensi', 'backup-restore'],
-    keywords: ['pin', 'keamanan', 'kunci aplikasi', 'password kasir'],
+    keywords: ['pin', 'keamanan', 'kunci aplikasi', 'password kasir', 'salted sha256', 'proteksi toko'],
   },
 
-  // 21. Lisensi
+  // =========================================================================
+  // BAB 21 — LISENSI RESMI & PERGANTIAN PERANGKAT
+  // =========================================================================
   {
     slug: 'lisensi',
-    title: 'Lisensi Resmi & Pergantian Perangkat',
+    title: 'BAB 21 — Lisensi Resmi & Pergantian Perangkat',
     category: 'keamanan',
     categoryName: 'Keamanan & Lisensi',
     order: 21,
-    description: 'Ketentuan lisensi resmi sekali beli seumur hidup dan prosedur jika ganti HP baru.',
+    chapterLabel: 'BAB 21',
+    description: 'Ketentuan lisensi resmi sekali beli seumur hidup dan prosedur resmi jika berganti HP baru.',
     version: DOC_VERSION,
     updatedAt: DOC_LAST_UPDATED,
     readTime: '3 menit baca',
     summary:
-      'Lisensi Buku Warung berlaku 1 Lisensi = 1 Email Pemilik = 1 HP Aktif Selamanya. Tidak ada biaya langganan bulanan maupun tahunan.',
+      'Lisensi Buku Warung berlaku 1 Lisensi = 1 Email Pemilik = 1 HP Android Aktif Selamanya. Tidak ada biaya langganan bulanan maupun potongan per transaksi.',
+    targetAudience: 'Semua pemilik lisensi resmi Buku Warung.',
+    features: [
+      'Sekali beli untuk seumur hidup (Lifetime One-Time Purchase)',
+      'Tanpa biaya bulanan / tahunan (No recurring fee)',
+      'Prosedur resmi pemindahan lisensi saat ganti HP baru melalui Admin CS',
+    ],
     sections: [
       {
-        title: 'Prosedur Ganti HP Baru',
+        title: '1. Prosedur Resmi Jika Ganti HP Baru',
         paragraphs: [
-          'Jika Anda mengganti perangkat HP atau melakukan factory reset, lisensi Anda tidak hangus. Hubungi Customer Service resmi SKMNetwork dengan melampirkan email pemilik terdaftar untuk verifikasi dan pelepasan binding perangkat lama.',
+          'Jika Anda membeli HP baru atau HP lama rusak, lisensi Anda tidak hangus karena terdaftar atas nama email pemilik Anda.',
+          'Hubungi CS WhatsApp resmi SKMNetwork dengan menyertakan Email Pemilik terdaftar. Tim admin akan membantu melepaskan ikatan perangkat lama agar kode lisensi dapat diaktifkan kembali di HP baru Anda.',
         ],
       },
     ],
-    relatedSlugs: ['mulai', 'backup-restore', 'faq'],
-    keywords: ['lisensi', 'aktivasi', 'ganti hp', 'device binding', 'lifetime'],
+    relatedSlugs: ['instalasi', 'mulai', 'backup-restore', 'faq'],
+    keywords: ['lisensi', 'aktivasi', 'ganti hp', 'device binding', 'lifetime', 'sekali beli'],
   },
 
-  // 22. Jenis Usaha
+  // =========================================================================
+  // BAB 22 — KUSTOMISASI 19 JENIS USAHA ADAPTIF
+  // =========================================================================
   {
     slug: 'jenis-usaha',
-    title: 'Kustomisasi 19 Jenis Usaha Adaptif',
+    title: 'BAB 22 — Kustomisasi 19 Jenis Usaha Adaptif',
     category: 'bantuan',
     categoryName: 'Bantuan & Kustomisasi',
     order: 22,
-    description: 'Penjelasan adaptasi terminologi dan fitur untuk 19 kategori profil usaha UMKM Indonesia.',
+    chapterLabel: 'BAB 22',
+    description: 'Penjelasan adaptasi istilah dan fitur untuk 19 kategori profil bisnis UMKM Indonesia.',
     version: DOC_VERSION,
     updatedAt: DOC_LAST_UPDATED,
     readTime: '4 menit baca',
     summary:
-      'Satu aplikasi untuk berbagai bisnis. Buku Warung otomatis menyesuaikan sebutan produk, satuan, dan struk sesuai jenis usaha yang Anda pilih.',
+      'Satu aplikasi untuk beragam jenis usaha. Buku Warung otomatis menyesuaikan sebutan produk, satuan barang, dan format struk sesuai profil bisnis yang Anda pilih.',
+    targetAudience: 'Pelaku berbagai sektor usaha UMKM di Indonesia.',
+    features: [
+      'Retail: Warung Sembako, Minimarket, Toko Pakaian, Toko Elektronik, Toko Bangunan, Apotek, Konter HP',
+      'Jasa: Bengkel Motor/Mobil, Cuci Kendaraan, Service Elektronik, Laundry, Salon/Barbershop, Penjahit, Fotocopy, Teknisi',
+      'Food & Beverage: Warung Makan/Resto, Kedai Kopi & Kafe, Toko Roti & Kue (Bakery)',
+      'Produksi: Industri Rumahan & Kerajinan',
+    ],
     sections: [
       {
-        title: 'Daftar Kategori Usaha yang Didukung',
+        title: '1. Satu Mesin Aplikasi, Beragam Adaptasi',
         paragraphs: [
-          '1. Retail: Warung Sembako, Minimarket, Toko Pakaian, Toko Elektronik, Toko Bangunan, Apotek, Konter Pulsa.',
-          '2. Services: Bengkel Motor/Mobil, Cuci Kendaraan, Service Elektronik, Laundry, Barbershop/Salon, Penjahit, Fotocopy/Percetakan, Jasa Teknisi.',
-          '3. Food & Beverage: Warung Makan/Resto, Kedai Kopi & Kafe, Toko Roti & Kue (Bakery).',
-          '4. Production: Industri Rumahan & Kerajinan.',
+          'Buku Warung tidak memerlukan instalasi aplikasi berbeda untuk bisnis berbeda. Cukup ubah jenis usaha di menu Pengaturan -> Profil Usaha, dan seluruh antarmuka aplikasi akan otomatis beradaptasi.',
         ],
       },
     ],
     relatedSlugs: ['mulai', 'produk', 'pos'],
-    keywords: ['jenis usaha', 'adaptif', 'warung sembako', 'bengkel', 'apotek', 'toko bangunan', 'laundry'],
+    keywords: ['jenis usaha', 'adaptif', 'warung sembako', 'bengkel', 'apotek', 'toko bangunan', 'laundry', 'salon'],
   },
 
-  // 23. FAQ
+  // =========================================================================
+  // BAB 23 — TANYA JAWAB POPULER (FAQ)
+  // =========================================================================
   {
     slug: 'faq',
-    title: 'Tanya Jawab Populer (FAQ)',
+    title: 'BAB 23 — Tanya Jawab Populer (FAQ)',
     category: 'bantuan',
     categoryName: 'Bantuan & Kustomisasi',
     order: 23,
-    description: 'Jawaban atas pertanyaan yang paling sering diajukan mengenai penggunaan Buku Warung.',
+    chapterLabel: 'BAB 23',
+    description: 'Jawaban atas pertanyaan paling sering diajukan mengenai penggunaan Buku Warung v0.2.0.',
     version: DOC_VERSION,
     updatedAt: DOC_LAST_UPDATED,
     readTime: '4 menit baca',
     summary:
-      'Kumpulan jawaban resmi seputar offline mode, printer, backup, lisensi, dan batasan operasional aplikasi Buku Warung v0.2.0.',
+      'Kumpulan jawaban resmi seputar mode offline, printer, barcode, kasbon pelanggan, backup data, dan lisensi resmi.',
+    targetAudience: 'Calon pengguna dan pemilik toko yang membutuhkan jawaban cepat.',
+    features: [
+      'Pertanyaan seputar koneksi offline dan kuota internet',
+      'Pertanyaan seputar kompatibilitas printer Bluetooth',
+      'Pertanyaan seputar keamanan data dan backup Google Sheets',
+      'Pertanyaan seputar ketentuan lisensi resmi',
+    ],
     sections: [
       {
-        title: 'Apakah Buku Warung bisa dipakai tanpa kuota internet?',
+        title: 'Apakah aplikasi bisa dipakai tanpa kuota internet?',
         paragraphs: [
-          'Ya, 100% bisa offline. Transaksi kasir, cetak nota, cek stok, dan laporan keuangan berjalan penuh tanpa koneksi internet. Internet hanya digunakan saat aktivasi awal atau backup Google Drive.',
+          'Ya, 100% bisa offline. Kasir POS, stok barang, cetak struk, dan laporan keuangan berjalan penuh tanpa koneksi internet. Internet hanya digunakan saat aktivasi awal atau saat Anda memilih backup ke Google Drive.',
         ],
       },
       {
         title: 'Apakah ada biaya perpanjangan langganan bulanan?',
         paragraphs: [
-          'Tidak ada. Pembelian lisensi Buku Warung adalah sekali beli untuk selamanya (Lifetime One-Time Purchase).',
+          'Tidak ada. Pembelian lisensi Buku Warung adalah sekali bayar seumur hidup (Lifetime One-Time Purchase).',
         ],
       },
       {
-        title: 'Berapa kapasitas penyimpanan data produk dan transaksi?',
+        title: 'Apakah bisa menggunakan barcode scanner?',
         paragraphs: [
-          'Kapasitas tidak dibatasi oleh aplikasi (unlimited), melainkan hanya dibatasi oleh memori internal HP Android Anda.',
+          'Ya. Anda dapat scan barcode menggunakan kamera bawaan HP atau menghubungkan barcode scanner laser eksternal (Bluetooth / USB).',
+        ],
+      },
+      {
+        title: 'Berapa banyak barang dan transaksi yang bisa dicatat?',
+        paragraphs: [
+          'Tidak ada batasan jumlah barang atau transaksi dari aplikasi (unlimited). Batasannya hanya kapasitas memori internal HP Anda.',
         ],
       },
     ],
     relatedSlugs: ['troubleshooting', 'mulai', 'lisensi', 'printer'],
-    keywords: ['faq', 'tanya jawab', 'offline', 'langganan', 'kapasitas data'],
+    keywords: ['faq', 'tanya jawab', 'offline', 'langganan', 'kapasitas', 'printer bluetooth'],
   },
 
-  // 24. Troubleshooting
+  // =========================================================================
+  // BAB 24 — PANDUAN MENGATASI KENDALA (TROUBLESHOOTING)
+  // =========================================================================
   {
     slug: 'troubleshooting',
-    title: 'Panduan Mengatasi Kendala (Troubleshooting)',
+    title: 'BAB 24 — Panduan Mengatasi Kendala (Troubleshooting)',
     category: 'bantuan',
     categoryName: 'Bantuan & Kustomisasi',
     order: 24,
-    description: 'Solusi cepat saat printer tidak konek, backup gagal, atau lupa nomor lisensi.',
+    chapterLabel: 'BAB 24',
+    description: 'Langkah mandiri mengatasi printer tidak konek, backup Google Sheets gagal, atau kendala aktivasi.',
     version: DOC_VERSION,
     updatedAt: DOC_LAST_UPDATED,
     readTime: '3 menit baca',
     summary:
-      'Panduan perbaikan mandiri untuk mengatasi kendala umum operasional sehari-hari pada printer, backup Google Sheets, dan lisensi.',
+      'Panduan perbaikan mandiri untuk menyelesaikan kendala umum operasional sehari-hari pada printer struk, backup Google Drive, dan lisensi.',
+    targetAudience: 'Pengguna yang mengalami kendala teknis saat mengoperasikan aplikasi.',
+    features: [
+      'Solusi printer thermal tidak mencetak atau tulisan buram',
+      'Solusi pencadangan Google Sheets gagal atau koneksi terputus',
+      'Solusi barcode scanner tidak mendeteksi kemasan barang',
+      'Kontak layanan bantuan Customer Service resmi SKMNetwork',
+    ],
     sections: [
       {
-        title: 'Printer Thermal Tidak Mau Mencetak',
+        title: '1. Printer Thermal Tidak Mau Mencetak',
         paragraphs: [
-          '1. Pastikan printer dalam kondisi menyala dan kertas terpasang dengan arah gulungan yang benar.',
-          '2. Pastikan printer sudah dipasangkan (paired) di pengaturan Bluetooth Android.',
-          '3. Buka Pengaturan -> Printer di Buku Warung, pilih nama printer Anda, lalu tekan Test Print.',
+          'Pemeriksaan Cepat:',
+          '1. Pastikan printer dalam posisi ON dan baterai mencukupi.',
+          '2. Periksa arah gulungan kertas thermal (bagian licin kertas harus menghadap ke kepala cetak printer).',
+          '3. Pastikan printer sudah di-pair di pengaturan Bluetooth Android HP.',
+          '4. Buka Pengaturan -> Printer di Buku Warung, pilih nama printer Anda, lalu tekan Test Print.',
         ],
       },
       {
-        title: 'Backup Google Sheets Gagal',
+        title: '2. Pencadangan (Backup) Google Sheets Gagal',
         paragraphs: [
-          '1. Pastikan HP sedang terhubung ke internet yang stabil.',
-          '2. Pastikan akun Google Drive memiliki ruang penyimpanan yang mencukupi.',
-          '3. Lakukan login ulang akun Google jika masa otorisasi telah kedaluwarsa.',
+          'Pemeriksaan Cepat:',
+          '1. Pastikan HP sedang terhubung ke koneksi internet yang stabil.',
+          '2. Pastikan akun Google Drive Anda memiliki sisa ruang penyimpanan yang cukup.',
+          '3. Jika muncul pesan izin ditolak, lakukan login ulang ke akun Google Anda pada menu Cadangkan.',
+        ],
+      },
+      {
+        title: '3. Kontak Bantuan Resmi',
+        paragraphs: [
+          'Jika Anda masih mengalami kendala setelah mengikuti panduan di atas, tim Customer Service resmi SKMNetwork siap membantu Anda melalui WhatsApp resmi di nomor yang tertera pada website https://bukuwarung.skmnetwork.com.',
         ],
       },
     ],
     relatedSlugs: ['faq', 'printer', 'backup-restore', 'lisensi'],
-    keywords: ['troubleshooting', 'kendala', 'printer error', 'backup gagal', 'bantuan'],
+    keywords: ['troubleshooting', 'kendala', 'printer error', 'backup gagal', 'bantuan cs'],
   },
 ];
 
@@ -977,8 +1576,26 @@ export function searchDocArticles(query: string): DocArticle[] {
     return (
       article.title.toLowerCase().includes(q) ||
       article.description.toLowerCase().includes(q) ||
+      article.summary.toLowerCase().includes(q) ||
       article.categoryName.toLowerCase().includes(q) ||
-      article.keywords.some((kw) => kw.toLowerCase().includes(q))
+      (article.targetAudience && article.targetAudience.toLowerCase().includes(q)) ||
+      (article.features && article.features.some((f) => f.toLowerCase().includes(q))) ||
+      article.keywords.some((kw) => kw.toLowerCase().includes(q)) ||
+      (article.limitations && article.limitations.some((lim) => lim.toLowerCase().includes(q))) ||
+      article.sections.some(
+        (sec) =>
+          sec.title.toLowerCase().includes(q) ||
+          sec.paragraphs.some((p) => p.toLowerCase().includes(q)) ||
+          (sec.listItems && sec.listItems.some((li) => li.toLowerCase().includes(q)))
+      ) ||
+      (article.steps &&
+        article.steps.some(
+          (st) => st.title.toLowerCase().includes(q) || st.description.toLowerCase().includes(q)
+        )) ||
+      (article.example &&
+        (article.example.title.toLowerCase().includes(q) ||
+          article.example.scenario.toLowerCase().includes(q) ||
+          article.example.details.some((d) => d.toLowerCase().includes(q))))
     );
   });
 }
