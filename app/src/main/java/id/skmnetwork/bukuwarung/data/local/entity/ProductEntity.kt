@@ -75,5 +75,14 @@ data class ProductEntity(
     val barcode: String? = null,
 
     @ColumnInfo(name = "image_uri")
-    val imageUri: String? = null
+    val imageUri: String? = null,
+
+    @ColumnInfo(name = "fulfillment_mode")
+    val fulfillmentMode: String = FulfillmentMode.MANUAL.name,
+
+    @ColumnInfo(name = "digital_provider_id")
+    val digitalProviderId: String? = null,
+
+    @ColumnInfo(name = "digital_product_code")
+    val digitalProductCode: String? = null
 )

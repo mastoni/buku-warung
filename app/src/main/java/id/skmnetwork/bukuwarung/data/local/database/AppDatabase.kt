@@ -22,6 +22,7 @@ import id.skmnetwork.bukuwarung.data.local.entity.CategoryEntity
 import id.skmnetwork.bukuwarung.data.local.entity.CustomerEntity
 import id.skmnetwork.bukuwarung.data.local.entity.DebtEntity
 import id.skmnetwork.bukuwarung.data.local.entity.DebtPaymentEntity
+import id.skmnetwork.bukuwarung.data.local.entity.DigitalTransactionEntity
 import id.skmnetwork.bukuwarung.data.local.entity.ProductEntity
 import id.skmnetwork.bukuwarung.data.local.entity.PurchaseItemEntity
 import id.skmnetwork.bukuwarung.data.local.entity.PurchaseTransactionEntity
@@ -33,6 +34,7 @@ import id.skmnetwork.bukuwarung.data.local.entity.SupplierPayableEntity
 import id.skmnetwork.bukuwarung.data.local.entity.SupplierPaymentEntity
 import id.skmnetwork.bukuwarung.data.local.dao.PurchaseOrderDao
 import id.skmnetwork.bukuwarung.data.local.dao.SaleReturnDao
+import id.skmnetwork.bukuwarung.data.local.dao.DigitalTransactionDao
 import id.skmnetwork.bukuwarung.data.local.entity.PurchaseOrderEntity
 import id.skmnetwork.bukuwarung.data.local.entity.PurchaseOrderItemEntity
 import id.skmnetwork.bukuwarung.data.local.entity.SaleReturnItemEntity
@@ -677,12 +679,46 @@ val MIGRATION_12_13 = object : Migration(12, 13) {
     }
 }
 
+val MIGRATION_13_14 = object : Migration(13, 14) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE `products` ADD COLUMN `fulfillment_mode` TEXT NOT NULL DEFAULT 'MANUAL'")
+        db.execSQL("ALTER TABLE `products` ADD COLUMN `digital_provider_id` TEXT")
+        db.execSQL("ALTER TABLE `products` ADD COLUMN `digital_product_code` TEXT")
+
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS `digital_transactions` (
+                `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                `uuid` TEXT NOT NULL,
+                `sale_item_id` INTEGER NOT NULL,
+                `provider_id` TEXT NOT NULL,
+                `provider_product_code` TEXT NOT NULL,
+                `destination_number` TEXT NOT NULL,
+                `selling_price` INTEGER NOT NULL,
+                `actual_purchase_price` INTEGER NOT NULL,
+                `status` TEXT NOT NULL,
+                `provider_reference_id` TEXT,
+                `sn_token` TEXT,
+                `failure_reason` TEXT,
+                `created_at` INTEGER NOT NULL,
+                `updated_at` INTEGER NOT NULL,
+                FOREIGN KEY(`sale_item_id`) REFERENCES `sale_items`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE
+            )
+            """.trimIndent()
+        )
+        db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_digital_transactions_uuid` ON `digital_transactions` (`uuid`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_digital_transactions_sale_item_id` ON `digital_transactions` (`sale_item_id`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_digital_transactions_status` ON `digital_transactions` (`status`)")
+    }
+}
+
 @Database(
     entities = [
         CategoryEntity::class,
         ProductEntity::class,
         SaleTransactionEntity::class,
         SaleItemEntity::class,
+        DigitalTransactionEntity::class,
         CashTransactionEntity::class,
         PurchaseTransactionEntity::class,
         PurchaseItemEntity::class,
@@ -699,7 +735,7 @@ val MIGRATION_12_13 = object : Migration(12, 13) {
         PurchaseOrderEntity::class,
         PurchaseOrderItemEntity::class
     ],
-    version = 13,
+    version = 14,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -717,6 +753,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun syncQueueDao(): SyncQueueDao
     abstract fun saleReturnDao(): SaleReturnDao
     abstract fun purchaseOrderDao(): PurchaseOrderDao
+    abstract fun digitalTransactionDao(): DigitalTransactionDao
 
     companion object {
         @Volatile
@@ -741,7 +778,8 @@ abstract class AppDatabase : RoomDatabase() {
                         MIGRATION_9_10,
                         MIGRATION_10_11,
                         MIGRATION_11_12,
-                        MIGRATION_12_13
+                        MIGRATION_12_13,
+                        MIGRATION_13_14
                     )
                     .build()
                 INSTANCE = instance
