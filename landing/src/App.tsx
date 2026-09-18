@@ -10,25 +10,40 @@ import { StickyMobileCta } from './components/StickyMobileCta';
 import { Footer } from './components/Footer';
 import { useScrollReveal } from './hooks/useScrollReveal';
 import { PricingProvider } from './hooks/usePricingPromo';
+import { DocsRouterProvider, useDocsRouter } from './hooks/useDocsRouter';
+import { DocsLayout } from './components/docs/DocsLayout';
 
-export const App: React.FC = () => {
+const AppContent: React.FC = () => {
   useScrollReveal();
+  const { isDocsPortal } = useDocsRouter();
+
+  if (isDocsPortal) {
+    return <DocsLayout />;
+  }
 
   return (
+    <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900">
+      <Navbar />
+      <main className="flex-1">
+        <Hero />
+        <FeatureGrid />
+        <AdaptiveBusinessSwitcher />
+        <ScreenshotShowcase />
+        <PricingSection />
+        <FaqSection />
+      </main>
+      <Footer />
+      <StickyMobileCta />
+    </div>
+  );
+};
+
+export const App: React.FC = () => {
+  return (
     <PricingProvider>
-      <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900">
-        <Navbar />
-        <main className="flex-1">
-          <Hero />
-          <FeatureGrid />
-          <AdaptiveBusinessSwitcher />
-          <ScreenshotShowcase />
-          <PricingSection />
-          <FaqSection />
-        </main>
-        <Footer />
-        <StickyMobileCta />
-      </div>
+      <DocsRouterProvider>
+        <AppContent />
+      </DocsRouterProvider>
     </PricingProvider>
   );
 };

@@ -2,11 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { ShoppingCart, Menu, X, ArrowRight } from 'lucide-react';
 import { LANDING_CONFIG } from '../data/landingData';
 import { usePricing } from '../hooks/usePricingPromo';
+import { useDocsRouter } from '../hooks/useDocsRouter';
 
 export const Navbar: React.FC = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { effectivePriceFormatted } = usePricing();
+  const { navigateTo } = useDocsRouter();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -44,7 +46,7 @@ export const Navbar: React.FC = () => {
         </a>
 
         {/* Desktop Nav */}
-        <nav className="hidden md:flex items-center gap-7 text-sm font-semibold text-slate-600">
+        <nav className="hidden md:flex items-center gap-6 text-sm font-semibold text-slate-600">
           <a href="#fitur" className="hover:text-emerald-600 transition-colors">
             Fitur Utama
           </a>
@@ -57,6 +59,13 @@ export const Navbar: React.FC = () => {
           <a href="#harga" className="hover:text-emerald-600 transition-colors">
             Harga & Paket
           </a>
+          <button
+            type="button"
+            onClick={() => navigateTo('/panduan')}
+            className="hover:text-emerald-600 transition-colors font-semibold cursor-pointer"
+          >
+            Panduan
+          </button>
           <a href="#faq" className="hover:text-emerald-600 transition-colors">
             Tanya Jawab
           </a>
@@ -124,6 +133,16 @@ export const Navbar: React.FC = () => {
             >
               Harga & Paket
             </a>
+            <button
+              type="button"
+              onClick={() => {
+                setMobileMenuOpen(false);
+                navigateTo('/panduan');
+              }}
+              className="text-left px-3 py-2 rounded-lg hover:bg-slate-50 text-emerald-700 font-bold"
+            >
+              Buku Panduan v0.2.0
+            </button>
             <a
               href="#faq"
               onClick={() => setMobileMenuOpen(false)}

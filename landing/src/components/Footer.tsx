@@ -2,9 +2,11 @@ import React from 'react';
 import { ShoppingCart, MessageCircle, ShieldCheck } from 'lucide-react';
 import { LANDING_CONFIG } from '../data/landingData';
 import { usePricing } from '../hooks/usePricingPromo';
+import { useDocsRouter } from '../hooks/useDocsRouter';
 
 export const Footer: React.FC = () => {
   const { effectivePriceFormatted } = usePricing();
+  const { navigateTo } = useDocsRouter();
 
   return (
     <footer className="bg-slate-900 text-slate-300 py-12 md:py-16 border-t border-slate-800">
@@ -51,6 +53,15 @@ export const Footer: React.FC = () => {
                 <a href="#harga" className="hover:text-emerald-400 transition-colors">
                   Harga & Paket
                 </a>
+              </li>
+              <li>
+                <button
+                  type="button"
+                  onClick={() => navigateTo('/panduan')}
+                  className="hover:text-emerald-400 transition-colors text-left font-medium cursor-pointer"
+                >
+                  Pusat Panduan Pengguna
+                </button>
               </li>
               <li>
                 <a href="#faq" className="hover:text-emerald-400 transition-colors">
