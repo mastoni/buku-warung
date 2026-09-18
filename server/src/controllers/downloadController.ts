@@ -9,12 +9,12 @@ import { AttributionService } from '../services/attributionService.js';
 const PRODUCT = {
   name: 'Buku Warung',
   tagline: 'Kasir & pembukuan sederhana untuk warung dan toko kecil.',
-  version: '0.1.0',
+  version: '0.2.0',
   platform: 'Android',
   packageId: 'id.skmnetwork.bukuwarung',
-  sha256: '1E0221EF344413EA9954A21939E023C59B6374CEE8E56FF004084F92023DB3A8',
-  apkFilename: 'bukuwarung-0.1.0-release.apk',
-  pdfFilename: 'panduan-buku-warung-v0.1.0.pdf',
+  sha256: '9F2B282F924CD2C5388759C4C0F6FEEF5EC52A5BD55CD434F128B28B15A05D2B',
+  apkFilename: 'bukuwarung-0.2.0-release.apk',
+  pdfFilename: 'Buku-Warung-v0.2.0-Panduan-Pengguna.pdf',
 } as const;
 
 /**

@@ -7,9 +7,9 @@ import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
 
-const OFFICIAL_SHA256 = '1E0221EF344413EA9954A21939E023C59B6374CEE8E56FF004084F92023DB3A8';
-const APK_FILENAME = 'bukuwarung-0.1.0-release.apk';
-const PDF_FILENAME = 'panduan-buku-warung-v0.1.0.pdf';
+const OFFICIAL_SHA256 = '9F2B282F924CD2C5388759C4C0F6FEEF5EC52A5BD55CD434F128B28B15A05D2B';
+const APK_FILENAME = 'bukuwarung-0.2.0-release.apk';
+const PDF_FILENAME = 'Buku-Warung-v0.2.0-Panduan-Pengguna.pdf';
 
 describe('Product Distribution & Download (M.2.0)', () => {
   let app: FastifyInstance;
@@ -55,7 +55,7 @@ describe('Product Distribution & Download (M.2.0)', () => {
 
       const html = res.body;
       expect(html).toContain('Buku Warung');
-      expect(html).toContain('0.1.0');
+      expect(html).toContain('0.2.0');
     });
 
     it('displays SHA-256 checksum', async () => {
@@ -249,7 +249,7 @@ describe('Product Distribution & Download (M.2.0)', () => {
       const body = JSON.parse(res.body);
       expect(body.success).toBe(true);
       expect(body.data.product).toBe('Buku Warung');
-      expect(body.data.version).toBe('0.1.0');
+      expect(body.data.version).toBe('0.2.0');
       expect(body.data.platform).toBe('Android');
       expect(body.data.packageId).toBe('id.skmnetwork.bukuwarung');
       expect(body.data.sha256).toBe(OFFICIAL_SHA256);
