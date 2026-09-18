@@ -170,7 +170,7 @@ export const DOC_ARTICLES: DocArticle[] = [
           'Install APK: Pasang file aplikasi di smartphone Android Anda',
           'Setup Awal: Pilih jenis usaha dan lengkapi nama warung/toko',
           'Aktivasi: Masukkan email pemilik dan kode lisensi resmi',
-          'Gunakan: Aplikasi siap beroperasi 100% offline selamanya!',
+          'Gunakan: Aplikasi siap beroperasi secara offline dengan penyimpanan lokal!',
         ],
       },
       {
@@ -189,7 +189,7 @@ export const DOC_ARTICLES: DocArticle[] = [
       {
         title: '3. Verifikasi Keamanan File APK (Opsional untuk Pengguna Mahir)',
         paragraphs: [
-          'Untuk memastikan file APK yang Anda pasang 100% asli dan tidak dimodifikasi oleh pihak lain, Anda dapat mencocokkan nilai SHA-256 Checksum file:',
+          'Untuk memastikan file APK yang Anda pasang asli dan tidak dimodifikasi oleh pihak lain, Anda dapat mencocokkan nilai SHA-256 Checksum file:',
           `SHA-256 Resmi: ${OFFICIAL_APK_SHA256}`,
           'Pengecekan ini bersifat opsional bagi pengguna tingkat lanjut dan tidak wajib bagi pengguna awam.',
         ],
@@ -226,7 +226,7 @@ export const DOC_ARTICLES: DocArticle[] = [
       {
         type: 'info',
         title: 'Koneksi Internet Hanya 1 Kali',
-        text: 'Setelah tombol Aktivasi Lisensi berhasil, aplikasi 100% tidak membutuhkan internet lagi untuk transaksi kasir harian.',
+        text: 'Setelah tombol Aktivasi Lisensi berhasil, aplikasi beroperasi secara offline dan tidak membutuhkan koneksi internet untuk transaksi kasir harian.',
       },
       {
         type: 'warning',
@@ -290,9 +290,9 @@ export const DOC_ARTICLES: DocArticle[] = [
     ],
     sections: [
       {
-        title: '1. Filosofi 100% Offline-First',
+        title: '1. Filosofi Arsitektur Offline-First',
         paragraphs: [
-          'Buku Warung dirancang dengan arsitektur 100% Offline-First. Semua data transaksi kasir, stok barang, buku hutang piutang, dan pencatatan kas disimpan langsung di penyimpanan internal HP Anda.',
+          'Buku Warung dirancang dengan arsitektur Offline-First. Seluruh data transaksi kasir, stok barang, buku hutang piutang, dan pencatatan kas disimpan langsung di penyimpanan internal HP Anda.',
           'Anda tidak perlu khawatir jika sinyal internet mati atau kuota habis di toko. Semua fungsi utama kasir dan cetak struk tetap beroperasi tanpa hambatan.',
         ],
       },
@@ -1475,7 +1475,7 @@ export const DOC_ARTICLES: DocArticle[] = [
       {
         title: 'Apakah aplikasi bisa dipakai tanpa kuota internet?',
         paragraphs: [
-          'Ya, 100% bisa offline. Kasir POS, stok barang, cetak struk, dan laporan keuangan berjalan penuh tanpa koneksi internet. Internet hanya digunakan saat aktivasi awal atau saat Anda memilih backup ke Google Drive.',
+          'Ya, aplikasi beroperasi secara offline. Kasir POS, stok barang, cetak struk, dan laporan keuangan berjalan penuh secara lokal tanpa memerlukan koneksi internet aktif. Internet hanya digunakan saat aktivasi lisensi awal atau saat Anda melakukan pencadangan ke Google Drive.',
         ],
       },
       {
@@ -1493,7 +1493,7 @@ export const DOC_ARTICLES: DocArticle[] = [
       {
         title: 'Berapa banyak barang dan transaksi yang bisa dicatat?',
         paragraphs: [
-          'Tidak ada batasan jumlah barang atau transaksi dari aplikasi (unlimited). Batasannya hanya kapasitas memori internal HP Anda.',
+          'Aplikasi tidak membatasi kuota jumlah barang maupun riwayat transaksi. Batasannya bergantung pada kapasitas ruang penyimpanan internal smartphone Android Anda.',
         ],
       },
     ],

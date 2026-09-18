@@ -94,7 +94,7 @@ function buildPdfDocument(
 
     // Cover Titles
     doc.fillColor(COLORS.white).font('Helvetica-Bold').fontSize(32).text('Buku Warung', 120, 50);
-    doc.fillColor('#94A3B8').font('Helvetica').fontSize(16).text('Aplikasi Kasir & Pembukuan UMKM 100% Offline', 120, 90);
+    doc.fillColor('#94A3B8').font('Helvetica').fontSize(16).text('Aplikasi Kasir & Pembukuan UMKM Offline-First', 120, 90);
 
     // Document Type Banner
     doc.fillColor('#38BDF8').font('Helvetica-Bold').fontSize(14).text('PANDUAN PENGGUNA RESMI (OFFICIAL USER MANUAL)', 50, 150);
@@ -111,7 +111,7 @@ function buildPdfDocument(
 
     // Feature highlights cards grid on cover
     const highlights = [
-      { title: '100% Offline-First', desc: 'Semua data tersimpan di HP Anda tanpa ketergantungan cloud realtime.' },
+      { title: 'Offline-First Mandiri', desc: 'Data utama tersimpan di HP Anda tanpa ketergantungan cloud realtime.' },
       { title: 'Siklus Kasir & PO Lengkap', desc: 'Transaksi kasir, barcode, piutang, hutang, kulakan, dan status PO resmi.' },
       { title: 'Adaptif 19 Jenis Usaha', desc: 'Warung sembako, apotek, bengkel, toko bangunan, jasa, dan pulsa.' },
       { title: 'Cetak Thermal & PDF', desc: 'Dukungan printer thermal 58mm/80mm ESC/POS dan ekspor laporan PDF.' },
@@ -191,8 +191,8 @@ function buildPdfDocument(
 
     const archItems = [
       {
-        title: '1. 100% Offline-First Architecture',
-        desc: 'Semua database (SQLite Room) tersimpan aman di HP Anda. Transaksi kasir, cetak struk Bluetooth, hitung laba, dan pencatatan hutang berjalan normal tanpa memerlukan kuota atau sinyal internet.',
+        title: '1. Arsitektur Offline-First Mandiri',
+        desc: 'Seluruh database (SQLite Room) tersimpan aman di penyimpanan internal HP Anda. Transaksi kasir, cetak struk Bluetooth, hitung laba, dan pencatatan hutang berjalan normal tanpa memerlukan koneksi internet aktif.',
       },
       {
         title: '2. Backup Google Sheets Mandiri',
