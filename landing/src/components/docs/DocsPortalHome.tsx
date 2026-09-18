@@ -73,19 +73,30 @@ export const DocsPortalHome: React.FC<DocsPortalHomeProps> = ({ onOpenSearch }) 
             buku hutang piutang, Purchase Order supplier, laporan laba rugi, dan pencadangan Google Sheets.
           </p>
 
-          {/* Search Bar in Hero */}
-          <div className="pt-2">
+          {/* Search Bar & PDF Download in Hero */}
+          <div className="pt-2 flex flex-wrap items-center gap-3">
             <button
               type="button"
               onClick={onOpenSearch}
-              className="w-full sm:w-auto flex items-center gap-3 px-5 py-3 rounded-xl bg-white text-slate-700 hover:bg-slate-50 font-medium text-sm shadow-md transition-all hover:scale-[1.01]"
+              className="flex-1 sm:flex-none flex items-center justify-between sm:justify-start gap-3 px-5 py-3 rounded-xl bg-white text-slate-700 hover:bg-slate-50 font-medium text-sm shadow-md transition-all hover:scale-[1.01]"
             >
-              <Search className="w-4 h-4 text-emerald-600" />
-              <span>Cari panduan dari 24 bab resmi...</span>
+              <span className="flex items-center gap-2">
+                <Search className="w-4 h-4 text-emerald-600" />
+                <span>Cari panduan dari 24 bab resmi...</span>
+              </span>
               <kbd className="hidden sm:inline text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-slate-100 border border-slate-300 text-slate-500 ml-4">
                 Ctrl+K
               </kbd>
             </button>
+
+            <a
+              href="/downloads/Buku-Warung-v0.2.0-Panduan-Pengguna.pdf"
+              download="Buku-Warung-v0.2.0-Panduan-Pengguna.pdf"
+              className="inline-flex items-center gap-2 px-4 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-sm shadow-md transition-all hover:scale-[1.01]"
+            >
+              <Download className="w-4 h-4" />
+              <span>Unduh Manual PDF (A4)</span>
+            </a>
           </div>
         </div>
       </section>

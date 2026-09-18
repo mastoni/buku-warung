@@ -80,10 +80,15 @@ export const DocsHeader: React.FC<DocsHeaderProps> = ({
             <Search className="w-5 h-5" />
           </button>
 
-          <div className="hidden xl:flex items-center gap-1.5 text-[11px] font-medium text-emerald-700 bg-emerald-50 border border-emerald-200/80 px-2.5 py-1 rounded-lg">
+          <a
+            href="/downloads/Buku-Warung-v0.2.0-Panduan-Pengguna.pdf"
+            download="Buku-Warung-v0.2.0-Panduan-Pengguna.pdf"
+            className="hidden md:inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-3 py-2 rounded-xl transition-all shadow-2xs"
+            title={`Unduh Manual PDF Resmi (${DOC_VERSION})`}
+          >
             <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-            <span>{DOC_VERSION}</span>
-          </div>
+            <span>Manual PDF</span>
+          </a>
 
           <button
             type="button"
