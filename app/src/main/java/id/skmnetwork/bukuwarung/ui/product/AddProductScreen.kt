@@ -86,6 +86,7 @@ import id.skmnetwork.bukuwarung.ui.theme.AppSpacing
 import java.io.File
 import java.io.FileOutputStream
 import java.util.UUID
+import java.io.InputStream
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -145,8 +146,8 @@ fun AddProductScreen(
             try {
                 val imagesDir = File(context.filesDir, "product_images").apply { if (!exists()) mkdirs() }
                 val destFile = File(imagesDir, "prod_gal_${System.currentTimeMillis()}.jpg")
-                val input = contentResolver.openInputStream(uri)
-                input?.use { input ->
+                val input = context.contentResolver.openInputStream(uri)
+                input?.use { input: InputStream ->
                     FileOutputStream(destFile).use { output ->
                         input.copyTo(output)
                     }
@@ -516,13 +517,13 @@ fun AddProductScreen(
             verticalArrangement = Arrangement.spacedBy(AppSpacing.md),
         ) {
             if (errorMessage != null) {
-                Text(
-                    text = errorMessage!!,
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialScheme.typography.bodyMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.padding(vertical = AppSpacing.xs)
-                )
+                 Text(
+                     text = errorMessage!!,
+                     color = MaterialTheme.colorScheme.error,
+                     style = MaterialTheme.typography.bodyMedium,
+                     fontWeight = FontWeight.SemiBold,
+                     modifier = Modifier.padding(vertical = AppSpacing.xs)
+                 )
             }
 
             // Image Picker Section
