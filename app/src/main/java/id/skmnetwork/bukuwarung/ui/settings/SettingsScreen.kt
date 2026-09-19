@@ -122,6 +122,7 @@ import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import id.skmnetwork.bukuwarung.BuildConfig
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -1698,18 +1699,18 @@ fun SettingsScreen(
                         verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         Text(
-                            text = "Buku Warung v0.1.0",
+                            text = "Buku Warung v${BuildConfig.VERSION_NAME}",
                             fontWeight = FontWeight.Bold,
                             fontSize = 13.5.sp,
                             color = AppColors.TextPrimary
                         )
                         Text(
-                            text = "Aplikasi Kasir & Pembukuan Warung Kecil 100% Offline-First.",
+                            text = "Aplikasi kasir dan pembukuan sederhana untuk usaha kecil.",
                             style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.5.sp),
                             color = AppColors.TextSecondary
                         )
                         Text(
-                            text = "Seluruh data kas, produk, dan transaksi tersimpan lokal di perangkat Anda.",
+                            text = "Data usaha tersimpan secara lokal di perangkat dan dapat dicadangkan melalui Google Sheets.",
                             style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.5.sp),
                             color = AppColors.TextSecondary
                         )
