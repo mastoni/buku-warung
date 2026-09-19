@@ -17,7 +17,7 @@ class DigitalTransactionRepository @Inject constructor(
         providerProductCode: String,
         destinationNumber: String,
         sellingPrice: Long,
-        actualPurchasePrice: Long
+        actualPurchasePrice: Long = sellingPrice
     ): Long {
         val transaction = DigitalTransactionEntity(
             saleItemId = saleItemId,
@@ -29,6 +29,11 @@ class DigitalTransactionRepository @Inject constructor(
             status = DigitalTransactionStatus.DRAFT.name
         )
         return digitalTransactionDao.insert(transaction)
+    }
+
+    suspend fun getBySaleItemIds(saleItemIds: List<Long>): List<DigitalTransactionEntity> {
+        if (saleItemIds.isEmpty()) return emptyList()
+        return digitalTransactionDao.getBySaleItemIds(saleItemIds.distinct())
     }
 
     suspend fun transitionState(id: Long, newState: DigitalTransactionStatus, failureReason: String? = null, snToken: String? = null) {

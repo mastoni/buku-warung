@@ -3,14 +3,16 @@ package id.skmnetwork.bukuwarung.data.repository
 import androidx.room.withTransaction
 import id.skmnetwork.bukuwarung.data.local.database.AppDatabase
 import id.skmnetwork.bukuwarung.data.local.entity.CashTransactionEntity
-import id.skmnetwork.bukuwarung.data.local.entity.CustomerEntity
 import id.skmnetwork.bukuwarung.data.local.entity.DebtEntity
+import id.skmnetwork.bukuwarung.data.local.entity.FulfillmentMode
 import id.skmnetwork.bukuwarung.data.local.entity.ItemType
 import id.skmnetwork.bukuwarung.data.local.entity.ProductEntity
 import id.skmnetwork.bukuwarung.data.local.entity.SaleItemEntity
 import id.skmnetwork.bukuwarung.data.local.entity.SaleTransactionEntity
 import id.skmnetwork.bukuwarung.data.local.entity.StockMovementEntity
 import id.skmnetwork.bukuwarung.data.local.entity.SyncQueueEntity
+import id.skmnetwork.bukuwarung.domain.checkout.CartLineRequest
+import id.skmnetwork.bukuwarung.domain.checkout.SaleCommitResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
@@ -98,158 +100,211 @@ class SaleRepository(
         discountAmount: Long = 0L,
         now: Long = System.currentTimeMillis()
     ): Result<Long> = withContext(Dispatchers.IO) {
-        if (cartItems.isEmpty()) {
-            return@withContext Result.failure(IllegalArgumentException("Keranjang kosong"))
+        runCatching {
+            appDatabase.withTransaction {
+                completeSaleInTransaction(
+                    cartItems = cartItems.map { (productId, quantity) ->
+                        CartLineRequest(productId = productId, quantity = quantity)
+                    },
+                    paymentMethod = paymentMethod,
+                    customerId = customerId,
+                    discountAmount = discountAmount,
+                    now = now
+                ).saleId
+            }
+        }
+    }
+
+    suspend fun completeSale(
+        cartItems: List<CartLineRequest>,
+        paymentMethod: String = "CASH",
+        customerId: Long? = null,
+        discountAmount: Long = 0L,
+        now: Long = System.currentTimeMillis()
+    ): Result<Long> = completeSaleRequests(
+        cartLineRequests = cartItems,
+        paymentMethod = paymentMethod,
+        customerId = customerId,
+        discountAmount = discountAmount,
+        now = now
+    )
+
+    suspend fun completeSaleRequests(
+        cartLineRequests: List<CartLineRequest>,
+        paymentMethod: String = "CASH",
+        customerId: Long? = null,
+        discountAmount: Long = 0L,
+        now: Long = System.currentTimeMillis()
+    ): Result<Long> = withContext(Dispatchers.IO) {
+        runCatching {
+            appDatabase.withTransaction {
+                completeSaleInTransaction(
+                    cartItems = cartLineRequests,
+                    paymentMethod = paymentMethod,
+                    customerId = customerId,
+                    discountAmount = discountAmount,
+                    now = now
+                ).saleId
+            }
+        }
+    }
+
+    suspend fun completeSaleInTransaction(
+        cartItems: List<CartLineRequest>,
+        paymentMethod: String = "CASH",
+        customerId: Long? = null,
+        discountAmount: Long = 0L,
+        now: Long = System.currentTimeMillis()
+    ): SaleCommitResult {
+        require(cartItems.isNotEmpty()) { "Keranjang kosong" }
+        require(paymentMethod.uppercase() in setOf("CASH", "QRIS", "CREDIT")) {
+            "Metode pembayaran tidak didukung"
+        }
+        require(paymentMethod.uppercase() != "CREDIT" || customerId != null) {
+            "Pelanggan wajib dipilih untuk transaksi kredit"
         }
 
         val methodUpper = paymentMethod.uppercase()
-        if (methodUpper == "CREDIT" && customerId == null) {
-            return@withContext Result.failure(IllegalArgumentException("Pelanggan wajib dipilih untuk transaksi kredit"))
+        val customer = customerId?.let { id ->
+            customerDao.getCustomerById(id)
+                ?: if (methodUpper == "CREDIT") throw IllegalStateException("Pelanggan tidak ditemukan") else null
+        }
+        val productMap = linkedMapOf<Long, ProductEntity>()
+        cartItems.forEach { item ->
+            require(item.quantity.isFinite() && item.quantity > 0.0) {
+                "Jumlah item harus lebih besar dari 0"
+            }
+            val product = productDao.getProductById(item.productId)
+                ?: throw IllegalStateException("Produk tidak ditemukan")
+            if (product.itemType == ItemType.DIGITAL.name &&
+                product.fulfillmentMode == FulfillmentMode.PROVIDER.name
+            ) {
+                require(!product.digitalProviderId.isNullOrBlank()) {
+                    "Provider digital produk belum dikonfigurasi"
+                }
+                require(!product.digitalProductCode.isNullOrBlank()) {
+                    "Kode produk digital belum dikonfigurasi"
+                }
+                require(!item.destinationNumber.isNullOrBlank()) {
+                    "Nomor tujuan digital wajib diisi"
+                }
+            }
+            if (ItemType.isStockable(product.itemType) && product.stock < item.quantity) {
+                throw IllegalStateException("Stok ${product.name} tidak mencukupi")
+            }
+            productMap[item.productId] = product
         }
 
-        runCatching {
-            appDatabase.withTransaction {
-                // 1. Validate customer if provided or credit sale
-                val customer: CustomerEntity? = if (customerId != null) {
-                    customerDao.getCustomerById(customerId)
-                        ?: if (methodUpper == "CREDIT") throw IllegalStateException("Pelanggan tidak ditemukan") else null
-                } else null
+        val grossSubtotal = cartItems.sumOf { item ->
+            productMap.getValue(item.productId).sellingPrice * item.quantity.toLong()
+        }
+        require(grossSubtotal > 0L) { "Total transaksi harus lebih dari 0" }
 
-                // 2. Validate products and stock availability
-                val productMap = mutableMapOf<Long, ProductEntity>()
-                for ((productId, qty) in cartItems) {
-                    if (qty <= 0) {
-                        throw IllegalArgumentException("Jumlah item harus lebih dari 0")
-                    }
-                    val product = productDao.getProductById(productId)
-                        ?: throw IllegalStateException("Produk tidak ditemukan")
-                    if (ItemType.isStockable(product.itemType) && product.stock < qty) {
-                        throw IllegalStateException("Stok ${product.name} tidak mencukupi")
-                    }
-                    productMap[productId] = product
-                }
+        val discountResult = id.skmnetwork.bukuwarung.domain.discount.DiscountCalculator.calculateFixed(
+            grossSubtotal = grossSubtotal,
+            fixedAmount = discountAmount
+        )
+        val safeDiscount = discountResult.discountAmount
+        val netTotal = discountResult.netTotal
+        val trxNumber = "TRX-$now"
+        val trxUuid = UUID.randomUUID().toString()
+        val saleTransaction = SaleTransactionEntity(
+            uuid = trxUuid,
+            transactionNumber = trxNumber,
+            transactionDate = now,
+            totalAmount = netTotal,
+            discountAmount = safeDiscount,
+            paymentMethod = methodUpper,
+            customerId = customer?.id,
+            createdAt = now
+        )
+        val saleId = saleDao.insertTransaction(saleTransaction)
 
-                // 3. Calculate Gross Subtotal and Net Total Amount via Single Calculation Authority
-                val grossSubtotal = cartItems.entries.sumOf { (prodId, qty) ->
-                    val prod = productMap[prodId]!!
-                    (prod.sellingPrice * qty).toLong()
-                }
+        val saleItems = cartItems.map { item ->
+            val product = productMap.getValue(item.productId)
+            SaleItemEntity(
+                saleUuid = trxUuid,
+                productUuid = product.uuid,
+                transactionId = saleId,
+                productId = item.productId,
+                productName = product.name,
+                quantity = item.quantity,
+                price = product.sellingPrice,
+                purchasePrice = product.purchasePrice,
+                subtotal = product.sellingPrice * item.quantity.toLong()
+            )
+        }
+        val saleItemIds = saleDao.insertSaleItems(saleItems)
+        require(saleItemIds.size == cartItems.size) {
+            "Jumlah item penjualan tidak sesuai dengan keranjang"
+        }
 
-                if (grossSubtotal <= 0) {
-                    throw IllegalStateException("Total transaksi harus lebih dari 0")
-                }
-
-                val discountResult = id.skmnetwork.bukuwarung.domain.discount.DiscountCalculator.calculateFixed(
-                    grossSubtotal = grossSubtotal,
-                    fixedAmount = discountAmount
+        cartItems.forEach { item ->
+            val product = productMap.getValue(item.productId)
+            if (ItemType.isStockable(product.itemType)) {
+                val newStock = product.stock - item.quantity
+                productDao.deductProductStock(item.productId, item.quantity, now)
+                stockMovementDao.insertMovement(
+                    StockMovementEntity(
+                        productUuid = product.uuid,
+                        movementType = "SALE",
+                        deltaQuantity = -item.quantity,
+                        currentStockSnapshot = newStock,
+                        referenceUuid = trxUuid,
+                        note = "Penjualan $trxNumber",
+                        createdAt = now
+                    )
                 )
-                val safeDiscount = discountResult.discountAmount
-                val netTotal = discountResult.netTotal
+            }
+        }
 
-                val trxNumber = "TRX-$now"
-                val trxUuid = UUID.randomUUID().toString()
-
-                // 4. Create Sale Transaction Record
-                val saleTransaction = SaleTransactionEntity(
-                    uuid = trxUuid,
-                    transactionNumber = trxNumber,
-                    transactionDate = now,
-                    totalAmount = netTotal,
-                    discountAmount = safeDiscount,
-                    paymentMethod = methodUpper,
-                    customerId = customer?.id,
-                    createdAt = now
-                )
-                val saleId = saleDao.insertTransaction(saleTransaction)
-
-                // 5. Create Sale Items Records
-                val saleItems = cartItems.map { (prodId, qty) ->
-                    val prod = productMap[prodId]!!
-                    SaleItemEntity(
-                        saleUuid = trxUuid,
-                        productUuid = prod.uuid,
-                        transactionId = saleId,
-                        productId = prodId,
-                        productName = prod.name,
-                        quantity = qty,
-                        price = prod.sellingPrice,
-                        purchasePrice = prod.purchasePrice,
-                        subtotal = (prod.sellingPrice * qty).toLong()
+        when (methodUpper) {
+            "CASH" -> {
+                if (netTotal > 0L) {
+                    cashDao.insertCashTransaction(
+                        CashTransactionEntity(
+                            type = "INCOME",
+                            amount = netTotal,
+                            description = "Penjualan $trxNumber",
+                            refId = saleId,
+                            refUuid = trxUuid,
+                            createdAt = now
+                        )
                     )
                 }
-                saleDao.insertSaleItems(saleItems)
-
-                // 6. Mutate Stock & Append Stock Movement for stockable products (PHYSICAL and FUEL)
-                for ((prodId, qty) in cartItems) {
-                    val prod = productMap[prodId]!!
-                    if (ItemType.isStockable(prod.itemType)) {
-                        val newStock = if (prod.stock - qty < 0) 0.0 else prod.stock - qty
-                        productDao.deductProductStock(prodId, qty, now)
-                        stockMovementDao.insertMovement(
-                            StockMovementEntity(
-                                productUuid = prod.uuid,
-                                movementType = "SALE",
-                                deltaQuantity = -qty,
-                                currentStockSnapshot = newStock,
-                                referenceUuid = trxUuid,
-                                note = "Penjualan $trxNumber",
-                                createdAt = now
-                            )
-                        )
-                    }
-                }
-
-                // 7. Payment method routing
-                when (methodUpper) {
-                    "CASH" -> {
-                        if (netTotal > 0L) {
-                            val cashIncome = CashTransactionEntity(
-                                type = "INCOME",
-                                amount = netTotal,
-                                description = "Penjualan $trxNumber",
-                                refId = saleId,
-                                refUuid = trxUuid,
-                                createdAt = now
-                            )
-                            cashDao.insertCashTransaction(cashIncome)
-                        }
-                    }
-                    "CREDIT" -> {
-                        val debt = DebtEntity(
-                            uuid = UUID.randomUUID().toString(),
-                            customerId = customer!!.id,
-                            saleTransactionId = saleId,
-                            customerUuid = customer.uuid,
-                            saleUuid = trxUuid,
-                            totalDebt = netTotal,
-                            paidAmount = 0L,
-                            status = if (netTotal == 0L) "PAID" else "OPEN",
-                            createdAt = now,
-                            updatedAt = now
-                        )
-                        debtDao.insertDebt(debt)
-                    }
-                    "QRIS" -> {
-                        // QRIS does not generate CashTransaction entry
-                    }
-                }
-
-                // 8. Atomic Sync Queue Enqueue (Aggregate SALE event)
-                syncQueueDao.insert(
-                    SyncQueueEntity(
-                        businessId = saleTransaction.businessId,
-                        deviceId = saleTransaction.deviceId,
-                        entityType = "SALE",
-                        entityUuid = trxUuid,
-                        operation = "INSERT",
+            }
+            "CREDIT" -> {
+                debtDao.insertDebt(
+                    DebtEntity(
+                        uuid = UUID.randomUUID().toString(),
+                        customerId = customer!!.id,
+                        saleTransactionId = saleId,
+                        customerUuid = customer.uuid,
+                        saleUuid = trxUuid,
+                        totalDebt = netTotal,
+                        paidAmount = 0L,
+                        status = if (netTotal == 0L) "PAID" else "OPEN",
                         createdAt = now,
                         updatedAt = now
                     )
                 )
-
-                saleId
             }
+            "QRIS" -> Unit
         }
+
+        syncQueueDao.insert(
+            SyncQueueEntity(
+                businessId = saleTransaction.businessId,
+                deviceId = saleTransaction.deviceId,
+                entityType = "SALE",
+                entityUuid = trxUuid,
+                operation = "INSERT",
+                createdAt = now,
+                updatedAt = now
+            )
+        )
+
+        return SaleCommitResult(saleId = saleId, saleItemIds = saleItemIds)
     }
 
     /**

@@ -38,6 +38,8 @@ import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
@@ -67,6 +69,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+
+import id.skmnetwork.bukuwarung.data.local.entity.FulfillmentMode
 import id.skmnetwork.bukuwarung.data.local.entity.ItemType
 import id.skmnetwork.bukuwarung.data.preferences.UserSettings
 import id.skmnetwork.bukuwarung.domain.business.BusinessTaxonomyRegistry
@@ -116,6 +120,10 @@ fun AddProductScreen(
     var minimumStock by remember { mutableStateOf(if (isEditMode) "" else defaultLowStockLimit.toString()) }
     var unit by remember { mutableStateOf(preferredUnits.firstOrNull() ?: "pcs") }
     var selectedItemType by remember { mutableStateOf(ItemType.PHYSICAL) }
+    var selectedFulfillmentMode by remember { mutableStateOf(FulfillmentMode.MANUAL) }
+    var providerId by remember { mutableStateOf("") }
+    var providerProductCode by remember { mutableStateOf("") }
+
     var barcode by remember { mutableStateOf("") }
     var imageUri by remember { mutableStateOf<String?>(null) }
 
@@ -168,6 +176,13 @@ fun AddProductScreen(
                 } catch (e: Exception) {
                     ItemType.PHYSICAL
                 }
+                selectedFulfillmentMode = try {
+                    FulfillmentMode.valueOf(product.fulfillmentMode)
+                } catch (e: Exception) {
+                    FulfillmentMode.MANUAL
+                }
+                providerId = product.digitalProviderId ?: ""
+                providerProductCode = product.digitalProductCode ?: ""
             }
         }
     }
@@ -603,13 +618,93 @@ fun AddProductScreen(
                         val isSelected = selectedItemType == type
                         FilterChip(
                             selected = isSelected,
-                            onClick = { selectedItemType = type },
+                            onClick = {
+                                selectedItemType = type
+                                if (type != id.skmnetwork.bukuwarung.data.local.entity.ItemType.DIGITAL) {
+                                    selectedFulfillmentMode = id.skmnetwork.bukuwarung.data.local.entity.FulfillmentMode.MANUAL
+                                }
+                            },
                             label = { Text(label, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal) },
                             colors = FilterChipDefaults.filterChipColors(
                                 selectedContainerColor = AppColors.GreenLight,
                                 selectedLabelColor = AppColors.GreenDark
                             )
                         )
+                    }
+                }
+            }
+
+
+            // Digital Fulfillment Mode Selection
+            if (selectedItemType == ItemType.DIGITAL) {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(
+                        text = "Metode Pemenuhan (Fulfillment)",
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = AppColors.TextSecondary
+                    )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        val fulfillmentTypes = listOf(
+                            FulfillmentMode.MANUAL to "Manual (Internal)",
+                            FulfillmentMode.PROVIDER to "Otomatis (Provider API)"
+                        )
+                        fulfillmentTypes.forEach { (type, label) ->
+                            val isSelected = selectedFulfillmentMode == type
+                            FilterChip(
+                                selected = isSelected,
+                                onClick = { selectedFulfillmentMode = type },
+                                label = { Text(label, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal) },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = AppColors.GreenLight,
+                                    selectedLabelColor = AppColors.GreenDark
+                                )
+                            )
+                        }
+                    }
+                }
+
+                if (selectedFulfillmentMode == FulfillmentMode.PROVIDER) {
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = AppColors.GreenLight.copy(alpha = 0.3f)),
+                        shape = AppShapes.CardShape,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(AppSpacing.md),
+                            verticalArrangement = Arrangement.spacedBy(AppSpacing.sm)
+                        ) {
+                            Text(
+                                text = "Konfigurasi Provider",
+                                fontWeight = FontWeight.Bold,
+                                style = MaterialTheme.typography.titleMedium
+                            )
+                            AppTextField(
+                                value = providerId,
+                                onValueChange = {
+                                    providerId = it
+                                    errorMessage = null
+                                },
+                                label = "ID Provider (contoh: DIGIFLAZZ) *",
+                                isError = errorMessage == "ID Provider wajib diisi untuk mode Otomatis"
+                            )
+                            AppTextField(
+                                value = providerProductCode,
+                                onValueChange = {
+                                    providerProductCode = it
+                                    errorMessage = null
+                                },
+                                label = "Kode Produk Provider (SKU) *",
+                                isError = errorMessage == "Kode Produk wajib diisi untuk mode Otomatis"
+                            )
+                        }
                     }
                 }
             }
@@ -779,8 +874,22 @@ fun AddProductScreen(
                     isSaving = true
                     errorMessage = null
 
-                    val finalStockStr = if (selectedItemType == ItemType.SERVICE) "0" else stock
-                    val finalMinStockStr = if (selectedItemType == ItemType.SERVICE) "0" else minimumStock
+
+                    if (selectedItemType == ItemType.DIGITAL && selectedFulfillmentMode == FulfillmentMode.PROVIDER) {
+                        if (providerId.trim().isEmpty()) {
+                            errorMessage = "ID Provider wajib diisi untuk mode Otomatis"
+                            isSaving = false
+                            return@PrimaryButton
+                        }
+                        if (providerProductCode.trim().isEmpty()) {
+                            errorMessage = "Kode Produk wajib diisi untuk mode Otomatis"
+                            isSaving = false
+                            return@PrimaryButton
+                        }
+                    }
+
+                    val finalStockStr = if (selectedItemType == ItemType.SERVICE || selectedItemType == ItemType.DIGITAL) "0" else stock
+                    val finalMinStockStr = if (selectedItemType == ItemType.SERVICE || selectedItemType == ItemType.DIGITAL) "0" else minimumStock
 
                     if (isEditMode && productIdToEdit != null) {
                         viewModel.updateProduct(
@@ -796,6 +905,9 @@ fun AddProductScreen(
                             imageUriStr = imageUri,
                             categoryId = selectedCategoryId,
                             itemType = selectedItemType,
+                            fulfillmentMode = selectedFulfillmentMode,
+                            digitalProviderId = providerId.trim().ifEmpty { null },
+                            digitalProductCode = providerProductCode.trim().ifEmpty { null },
                             onSuccess = {
                                 isSaving = false
                                 onBack()
@@ -818,6 +930,9 @@ fun AddProductScreen(
                             imageUriStr = imageUri,
                             categoryId = selectedCategoryId,
                             itemType = selectedItemType,
+                            fulfillmentMode = selectedFulfillmentMode,
+                            digitalProviderId = providerId.trim().ifEmpty { null },
+                            digitalProductCode = providerProductCode.trim().ifEmpty { null },
                             onSuccess = {
                                 isSaving = false
                                 onBack()

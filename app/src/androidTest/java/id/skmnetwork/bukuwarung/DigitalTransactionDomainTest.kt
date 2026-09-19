@@ -74,8 +74,7 @@ class DigitalTransactionDomainTest {
             purchasePrice = product.purchasePrice,
             subtotal = product.sellingPrice
         )
-        db.saleDao().insertSaleItems(listOf(saleItem))
-        val saleItemId = 1L // Note: insertSaleItems does not return id, we rely on the id generated or known for test, let's just assume we query it or assign it
+        val saleItemId = db.saleDao().insertSaleItems(listOf(saleItem)).single()
 
 
         // 1. Create DRAFT
@@ -132,8 +131,7 @@ class DigitalTransactionDomainTest {
             price = product.sellingPrice,
             subtotal = product.sellingPrice
         )
-        db.saleDao().insertSaleItems(listOf(saleItem))
-        val saleItemId = 2L
+        val saleItemId = db.saleDao().insertSaleItems(listOf(saleItem)).single()
 
         val dtId = repository.createDraft(
             saleItemId = saleItemId,
@@ -192,8 +190,7 @@ class DigitalTransactionDomainTest {
             price = product.sellingPrice,
             subtotal = product.sellingPrice
         )
-        db.saleDao().insertSaleItems(listOf(saleItem))
-        val saleItemId = 3L
+        val saleItemId = db.saleDao().insertSaleItems(listOf(saleItem)).single()
 
         val initialPurchasePrice = 24000L
         val dtId = repository.createDraft(
@@ -223,8 +220,7 @@ class DigitalTransactionDomainTest {
         val saleId = db.saleDao().insertTransaction(sale)
         
         val saleItem = SaleItemEntity(transactionId = saleId, productId = productId, productName = product.name, quantity = 1.0, price = product.sellingPrice, subtotal = product.sellingPrice)
-        db.saleDao().insertSaleItems(listOf(saleItem))
-        val saleItemId = 4L
+        val saleItemId = db.saleDao().insertSaleItems(listOf(saleItem)).single()
 
         val dtId = repository.createDraft(
             saleItemId = saleItemId,

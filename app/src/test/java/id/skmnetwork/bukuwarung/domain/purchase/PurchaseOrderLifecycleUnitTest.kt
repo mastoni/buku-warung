@@ -87,6 +87,7 @@ class PurchaseOrderLifecycleUnitTest {
         override fun customerDao(): CustomerDao = throw UnsupportedOperationException()
         override fun debtDao(): DebtDao = throw UnsupportedOperationException()
         override fun saleReturnDao(): SaleReturnDao = throw UnsupportedOperationException()
+        override fun digitalTransactionDao(): id.skmnetwork.bukuwarung.data.local.dao.DigitalTransactionDao = throw UnsupportedOperationException()
 
         override val openHelper: SupportSQLiteOpenHelper = helper
         override fun createOpenHelper(config: androidx.room.DatabaseConfiguration): SupportSQLiteOpenHelper = helper

@@ -44,6 +44,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+
+import id.skmnetwork.bukuwarung.data.local.entity.DigitalTransactionEntity
+import id.skmnetwork.bukuwarung.data.local.entity.DigitalTransactionStatus
+
 import id.skmnetwork.bukuwarung.data.local.entity.CustomerEntity
 import id.skmnetwork.bukuwarung.data.local.entity.SaleItemEntity
 import id.skmnetwork.bukuwarung.data.local.entity.SaleReturnItemEntity
@@ -81,6 +85,7 @@ fun SaleDetailDialog(
     val scope = rememberCoroutineScope()
     var isPrinting by remember { mutableStateOf(false) }
     var saleItems by remember { mutableStateOf<List<SaleItemEntity>>(emptyList()) }
+    var digitalTransactions by remember { mutableStateOf<List<DigitalTransactionEntity>>(emptyList()) }
     var returnTransactions by remember { mutableStateOf<List<SaleReturnTransactionEntity>>(emptyList()) }
     var returnItemsMap by remember { mutableStateOf<Map<Long, List<SaleReturnItemEntity>>>(emptyMap()) }
     var returnableQuantities by remember { mutableStateOf<Map<Long, Double>>(emptyMap()) }
@@ -100,6 +105,10 @@ fun SaleDetailDialog(
         returnTransactions = returns
         returnItemsMap = retItemsMap
         returnableQuantities = returnable
+
+        val digitalTxs = viewModel.getDigitalTransactionsBySaleItemIds(items.map { it.id })
+        digitalTransactions = digitalTxs
+
         isLoading = false
     }
 
@@ -236,6 +245,53 @@ fun SaleDetailDialog(
                                             style = MaterialTheme.typography.bodySmall,
                                             color = AppColors.TextSecondary
                                         )
+
+                                        val digitalTx = digitalTransactions.find { it.saleItemId == item.id }
+                                        if (digitalTx != null) {
+                                            Spacer(modifier = Modifier.height(4.dp))
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Text(
+                                                    text = "Digital: ${digitalTx.destinationNumber}",
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = AppColors.TextPrimary
+                                                )
+                                                Spacer(modifier = Modifier.width(8.dp))
+                                                Surface(
+                                                    shape = AppShapes.ChipShape,
+                                                    color = when (digitalTx.status) {
+                                                        DigitalTransactionStatus.SUCCESS.name -> AppColors.GreenLight
+                                                        DigitalTransactionStatus.PENDING.name, DigitalTransactionStatus.UNKNOWN.name -> Color(0xFFFFF3E0)
+                                                        else -> Color(0xFFFFEBEE)
+                                                    }
+                                                ) {
+                                                    Text(
+                                                        text = digitalTx.status,
+                                                        color = when (digitalTx.status) {
+                                                            DigitalTransactionStatus.SUCCESS.name -> AppColors.GreenDark
+                                                            DigitalTransactionStatus.PENDING.name, DigitalTransactionStatus.UNKNOWN.name -> Color(0xFFE65100)
+                                                            else -> AppColors.RedExpense
+                                                        },
+                                                        style = MaterialTheme.typography.labelSmall,
+                                                        fontWeight = FontWeight.Bold,
+                                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                                    )
+                                                }
+                                            }
+
+                                            if (digitalTx.status == DigitalTransactionStatus.PENDING.name || digitalTx.status == DigitalTransactionStatus.UNKNOWN.name) {
+                                                Spacer(modifier = Modifier.height(4.dp))
+                                                OutlinedButton(
+                                                    onClick = {
+                                                        Toast.makeText(context, "Cek Status ${digitalTx.status} (Not Implemented)", Toast.LENGTH_SHORT).show()
+                                                    },
+                                                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp, vertical = 0.dp),
+                                                    modifier = Modifier.height(24.dp)
+                                                ) {
+                                                    Text("Cek Status", style = MaterialTheme.typography.labelSmall)
+                                                }
+                                            }
+                                        }
+
                                         if (returnedQty > 0.0) {
                                             Text(
                                                 "Sudah diretur: ${returnedQty.toInt()} item",

@@ -15,7 +15,7 @@ interface SaleDao {
     suspend fun insertTransaction(transaction: SaleTransactionEntity): Long
 
     @Insert(onConflict = OnConflictStrategy.ABORT)
-    suspend fun insertSaleItems(items: List<SaleItemEntity>)
+    suspend fun insertSaleItems(items: List<SaleItemEntity>): List<Long>
 
     @Query("SELECT * FROM sales_transactions ORDER BY transaction_date DESC")
     fun getAllTransactions(): Flow<List<SaleTransactionEntity>>

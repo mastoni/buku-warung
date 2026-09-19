@@ -7,6 +7,8 @@ import id.skmnetwork.bukuwarung.data.local.entity.CustomerEntity
 import id.skmnetwork.bukuwarung.data.local.entity.DebtEntity
 import id.skmnetwork.bukuwarung.data.local.entity.DebtPaymentEntity
 import id.skmnetwork.bukuwarung.data.repository.CustomerRepository
+import id.skmnetwork.bukuwarung.domain.checkout.CartLine
+import id.skmnetwork.bukuwarung.domain.checkout.CheckoutOrchestrator
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,7 +21,8 @@ import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class CustomerViewModel(
-    private val repository: CustomerRepository
+    private val repository: CustomerRepository,
+    private val checkoutOrchestrator: CheckoutOrchestrator? = null
 ) : ViewModel() {
 
     val searchQuery = MutableStateFlow("")
@@ -160,6 +163,34 @@ class CustomerViewModel(
         }
     }
 
+    fun checkoutCreditSale(
+        cartLines: List<CartLine>,
+        customerId: Long,
+        discountAmount: Long = 0L,
+        onSuccess: (Long) -> Unit,
+        onError: (String) -> Unit
+    ) {
+        if (cartLines.isEmpty()) {
+            onError("Keranjang kosong")
+            return
+        }
+
+        viewModelScope.launch(Dispatchers.IO) {
+            val result = checkoutOrchestrator?.processCheckout(
+                cartLines = cartLines,
+                paymentMethod = "CREDIT",
+                customerId = customerId,
+                discountAmount = discountAmount
+            ) ?: repository.processAtomicCreditCheckout(cartLines, customerId, discountAmount)
+            withContext(Dispatchers.Main) {
+                result.fold(
+                    onSuccess = { saleId -> onSuccess(saleId) },
+                    onFailure = { e -> onError(e.localizedMessage ?: "Gagal memproses transaksi kredit") }
+                )
+            }
+        }
+    }
+
     suspend fun getReceiptData(
         saleId: Long,
         userSettings: id.skmnetwork.bukuwarung.data.preferences.UserSettings? = null
@@ -191,12 +222,13 @@ class CustomerViewModel(
 }
 
 class CustomerViewModelFactory(
-    private val repository: CustomerRepository
+    private val repository: CustomerRepository,
+    private val checkoutOrchestrator: CheckoutOrchestrator? = null
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(CustomerViewModel::class.java)) {
-            return CustomerViewModel(repository) as T
+            return CustomerViewModel(repository, checkoutOrchestrator) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }

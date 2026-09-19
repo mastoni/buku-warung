@@ -36,9 +36,12 @@ import id.skmnetwork.bukuwarung.data.local.database.AppDatabase
 import id.skmnetwork.bukuwarung.data.preferences.UserPreferencesRepository
 import id.skmnetwork.bukuwarung.data.preferences.UserSettings
 import id.skmnetwork.bukuwarung.data.repository.CustomerRepository
+import id.skmnetwork.bukuwarung.data.repository.DigitalTransactionRepository
 import id.skmnetwork.bukuwarung.data.repository.ProductRepository
 import id.skmnetwork.bukuwarung.data.repository.ReportRepository
+import id.skmnetwork.bukuwarung.data.repository.SaleRepository
 import id.skmnetwork.bukuwarung.data.repository.SupplierRepository
+import id.skmnetwork.bukuwarung.domain.checkout.CheckoutOrchestrator
 import id.skmnetwork.bukuwarung.license.LicenseManager
 import id.skmnetwork.bukuwarung.license.LicenseStatus
 import id.skmnetwork.bukuwarung.ui.cash.CashScreen
@@ -93,6 +96,11 @@ fun BukuWarungApp() {
     val database = remember { AppDatabase.getDatabase(context) }
     val productRepository = remember { ProductRepository(database) }
     val customerRepository = remember { CustomerRepository(database) }
+    val saleRepository = remember { SaleRepository(database) }
+    val digitalTransactionRepository = remember { DigitalTransactionRepository(database.digitalTransactionDao()) }
+    val checkoutOrchestrator = remember {
+        CheckoutOrchestrator(database, saleRepository, digitalTransactionRepository)
+    }
     val supplierRepository = remember { SupplierRepository(database) }
     val reportRepository = remember { ReportRepository(database) }
     val notificationRepository = remember {
@@ -168,10 +176,10 @@ fun BukuWarungApp() {
     }
 
     val productViewModel: ProductViewModel = viewModel(
-        factory = ProductViewModelFactory(productRepository)
+        factory = ProductViewModelFactory(productRepository, checkoutOrchestrator)
     )
     val customerViewModel: CustomerViewModel = viewModel(
-        factory = CustomerViewModelFactory(customerRepository)
+        factory = CustomerViewModelFactory(customerRepository, checkoutOrchestrator)
     )
     val supplierViewModel: SupplierViewModel = viewModel(
         factory = SupplierViewModelFactory(supplierRepository)

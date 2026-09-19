@@ -4,6 +4,7 @@ import androidx.room.withTransaction
 import id.skmnetwork.bukuwarung.data.local.database.AppDatabase
 import id.skmnetwork.bukuwarung.data.local.entity.CashTransactionEntity
 import id.skmnetwork.bukuwarung.data.local.entity.CategoryEntity
+import id.skmnetwork.bukuwarung.data.local.entity.FulfillmentMode
 import id.skmnetwork.bukuwarung.data.local.entity.ItemType
 import id.skmnetwork.bukuwarung.data.local.entity.ProductEntity
 import id.skmnetwork.bukuwarung.data.local.entity.PurchaseItemEntity
@@ -12,6 +13,10 @@ import id.skmnetwork.bukuwarung.data.local.entity.SaleItemEntity
 import id.skmnetwork.bukuwarung.data.local.entity.SaleTransactionEntity
 import id.skmnetwork.bukuwarung.data.local.entity.StockMovementEntity
 import id.skmnetwork.bukuwarung.data.local.entity.SyncQueueEntity
+import id.skmnetwork.bukuwarung.data.repository.DigitalTransactionRepository
+import id.skmnetwork.bukuwarung.domain.checkout.CartLine
+import id.skmnetwork.bukuwarung.domain.checkout.CartLineRequest
+import id.skmnetwork.bukuwarung.domain.checkout.toRequest
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
@@ -107,7 +112,10 @@ class ProductRepository(
         barcode: String? = null,
         imageUri: String? = null,
         itemType: ItemType = ItemType.PHYSICAL,
-        categoryId: Long? = null
+        categoryId: Long? = null,
+        fulfillmentMode: FulfillmentMode = FulfillmentMode.MANUAL,
+        digitalProviderId: String? = null,
+        digitalProductCode: String? = null
     ): Long = withContext(Dispatchers.IO) {
         val resolvedCategoryId = if (categoryId != null && categoryId > 0 && categoryDao.getCategoryById(categoryId) != null) {
             categoryId
@@ -131,6 +139,9 @@ class ProductRepository(
             minimumStock = minimumStock,
             unit = unit.trim().ifEmpty { "pcs" },
             itemType = itemType.name,
+            fulfillmentMode = fulfillmentMode.name,
+            digitalProviderId = digitalProviderId?.trim()?.ifEmpty { null },
+            digitalProductCode = digitalProductCode?.trim()?.ifEmpty { null },
             barcode = barcode?.trim()?.ifEmpty { null },
             imageUri = imageUri?.trim()?.ifEmpty { null },
             createdAt = now,
@@ -178,7 +189,10 @@ class ProductRepository(
         barcode: String? = null,
         imageUri: String? = null,
         categoryId: Long? = null,
-        itemType: ItemType? = null
+        itemType: ItemType? = null,
+        fulfillmentMode: FulfillmentMode? = null,
+        digitalProviderId: String? = null,
+        digitalProductCode: String? = null
     ) = withContext(Dispatchers.IO) {
         val resolvedCategoryId = if (categoryId != null && categoryId > 0 && categoryDao.getCategoryById(categoryId) != null) {
             categoryId
@@ -193,6 +207,15 @@ class ProductRepository(
         val existingProduct = productDao.getProductById(productId)
             ?: throw Exception("Produk tidak ditemukan")
 
+        val resolvedItemType = itemType?.name ?: existingProduct.itemType
+        val resolvedFulfillmentMode = fulfillmentMode?.name ?: existingProduct.fulfillmentMode
+        val isDigitalProvider = resolvedItemType == ItemType.DIGITAL.name &&
+                resolvedFulfillmentMode == FulfillmentMode.PROVIDER.name
+        val resolvedProviderId = digitalProviderId?.trim()?.ifEmpty { null }
+            ?: if (isDigitalProvider) existingProduct.digitalProviderId else null
+        val resolvedProductCode = digitalProductCode?.trim()?.ifEmpty { null }
+            ?: if (isDigitalProvider) existingProduct.digitalProductCode else null
+
         val now = System.currentTimeMillis()
         val product = existingProduct.copy(
             categoryId = resolvedCategoryId,
@@ -202,7 +225,10 @@ class ProductRepository(
             stock = stock,
             minimumStock = minimumStock,
             unit = unit.trim().ifEmpty { "pcs" },
-            itemType = itemType?.name ?: existingProduct.itemType,
+            itemType = resolvedItemType,
+            fulfillmentMode = resolvedFulfillmentMode,
+            digitalProviderId = resolvedProviderId,
+            digitalProductCode = resolvedProductCode,
             barcode = barcode?.trim()?.ifEmpty { null },
             imageUri = imageUri?.trim()?.ifEmpty { null },
             updatedAt = now
@@ -259,6 +285,7 @@ class ProductRepository(
     }
 
     private val saleRepository = SaleRepository(appDatabase)
+    private val digitalTransactionRepository = DigitalTransactionRepository(appDatabase.digitalTransactionDao())
     private val purchaseRepository = PurchaseRepository(appDatabase)
     private val cashRepository = CashRepository(appDatabase)
     private val stockRepository = StockRepository(appDatabase)
@@ -269,7 +296,21 @@ class ProductRepository(
         discountAmount: Long = 0L
     ): Result<Long> = withContext(Dispatchers.IO) {
         saleRepository.completeSale(
-            cartItems = cartItems,
+            cartItems = cartItems.map { (productId, quantity) ->
+                CartLineRequest(productId = productId, quantity = quantity)
+            },
+            paymentMethod = paymentMethod,
+            discountAmount = discountAmount
+        )
+    }
+
+    suspend fun processAtomicCheckout(
+        cartLines: List<CartLine>,
+        paymentMethod: String = "CASH",
+        discountAmount: Long = 0L
+    ): Result<Long> = withContext(Dispatchers.IO) {
+        saleRepository.completeSaleRequests(
+            cartLineRequests = cartLines.map { it.toRequest() },
             paymentMethod = paymentMethod,
             discountAmount = discountAmount
         )
@@ -301,6 +342,10 @@ class ProductRepository(
 
     suspend fun getSaleItems(transactionId: Long): List<SaleItemEntity> = withContext(Dispatchers.IO) {
         saleRepository.getItemsForTransaction(transactionId)
+    }
+
+    suspend fun getDigitalTransactionsBySaleItemIds(saleItemIds: List<Long>): List<id.skmnetwork.bukuwarung.data.local.entity.DigitalTransactionEntity> = withContext(Dispatchers.IO) {
+        digitalTransactionRepository.getBySaleItemIds(saleItemIds)
     }
 
     suspend fun getReturnsForSale(saleId: Long): List<id.skmnetwork.bukuwarung.data.local.entity.SaleReturnTransactionEntity> = withContext(Dispatchers.IO) {

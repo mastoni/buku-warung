@@ -5,8 +5,12 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import id.skmnetwork.bukuwarung.data.local.entity.CashTransactionEntity
 import id.skmnetwork.bukuwarung.data.local.entity.CategoryEntity
+import id.skmnetwork.bukuwarung.data.local.entity.DigitalTransactionEntity
+import id.skmnetwork.bukuwarung.data.local.entity.FulfillmentMode
 import id.skmnetwork.bukuwarung.data.local.entity.ProductEntity
 import id.skmnetwork.bukuwarung.data.repository.ProductRepository
+import id.skmnetwork.bukuwarung.domain.checkout.CartLine
+import id.skmnetwork.bukuwarung.domain.checkout.CheckoutOrchestrator
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -15,7 +19,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 class ProductViewModel(
-    private val repository: ProductRepository
+    private val repository: ProductRepository,
+    private val checkoutOrchestrator: CheckoutOrchestrator? = null
 ) : ViewModel() {
 
     val products: StateFlow<List<ProductEntity>> = repository.allProducts
@@ -83,6 +88,10 @@ class ProductViewModel(
 
     suspend fun getSaleItems(transactionId: Long): List<id.skmnetwork.bukuwarung.data.local.entity.SaleItemEntity> {
         return repository.getSaleItems(transactionId)
+    }
+
+    suspend fun getDigitalTransactionsBySaleItemIds(saleItemIds: List<Long>): List<DigitalTransactionEntity> {
+        return repository.getDigitalTransactionsBySaleItemIds(saleItemIds)
     }
 
     suspend fun getReturnsForSale(saleId: Long): List<id.skmnetwork.bukuwarung.data.local.entity.SaleReturnTransactionEntity> {
@@ -182,6 +191,9 @@ class ProductViewModel(
         imageUriStr: String? = null,
         categoryId: Long? = null,
         itemType: id.skmnetwork.bukuwarung.data.local.entity.ItemType = id.skmnetwork.bukuwarung.data.local.entity.ItemType.PHYSICAL,
+        fulfillmentMode: FulfillmentMode = FulfillmentMode.MANUAL,
+        digitalProviderId: String? = null,
+        digitalProductCode: String? = null,
         onSuccess: () -> Unit,
         onError: (String) -> Unit
     ) {
@@ -217,6 +229,17 @@ class ProductViewModel(
 
         val unit = unitStr.trim().ifEmpty { "pcs" }
 
+        if (fulfillmentMode == FulfillmentMode.PROVIDER) {
+            if (digitalProviderId.isNullOrBlank()) {
+                onError("ID provider digital wajib diisi")
+                return
+            }
+            if (digitalProductCode.isNullOrBlank()) {
+                onError("Kode produk digital wajib diisi")
+                return
+            }
+        }
+
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 repository.insertProductWithCategory(
@@ -230,7 +253,10 @@ class ProductViewModel(
                     barcode = barcodeStr,
                     imageUri = imageUriStr,
                     itemType = itemType,
-                    categoryId = categoryId
+                    categoryId = categoryId,
+                    fulfillmentMode = fulfillmentMode,
+                    digitalProviderId = digitalProviderId,
+                    digitalProductCode = digitalProductCode
                 )
                 withContext(Dispatchers.Main) {
                     onSuccess()
@@ -256,6 +282,9 @@ class ProductViewModel(
         imageUriStr: String? = null,
         categoryId: Long? = null,
         itemType: id.skmnetwork.bukuwarung.data.local.entity.ItemType? = null,
+        fulfillmentMode: FulfillmentMode? = null,
+        digitalProviderId: String? = null,
+        digitalProductCode: String? = null,
         onSuccess: () -> Unit,
         onError: (String) -> Unit
     ) {
@@ -291,6 +320,17 @@ class ProductViewModel(
 
         val unit = unitStr.trim().ifEmpty { "pcs" }
 
+        if (fulfillmentMode == FulfillmentMode.PROVIDER) {
+            if (digitalProviderId.isNullOrBlank()) {
+                onError("ID provider digital wajib diisi")
+                return
+            }
+            if (digitalProductCode.isNullOrBlank()) {
+                onError("Kode produk digital wajib diisi")
+                return
+            }
+        }
+
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 repository.updateProductWithCategory(
@@ -305,7 +345,10 @@ class ProductViewModel(
                     barcode = barcodeStr,
                     imageUri = imageUriStr,
                     categoryId = categoryId,
-                    itemType = itemType
+                    itemType = itemType,
+                    fulfillmentMode = fulfillmentMode,
+                    digitalProviderId = digitalProviderId,
+                    digitalProductCode = digitalProductCode
                 )
                 withContext(Dispatchers.Main) {
                     onSuccess()
@@ -351,6 +394,33 @@ class ProductViewModel(
 
         viewModelScope.launch(Dispatchers.IO) {
             val result = repository.processAtomicCheckout(cartItems, paymentMethod, discountAmount)
+            withContext(Dispatchers.Main) {
+                result.fold(
+                    onSuccess = { saleId -> onSuccess(saleId) },
+                    onFailure = { e -> onError(e.localizedMessage ?: "Gagal memproses transaksi") }
+                )
+            }
+        }
+    }
+
+    fun checkoutCart(
+        cartLines: List<CartLine>,
+        paymentMethod: String = "CASH",
+        discountAmount: Long = 0L,
+        onSuccess: (Long) -> Unit,
+        onError: (String) -> Unit
+    ) {
+        if (cartLines.isEmpty()) {
+            onError("Keranjang kosong")
+            return
+        }
+
+        viewModelScope.launch(Dispatchers.IO) {
+            val result = checkoutOrchestrator?.processCheckout(
+                cartLines = cartLines,
+                paymentMethod = paymentMethod,
+                discountAmount = discountAmount
+            ) ?: repository.processAtomicCheckout(cartLines, paymentMethod, discountAmount)
             withContext(Dispatchers.Main) {
                 result.fold(
                     onSuccess = { saleId -> onSuccess(saleId) },
@@ -418,12 +488,13 @@ class ProductViewModel(
 }
 
 class ProductViewModelFactory(
-    private val repository: ProductRepository
+    private val repository: ProductRepository,
+    private val checkoutOrchestrator: CheckoutOrchestrator? = null
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(ProductViewModel::class.java)) {
-            return ProductViewModel(repository) as T
+            return ProductViewModel(repository, checkoutOrchestrator) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }

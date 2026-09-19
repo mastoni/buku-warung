@@ -1,5 +1,8 @@
 package id.skmnetwork.bukuwarung.ui.pos
 
+import android.content.Context
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
@@ -45,6 +48,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.foundation.text.KeyboardOptions
@@ -56,7 +60,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -74,8 +78,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import id.skmnetwork.bukuwarung.data.local.entity.CustomerEntity
+import id.skmnetwork.bukuwarung.data.local.entity.FulfillmentMode
 import id.skmnetwork.bukuwarung.data.local.entity.ItemType
+import id.skmnetwork.bukuwarung.data.local.entity.ProductEntity
 import id.skmnetwork.bukuwarung.data.local.entity.SaleTransactionEntity
+import id.skmnetwork.bukuwarung.domain.checkout.CartLine
 import id.skmnetwork.bukuwarung.data.preferences.UserSettings
 import id.skmnetwork.bukuwarung.domain.business.BusinessCapability
 import id.skmnetwork.bukuwarung.domain.business.BusinessTaxonomyRegistry
@@ -129,8 +136,80 @@ fun PosScreen(
     var salesHistoryQuery by remember { mutableStateOf("") }
     var selectedCategoryId by remember { mutableStateOf<Long?>(null) } // null = Semua
 
-    val cart = remember { mutableStateMapOf<Long, Double>() }
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val cart = remember { mutableStateListOf<CartLine>() }
     var isCartExpanded by remember { mutableStateOf(false) }
+
+    fun isProvider(product: ProductEntity): Boolean {
+        return product.itemType == ItemType.DIGITAL.name &&
+                product.fulfillmentMode == FulfillmentMode.PROVIDER.name
+    }
+
+    fun isInternetAvailable(): Boolean {
+        val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        val network = connectivityManager.activeNetwork ?: return false
+        val capabilities = connectivityManager.getNetworkCapabilities(network) ?: return false
+        return capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
+                capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
+    }
+
+    fun normalizedDestination(destinationNumber: String?): String? {
+        return destinationNumber?.trim()?.ifEmpty { null }
+    }
+
+    fun addProductToCart(product: ProductEntity) {
+        val isServiceOrDigital = product.itemType == ItemType.SERVICE.name ||
+                product.itemType == ItemType.DIGITAL.name
+        val provider = isProvider(product)
+        val existingIndex = if (provider) {
+            cart.indexOfFirst { it.product.id == product.id && normalizedDestination(it.destinationNumber) == null }
+        } else {
+            cart.indexOfFirst { it.product.id == product.id }
+        }
+
+        if (isServiceOrDigital) {
+            if (existingIndex >= 0) {
+                val existing = cart[existingIndex]
+                cart[existingIndex] = existing.copy(quantity = existing.quantity + 1.0)
+            } else {
+                cart.add(CartLine(product = product, quantity = 1.0, destinationNumber = null))
+            }
+            Toast.makeText(context, "+1 ${product.name}", Toast.LENGTH_SHORT).show()
+        } else if (product.stock <= 0.0) {
+            Toast.makeText(context, "${terminology.stockLabel} ${product.name} habis (0)", Toast.LENGTH_SHORT).show()
+        } else {
+            val currentQty = if (existingIndex >= 0) cart[existingIndex].quantity else 0.0
+            if (currentQty + 1.0 <= product.stock) {
+                if (existingIndex >= 0) {
+                    val existing = cart[existingIndex]
+                    cart[existingIndex] = existing.copy(quantity = existing.quantity + 1.0)
+                } else {
+                    cart.add(CartLine(product = product, quantity = 1.0, destinationNumber = null))
+                }
+                Toast.makeText(context, "+1 ${product.name}", Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(context, "${terminology.stockLabel} ${product.name} hanya tersisa ${product.stock.toInt()}", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    fun updateCartDestination(index: Int, destinationNumber: String) {
+        val normalized = normalizedDestination(destinationNumber)
+        val current = cart[index]
+        val duplicateIndex = cart.indexOfFirst {
+            it.lineId != current.lineId &&
+                    it.product.id == current.product.id &&
+                    normalizedDestination(it.destinationNumber) == normalized
+        }
+        if (duplicateIndex >= 0) {
+            val duplicate = cart[duplicateIndex]
+            cart[duplicateIndex] = duplicate.copy(quantity = duplicate.quantity + current.quantity)
+            cart.removeAt(index)
+        } else {
+            cart[index] = current.copy(destinationNumber = normalized)
+        }
+    }
 
     var showPaymentSelectorDialog by remember { mutableStateOf(false) }
     var showCashPaymentDialog by remember { mutableStateOf(false) }
@@ -150,9 +229,6 @@ fun PosScreen(
     var showCustomerPickerSheet by remember { mutableStateOf(false) }
     var showPosScannerDialog by remember { mutableStateOf(false) }
 
-    val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-
     val filteredProducts = dbProducts.filter { product ->
         val matchesQuery = product.name.contains(query, ignoreCase = true) ||
                 (product.barcode != null && product.barcode.contains(query, ignoreCase = true))
@@ -170,11 +246,8 @@ fun PosScreen(
     var discountType by remember { mutableStateOf(DiscountType.FIXED) }
     var discountInputText by remember { mutableStateOf("") }
 
-    val totalItemCount = cart.values.sum().toInt()
-    val totalPrice = cart.entries.sumOf { (productId, qty) ->
-        val prod = dbProducts.find { it.id == productId }
-        (prod?.sellingPrice ?: 0L) * qty.toLong()
-    }
+    val totalItemCount = cart.sumOf { it.quantity }.toInt()
+    val totalPrice = cart.sumOf { (it.product.sellingPrice) * it.quantity.toLong() }
 
     val parsedDiscountValue = discountInputText.trim().toDoubleOrNull() ?: 0.0
     val discountCalcResult = remember(totalPrice, discountType, parsedDiscountValue) {
@@ -187,9 +260,9 @@ fun PosScreen(
     val discountAmount = discountCalcResult.discountAmount
     val netTotal = discountCalcResult.netTotal
 
-    val cartSummaryList = cart.entries.mapNotNull { (prodId, qty) ->
-        val prod = dbProducts.find { it.id == prodId }
-        if (prod != null) Pair(prod.name, qty) else null
+    val cartSummaryList = cart.map { Pair(it.product.name, it.quantity) }
+    val hasMissingProviderDestination = cart.any {
+        isProvider(it.product) && it.destinationNumber.isNullOrBlank()
     }
 
     if (selectedSaleForDetail != null) {
@@ -235,19 +308,11 @@ fun PosScreen(
                     if (matchedProduct != null) {
                         val isServiceOrDigital = matchedProduct.itemType == ItemType.SERVICE.name || matchedProduct.itemType == ItemType.DIGITAL.name
                         if (isServiceOrDigital) {
-                            val currentQty = cart[matchedProduct.id] ?: 0.0
-                            cart[matchedProduct.id] = currentQty + 1.0
-                            Toast.makeText(context, "+1 ${matchedProduct.name}", Toast.LENGTH_SHORT).show()
+                            addProductToCart(matchedProduct)
                         } else if (matchedProduct.stock <= 0.0) {
                             Toast.makeText(context, "${terminology.stockLabel} ${matchedProduct.name} habis (0)", Toast.LENGTH_SHORT).show()
                         } else {
-                            val currentQty = cart[matchedProduct.id] ?: 0.0
-                            if (currentQty + 1.0 <= matchedProduct.stock) {
-                                cart[matchedProduct.id] = currentQty + 1.0
-                                Toast.makeText(context, "+1 ${matchedProduct.name}", Toast.LENGTH_SHORT).show()
-                            } else {
-                                Toast.makeText(context, "${terminology.stockLabel} ${matchedProduct.name} hanya tersisa ${matchedProduct.stock.toInt()}", Toast.LENGTH_SHORT).show()
-                            }
+                            addProductToCart(matchedProduct)
                         }
                     } else {
                         Toast.makeText(context, "${terminology.productLabel} barcode $cleanBarcode tidak ditemukan", Toast.LENGTH_SHORT).show()
@@ -310,7 +375,7 @@ fun PosScreen(
                 if (isCheckingOut) return@CashPaymentDialog
                 isCheckingOut = true
                 viewModel.checkoutCart(
-                    cartItems = cart.toMap(),
+                    cartLines = cart.toList(),
                     paymentMethod = "CASH",
                     discountAmount = discountAmount,
                     onSuccess = { saleId ->
@@ -366,7 +431,7 @@ fun PosScreen(
                 if (isCheckingOut) return@QrisPaymentDialog
                 isCheckingOut = true
                 viewModel.checkoutCart(
-                    cartItems = cart.toMap(),
+                    cartLines = cart.toList(),
                     paymentMethod = "QRIS",
                     discountAmount = discountAmount,
                     onSuccess = { saleId ->
@@ -432,25 +497,24 @@ fun PosScreen(
                                 .height(110.dp)
                                 .padding(AppSpacing.sm)
                         ) {
-                            items(cart.entries.toList()) { (prodId, qty) ->
-                                val prod = dbProducts.find { it.id == prodId }
-                                if (prod != null) {
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Column(Modifier.weight(1f)) {
-                                            Text(prod.name, fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.bodySmall)
-                                            Text("${qty.toInt()} × ${formatRupiah(prod.sellingPrice)}", color = AppColors.TextSecondary, style = MaterialTheme.typography.labelSmall)
-                                        }
-                                        Text(formatRupiah(prod.sellingPrice * qty.toLong()), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodySmall)
+                            items(cart) { cartLine ->
+                                val prod = cartLine.product
+                                val qty = cartLine.quantity
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(Modifier.weight(1f)) {
+                                        Text(prod.name, fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.bodySmall)
+                                        Text("${qty.toInt()} × ${formatRupiah(prod.sellingPrice)}", color = AppColors.TextSecondary, style = MaterialTheme.typography.labelSmall)
                                     }
+                                    Text(formatRupiah(prod.sellingPrice * qty.toLong()), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodySmall)
                                 }
                             }
                         }
                     }
 
-                    // Universal Discount Section
+                // Universal Discount Section
                     Column(
                         verticalArrangement = Arrangement.spacedBy(4.dp),
                         modifier = Modifier.fillMaxWidth()
@@ -625,6 +689,10 @@ fun PosScreen(
                 val isCreditWithoutCustomer = selectedPaymentMethod == "CREDIT" && selectedCustomerForCredit == null
                 Button(
                     onClick = {
+                        if (hasMissingProviderDestination) {
+                            Toast.makeText(context, "Isi nomor tujuan produk digital", Toast.LENGTH_SHORT).show()
+                            return@Button
+                        }
                         if (isCheckingOut) return@Button
                         when (selectedPaymentMethod) {
                             "CASH" -> {
@@ -641,7 +709,7 @@ fun PosScreen(
                                 }
                                 isCheckingOut = true
                                 customerViewModel.checkoutCreditSale(
-                                    cartItems = cart.toMap(),
+                                    cartLines = cart.toList(),
                                     customerId = selectedCustomerForCredit!!.id,
                                     discountAmount = discountAmount,
                                     onSuccess = { saleId ->
@@ -1081,23 +1149,13 @@ fun PosScreen(
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 rowProducts.forEach { product ->
-                                    val currentCartQty = cart[product.id] ?: 0.0
+                                    val currentCartQty = cart.filter { it.product.id == product.id }.sumOf { it.quantity }
                                     val isServiceOrDigital = product.itemType == ItemType.SERVICE.name || product.itemType == ItemType.DIGITAL.name
                                     val isOutofStock = if (isServiceOrDigital) false else product.stock <= 0.0
                                     val isInCart = currentCartQty > 0.0
 
                                     Surface(
-                                        onClick = {
-                                            if (isServiceOrDigital) {
-                                                cart[product.id] = currentCartQty + 1.0
-                                            } else if (!isOutofStock) {
-                                                if (currentCartQty + 1.0 <= product.stock) {
-                                                    cart[product.id] = currentCartQty + 1.0
-                                                } else {
-                                                    Toast.makeText(context, "${terminology.stockLabel} ${product.name} hanya tersisa ${product.stock.toInt()}", Toast.LENGTH_SHORT).show()
-                                                }
-                                            }
-                                        },
+                                        onClick = { addProductToCart(product) },
                                         shape = RoundedCornerShape(14.dp),
                                         color = if (isInCart) AppColors.GreenLight else Color.White,
                                         border = BorderStroke(
@@ -1201,7 +1259,10 @@ fun PosScreen(
                                                             color = Color(0xFFF6FFED)
                                                         ) {
                                                             Text(
-                                                                text = "Digital",
+                                                                text = when (product.fulfillmentMode) {
+                                                                    FulfillmentMode.PROVIDER.name -> "Digital • Provider"
+                                                                    else -> "Digital • Manual"
+                                                                },
                                                                 color = Color(0xFF389E0D),
                                                                 fontSize = 10.5.sp,
                                                                 fontWeight = FontWeight.Bold,
@@ -1332,20 +1393,24 @@ fun PosScreen(
                                         .padding(top = AppSpacing.sm, bottom = AppSpacing.xs)
                                         .fillMaxWidth()
                                 ) {
-                                    cart.entries.forEach { (prodId, qty) ->
-                                        val prod = dbProducts.find { it.id == prodId }
-                                        if (prod != null) {
-                                            val isServiceOrDigitalProd = prod.itemType == ItemType.SERVICE.name || prod.itemType == ItemType.DIGITAL.name
-                                            Surface(
-                                                shape = RoundedCornerShape(10.dp),
-                                                color = Color(0xFFF8FAF9),
-                                                modifier = Modifier.fillMaxWidth()
+                                    cart.forEach { cartLine ->
+                                        val prod = cartLine.product
+                                        val lineIndex = cart.indexOfFirst { it.lineId == cartLine.lineId }
+                                        val isServiceOrDigitalProd = prod.itemType == ItemType.SERVICE.name || prod.itemType == ItemType.DIGITAL.name
+                                        Surface(
+                                            shape = RoundedCornerShape(10.dp),
+                                            color = Color(0xFFF8FAF9),
+                                            modifier = Modifier.fillMaxWidth()
+                                        ) {
+                                            Column(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(horizontal = 10.dp, vertical = 6.dp),
+                                                verticalArrangement = Arrangement.spacedBy(4.dp)
                                             ) {
                                                 Row(
                                                     verticalAlignment = Alignment.CenterVertically,
-                                                    modifier = Modifier
-                                                        .fillMaxWidth()
-                                                        .padding(horizontal = 10.dp, vertical = 6.dp)
+                                                    modifier = Modifier.fillMaxWidth()
                                                 ) {
                                                     Column(modifier = Modifier.weight(1f)) {
                                                         Text(
@@ -1357,62 +1422,83 @@ fun PosScreen(
                                                             overflow = TextOverflow.Ellipsis
                                                         )
                                                         Text(
-                                                            "${formatRupiah(prod.sellingPrice)} × ${qty.toInt()} = ${formatRupiah(prod.sellingPrice * qty.toLong())}",
+                                                            "${formatRupiah(prod.sellingPrice)} × ${cartLine.quantity.toInt()} = ${formatRupiah(prod.sellingPrice * cartLine.quantity.toLong())}",
                                                             color = AppColors.TextSecondary,
                                                             fontSize = 11.sp
                                                         )
-                                                    }
-                                                    Surface(
-                                                        shape = CircleShape,
-                                                        color = Color(0xFFFFEBEE),
-                                                        modifier = Modifier
-                                                            .size(28.dp)
-                                                            .clickable {
-                                                                val newQty = qty - 1.0
-                                                                if (newQty <= 0) {
-                                                                    cart.remove(prodId)
-                                                                } else {
-                                                                    cart[prodId] = newQty
-                                                                }
-                                                            }
-                                                    ) {
-                                                        Box(contentAlignment = Alignment.Center) {
-                                                            Icon(
-                                                                Icons.Default.Remove,
-                                                                "Kurangi",
-                                                                tint = AppColors.RedExpense,
-                                                                modifier = Modifier.size(16.dp)
+                                                        if (isProvider(prod)) {
+                                                            Text(
+                                                                "Nomor tujuan: ${cartLine.destinationNumber.orEmpty().ifEmpty { "Belum diisi" }}",
+                                                                color = AppColors.TextSecondary,
+                                                                fontSize = 10.5.sp
                                                             )
                                                         }
                                                     }
-                                                    Text(
-                                                        "${qty.toInt()}",
-                                                        fontWeight = FontWeight.Bold,
-                                                        fontSize = 13.sp,
-                                                        modifier = Modifier.padding(horizontal = 8.dp)
+                                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                                        Surface(
+                                                            shape = CircleShape,
+                                                            color = Color(0xFFFFEBEE),
+                                                            modifier = Modifier
+                                                                .size(28.dp)
+                                                                .clickable {
+                                                                    val newQty = cartLine.quantity - 1.0
+                                                                    if (newQty <= 0) {
+                                                                        cart.removeIf { it.lineId == cartLine.lineId }
+                                                                    } else if (lineIndex >= 0) {
+                                                                        cart[lineIndex] = cartLine.copy(quantity = newQty)
+                                                                    }
+                                                                }
+                                                        ) {
+                                                            Box(contentAlignment = Alignment.Center) {
+                                                                Icon(
+                                                                    Icons.Default.Remove,
+                                                                    "Kurangi",
+                                                                    tint = AppColors.RedExpense,
+                                                                    modifier = Modifier.size(16.dp)
+                                                                )
+                                                            }
+                                                        }
+                                                        Text(
+                                                            "${cartLine.quantity.toInt()}",
+                                                            fontWeight = FontWeight.Bold,
+                                                            fontSize = 13.sp,
+                                                            modifier = Modifier.padding(horizontal = 8.dp)
+                                                        )
+                                                        Surface(
+                                                            shape = CircleShape,
+                                                            color = AppColors.GreenLight,
+                                                            modifier = Modifier
+                                                                .size(28.dp)
+                                                                .clickable {
+                                                                    if (isServiceOrDigitalProd || cartLine.quantity + 1.0 <= prod.stock) {
+                                                                        if (lineIndex >= 0) {
+                                                                            cart[lineIndex] = cartLine.copy(quantity = cartLine.quantity + 1.0)
+                                                                        }
+                                                                    } else {
+                                                                        Toast.makeText(context, "${terminology.stockLabel} ${prod.name} hanya tersisa ${prod.stock.toInt()}", Toast.LENGTH_SHORT).show()
+                                                                    }
+                                                                }
+                                                        ) {
+                                                            Box(contentAlignment = Alignment.Center) {
+                                                                Icon(
+                                                                    Icons.Default.Add,
+                                                                    "Tambah",
+                                                                    tint = AppColors.GreenPrimary,
+                                                                    modifier = Modifier.size(16.dp)
+                                                                )
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                                if (isProvider(prod)) {
+                                                    OutlinedTextField(
+                                                        value = cartLine.destinationNumber.orEmpty(),
+                                                        onValueChange = { if (lineIndex >= 0) updateCartDestination(lineIndex, it) },
+                                                        label = { Text("Nomor tujuan", fontSize = 10.sp) },
+                                                        singleLine = true,
+                                                        modifier = Modifier.fillMaxWidth(),
+                                                        enabled = !isCheckingOut
                                                     )
-                                                    Surface(
-                                                        shape = CircleShape,
-                                                        color = AppColors.GreenLight,
-                                                        modifier = Modifier
-                                                            .size(28.dp)
-                                                            .clickable {
-                                                                if (isServiceOrDigitalProd || qty + 1.0 <= prod.stock) {
-                                                                    cart[prodId] = qty + 1.0
-                                                                } else {
-                                                                    Toast.makeText(context, "${terminology.stockLabel} ${prod.name} hanya tersisa ${prod.stock.toInt()}", Toast.LENGTH_SHORT).show()
-                                                                }
-                                                            }
-                                                    ) {
-                                                        Box(contentAlignment = Alignment.Center) {
-                                                            Icon(
-                                                                Icons.Default.Add,
-                                                                "Tambah",
-                                                                tint = AppColors.GreenPrimary,
-                                                                modifier = Modifier.size(16.dp)
-                                                            )
-                                                        }
-                                                    }
                                                 }
                                             }
                                         }
@@ -1423,7 +1509,17 @@ fun PosScreen(
                             Spacer(Modifier.height(AppSpacing.sm))
 
                             Button(
-                                onClick = { showPaymentSelectorDialog = true },
+                                onClick = {
+                                    if (hasMissingProviderDestination) {
+                                        Toast.makeText(context, "Isi nomor tujuan produk digital", Toast.LENGTH_SHORT).show()
+                                        return@Button
+                                    }
+                                    if (cart.any { isProvider(it.product) } && !isInternetAvailable()) {
+                                        Toast.makeText(context, "Transaksi produk digital membutuhkan internet. Sambungkan internet lalu coba lagi.", Toast.LENGTH_SHORT).show()
+                                        return@Button
+                                    }
+                                    showPaymentSelectorDialog = true
+                                },
                                 shape = RoundedCornerShape(14.dp),
                                 colors = ButtonDefaults.buttonColors(containerColor = AppColors.GreenPrimary),
                                 modifier = Modifier

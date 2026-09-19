@@ -21,6 +21,9 @@ interface DigitalTransactionDao {
     @Query("SELECT * FROM digital_transactions WHERE sale_item_id = :saleItemId LIMIT 1")
     suspend fun getBySaleItemId(saleItemId: Long): DigitalTransactionEntity?
 
+    @Query("SELECT * FROM digital_transactions WHERE sale_item_id IN (:saleItemIds)")
+    suspend fun getBySaleItemIds(saleItemIds: List<Long>): List<DigitalTransactionEntity>
+
     @Query("SELECT * FROM digital_transactions WHERE status = :status")
     fun getByStatus(status: String): Flow<List<DigitalTransactionEntity>>
 }

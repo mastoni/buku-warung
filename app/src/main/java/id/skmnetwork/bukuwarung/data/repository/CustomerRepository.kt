@@ -12,6 +12,8 @@ import id.skmnetwork.bukuwarung.data.local.entity.SaleItemEntity
 import id.skmnetwork.bukuwarung.data.local.entity.SaleTransactionEntity
 import id.skmnetwork.bukuwarung.data.local.entity.StockMovementEntity
 import id.skmnetwork.bukuwarung.data.local.entity.SyncQueueEntity
+import id.skmnetwork.bukuwarung.domain.checkout.CartLine
+import id.skmnetwork.bukuwarung.domain.checkout.toRequest
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
@@ -156,7 +158,25 @@ class CustomerRepository(
         discountAmount: Long = 0L
     ): Result<Long> = withContext(Dispatchers.IO) {
         saleRepository.completeSale(
-            cartItems = cartItems,
+            cartItems = cartItems.map { (productId, quantity) ->
+                id.skmnetwork.bukuwarung.domain.checkout.CartLineRequest(
+                    productId = productId,
+                    quantity = quantity
+                )
+            },
+            paymentMethod = "CREDIT",
+            customerId = customerId,
+            discountAmount = discountAmount
+        )
+    }
+
+    suspend fun processAtomicCreditCheckout(
+        cartLines: List<CartLine>,
+        customerId: Long,
+        discountAmount: Long = 0L
+    ): Result<Long> = withContext(Dispatchers.IO) {
+        saleRepository.completeSaleRequests(
+            cartLineRequests = cartLines.map { it.toRequest() },
             paymentMethod = "CREDIT",
             customerId = customerId,
             discountAmount = discountAmount
