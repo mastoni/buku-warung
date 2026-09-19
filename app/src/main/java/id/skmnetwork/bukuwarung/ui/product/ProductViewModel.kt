@@ -94,6 +94,15 @@ class ProductViewModel(
         return repository.getDigitalTransactionsBySaleItemIds(saleItemIds)
     }
 
+    fun checkDigitalStatus(saleItemId: Long, onComplete: (DigitalTransactionEntity?) -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val result = repository.checkDigitalTransactionStatus(saleItemId)
+            withContext(Dispatchers.Main) {
+                onComplete(result)
+            }
+        }
+    }
+
     suspend fun getReturnsForSale(saleId: Long): List<id.skmnetwork.bukuwarung.data.local.entity.SaleReturnTransactionEntity> {
         return repository.getReturnsForSale(saleId)
     }

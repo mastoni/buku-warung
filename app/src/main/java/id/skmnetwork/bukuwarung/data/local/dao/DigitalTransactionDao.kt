@@ -26,4 +26,7 @@ interface DigitalTransactionDao {
 
     @Query("SELECT * FROM digital_transactions WHERE status = :status")
     fun getByStatus(status: String): Flow<List<DigitalTransactionEntity>>
+
+    @Query("SELECT * FROM digital_transactions WHERE uuid = :uuid")
+    suspend fun getByUuid(uuid: String): DigitalTransactionEntity?
 }

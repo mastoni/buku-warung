@@ -348,6 +348,14 @@ class ProductRepository(
         digitalTransactionRepository.getBySaleItemIds(saleItemIds)
     }
 
+    suspend fun checkDigitalTransactionStatus(saleItemId: Long): id.skmnetwork.bukuwarung.data.local.entity.DigitalTransactionEntity? = withContext(Dispatchers.IO) {
+        val digitalTxs = digitalTransactionRepository.getBySaleItemIds(listOf(saleItemId))
+        if (digitalTxs.isEmpty()) return@withContext null
+        val digitalTx = digitalTxs.first()
+        digitalTransactionRepository.checkStatus(digitalTx.id)
+        digitalTransactionRepository.getBySaleItemIds(listOf(saleItemId)).firstOrNull()
+    }
+
     suspend fun getReturnsForSale(saleId: Long): List<id.skmnetwork.bukuwarung.data.local.entity.SaleReturnTransactionEntity> = withContext(Dispatchers.IO) {
         saleRepository.getReturnsListForSale(saleId)
     }

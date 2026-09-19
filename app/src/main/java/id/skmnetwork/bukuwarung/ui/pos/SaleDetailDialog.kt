@@ -86,31 +86,32 @@ fun SaleDetailDialog(
     var isPrinting by remember { mutableStateOf(false) }
     var saleItems by remember { mutableStateOf<List<SaleItemEntity>>(emptyList()) }
     var digitalTransactions by remember { mutableStateOf<List<DigitalTransactionEntity>>(emptyList()) }
+    var statusCheckKey by remember { mutableStateOf(0) }
     var returnTransactions by remember { mutableStateOf<List<SaleReturnTransactionEntity>>(emptyList()) }
     var returnItemsMap by remember { mutableStateOf<Map<Long, List<SaleReturnItemEntity>>>(emptyMap()) }
     var returnableQuantities by remember { mutableStateOf<Map<Long, Double>>(emptyMap()) }
     var isLoading by remember { mutableStateOf(true) }
 
-    LaunchedEffect(sale.id) {
-        isLoading = true
-        val items = viewModel.getSaleItems(sale.id)
-        val returns = viewModel.getReturnsForSale(sale.id)
-        val retItemsMap = mutableMapOf<Long, List<SaleReturnItemEntity>>()
-        for (ret in returns) {
-            retItemsMap[ret.id] = viewModel.getReturnItems(ret.id)
+        LaunchedEffect(sale.id, statusCheckKey) {
+            isLoading = true
+            val items = viewModel.getSaleItems(sale.id)
+            val returns = viewModel.getReturnsForSale(sale.id)
+            val retItemsMap = mutableMapOf<Long, List<SaleReturnItemEntity>>()
+            for (ret in returns) {
+                retItemsMap[ret.id] = viewModel.getReturnItems(ret.id)
+            }
+            val returnable = viewModel.getReturnableQuantities(sale.id)
+
+            saleItems = items
+            returnTransactions = returns
+            returnItemsMap = retItemsMap
+            returnableQuantities = returnable
+
+            val digitalTxs = viewModel.getDigitalTransactionsBySaleItemIds(items.map { it.id })
+            digitalTransactions = digitalTxs
+
+            isLoading = false
         }
-        val returnable = viewModel.getReturnableQuantities(sale.id)
-
-        saleItems = items
-        returnTransactions = returns
-        returnItemsMap = retItemsMap
-        returnableQuantities = returnable
-
-        val digitalTxs = viewModel.getDigitalTransactionsBySaleItemIds(items.map { it.id })
-        digitalTransactions = digitalTxs
-
-        isLoading = false
-    }
 
     val customer = remember(sale.customerId, customers) {
         customers.find { it.id == sale.customerId }
@@ -282,7 +283,11 @@ fun SaleDetailDialog(
                                                 Spacer(modifier = Modifier.height(4.dp))
                                                 OutlinedButton(
                                                     onClick = {
-                                                        Toast.makeText(context, "Cek Status ${digitalTx.status} (Not Implemented)", Toast.LENGTH_SHORT).show()
+                                                        viewModel.checkDigitalStatus(digitalTx.saleItemId) { updated ->
+                                                            if (updated != null) {
+                                                                statusCheckKey++
+                                                            }
+                                                        }
                                                     },
                                                     contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp, vertical = 0.dp),
                                                     modifier = Modifier.height(24.dp)

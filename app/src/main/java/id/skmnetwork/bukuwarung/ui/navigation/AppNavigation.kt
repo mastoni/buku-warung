@@ -97,7 +97,8 @@ fun BukuWarungApp() {
     val productRepository = remember { ProductRepository(database) }
     val customerRepository = remember { CustomerRepository(database) }
     val saleRepository = remember { SaleRepository(database) }
-    val digitalTransactionRepository = remember { DigitalTransactionRepository(database.digitalTransactionDao()) }
+    val mockBackendApi = remember { id.skmnetwork.bukuwarung.data.remote.MockBackendApi() }
+    val digitalTransactionRepository = remember { DigitalTransactionRepository(database.digitalTransactionDao(), mockBackendApi) }
     val checkoutOrchestrator = remember {
         CheckoutOrchestrator(database, saleRepository, digitalTransactionRepository)
     }
