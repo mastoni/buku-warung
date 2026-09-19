@@ -69,7 +69,6 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-
 import id.skmnetwork.bukuwarung.data.local.entity.FulfillmentMode
 import id.skmnetwork.bukuwarung.data.local.entity.ItemType
 import id.skmnetwork.bukuwarung.data.preferences.UserSettings
@@ -86,6 +85,7 @@ import id.skmnetwork.bukuwarung.ui.theme.AppShapes
 import id.skmnetwork.bukuwarung.ui.theme.AppSpacing
 import java.io.File
 import java.io.FileOutputStream
+import java.util.UUID
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -145,7 +145,8 @@ fun AddProductScreen(
             try {
                 val imagesDir = File(context.filesDir, "product_images").apply { if (!exists()) mkdirs() }
                 val destFile = File(imagesDir, "prod_gal_${System.currentTimeMillis()}.jpg")
-                context.contentResolver.openInputStream(uri)?.use { input ->
+                val input = contentResolver.openInputStream(uri)
+                input?.use { input ->
                     FileOutputStream(destFile).use { output ->
                         input.copyTo(output)
                     }
@@ -518,7 +519,7 @@ fun AddProductScreen(
                 Text(
                     text = errorMessage!!,
                     color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialScheme.typography.bodyMedium,
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.padding(vertical = AppSpacing.xs)
                 )
@@ -824,7 +825,14 @@ fun AddProductScreen(
 
             // Unit Field with Suggested Quick Chips
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                if (preferredUnits.isNotEmpty()) {
+                // Enhance unit suggestions for FUEL and SERVICE
+                val enhancedPreferredUnits = when (selectedItemType) {
+                    ItemType.FUEL -> preferredUnits + listOf("liter", "milliliter", "gallon")
+                    ItemType.SERVICE -> preferredUnits + listOf("jam", "menit", "sesi", "paket")
+                    else -> preferredUnits
+                }.distinct()
+
+                if (enhancedPreferredUnits.isNotEmpty()) {
                     Text(
                         text = "Saran Satuan:",
                         style = MaterialTheme.typography.labelSmall,
@@ -837,7 +845,7 @@ fun AddProductScreen(
                             .horizontalScroll(rememberScrollState()),
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        preferredUnits.forEach { unitSuggestion ->
+                        enhancedPreferredUnits.forEach { unitSuggestion ->
                             val isSelected = unit.equals(unitSuggestion, ignoreCase = true)
                             FilterChip(
                                 selected = isSelected,
