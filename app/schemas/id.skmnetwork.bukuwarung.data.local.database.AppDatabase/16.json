@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 16,
-    "identityHash": "da1810526b62177a8176970e7c3eb9bb",
+    "identityHash": "c2fb6b9b3d251637e8ab1b93ae2befd2",
     "entities": [
       {
         "tableName": "categories",
@@ -2236,7 +2236,7 @@
       },
       {
         "tableName": "sale_return_transactions",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `uuid` TEXT NOT NULL, `business_id` TEXT NOT NULL, `device_id` TEXT NOT NULL, `return_number` TEXT NOT NULL, `return_date` INTEGER NOT NULL, `sale_transaction_id` INTEGER NOT NULL, `sale_uuid` TEXT NOT NULL, `customer_id` INTEGER, `customer_uuid` TEXT, `total_refund_amount` INTEGER NOT NULL, `refund_method` TEXT NOT NULL, `reason` TEXT, `notes` TEXT, `created_at` INTEGER NOT NULL, FOREIGN KEY(`sale_transaction_id`) REFERENCES `sales_transactions`(`id`) ON UPDATE NO ACTION ON DELETE RESTRICT , FOREIGN KEY(`customer_id`) REFERENCES `customers`(`id`) ON UPDATE NO ACTION ON DELETE SET NULL )",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `uuid` TEXT NOT NULL, `business_id` TEXT NOT NULL, `device_id` TEXT NOT NULL, `return_number` TEXT NOT NULL, `return_date` INTEGER NOT NULL, `sale_transaction_id` INTEGER NOT NULL, `sale_uuid` TEXT NOT NULL, `customer_id` INTEGER, `customer_uuid` TEXT, `total_refund_amount` INTEGER NOT NULL, `refund_method` TEXT NOT NULL, `reason` TEXT, `notes` TEXT, `taxable_base_snapshot` INTEGER NOT NULL, `tax_rate_snapshot` REAL NOT NULL, `tax_amount_snapshot` INTEGER NOT NULL, `created_at` INTEGER NOT NULL, FOREIGN KEY(`sale_transaction_id`) REFERENCES `sales_transactions`(`id`) ON UPDATE NO ACTION ON DELETE RESTRICT , FOREIGN KEY(`customer_id`) REFERENCES `customers`(`id`) ON UPDATE NO ACTION ON DELETE SET NULL )",
         "fields": [
           {
             "fieldPath": "id",
@@ -2317,6 +2317,24 @@
             "fieldPath": "notes",
             "columnName": "notes",
             "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "taxableBaseSnapshot",
+            "columnName": "taxable_base_snapshot",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "taxRateSnapshot",
+            "columnName": "tax_rate_snapshot",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "taxAmountSnapshot",
+            "columnName": "tax_amount_snapshot",
+            "affinity": "INTEGER",
+            "notNull": true
           },
           {
             "fieldPath": "createdAt",
@@ -2423,7 +2441,7 @@
       },
       {
         "tableName": "sale_return_items",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `uuid` TEXT NOT NULL, `business_id` TEXT NOT NULL, `return_uuid` TEXT NOT NULL, `sale_item_uuid` TEXT NOT NULL, `product_uuid` TEXT NOT NULL, `return_transaction_id` INTEGER NOT NULL, `sale_item_id` INTEGER NOT NULL, `product_id` INTEGER NOT NULL, `product_name` TEXT NOT NULL, `quantity` REAL NOT NULL, `price` INTEGER NOT NULL, `purchase_price` INTEGER NOT NULL, `subtotal` INTEGER NOT NULL, `created_at` INTEGER NOT NULL, FOREIGN KEY(`return_transaction_id`) REFERENCES `sale_return_transactions`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE , FOREIGN KEY(`sale_item_id`) REFERENCES `sale_items`(`id`) ON UPDATE NO ACTION ON DELETE RESTRICT , FOREIGN KEY(`product_id`) REFERENCES `products`(`id`) ON UPDATE NO ACTION ON DELETE RESTRICT )",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `uuid` TEXT NOT NULL, `business_id` TEXT NOT NULL, `return_uuid` TEXT NOT NULL, `sale_item_uuid` TEXT NOT NULL, `product_uuid` TEXT NOT NULL, `return_transaction_id` INTEGER NOT NULL, `sale_item_id` INTEGER NOT NULL, `product_id` INTEGER NOT NULL, `product_name` TEXT NOT NULL, `quantity` REAL NOT NULL, `price` INTEGER NOT NULL, `purchase_price` INTEGER NOT NULL, `subtotal` INTEGER NOT NULL, `taxable` INTEGER NOT NULL, `tax_rate_snapshot` REAL, `tax_amount_snapshot` INTEGER, `created_at` INTEGER NOT NULL, FOREIGN KEY(`return_transaction_id`) REFERENCES `sale_return_transactions`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE , FOREIGN KEY(`sale_item_id`) REFERENCES `sale_items`(`id`) ON UPDATE NO ACTION ON DELETE RESTRICT , FOREIGN KEY(`product_id`) REFERENCES `products`(`id`) ON UPDATE NO ACTION ON DELETE RESTRICT )",
         "fields": [
           {
             "fieldPath": "id",
@@ -2508,6 +2526,22 @@
             "columnName": "subtotal",
             "affinity": "INTEGER",
             "notNull": true
+          },
+          {
+            "fieldPath": "taxable",
+            "columnName": "taxable",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "taxRateSnapshot",
+            "columnName": "tax_rate_snapshot",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "taxAmountSnapshot",
+            "columnName": "tax_amount_snapshot",
+            "affinity": "INTEGER"
           },
           {
             "fieldPath": "createdAt",
@@ -2982,7 +3016,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'da1810526b62177a8176970e7c3eb9bb')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'c2fb6b9b3d251637e8ab1b93ae2befd2')"
     ]
   }
 }

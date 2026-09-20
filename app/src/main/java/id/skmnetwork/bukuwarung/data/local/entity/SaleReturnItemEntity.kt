@@ -83,6 +83,15 @@ data class SaleReturnItemEntity(
     @ColumnInfo(name = "subtotal")
     val subtotal: Long,
 
+    @ColumnInfo(name = "taxable")
+    val taxable: Boolean = true,
+
+    @ColumnInfo(name = "tax_rate_snapshot")
+    val taxRateSnapshot: Double? = null,
+
+    @ColumnInfo(name = "tax_amount_snapshot")
+    val taxAmountSnapshot: Long? = null,
+
     @ColumnInfo(name = "created_at")
     val createdAt: Long = System.currentTimeMillis()
 )

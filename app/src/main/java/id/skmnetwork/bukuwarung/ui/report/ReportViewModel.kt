@@ -260,6 +260,10 @@ class ReportViewModel(
         val grossSales = repository.getSalesTotal(range.startDate, range.endDate).first() ?: 0L
         val salesTaxableBaseTotal = repository.getSalesTaxableBaseTotal(range.startDate, range.endDate).first() ?: 0L
         val salesTaxAmountTotal = repository.getSalesTaxAmountTotal(range.startDate, range.endDate).first() ?: 0L
+        val returnsTaxableBaseTotal = repository.getReturnsTaxableBaseTotal(range.startDate, range.endDate).first() ?: 0L
+        val returnsTaxAmountTotal = repository.getReturnsTaxAmountTotal(range.startDate, range.endDate).first() ?: 0L
+        val netTaxableBase = salesTaxableBaseTotal - returnsTaxableBaseTotal
+        val netTaxAmount = salesTaxAmountTotal - returnsTaxAmountTotal
         val totalRefunds = repository.getSalesReturnTotal(range.startDate, range.endDate).first() ?: 0L
         val netSales = grossSales - totalRefunds
 
@@ -313,8 +317,8 @@ class ReportViewModel(
             totalRefund = totalRefunds,
             netSales = netSales,
             totalTransactions = salesList.size,
-            totalTaxableBase = salesTaxableBaseTotal,
-            totalTaxAmount = salesTaxAmountTotal,
+            totalTaxableBase = netTaxableBase,
+            totalTaxAmount = netTaxAmount,
             terminology = terminology
         )
     }

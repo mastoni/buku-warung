@@ -76,6 +76,15 @@ data class SaleReturnTransactionEntity(
     @ColumnInfo(name = "notes")
     val notes: String? = null,
 
+    @ColumnInfo(name = "taxable_base_snapshot")
+    val taxableBaseSnapshot: Long = 0L,
+
+    @ColumnInfo(name = "tax_rate_snapshot")
+    val taxRateSnapshot: Double = 0.0,
+
+    @ColumnInfo(name = "tax_amount_snapshot")
+    val taxAmountSnapshot: Long = 0L,
+
     @ColumnInfo(name = "created_at")
     val createdAt: Long = System.currentTimeMillis()
 )

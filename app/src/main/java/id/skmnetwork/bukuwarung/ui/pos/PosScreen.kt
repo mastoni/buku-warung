@@ -313,11 +313,12 @@ fun PosScreen(
         SaleReturnDialog(
             sale = selectedSaleForReturn!!,
             viewModel = viewModel,
+            userSettings = userSettings,
+            printerService = printerService,
             onDismiss = { selectedSaleForReturn = null },
             onReturnSuccess = {
                 val targetSale = selectedSaleForReturn
                 selectedSaleForReturn = null
-                // Re-open detail dialog so merchant sees updated return history immediately
                 selectedSaleForDetail = targetSale
             }
         )

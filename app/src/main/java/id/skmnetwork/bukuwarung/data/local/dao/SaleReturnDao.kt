@@ -41,6 +41,14 @@ interface SaleReturnDao {
     @Query("SELECT SUM(quantity) FROM sale_return_items WHERE sale_item_id = :saleItemId AND business_id = :businessId")
     suspend fun getReturnedQuantityForSaleItem(saleItemId: Long, businessId: String): Double?
 
+    @Query("""
+        SELECT sri.*
+        FROM sale_return_items sri
+        JOIN sale_return_transactions srt ON sri.return_transaction_id = srt.id
+        WHERE srt.sale_transaction_id = :saleId AND srt.business_id = :businessId
+    """)
+    suspend fun getReturnItemsForSale(saleId: Long, businessId: String): List<SaleReturnItemEntity>
+
     @Query("SELECT SUM(total_refund_amount) FROM sale_return_transactions WHERE business_id = :businessId AND sale_transaction_id = :saleTransactionId")
     suspend fun getTotalReturnedForSale(businessId: String, saleTransactionId: Long): Long?
 
@@ -55,6 +63,12 @@ interface SaleReturnDao {
 
     @Query("SELECT SUM(CAST(quantity * purchase_price AS INTEGER)) FROM sale_return_items JOIN sale_return_transactions ON sale_return_items.return_transaction_id = sale_return_transactions.id WHERE sale_return_transactions.business_id = :businessId AND return_date >= :startDate AND return_date <= :endDate")
     fun getReturnCogsTotal(businessId: String, startDate: Long, endDate: Long): Flow<Long?>
+
+    @Query("SELECT SUM(taxable_base_snapshot) FROM sale_return_transactions WHERE business_id = :businessId AND return_date >= :startDate AND return_date <= :endDate")
+    fun getReturnsTaxableBaseTotal(businessId: String, startDate: Long, endDate: Long): Flow<Long?>
+
+    @Query("SELECT SUM(tax_amount_snapshot) FROM sale_return_transactions WHERE business_id = :businessId AND return_date >= :startDate AND return_date <= :endDate")
+    fun getReturnsTaxAmountTotal(businessId: String, startDate: Long, endDate: Long): Flow<Long?>
 
     @Query("""
         SELECT 

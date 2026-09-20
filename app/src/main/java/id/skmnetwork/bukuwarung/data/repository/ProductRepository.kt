@@ -331,6 +331,12 @@ class ProductRepository(
         cashGiven: Long? = null
     ): id.skmnetwork.bukuwarung.domain.receipt.ReceiptData? = saleRepository.getReceiptData(saleId, userSettings, cashGiven)
 
+    suspend fun getReturnReceiptData(
+        returnId: Long,
+        userSettings: id.skmnetwork.bukuwarung.data.preferences.UserSettings? = null,
+        cashGiven: Long? = null
+    ): id.skmnetwork.bukuwarung.domain.receipt.ReceiptData? = saleRepository.getReturnReceiptData(returnId, userSettings, cashGiven)
+
     suspend fun getPurchaseItems(transactionId: Long): List<PurchaseItemEntity> = withContext(Dispatchers.IO) {
         purchaseDao.getItemsForPurchase(transactionId, businessId)
     }

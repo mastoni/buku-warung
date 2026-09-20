@@ -20,6 +20,8 @@ import id.skmnetwork.bukuwarung.domain.tax.TaxSettings
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
+import java.math.BigDecimal
+import java.math.RoundingMode
 import java.util.Calendar
 import java.util.UUID
 
@@ -405,8 +407,23 @@ class SaleRepository(
                 val originalSaleItems = saleDao.getItemsForTransaction(saleId, businessId)
                 val saleItemMap = originalSaleItems.associateBy { it.id }
 
+                data class ReturnItemPlan(
+                    val saleItem: SaleItemEntity,
+                    val returnQty: Double,
+                    val subtotal: Long,
+                    val taxAmount: Long
+                )
+
+                val previousReturnItems = saleReturnDao.getReturnItemsForSale(saleId, businessId)
+                val previousReturnedQtyByItem = previousReturnItems.groupingBy { it.saleItemId }
+                    .fold(0.0) { acc, item -> acc + item.quantity }
+                val previousReturnedTaxByItem = previousReturnItems.groupingBy { it.saleItemId }
+                    .fold(0L) { acc, item -> acc + (item.taxAmountSnapshot ?: 0L) }
+                val previousReturnedSubtotalByItem = previousReturnItems.groupingBy { it.saleItemId }
+                    .fold(0L) { acc, item -> acc + item.subtotal }
+
                 var calculatedItemRefund = 0L
-                val validatedReturnItems = mutableListOf<Pair<SaleItemEntity, Double>>()
+                val returnItemPlans = mutableListOf<ReturnItemPlan>()
 
                 for ((saleItemId, returnQty) in itemsToReturn) {
                     if (returnQty <= 0.0) {
@@ -415,7 +432,7 @@ class SaleRepository(
                     val saleItem = saleItemMap[saleItemId]
                         ?: throw IllegalArgumentException("Item penjualan ID $saleItemId tidak ditemukan pada transaksi ini")
 
-                    val alreadyReturned = saleReturnDao.getReturnedQuantityForSaleItem(saleItemId, businessId) ?: 0.0
+                    val alreadyReturned = previousReturnedQtyByItem[saleItemId] ?: 0.0
                     val remainingReturnable = saleItem.quantity - alreadyReturned
                     if (returnQty > remainingReturnable) {
                         throw IllegalArgumentException(
@@ -423,9 +440,37 @@ class SaleRepository(
                         )
                     }
 
-                    val itemRefund = (saleItem.price * returnQty).toLong()
-                    calculatedItemRefund += itemRefund
-                    validatedReturnItems.add(Pair(saleItem, returnQty))
+                    val previousReturnedQty = previousReturnedQtyByItem[saleItemId] ?: 0.0
+                    val previousReturnedTax = previousReturnedTaxByItem[saleItemId] ?: 0L
+                    val previousReturnedSubtotal = previousReturnedSubtotalByItem[saleItemId] ?: 0L
+
+                    val originalTax = saleItem.taxAmountSnapshot ?: 0L
+                    val originalSubtotal = saleItem.subtotal
+                    val originalQty = saleItem.quantity
+
+                    val remainingQty = originalQty - previousReturnedQty
+                    val remainingTax = originalTax - previousReturnedTax
+                    val remainingSubtotal = originalSubtotal - previousReturnedSubtotal
+
+                    val itemSubtotal: Long
+                    val itemTax: Long
+
+                    if (returnQty >= remainingQty - 0.0001) {
+                        itemSubtotal = remainingSubtotal
+                        itemTax = remainingTax
+                    } else {
+                        itemSubtotal = TaxCalculator.roundToLong(
+                            BigDecimal(originalSubtotal) * BigDecimal(returnQty) / BigDecimal(originalQty),
+                            RoundingMode.HALF_UP
+                        )
+                        itemTax = TaxCalculator.roundToLong(
+                            BigDecimal(remainingTax) * BigDecimal(returnQty) / BigDecimal(remainingQty),
+                            RoundingMode.HALF_UP
+                        )
+                    }
+
+                    calculatedItemRefund += itemSubtotal
+                    returnItemPlans.add(ReturnItemPlan(saleItem, returnQty, itemSubtotal, itemTax))
                 }
 
                 // Invariant: refund <= amount actually paid (net total of sale)
@@ -445,6 +490,11 @@ class SaleRepository(
                 val cleanedReason = reason?.trim()?.ifEmpty { null }
                 val cleanedNotes = notes?.trim()?.ifEmpty { null }
 
+                val totalReturnTaxableBase = returnItemPlans.sumOf { plan ->
+                    if (plan.saleItem.taxable) plan.subtotal - plan.taxAmount else 0L
+                }
+                val totalReturnTaxAmount = returnItemPlans.sumOf { it.taxAmount }
+
                 // 3. Create Return Transaction Record
                 val returnTransaction = SaleReturnTransactionEntity(
                     uuid = returnUuid,
@@ -460,13 +510,16 @@ class SaleRepository(
                     refundMethod = if (sale.paymentMethod.equals("CREDIT", ignoreCase = true)) "CREDIT" else "CASH",
                     reason = cleanedReason,
                     notes = cleanedNotes,
+                    taxableBaseSnapshot = totalReturnTaxableBase,
+                    taxRateSnapshot = sale.taxRateSnapshot,
+                    taxAmountSnapshot = totalReturnTaxAmount,
                     createdAt = now
                 )
                 val returnId = saleReturnDao.insertReturnTransaction(returnTransaction)
 
                 // 4. Create Return Items Records
-                val returnEntities = validatedReturnItems.map { (saleItem, returnQty) ->
-                    val subtotal = (saleItem.price * returnQty).toLong()
+                val returnEntities = returnItemPlans.map { plan ->
+                    val (saleItem, returnQty, itemSubtotal, itemTax) = plan
                     SaleReturnItemEntity(
                         uuid = UUID.randomUUID().toString(),
                         businessId = businessId,
@@ -480,14 +533,19 @@ class SaleRepository(
                         quantity = returnQty,
                         price = saleItem.price,
                         purchasePrice = saleItem.purchasePrice,
-                        subtotal = subtotal,
+                        subtotal = itemSubtotal,
+                        taxable = saleItem.taxable,
+                        taxRateSnapshot = saleItem.taxRateSnapshot,
+                        taxAmountSnapshot = itemTax,
                         createdAt = now
                     )
                 }
                 saleReturnDao.insertReturnItems(returnEntities)
 
                 // 5. Restock Physical & Fuel Products & append StockMovement RETURN
-                for ((saleItem, returnQty) in validatedReturnItems) {
+                for (plan in returnItemPlans) {
+                    val saleItem = plan.saleItem
+                    val returnQty = plan.returnQty
                     val product = productDao.getProductByIdRaw(saleItem.productId)
                     if (product != null && ItemType.isStockable(product.itemType)) {
                         productDao.addProductStock(product.id, returnQty, now, businessId)
@@ -616,6 +674,22 @@ class SaleRepository(
             items = items,
             customer = customer,
             debt = debt,
+            userSettings = userSettings,
+            cashGiven = cashGiven
+        )
+    }
+
+    suspend fun getReturnReceiptData(
+        returnId: Long,
+        userSettings: id.skmnetwork.bukuwarung.data.preferences.UserSettings? = null,
+        cashGiven: Long? = null
+    ): id.skmnetwork.bukuwarung.domain.receipt.ReceiptData? = withContext(Dispatchers.IO) {
+        val returnTx = saleReturnDao.getReturnById(returnId, businessId) ?: return@withContext null
+        val items = saleReturnDao.getItemsForReturn(businessId, returnId)
+
+        id.skmnetwork.bukuwarung.domain.receipt.ReceiptMapper.mapFromReturn(
+            returnTx = returnTx,
+            items = items,
             userSettings = userSettings,
             cashGiven = cashGiven
         )

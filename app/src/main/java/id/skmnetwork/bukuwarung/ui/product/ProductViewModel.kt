@@ -458,6 +458,12 @@ class ProductViewModel(
         cashGiven: Long? = null
     ): id.skmnetwork.bukuwarung.domain.receipt.ReceiptData? = repository.getReceiptData(saleId, userSettings, cashGiven)
 
+    suspend fun getReturnReceiptData(
+        returnId: Long,
+        userSettings: id.skmnetwork.bukuwarung.data.preferences.UserSettings? = null,
+        cashGiven: Long? = null
+    ): id.skmnetwork.bukuwarung.domain.receipt.ReceiptData? = repository.getReturnReceiptData(returnId, userSettings, cashGiven)
+
     fun checkoutPurchase(
         purchaseItems: Map<Long, Double>,
         supplierId: Long? = null,

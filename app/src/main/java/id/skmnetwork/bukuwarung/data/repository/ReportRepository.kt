@@ -28,6 +28,8 @@ class ReportRepository(
     fun getSalesReturnCount(startDate: Long, endDate: Long): Flow<Int> = saleReturnDao.getReturnCount(businessId, startDate, endDate)
     fun getItemsSoldTotal(startDate: Long, endDate: Long): Flow<Double?> = saleDao.getItemsSoldTotal(businessId, startDate, endDate)
     fun getItemsReturnedTotal(startDate: Long, endDate: Long): Flow<Double?> = saleReturnDao.getItemsReturnedTotal(businessId, startDate, endDate)
+    fun getReturnsTaxableBaseTotal(startDate: Long, endDate: Long): Flow<Long?> = saleReturnDao.getReturnsTaxableBaseTotal(businessId, startDate, endDate)
+    fun getReturnsTaxAmountTotal(startDate: Long, endDate: Long): Flow<Long?> = saleReturnDao.getReturnsTaxAmountTotal(businessId, startDate, endDate)
     fun getCashSalesTotal(startDate: Long, endDate: Long): Flow<Long?> = saleDao.getCashSalesTotal(businessId, startDate, endDate)
     fun getCreditSalesTotal(startDate: Long, endDate: Long): Flow<Long?> = saleDao.getCreditSalesTotal(businessId, startDate, endDate)
     fun getTopSellingProducts(startDate: Long, endDate: Long, limit: Int = 5): Flow<List<TopProductSummary>> =

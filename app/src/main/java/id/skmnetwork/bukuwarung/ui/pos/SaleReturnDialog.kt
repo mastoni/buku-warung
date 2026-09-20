@@ -69,6 +69,9 @@ import id.skmnetwork.bukuwarung.ui.theme.AppColors
 import id.skmnetwork.bukuwarung.ui.theme.AppShapes
 import id.skmnetwork.bukuwarung.ui.theme.AppSpacing
 import id.skmnetwork.bukuwarung.util.formatRupiah
+import id.skmnetwork.bukuwarung.data.preferences.UserSettings
+import id.skmnetwork.bukuwarung.printer.PrinterService
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -87,6 +90,8 @@ val RETURN_REASONS = listOf(
 fun SaleReturnDialog(
     sale: SaleTransactionEntity,
     viewModel: ProductViewModel,
+    userSettings: UserSettings = UserSettings(),
+    printerService: PrinterService? = null,
     onDismiss: () -> Unit,
     onReturnSuccess: () -> Unit
 ) {
@@ -107,6 +112,7 @@ fun SaleReturnDialog(
     var isSubmitting by remember { mutableStateOf(false) }
 
     var successReturnNumber by remember { mutableStateOf<String?>(null) }
+    var successReturnId by remember { mutableStateOf<Long?>(null) }
     var showSuccessDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(sale.id) {
@@ -229,6 +235,7 @@ fun SaleReturnDialog(
                                 scope.launch {
                                     val returnTx = viewModel.getReturnsForSale(sale.id).find { it.id == returnId }
                                     successReturnNumber = returnTx?.returnNumber ?: "RET-${sale.id}"
+                                    successReturnId = returnId
                                     showSuccessDialog = true
                                 }
                             },
@@ -299,6 +306,21 @@ fun SaleReturnDialog(
                                     style = MaterialTheme.typography.bodySmall
                                 )
                             }
+                        }
+                    }
+                    if (printerService != null && successReturnId != null) {
+                        OutlinedButton(
+                            onClick = {
+                                scope.launch(Dispatchers.IO) {
+                                    val receipt = viewModel.getReturnReceiptData(successReturnId!!, userSettings, null)
+                                    if (receipt != null) {
+                                        printerService?.printReceipt(receipt)
+                                    }
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("Cetak Struk")
                         }
                     }
                 }

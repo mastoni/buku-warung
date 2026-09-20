@@ -11,6 +11,10 @@ import id.skmnetwork.bukuwarung.data.local.entity.ItemType
 import id.skmnetwork.bukuwarung.data.local.entity.ProductEntity
 import id.skmnetwork.bukuwarung.data.repository.ProductRepository
 import id.skmnetwork.bukuwarung.data.repository.SaleRepository
+import id.skmnetwork.bukuwarung.domain.tax.TaxCalculator
+import id.skmnetwork.bukuwarung.domain.tax.TaxPriceMode
+import id.skmnetwork.bukuwarung.domain.tax.TaxSettings
+import java.math.RoundingMode
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -777,13 +781,175 @@ class SaleReturnTest {
     // 29. Offline return
     @Test
     fun testOfflineReturn() = runBlocking {
-        // Runs completely without network
         val prodId = createProduct(stock = 10.0, sellingPrice = 5000L)
         val saleId = saleRepository.completeSale(mapOf(prodId to 1.0)).getOrThrow()
         val saleItemId = saleRepository.getItemsForTransaction(saleId).first().id
 
         val res = saleRepository.processSaleReturn(saleId, mapOf(saleItemId to 1.0))
         assertTrue(res.isSuccess)
+    }
+
+    @Test
+    fun testFullTaxableReturnCapturesTaxSnapshot() = runBlocking {
+        val prodId = createProduct(stock = 10.0, sellingPrice = 10000L)
+        val taxSettings = TaxSettings(enabled = true, rate = 11.0, priceMode = TaxPriceMode.EXCLUSIVE, roundingMode = RoundingMode.HALF_UP)
+        val saleId = saleRepository.completeSale(
+            cartItems = mapOf(prodId to 2.0),
+            paymentMethod = "CASH",
+            taxSettings = taxSettings
+        ).getOrThrow()
+
+        val sale = saleRepository.getTransactionById(saleId)!!
+        val saleItem = saleRepository.getItemsForTransaction(saleId).first()
+        val saleItemId = saleItem.id
+
+        val returnId = saleRepository.processSaleReturn(
+            saleId = saleId,
+            itemsToReturn = mapOf(saleItemId to 2.0)
+        ).getOrThrow()
+
+        val returnTx = saleRepository.getReturnById(returnId)!!
+        val returnItems = saleRepository.getItemsForReturn(returnId)
+
+        assertEquals(sale.taxRateSnapshot, returnTx.taxRateSnapshot, 0.0)
+        assertEquals(sale.taxAmountSnapshot, returnTx.taxAmountSnapshot)
+        assertEquals(sale.taxableBaseSnapshot, returnTx.taxableBaseSnapshot)
+        assertEquals(1, returnItems.size)
+        assertEquals(saleItem.taxable, returnItems.first().taxable)
+        assertEquals(saleItem.taxRateSnapshot, returnItems.first().taxRateSnapshot)
+        assertEquals(saleItem.taxAmountSnapshot, returnItems.first().taxAmountSnapshot)
+    }
+
+    @Test
+    fun testPartialTaxableReturnAllocatesTaxProportionally() = runBlocking {
+        val prodId = createProduct(stock = 10.0, sellingPrice = 10000L)
+        val taxSettings = TaxSettings(enabled = true, rate = 10.0, priceMode = TaxPriceMode.EXCLUSIVE, roundingMode = RoundingMode.HALF_UP)
+        val saleId = saleRepository.completeSale(
+            cartItems = mapOf(prodId to 4.0),
+            paymentMethod = "CASH",
+            taxSettings = taxSettings
+        ).getOrThrow()
+
+        val sale = saleRepository.getTransactionById(saleId)!!
+        val saleItem = saleRepository.getItemsForTransaction(saleId).first()
+        val saleItemId = saleItem.id
+
+        val returnId1 = saleRepository.processSaleReturn(
+            saleId = saleId,
+            itemsToReturn = mapOf(saleItemId to 1.0)
+        ).getOrThrow()
+
+        val returnTx1 = saleRepository.getReturnById(returnId1)!!
+        val returnItems1 = saleRepository.getItemsForReturn(returnId1)
+        val expectedTax1 = TaxCalculator.roundToLong(
+            java.math.BigDecimal(saleItem.taxAmountSnapshot ?: 0L) * java.math.BigDecimal(1) / java.math.BigDecimal(4),
+            java.math.RoundingMode.HALF_UP
+        )
+        assertEquals(expectedTax1, returnTx1.taxAmountSnapshot)
+        assertEquals(expectedTax1, returnItems1.first().taxAmountSnapshot)
+
+        val returnId2 = saleRepository.processSaleReturn(
+            saleId = saleId,
+            itemsToReturn = mapOf(saleItemId to 3.0)
+        ).getOrThrow()
+
+        val returnTx2 = saleRepository.getReturnById(returnId2)!!
+        val returnItems2 = saleRepository.getItemsForReturn(returnId2)
+        val remainingTax = (saleItem.taxAmountSnapshot ?: 0L) - returnTx1.taxAmountSnapshot
+        assertEquals(remainingTax, returnTx2.taxAmountSnapshot)
+        assertEquals(remainingTax, returnItems2.first().taxAmountSnapshot)
+
+        val allReturns = saleRepository.getReturnsListForSale(saleId)
+        val totalReturnedTax = allReturns.sumOf { it.taxAmountSnapshot }
+        assertEquals(sale.taxAmountSnapshot, totalReturnedTax)
+    }
+
+    @Test
+    fun testNonTaxableReturnHasZeroTax() = runBlocking {
+        val prodId = createProduct(stock = 10.0, sellingPrice = 10000L)
+        val product = database.productDao().getProductByIdRaw(prodId)!!
+        database.productDao().updateProduct(product.copy(taxable = false))
+        val taxSettings = TaxSettings(enabled = true, rate = 11.0, priceMode = TaxPriceMode.EXCLUSIVE, roundingMode = RoundingMode.HALF_UP)
+        val saleId = saleRepository.completeSale(
+            cartItems = mapOf(prodId to 1.0),
+            paymentMethod = "CASH",
+            taxSettings = taxSettings
+        ).getOrThrow()
+
+        val sale = saleRepository.getTransactionById(saleId)!!
+        val saleItem = saleRepository.getItemsForTransaction(saleId).first()
+        val saleItemId = saleItem.id
+
+        val returnId = saleRepository.processSaleReturn(
+            saleId = saleId,
+            itemsToReturn = mapOf(saleItemId to 1.0)
+        ).getOrThrow()
+
+        val returnTx = saleRepository.getReturnById(returnId)!!
+        val returnItems = saleRepository.getItemsForReturn(returnId)
+
+        assertEquals(0L, returnTx.taxAmountSnapshot)
+        assertEquals(0L, returnTx.taxableBaseSnapshot)
+        assertEquals(false, returnItems.first().taxable)
+        assertNull(returnItems.first().taxAmountSnapshot)
+    }
+
+    @Test
+    fun testMixedTaxableNonTaxableReturn() = runBlocking {
+        val taxableProd = createProduct(name = "Taxable Item", stock = 10.0, sellingPrice = 10000L)
+        val nonTaxableProd = createProduct(name = "NonTaxable Item", stock = 10.0, sellingPrice = 5000L)
+        val nonTaxableProduct = database.productDao().getProductByIdRaw(nonTaxableProd)!!
+        database.productDao().updateProduct(nonTaxableProduct.copy(taxable = false))
+        val taxSettings = TaxSettings(enabled = true, rate = 11.0, priceMode = TaxPriceMode.EXCLUSIVE, roundingMode = RoundingMode.HALF_UP)
+        val saleId = saleRepository.completeSale(
+            cartItems = mapOf(taxableProd to 1.0, nonTaxableProd to 1.0),
+            paymentMethod = "CASH",
+            taxSettings = taxSettings
+        ).getOrThrow()
+
+        val sale = saleRepository.getTransactionById(saleId)!!
+        val saleItems = saleRepository.getItemsForTransaction(saleId)
+        val taxableItem = saleItems.first { it.taxable }
+        val nonTaxableItem = saleItems.first { !it.taxable }
+
+        val returnId = saleRepository.processSaleReturn(
+            saleId = saleId,
+            itemsToReturn = mapOf(taxableItem.id to 1.0, nonTaxableItem.id to 1.0)
+        ).getOrThrow()
+
+        val returnTx = saleRepository.getReturnById(returnId)!!
+        val returnItems = saleRepository.getItemsForReturn(returnId)
+
+        val expectedTaxableBase = taxableItem.subtotal - (taxableItem.taxAmountSnapshot ?: 0L)
+        assertEquals(taxableItem.taxAmountSnapshot, returnTx.taxAmountSnapshot)
+        assertEquals(expectedTaxableBase, returnTx.taxableBaseSnapshot)
+        assertEquals(2, returnItems.size)
+        val returnedTaxable = returnItems.first { it.taxable }
+        val returnedNonTaxable = returnItems.first { !it.taxable }
+        assertEquals(taxableItem.taxAmountSnapshot, returnedTaxable.taxAmountSnapshot)
+        assertEquals(0L, returnedNonTaxable.taxAmountSnapshot ?: 0L)
+    }
+
+    @Test
+    fun testReturnReceiptContainsTaxFields() = runBlocking {
+        val prodId = createProduct(stock = 10.0, sellingPrice = 10000L)
+        val taxSettings = TaxSettings(enabled = true, rate = 11.0, priceMode = TaxPriceMode.EXCLUSIVE, roundingMode = RoundingMode.HALF_UP)
+        val saleId = saleRepository.completeSale(
+            cartItems = mapOf(prodId to 1.0),
+            paymentMethod = "CASH",
+            taxSettings = taxSettings
+        ).getOrThrow()
+
+        val saleItemId = saleRepository.getItemsForTransaction(saleId).first().id
+        val returnId = saleRepository.processSaleReturn(
+            saleId = saleId,
+            itemsToReturn = mapOf(saleItemId to 1.0)
+        ).getOrThrow()
+
+        val receipt = saleRepository.getReturnReceiptData(returnId)
+        assertNotNull(receipt)
+        assertNotNull(receipt!!.paymentInfo.taxableBase)
+        assertNotNull(receipt.paymentInfo.taxAmount)
     }
 }
 

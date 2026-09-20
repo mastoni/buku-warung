@@ -3,6 +3,8 @@ package id.skmnetwork.bukuwarung.printer
 import id.skmnetwork.bukuwarung.data.local.entity.CustomerEntity
 import id.skmnetwork.bukuwarung.data.local.entity.DebtEntity
 import id.skmnetwork.bukuwarung.data.local.entity.SaleItemEntity
+import id.skmnetwork.bukuwarung.data.local.entity.SaleReturnItemEntity
+import id.skmnetwork.bukuwarung.data.local.entity.SaleReturnTransactionEntity
 import id.skmnetwork.bukuwarung.data.local.entity.SaleTransactionEntity
 import id.skmnetwork.bukuwarung.data.preferences.UserSettings
 import id.skmnetwork.bukuwarung.domain.receipt.ReceiptMapper
@@ -184,5 +186,106 @@ class ReceiptMapperUnitTest {
         assertNotNull(receipt)
         assertEquals("Warung Saya", receipt.shopProfile.shopName)
         assertEquals("Kasir", receipt.cashierName)
+    }
+
+    @Test
+    fun testMapFromReturnWithTax() {
+        val returnTx = SaleReturnTransactionEntity(
+            id = 1L,
+            uuid = "return-uuid-001",
+            returnNumber = "RET-001",
+            returnDate = 1773738000000L,
+            saleTransactionId = 1L,
+            totalRefundAmount = 110000L,
+            refundMethod = "CASH",
+            taxableBaseSnapshot = 100000L,
+            taxRateSnapshot = 11.0,
+            taxAmountSnapshot = 10000L
+        )
+        val items = listOf(
+            SaleReturnItemEntity(
+                id = 10L,
+                returnTransactionId = 1L,
+                saleItemId = 100L,
+                productId = 100L,
+                productName = "Beras 5kg",
+                quantity = 2.0,
+                price = 50000L,
+                subtotal = 100000L,
+                taxable = true,
+                taxRateSnapshot = 11.0,
+                taxAmountSnapshot = 10000L
+            )
+        )
+        val userSettings = UserSettings(
+            shopName = "Warung Ibu Siti",
+            deviceName = "HP Kasir"
+        )
+
+        val receipt = ReceiptMapper.mapFromReturn(
+            returnTx = returnTx,
+            items = items,
+            userSettings = userSettings,
+            cashGiven = 200000L
+        )
+
+        assertEquals("RET-001", receipt.receiptNumber)
+        assertEquals("return-uuid-001", receipt.transactionUuid)
+        assertEquals(1773738000000L, receipt.dateTimeMillis)
+        assertEquals("HP Kasir", receipt.cashierName)
+        assertEquals("Warung Ibu Siti", receipt.shopProfile.shopName)
+        assertEquals(1, receipt.items.size)
+        assertEquals("Beras 5kg", receipt.items[0].name)
+        assertEquals(2.0, receipt.items[0].quantity, 0.001)
+        assertEquals(50000L, receipt.items[0].price)
+        assertEquals(100000L, receipt.items[0].subtotal)
+
+        assertEquals("CASH", receipt.paymentInfo.method)
+        assertEquals(110000L, receipt.paymentInfo.totalAmount)
+        assertEquals(100000L, receipt.paymentInfo.taxableBase)
+        assertEquals(10000L, receipt.paymentInfo.taxAmount)
+        assertEquals(200000L, receipt.paymentInfo.payAmount)
+        assertEquals(90000L, receipt.paymentInfo.changeAmount)
+    }
+
+    @Test
+    fun testMapFromReturnNonTaxable() {
+        val returnTx = SaleReturnTransactionEntity(
+            id = 2L,
+            uuid = "return-uuid-002",
+            returnNumber = "RET-002",
+            returnDate = 1773738000000L,
+            saleTransactionId = 2L,
+            totalRefundAmount = 50000L,
+            refundMethod = "CASH",
+            taxableBaseSnapshot = 0L,
+            taxRateSnapshot = 0.0,
+            taxAmountSnapshot = 0L
+        )
+        val items = listOf(
+            SaleReturnItemEntity(
+                id = 20L,
+                returnTransactionId = 2L,
+                saleItemId = 200L,
+                productId = 200L,
+                productName = "Buku Tulis",
+                quantity = 1.0,
+                price = 50000L,
+                subtotal = 50000L,
+                taxable = false,
+                taxRateSnapshot = null,
+                taxAmountSnapshot = null
+            )
+        )
+
+        val receipt = ReceiptMapper.mapFromReturn(
+            returnTx = returnTx,
+            items = items
+        )
+
+        assertEquals("RET-002", receipt.receiptNumber)
+        assertEquals(50000L, receipt.paymentInfo.totalAmount)
+        assertNull(receipt.paymentInfo.taxableBase)
+        assertNull(receipt.paymentInfo.taxAmount)
     }
 }

@@ -403,8 +403,8 @@ class TaxBackupRestoreTest {
             "14_SupplierPayments" to SheetTab(name = "14_SupplierPayments", headers = listOf("uuid", "business_id", "device_id", "payable_uuid", "amount", "payment_date", "note", "created_at"), rows = emptyList()),
             "15_CashTransactions" to SheetTab(name = "15_CashTransactions", headers = listOf("uuid", "business_id", "device_id", "type", "amount", "description", "ref_uuid", "created_at"), rows = emptyList()),
             "16_StockMovements" to SheetTab(name = "16_StockMovements", headers = listOf("uuid", "business_id", "device_id", "product_uuid", "movement_type", "delta_quantity", "current_stock_snapshot", "reference_uuid", "note", "created_at"), rows = emptyList()),
-            "17_SaleReturns" to SheetTab(name = "17_SaleReturns", headers = listOf("uuid", "business_id", "device_id", "return_number", "return_date", "sale_uuid", "customer_uuid", "total_refund_amount", "refund_method", "reason", "notes", "created_at"), rows = emptyList()),
-            "18_SaleReturnItems" to SheetTab(name = "18_SaleReturnItems", headers = listOf("uuid", "business_id", "return_uuid", "sale_item_uuid", "product_uuid", "product_name", "quantity", "price", "purchase_price", "subtotal", "created_at"), rows = emptyList())
+            "17_SaleReturns" to SheetTab(name = "17_SaleReturns", headers = listOf("uuid", "business_id", "device_id", "return_number", "return_date", "sale_uuid", "customer_uuid", "total_refund_amount", "refund_method", "reason", "notes", "taxable_base_snapshot", "tax_rate_snapshot", "tax_amount_snapshot", "created_at"), rows = emptyList()),
+            "18_SaleReturnItems" to SheetTab(name = "18_SaleReturnItems", headers = listOf("uuid", "business_id", "return_uuid", "sale_item_uuid", "product_uuid", "product_name", "quantity", "price", "purchase_price", "subtotal", "taxable", "tax_rate_snapshot", "tax_amount_snapshot", "created_at"), rows = emptyList())
         )
     }
 }
