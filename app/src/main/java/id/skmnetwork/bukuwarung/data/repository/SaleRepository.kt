@@ -411,7 +411,7 @@ class SaleRepository(
                     val saleItem: SaleItemEntity,
                     val returnQty: Double,
                     val subtotal: Long,
-                    val taxAmount: Long
+                    val taxAmount: Long?
                 )
 
                 val previousReturnItems = saleReturnDao.getReturnItemsForSale(saleId, businessId)
@@ -453,9 +453,15 @@ class SaleRepository(
                     val remainingSubtotal = originalSubtotal - previousReturnedSubtotal
 
                     val itemSubtotal: Long
-                    val itemTax: Long
+                    val itemTax: Long?
 
-                    if (returnQty >= remainingQty - 0.0001) {
+                    if (!saleItem.taxable) {
+                        itemSubtotal = TaxCalculator.roundToLong(
+                            BigDecimal(originalSubtotal) * BigDecimal(returnQty) / BigDecimal(originalQty),
+                            RoundingMode.HALF_UP
+                        )
+                        itemTax = null
+                    } else if (returnQty >= remainingQty - 0.0001) {
                         itemSubtotal = remainingSubtotal
                         itemTax = remainingTax
                     } else {
@@ -491,9 +497,9 @@ class SaleRepository(
                 val cleanedNotes = notes?.trim()?.ifEmpty { null }
 
                 val totalReturnTaxableBase = returnItemPlans.sumOf { plan ->
-                    if (plan.saleItem.taxable) plan.subtotal - plan.taxAmount else 0L
+                    if (plan.saleItem.taxable) plan.subtotal - (plan.taxAmount ?: 0L) else 0L
                 }
-                val totalReturnTaxAmount = returnItemPlans.sumOf { it.taxAmount }
+                val totalReturnTaxAmount = returnItemPlans.sumOf { it.taxAmount ?: 0L }
 
                 // 3. Create Return Transaction Record
                 val returnTransaction = SaleReturnTransactionEntity(
