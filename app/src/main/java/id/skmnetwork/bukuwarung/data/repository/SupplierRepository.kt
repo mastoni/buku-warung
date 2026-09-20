@@ -11,6 +11,7 @@ import id.skmnetwork.bukuwarung.data.local.entity.SupplierEntity
 import id.skmnetwork.bukuwarung.data.local.entity.SupplierPayableEntity
 import id.skmnetwork.bukuwarung.data.local.entity.SupplierPaymentEntity
 import id.skmnetwork.bukuwarung.data.local.entity.SyncQueueEntity
+import id.skmnetwork.bukuwarung.domain.tax.TaxSettings
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
@@ -153,12 +154,14 @@ class SupplierRepository(
 
     suspend fun processAtomicCreditPurchase(
         purchaseItems: Map<Long, Double>,
-        supplierId: Long
+        supplierId: Long,
+        taxSettings: TaxSettings? = null
     ): Result<Unit> = withContext(Dispatchers.IO) {
         purchaseRepository.completePurchase(
             purchaseItems = purchaseItems,
             paymentMethod = "CREDIT",
-            supplierId = supplierId
+            supplierId = supplierId,
+            taxSettings = taxSettings
         ).map { }
     }
 

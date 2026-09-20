@@ -49,6 +49,18 @@ data class PurchaseTransactionEntity(
     @ColumnInfo(name = "payment_method")
     val paymentMethod: String = "CASH",
 
+    @ColumnInfo(name = "subtotal_amount")
+    val subtotalAmount: Long = 0L,
+
+    @ColumnInfo(name = "taxable_base_snapshot")
+    val taxableBaseSnapshot: Long = 0L,
+
+    @ColumnInfo(name = "tax_rate_snapshot")
+    val taxRateSnapshot: Double = 0.0,
+
+    @ColumnInfo(name = "tax_amount_snapshot")
+    val taxAmountSnapshot: Long = 0L,
+
     @ColumnInfo(name = "created_at")
     val createdAt: Long = System.currentTimeMillis(),
 

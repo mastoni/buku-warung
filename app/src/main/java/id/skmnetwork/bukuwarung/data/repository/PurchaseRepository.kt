@@ -11,6 +11,10 @@ import id.skmnetwork.bukuwarung.data.local.entity.StockMovementEntity
 import id.skmnetwork.bukuwarung.data.local.entity.SupplierEntity
 import id.skmnetwork.bukuwarung.data.local.entity.SupplierPayableEntity
 import id.skmnetwork.bukuwarung.data.local.entity.SyncQueueEntity
+import id.skmnetwork.bukuwarung.domain.tax.TaxCalculator
+import id.skmnetwork.bukuwarung.domain.tax.TaxCalculationResult
+import id.skmnetwork.bukuwarung.domain.tax.TaxPriceMode
+import id.skmnetwork.bukuwarung.domain.tax.TaxSettings
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
@@ -52,7 +56,8 @@ class PurchaseRepository(
         purchaseItems: Map<Long, Double>,
         paymentMethod: String = "CASH",
         supplierId: Long? = null,
-        now: Long = System.currentTimeMillis()
+        now: Long = System.currentTimeMillis(),
+        taxSettings: TaxSettings? = null
     ): Result<Long> = withContext(Dispatchers.IO) {
         if (purchaseItems.isEmpty()) {
             return@withContext Result.failure(IllegalArgumentException("Keranjang belanja kosong"))
@@ -86,13 +91,41 @@ class PurchaseRepository(
                     productMap[productId] = product
                 }
 
-                // 3. Calculate Total Amount
-                val totalAmount = purchaseItems.entries.sumOf { (prodId, qty) ->
+                // 3. Calculate per-item tax
+                data class ItemTaxContext(
+                    val product: ProductEntity,
+                    val taxResult: TaxCalculationResult,
+                    val effectiveRate: Double
+                )
+
+                val itemTaxContexts = purchaseItems.map { (prodId, qty) ->
                     val prod = productMap[prodId]!!
-                    prod.purchasePrice * qty.toLong()
+                    val lineSubtotal = prod.purchasePrice * qty.toLong()
+                    val effectiveRate = when {
+                        taxSettings == null || !taxSettings.enabled -> 0.0
+                        !prod.taxable -> 0.0
+                        prod.taxRateOverride != null -> prod.taxRateOverride
+                        else -> taxSettings.rate
+                    }
+                    val isTaxable = taxSettings != null && taxSettings.enabled && prod.taxable
+                    val itemTaxResult = TaxCalculator.calculateItemTax(
+                        lineSubtotal = lineSubtotal,
+                        rate = effectiveRate,
+                        priceMode = taxSettings?.priceMode ?: TaxPriceMode.EXCLUSIVE,
+                        roundingMode = taxSettings?.roundingMode ?: java.math.RoundingMode.HALF_UP,
+                        taxable = isTaxable
+                    )
+                    ItemTaxContext(prod, itemTaxResult, effectiveRate)
                 }
 
-                if (totalAmount <= 0) {
+                val totalTaxableBase = itemTaxContexts.sumOf { it.taxResult.taxableBase }
+                val totalTaxAmount = itemTaxContexts.sumOf { it.taxResult.taxAmount }
+                val grossSubtotal = purchaseItems.entries.sumOf { (prodId, qty) ->
+                    productMap[prodId]!!.purchasePrice * qty.toLong()
+                }
+                val grandTotal = grossSubtotal + totalTaxAmount
+
+                if (grandTotal <= 0) {
                     throw IllegalStateException("Total transaksi belanja harus lebih dari 0")
                 }
 
@@ -105,8 +138,12 @@ class PurchaseRepository(
                     businessId = businessId,
                     transactionNumber = purNumber,
                     transactionDate = now,
-                    totalAmount = totalAmount,
+                    totalAmount = grandTotal,
                     paymentMethod = methodUpper,
+                    subtotalAmount = grossSubtotal,
+                    taxableBaseSnapshot = totalTaxableBase,
+                    taxRateSnapshot = if (taxSettings != null && taxSettings.enabled) taxSettings.rate else 0.0,
+                    taxAmountSnapshot = totalTaxAmount,
                     supplierId = supplier?.id,
                     createdAt = now
                 )
@@ -115,6 +152,7 @@ class PurchaseRepository(
                 // 5. Create Purchase Items Records
                 val itemsList = purchaseItems.map { (prodId, qty) ->
                     val prod = productMap[prodId]!!
+                    val ctx = itemTaxContexts.first { it.product.id == prodId }
                     PurchaseItemEntity(
                         uuid = UUID.randomUUID().toString(),
                         businessId = businessId,
@@ -125,7 +163,10 @@ class PurchaseRepository(
                         productName = prod.name,
                         quantity = qty,
                         purchasePrice = prod.purchasePrice,
-                        subtotal = prod.purchasePrice * qty.toLong()
+                        subtotal = ctx.taxResult.grandTotal,
+                        taxable = ctx.taxResult.taxableBase > 0L || (taxSettings != null && taxSettings.enabled && prod.taxable),
+                        taxRateSnapshot = if (ctx.taxResult.taxableBase > 0L || (taxSettings != null && taxSettings.enabled && prod.taxable)) ctx.effectiveRate else null,
+                        taxAmountSnapshot = if (ctx.taxResult.taxableBase > 0L || (taxSettings != null && taxSettings.enabled && prod.taxable)) ctx.taxResult.taxAmount else null
                     )
                 }
                 purchaseDao.insertPurchaseItems(itemsList)
@@ -157,7 +198,7 @@ class PurchaseRepository(
                         val cashExpense = CashTransactionEntity(
                             businessId = businessId,
                             type = "EXPENSE",
-                            amount = totalAmount,
+                            amount = grandTotal,
                             description = "Belanja Barang $purNumber",
                             refId = purchaseId,
                             refUuid = purUuid,
@@ -173,7 +214,7 @@ class PurchaseRepository(
                             purchaseTransactionId = purchaseId,
                             supplierUuid = supplier.uuid,
                             purchaseUuid = purUuid,
-                            totalDebt = totalAmount,
+                            totalDebt = grandTotal,
                             paidAmount = 0L,
                             status = "OPEN",
                             createdAt = now,

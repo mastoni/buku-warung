@@ -337,12 +337,14 @@ class ProductRepository(
 
     suspend fun processAtomicPurchase(
         purchaseItems: Map<Long, Double>,
-        supplierId: Long? = null
+        supplierId: Long? = null,
+        taxSettings: TaxSettings? = null
     ): Result<Unit> = withContext(Dispatchers.IO) {
         purchaseRepository.completePurchase(
             purchaseItems = purchaseItems,
             paymentMethod = "CASH",
-            supplierId = supplierId
+            supplierId = supplierId,
+            taxSettings = taxSettings
         ).map { }
     }
 

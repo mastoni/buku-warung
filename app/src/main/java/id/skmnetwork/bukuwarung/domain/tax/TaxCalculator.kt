@@ -26,13 +26,31 @@ data class ItemTaxInput(
     val taxable: Boolean
 )
 
+data class LineTaxInput(
+    val lineSubtotal: Long,
+    val taxable: Boolean,
+    val taxRateOverride: Double? = null
+)
+
 data class SaleItemTaxInput(
     val lineSubtotal: Long,
     val taxable: Boolean,
     val taxRateOverride: Double? = null
 )
 
+data class PurchaseItemTaxInput(
+    val lineSubtotal: Long,
+    val taxable: Boolean,
+    val taxRateOverride: Double? = null
+)
+
 data class SaleTaxBreakdown(
+    val totalTaxableBase: Long,
+    val totalTaxAmount: Long,
+    val grandTotal: Long
+)
+
+data class PurchaseTaxBreakdown(
     val totalTaxableBase: Long,
     val totalTaxAmount: Long,
     val grandTotal: Long
@@ -137,6 +155,48 @@ object TaxCalculator {
         priceMode: TaxPriceMode,
         roundingMode: RoundingMode
     ): SaleTaxBreakdown {
+        val result = calculateTaxCore(
+            items = items.map { it.toLineInput() },
+            discountAmount = discountAmount,
+            rate = rate,
+            priceMode = priceMode,
+            roundingMode = roundingMode
+        )
+        return SaleTaxBreakdown(
+            totalTaxableBase = result.totalTaxableBase,
+            totalTaxAmount = result.totalTaxAmount,
+            grandTotal = result.grandTotal
+        )
+    }
+
+    fun calculatePurchaseTax(
+        items: List<PurchaseItemTaxInput>,
+        discountAmount: Long,
+        rate: Double,
+        priceMode: TaxPriceMode,
+        roundingMode: RoundingMode
+    ): PurchaseTaxBreakdown {
+        val result = calculateTaxCore(
+            items = items.map { it.toLineInput() },
+            discountAmount = discountAmount,
+            rate = rate,
+            priceMode = priceMode,
+            roundingMode = roundingMode
+        )
+        return PurchaseTaxBreakdown(
+            totalTaxableBase = result.totalTaxableBase,
+            totalTaxAmount = result.totalTaxAmount,
+            grandTotal = result.grandTotal
+        )
+    }
+
+    private fun calculateTaxCore(
+        items: List<LineTaxInput>,
+        discountAmount: Long,
+        rate: Double,
+        priceMode: TaxPriceMode,
+        roundingMode: RoundingMode
+    ): TaxBreakdownCore {
         val grossSubtotal = items.sumOf { it.lineSubtotal }
         val safeDiscount = discountAmount.coerceAtLeast(0L).coerceAtMost(grossSubtotal)
         val safeRate = validateRate(rate)
@@ -182,12 +242,30 @@ object TaxCalculator {
             INCLUSIVE -> netSubtotal
         }
         
-        return SaleTaxBreakdown(
+        return TaxBreakdownCore(
             totalTaxableBase = totalTaxableBase,
             totalTaxAmount = totalTaxAmount,
             grandTotal = grandTotal
         )
     }
+    
+    private data class TaxBreakdownCore(
+        val totalTaxableBase: Long,
+        val totalTaxAmount: Long,
+        val grandTotal: Long
+    )
+    
+    private fun SaleItemTaxInput.toLineInput(): LineTaxInput = LineTaxInput(
+        lineSubtotal = lineSubtotal,
+        taxable = taxable,
+        taxRateOverride = taxRateOverride
+    )
+    
+    private fun PurchaseItemTaxInput.toLineInput(): LineTaxInput = LineTaxInput(
+        lineSubtotal = lineSubtotal,
+        taxable = taxable,
+        taxRateOverride = taxRateOverride
+    )
 
     fun validateRate(rate: Double): Double {
         val clamped = rate.coerceIn(0.0, 100.0)

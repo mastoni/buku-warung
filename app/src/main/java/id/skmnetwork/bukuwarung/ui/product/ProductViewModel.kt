@@ -461,6 +461,7 @@ class ProductViewModel(
     fun checkoutPurchase(
         purchaseItems: Map<Long, Double>,
         supplierId: Long? = null,
+        taxSettings: id.skmnetwork.bukuwarung.domain.tax.TaxSettings? = null,
         onSuccess: () -> Unit,
         onError: (String) -> Unit
     ) {
@@ -470,7 +471,11 @@ class ProductViewModel(
         }
 
         viewModelScope.launch(Dispatchers.IO) {
-            val result = repository.processAtomicPurchase(purchaseItems, supplierId)
+            val result = repository.processAtomicPurchase(
+                purchaseItems = purchaseItems,
+                supplierId = supplierId,
+                taxSettings = taxSettings
+            )
             withContext(Dispatchers.Main) {
                 result.fold(
                     onSuccess = { onSuccess() },
