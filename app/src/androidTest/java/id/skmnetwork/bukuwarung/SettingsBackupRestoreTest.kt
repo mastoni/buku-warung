@@ -311,6 +311,45 @@ class SettingsBackupRestoreTest {
         assertNotNull(settings)
         assertEquals(null, mockTransport.getSnapshotDirectly("OFFLINE_ID"))
     }
+
+    @Test
+    fun testRequirementJ_BusinessIdMismatchRejectsRestore() = runBlocking {
+        prefsRepo.setGoogleAccount("test@warung.com")
+        prefsRepo.setBusinessId("BIZ_ACTIVE")
+
+        val cat = productRepository.createCategory("Sembako").getOrThrow()
+        productRepository.insertProductWithCategory(
+            name = "Gula Pasir",
+            categoryName = "Sembako",
+            purchasePrice = 14000,
+            sellingPrice = 17000,
+            stock = 10.0,
+            minimumStock = 2.0,
+            unit = "kg",
+            categoryId = cat.id
+        )
+
+        val backupResult = backupRestoreManager.performBackup("TEST_BIZ_MISMATCH")
+        assertTrue(backupResult.isSuccess)
+
+        // Simulate cross-business restore by changing business_id after backup
+        prefsRepo.setBusinessId("BIZ_OTHER")
+
+        backupViewModel.performRestore("TEST_BIZ_MISMATCH")
+
+        var retries = 0
+        while (backupViewModel.restoreState.value !is RestoreOpState.Error && retries < 50) {
+            delay(50)
+            retries++
+        }
+
+        assertTrue(backupViewModel.restoreState.value is RestoreOpState.Error)
+        val errorState = backupViewModel.restoreState.value as RestoreOpState.Error
+        assertTrue(
+            "Error should mention cross-business mismatch",
+            errorState.message.contains("usaha yang berbeda") || errorState.message.contains("business")
+        )
+    }
 }
 
 

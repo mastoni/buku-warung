@@ -10,8 +10,8 @@ import java.util.Locale
  */
 object CanonicalSerializer {
 
-    const val BACKUP_FORMAT_VERSION = "1.0"
-    const val ROOM_SCHEMA_VERSION = 12
+    const val BACKUP_FORMAT_VERSION = "1.1"
+    const val ROOM_SCHEMA_VERSION = 15
 
     const val README_TAB_NAME = "00_README"
     const val METADATA_TAB_NAME = "00_Metadata"
@@ -34,7 +34,10 @@ object CanonicalSerializer {
         "15_CashTransactions",
         "16_StockMovements",
         "17_SaleReturns",
-        "18_SaleReturnItems"
+        "18_SaleReturnItems",
+        "19_DigitalTransactions",
+        "20_PurchaseOrders",
+        "21_PurchaseOrderItems"
     )
 
     val ALL_TAB_NAMES = listOf(README_TAB_NAME, METADATA_TAB_NAME) + DATA_TAB_NAMES
@@ -194,12 +197,24 @@ object CanonicalSerializer {
                 compareBy<List<String>> { it.getOrElse(2) { "" } } // return_uuid
                     .thenBy { it.getOrElse(0) { "" } } // uuid
             )
+            "19_DigitalTransactions" -> rows.sortedWith(
+                compareBy<List<String>> { it.getOrElse(7) { "0" }.toLongOrNull() ?: 0L }
+                    .thenBy { it.getOrElse(0) { "" } }
+            )
+            "20_PurchaseOrders" -> rows.sortedWith(
+                compareBy<List<String>> { it.getOrElse(7) { "0" }.toLongOrNull() ?: 0L }
+                    .thenBy { it.getOrElse(0) { "" } }
+            )
+            "21_PurchaseOrderItems" -> rows.sortedWith(
+                compareBy<List<String>> { it.getOrElse(2) { "" } } // po_uuid
+                    .thenBy { it.getOrElse(0) { "" } } // uuid
+            )
             else -> rows
         }
     }
 
     /**
-     * Builds the deterministic canonical payload across all 16 data tabs (01..16).
+     * Builds the deterministic canonical payload across all data tabs (01..21).
      */
     fun buildCanonicalPayload(tabs: Map<String, SheetTab>): String {
         val sb = StringBuilder()

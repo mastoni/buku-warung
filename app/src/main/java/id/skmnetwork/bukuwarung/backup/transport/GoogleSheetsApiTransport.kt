@@ -221,7 +221,8 @@ class GoogleSheetsApiTransport(
                         deviceId = metadataMap["device_id"] ?: "",
                         appVersion = metadataMap["app_version"] ?: "1.0.0",
                         totalRecords = metadataMap["total_records"]?.toIntOrNull() ?: 0,
-                        checksum = metadataMap["checksum"] ?: ""
+                        checksum = metadataMap["checksum"] ?: "",
+                        capabilities = metadataMap["capabilities"]?.split(",")?.filter { it.isNotBlank() }?.toSet() ?: emptySet()
                     )
                 } else if (CanonicalSerializer.DATA_TAB_NAMES.contains(tabName)) {
                     val headers = mutableListOf<String>()

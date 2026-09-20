@@ -6,14 +6,15 @@ package id.skmnetwork.bukuwarung.backup
  */
 
 data class BackupMetadata(
-    val backupFormatVersion: String = "1.0",
-    val roomSchemaVersion: Int = 12,
+    val backupFormatVersion: String = "1.1",
+    val roomSchemaVersion: Int = 15,
     val exportedAt: Long = System.currentTimeMillis(),
     val businessId: String = "",
     val deviceId: String = "",
     val appVersion: String = "1.0.0",
     val totalRecords: Int = 0,
-    val checksum: String = ""
+    val checksum: String = "",
+    val capabilities: Set<String> = emptySet()
 )
 
 data class SheetTab(
@@ -59,6 +60,7 @@ class IncompatibleBackupFormatException(message: String) : BackupException(messa
 class IncompatibleSchemaVersionException(message: String) : BackupException(message)
 class ChecksumMismatchException(message: String) : BackupException(message)
 class CorruptedBackupException(message: String) : BackupException(message)
+class BusinessIdMismatchException(message: String) : BackupException(message)
 class SpreadsheetNotFoundException(
     val spreadsheetId: String,
     message: String = "Spreadsheet '$spreadsheetId' tidak ditemukan di Google Drive (HTTP 404)"

@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import id.skmnetwork.bukuwarung.backup.BackupRestoreManager
+import id.skmnetwork.bukuwarung.backup.BusinessIdMismatchException
 import id.skmnetwork.bukuwarung.backup.ChecksumMismatchException
 import id.skmnetwork.bukuwarung.backup.CorruptedBackupException
 import id.skmnetwork.bukuwarung.backup.IncompatibleBackupFormatException
@@ -252,6 +253,7 @@ class BackupViewModel(
         viewModelScope.launch(Dispatchers.IO) {
             val settings = userPreferencesRepository.userSettings.first()
             val email = settings.googleAccountEmail.trim()
+            val expectedBusinessId = settings.businessId.ifBlank { null }
 
             if (email.isBlank()) {
                 withContext(Dispatchers.Main) {
@@ -270,7 +272,7 @@ class BackupViewModel(
                 return@launch
             }
 
-            val result = backupRestoreManager.performRestore(targetSpreadsheetId)
+            val result = backupRestoreManager.performRestore(targetSpreadsheetId, expectedBusinessId)
             withContext(Dispatchers.Main) {
                 result.fold(
                     onSuccess = {
@@ -303,6 +305,7 @@ class BackupViewModel(
     private fun mapToUserFriendlyErrorMessage(throwable: Throwable, isBackup: Boolean): String {
         return when (throwable) {
             is SpreadsheetNotFoundException -> "Spreadsheet cadangan tidak ditemukan di Google Drive."
+            is BusinessIdMismatchException -> "Cadangan ini berasal dari usaha yang berbeda. Pemulihan dibatalkan untuk melindungi data usaha Anda."
             is GoogleConsentDeniedException -> "Izin Google belum diberikan. Silakan hubungkan kembali untuk menggunakan backup Google Sheets."
             is GoogleAuthorizationRequiredException -> "Izin Google perlu diperbarui. Hubungkan kembali akun."
             is ChecksumMismatchException -> "Data cadangan di Google Sheets telah diubah atau rusak. Pemulihan dibatalkan demi keamanan data."

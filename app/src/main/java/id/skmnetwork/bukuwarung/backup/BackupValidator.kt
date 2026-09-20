@@ -8,13 +8,16 @@ import java.util.Locale
  */
 object BackupValidator {
 
-    fun validate(snapshot: BackupSnapshot) {
+    fun validate(snapshot: BackupSnapshot, expectedBusinessId: String? = null) {
         val metadata = snapshot.metadata
 
-        // 1. Exact Backup Format Version check
-        if (metadata.backupFormatVersion != CanonicalSerializer.BACKUP_FORMAT_VERSION) {
+        // 1. Backup Format Version check
+        // Accept current format "1.1" and legacy format "1.0" per design §19.2/§20.4.
+        // Any other format is rejected as incompatible.
+        val supportedFormats = setOf(CanonicalSerializer.BACKUP_FORMAT_VERSION, "1.0")
+        if (metadata.backupFormatVersion !in supportedFormats) {
             throw IncompatibleBackupFormatException(
-                "Unsupported backup format version: expected ${CanonicalSerializer.BACKUP_FORMAT_VERSION}, got '${metadata.backupFormatVersion}'"
+                "Unsupported backup format version: expected one of $supportedFormats, got '${metadata.backupFormatVersion}'"
             )
         }
 
@@ -22,6 +25,13 @@ object BackupValidator {
         if (metadata.roomSchemaVersion < 9 || metadata.roomSchemaVersion > CanonicalSerializer.ROOM_SCHEMA_VERSION) {
             throw IncompatibleSchemaVersionException(
                 "Unsupported Room schema version: expected between 9 and ${CanonicalSerializer.ROOM_SCHEMA_VERSION}, got '${metadata.roomSchemaVersion}'"
+            )
+        }
+
+        // 2b. Business ID scoping check (D-1)
+        if (!expectedBusinessId.isNullOrBlank() && metadata.businessId != expectedBusinessId) {
+            throw BusinessIdMismatchException(
+                "Cross-business restore rejected: backup business_id '${metadata.businessId}' does not match active business_id '$expectedBusinessId'"
             )
         }
 
@@ -46,6 +56,9 @@ object BackupValidator {
         val cashUuids = mutableSetOf<String>()
         val returnUuids = mutableSetOf<String>()
         val returnItemUuids = mutableSetOf<String>()
+        val digitalTransactionUuids = mutableSetOf<String>()
+        val purchaseOrderUuids = mutableSetOf<String>()
+        val purchaseOrderItemUuids = mutableSetOf<String>()
 
         fun checkUniqueUuid(tabName: String, uuid: String, set: MutableSet<String>) {
             if (uuid.isBlank() || uuid == "NULL") {
@@ -127,6 +140,21 @@ object BackupValidator {
         snapshot.getTab("18_SaleReturnItems")?.rows?.forEach { row ->
             val uuid = row.getOrElse(0) { "" }
             checkUniqueUuid("18_SaleReturnItems", uuid, returnItemUuids)
+        }
+
+        snapshot.getTab("19_DigitalTransactions")?.rows?.forEach { row ->
+            val uuid = row.getOrElse(0) { "" }
+            checkUniqueUuid("19_DigitalTransactions", uuid, digitalTransactionUuids)
+        }
+
+        snapshot.getTab("20_PurchaseOrders")?.rows?.forEach { row ->
+            val uuid = row.getOrElse(0) { "" }
+            checkUniqueUuid("20_PurchaseOrders", uuid, purchaseOrderUuids)
+        }
+
+        snapshot.getTab("21_PurchaseOrderItems")?.rows?.forEach { row ->
+            val uuid = row.getOrElse(0) { "" }
+            checkUniqueUuid("21_PurchaseOrderItems", uuid, purchaseOrderItemUuids)
         }
 
         // 5. Relational Graph Validation
@@ -239,6 +267,34 @@ object BackupValidator {
                 throw CorruptedBackupException("StockMovement '${row.getOrElse(0) { "" }}' references non-existent product_uuid '$prodUuid'")
             }
             productDeltas[prodUuid] = (productDeltas[prodUuid] ?: 0.0) + delta
+        }
+
+        // 5i. DigitalTransactions -> SaleItem
+        snapshot.getTab("19_DigitalTransactions")?.rows?.forEach { row ->
+            val saleItemUuid = row.getOrElse(2) { "" }
+            if (saleItemUuid.isBlank() || saleItemUuid == "NULL" || !saleItemUuids.contains(saleItemUuid)) {
+                throw CorruptedBackupException("DigitalTransaction '${row.getOrElse(0) { "" }}' references non-existent sale_item_uuid '$saleItemUuid'")
+            }
+        }
+
+        // 5j. PurchaseOrders -> Supplier
+        snapshot.getTab("20_PurchaseOrders")?.rows?.forEach { row ->
+            val supplierUuid = row.getOrElse(4) { "" }
+            if (supplierUuid.isBlank() || supplierUuid == "NULL" || !supplierUuids.contains(supplierUuid)) {
+                throw CorruptedBackupException("PurchaseOrder '${row.getOrElse(0) { "" }}' references non-existent supplier_uuid '$supplierUuid'")
+            }
+        }
+
+        // 5k. PurchaseOrderItems -> PurchaseOrder & Product
+        snapshot.getTab("21_PurchaseOrderItems")?.rows?.forEach { row ->
+            val poUuid = row.getOrElse(2) { "" }
+            val productUuid = row.getOrElse(3) { "" }
+            if (poUuid.isBlank() || poUuid == "NULL" || !purchaseOrderUuids.contains(poUuid)) {
+                throw CorruptedBackupException("PurchaseOrderItem '${row.getOrElse(0) { "" }}' references non-existent po_uuid '$poUuid'")
+            }
+            if (productUuid.isBlank() || productUuid == "NULL" || !productUuids.contains(productUuid)) {
+                throw CorruptedBackupException("PurchaseOrderItem '${row.getOrElse(0) { "" }}' references non-existent product_uuid '$productUuid'")
+            }
         }
 
         // 6. Stock Ledger Invariant Check: SUM(deltaQuantity) == Product.stock

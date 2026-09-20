@@ -186,12 +186,16 @@ class FoundationStep5Test {
         assertEquals(snapshot1.tabs.keys, snapshot2.tabs.keys)
 
         for (tabName in CanonicalSerializer.DATA_TAB_NAMES) {
-            val tab1 = snapshot1.getTab(tabName)!!
-            val tab2 = snapshot2.getTab(tabName)!!
-            assertEquals("Tab headers mismatch for $tabName", tab1.headers, tab2.headers)
-            assertEquals("Tab rows count mismatch for $tabName", tab1.rows.size, tab2.rows.size)
-            for (i in tab1.rows.indices) {
-                assertEquals("Row $i mismatch in tab $tabName", tab1.rows[i], tab2.rows[i])
+            val tab1 = snapshot1.getTab(tabName)
+            val tab2 = snapshot2.getTab(tabName)
+            if (tab1 != null && tab2 != null) {
+                assertEquals("Tab headers mismatch for $tabName", tab1.headers, tab2.headers)
+                assertEquals("Tab rows count mismatch for $tabName", tab1.rows.size, tab2.rows.size)
+                for (i in tab1.rows.indices) {
+                    assertEquals("Row $i mismatch in tab $tabName", tab1.rows[i], tab2.rows[i])
+                }
+            } else {
+                assertEquals("Tab presence mismatch for $tabName", tab1 != null, tab2 != null)
             }
         }
     }
@@ -276,13 +280,13 @@ class FoundationStep5Test {
             assertTrue(e.message?.contains("Unsupported Room schema version") == true)
         }
 
-        // Test future schema (e.g. 12)
+        // Test future schema (e.g. 16)
         val futureSchemaSnapshot = snapshot.copy(
-            metadata = snapshot.metadata.copy(roomSchemaVersion = 12)
+            metadata = snapshot.metadata.copy(roomSchemaVersion = 16)
         )
         try {
             BackupValidator.validate(futureSchemaSnapshot)
-            fail("Expected IncompatibleSchemaVersionException for schema 12")
+            fail("Expected IncompatibleSchemaVersionException for schema 16")
         } catch (e: IncompatibleSchemaVersionException) {
             assertTrue(e.message?.contains("Unsupported Room schema version") == true)
         }
@@ -308,6 +312,9 @@ class FoundationStep5Test {
         database.openHelper.writableDatabase.execSQL("DELETE FROM debts")
         database.openHelper.writableDatabase.execSQL("DELETE FROM purchase_items")
         database.openHelper.writableDatabase.execSQL("DELETE FROM purchase_transactions")
+        database.openHelper.writableDatabase.execSQL("DELETE FROM purchase_order_items")
+        database.openHelper.writableDatabase.execSQL("DELETE FROM purchase_orders")
+        database.openHelper.writableDatabase.execSQL("DELETE FROM digital_transactions")
         database.openHelper.writableDatabase.execSQL("DELETE FROM sale_items")
         database.openHelper.writableDatabase.execSQL("DELETE FROM sales_transactions")
         database.openHelper.writableDatabase.execSQL("DELETE FROM products")
@@ -598,6 +605,9 @@ class FoundationStep5Test {
         database.openHelper.writableDatabase.execSQL("DELETE FROM debts")
         database.openHelper.writableDatabase.execSQL("DELETE FROM purchase_items")
         database.openHelper.writableDatabase.execSQL("DELETE FROM purchase_transactions")
+        database.openHelper.writableDatabase.execSQL("DELETE FROM purchase_order_items")
+        database.openHelper.writableDatabase.execSQL("DELETE FROM purchase_orders")
+        database.openHelper.writableDatabase.execSQL("DELETE FROM digital_transactions")
         database.openHelper.writableDatabase.execSQL("DELETE FROM sale_items")
         database.openHelper.writableDatabase.execSQL("DELETE FROM sales_transactions")
         database.openHelper.writableDatabase.execSQL("DELETE FROM products")

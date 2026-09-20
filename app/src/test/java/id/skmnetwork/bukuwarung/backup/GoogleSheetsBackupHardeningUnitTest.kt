@@ -116,11 +116,14 @@ class GoogleSheetsBackupHardeningUnitTest {
             "15_CashTransactions" to 115,
             "16_StockMovements" to 116,
             "17_SaleReturns" to 117,
-            "18_SaleReturnItems" to 118
+            "18_SaleReturnItems" to 118,
+            "19_DigitalTransactions" to 119,
+            "20_PurchaseOrders" to 120,
+            "21_PurchaseOrderItems" to 121
         )
 
         val protectionRequests = transport.buildProtectionRequests(sheetIdMap)
-        assertTrue("Protection requests must cover all domain data tabs", protectionRequests.length() >= 18)
+        assertEquals("Protection requests must cover all domain data tabs + metadata", 22, protectionRequests.length())
 
         for (i in 0 until protectionRequests.length()) {
             val req = protectionRequests.getJSONObject(i)
