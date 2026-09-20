@@ -208,7 +208,7 @@ class BackupRestoreManager(
 
         // 3. Tab 04_Products
         val productRows = mutableListOf<List<String>>()
-        db.query("SELECT id, uuid, business_id, category_id, name, purchase_price, selling_price, stock, minimum_stock, unit, item_type, is_deleted, deleted_at, created_at, updated_at, barcode, image_uri FROM products WHERE business_id = ?", arrayOf(businessId)).use { cursor ->
+        db.query("SELECT id, uuid, business_id, category_id, name, purchase_price, selling_price, stock, minimum_stock, unit, item_type, is_deleted, deleted_at, created_at, updated_at, barcode, image_uri, taxable, tax_rate_override FROM products WHERE business_id = ?", arrayOf(businessId)).use { cursor ->
             while (cursor.moveToNext()) {
                 val uuid = cursor.getString(1)
                 val bId = cursor.getString(2)
@@ -227,6 +227,8 @@ class BackupRestoreManager(
                 val updatedAt = cursor.getLong(14)
                 val barcode = cursor.getString(15)
                 val imageUri = cursor.getString(16)
+                val taxable = cursor.getInt(17) == 1
+                val taxRateOverride = if (cursor.isNull(18)) null else cursor.getDouble(18)
 
                 productRows.add(
                     listOf(
@@ -245,20 +247,22 @@ class BackupRestoreManager(
                         createdAt.toString(),
                         updatedAt.toString(),
                         CanonicalSerializer.sanitize(barcode),
-                        CanonicalSerializer.sanitize(imageUri)
+                        CanonicalSerializer.sanitize(imageUri),
+                        taxable.toString(),
+                        CanonicalSerializer.formatDouble(taxRateOverride)
                     )
                 )
             }
         }
         val tab04 = SheetTab(
             name = "04_Products",
-            headers = listOf("uuid", "business_id", "category_uuid", "name", "purchase_price", "selling_price", "stock", "minimum_stock", "unit", "item_type", "is_deleted", "deleted_at", "created_at", "updated_at", "barcode", "image_uri"),
+            headers = listOf("uuid", "business_id", "category_uuid", "name", "purchase_price", "selling_price", "stock", "minimum_stock", "unit", "item_type", "is_deleted", "deleted_at", "created_at", "updated_at", "barcode", "image_uri", "taxable", "tax_rate_override"),
             rows = CanonicalSerializer.sortTabRows("04_Products", productRows)
         )
 
         // 4. Tab 06_Sales
         val saleRows = mutableListOf<List<String>>()
-        db.query("SELECT id, uuid, business_id, device_id, transaction_number, transaction_date, total_amount, payment_method, created_at, customer_id, discount_amount FROM sales_transactions WHERE business_id = ?", arrayOf(businessId)).use { cursor ->
+        db.query("SELECT id, uuid, business_id, device_id, transaction_number, transaction_date, total_amount, payment_method, created_at, customer_id, discount_amount, subtotal_amount, taxable_base_snapshot, tax_rate_snapshot, tax_amount_snapshot FROM sales_transactions WHERE business_id = ?", arrayOf(businessId)).use { cursor ->
             while (cursor.moveToNext()) {
                 val uuid = cursor.getString(1)
                 val bId = cursor.getString(2)
@@ -271,6 +275,10 @@ class BackupRestoreManager(
                 val customerId = if (cursor.isNull(9)) null else cursor.getLong(9)
                 val customerUuid = if (customerId != null) customerIdToUuid[customerId] ?: "NULL" else "NULL"
                 val discountAmount = if (cursor.columnCount > 10 && !cursor.isNull(10)) cursor.getLong(10) else 0L
+                val subtotalAmount = if (cursor.columnCount > 11 && !cursor.isNull(11)) cursor.getLong(11) else 0L
+                val taxableBaseSnapshot = if (cursor.columnCount > 12 && !cursor.isNull(12)) cursor.getLong(12) else 0L
+                val taxRateSnapshot = if (cursor.columnCount > 13 && !cursor.isNull(13)) cursor.getDouble(13) else 0.0
+                val taxAmountSnapshot = if (cursor.columnCount > 14 && !cursor.isNull(14)) cursor.getLong(14) else 0L
 
                 saleRows.add(
                     listOf(
@@ -283,20 +291,24 @@ class BackupRestoreManager(
                         CanonicalSerializer.sanitize(paymentMethod),
                         createdAt.toString(),
                         customerUuid,
-                        discountAmount.toString()
+                        discountAmount.toString(),
+                        subtotalAmount.toString(),
+                        taxableBaseSnapshot.toString(),
+                        taxRateSnapshot.toString(),
+                        taxAmountSnapshot.toString()
                     )
                 )
             }
         }
         val tab06 = SheetTab(
             name = "06_Sales",
-            headers = listOf("uuid", "business_id", "device_id", "transaction_number", "transaction_date", "total_amount", "payment_method", "created_at", "customer_uuid", "discount_amount"),
+            headers = listOf("uuid", "business_id", "device_id", "transaction_number", "transaction_date", "total_amount", "payment_method", "created_at", "customer_uuid", "discount_amount", "subtotal_amount", "taxable_base_snapshot", "tax_rate_snapshot", "tax_amount_snapshot"),
             rows = CanonicalSerializer.sortTabRows("06_Sales", saleRows)
         )
 
         // 5. Tab 07_SaleItems
         val saleItemRows = mutableListOf<List<String>>()
-        db.query("SELECT id, uuid, business_id, sale_uuid, product_uuid, product_name, quantity, price, purchase_price, subtotal FROM sale_items WHERE business_id = ?", arrayOf(businessId)).use { cursor ->
+        db.query("SELECT id, uuid, business_id, sale_uuid, product_uuid, product_name, quantity, price, purchase_price, subtotal, taxable, tax_rate_snapshot, tax_amount_snapshot FROM sale_items WHERE business_id = ?", arrayOf(businessId)).use { cursor ->
             while (cursor.moveToNext()) {
                 val uuid = cursor.getString(1)
                 val bId = cursor.getString(2)
@@ -307,6 +319,9 @@ class BackupRestoreManager(
                 val price = cursor.getLong(7)
                 val purchasePrice = cursor.getLong(8)
                 val subtotal = cursor.getLong(9)
+                val taxable = cursor.getInt(10) == 1
+                val taxRateSnapshot = if (cursor.isNull(11)) null else cursor.getDouble(11)
+                val taxAmountSnapshot = if (cursor.isNull(12)) null else cursor.getLong(12)
 
                 saleItemRows.add(
                     listOf(
@@ -318,20 +333,23 @@ class BackupRestoreManager(
                         CanonicalSerializer.formatDouble(qty),
                         price.toString(),
                         purchasePrice.toString(),
-                        subtotal.toString()
+                        subtotal.toString(),
+                        taxable.toString(),
+                        CanonicalSerializer.formatDouble(taxRateSnapshot),
+                        CanonicalSerializer.formatLong(taxAmountSnapshot)
                     )
                 )
             }
         }
         val tab07 = SheetTab(
             name = "07_SaleItems",
-            headers = listOf("uuid", "business_id", "sale_uuid", "product_uuid", "product_name", "quantity", "price", "purchase_price", "subtotal"),
+            headers = listOf("uuid", "business_id", "sale_uuid", "product_uuid", "product_name", "quantity", "price", "purchase_price", "subtotal", "taxable", "tax_rate_snapshot", "tax_amount_snapshot"),
             rows = CanonicalSerializer.sortTabRows("07_SaleItems", saleItemRows)
         )
 
         // 6. Tab 08_Purchases
         val purchaseRows = mutableListOf<List<String>>()
-        db.query("SELECT id, uuid, business_id, device_id, transaction_number, transaction_date, total_amount, payment_method, created_at, supplier_id FROM purchase_transactions WHERE business_id = ?", arrayOf(businessId)).use { cursor ->
+        db.query("SELECT id, uuid, business_id, device_id, transaction_number, transaction_date, total_amount, payment_method, created_at, supplier_id, subtotal_amount, taxable_base_snapshot, tax_rate_snapshot, tax_amount_snapshot FROM purchase_transactions WHERE business_id = ?", arrayOf(businessId)).use { cursor ->
             while (cursor.moveToNext()) {
                 val uuid = cursor.getString(1)
                 val bId = cursor.getString(2)
@@ -343,6 +361,10 @@ class BackupRestoreManager(
                 val createdAt = cursor.getLong(8)
                 val supplierId = if (cursor.isNull(9)) null else cursor.getLong(9)
                 val supplierUuid = if (supplierId != null) supplierIdToUuid[supplierId] ?: "NULL" else "NULL"
+                val subtotalAmount = if (cursor.columnCount > 10 && !cursor.isNull(10)) cursor.getLong(10) else 0L
+                val taxableBaseSnapshot = if (cursor.columnCount > 11 && !cursor.isNull(11)) cursor.getLong(11) else 0L
+                val taxRateSnapshot = if (cursor.columnCount > 12 && !cursor.isNull(12)) cursor.getDouble(12) else 0.0
+                val taxAmountSnapshot = if (cursor.columnCount > 13 && !cursor.isNull(13)) cursor.getLong(13) else 0L
 
                 purchaseRows.add(
                     listOf(
@@ -354,20 +376,24 @@ class BackupRestoreManager(
                         totalAmount.toString(),
                         CanonicalSerializer.sanitize(paymentMethod),
                         createdAt.toString(),
-                        supplierUuid
+                        supplierUuid,
+                        subtotalAmount.toString(),
+                        taxableBaseSnapshot.toString(),
+                        taxRateSnapshot.toString(),
+                        taxAmountSnapshot.toString()
                     )
                 )
             }
         }
         val tab08 = SheetTab(
             name = "08_Purchases",
-            headers = listOf("uuid", "business_id", "device_id", "transaction_number", "transaction_date", "total_amount", "payment_method", "created_at", "supplier_uuid"),
+            headers = listOf("uuid", "business_id", "device_id", "transaction_number", "transaction_date", "total_amount", "payment_method", "created_at", "supplier_uuid", "subtotal_amount", "taxable_base_snapshot", "tax_rate_snapshot", "tax_amount_snapshot"),
             rows = CanonicalSerializer.sortTabRows("08_Purchases", purchaseRows)
         )
 
         // 7. Tab 09_PurchaseItems
         val purchaseItemRows = mutableListOf<List<String>>()
-        db.query("SELECT id, uuid, business_id, purchase_uuid, product_uuid, product_name, quantity, purchase_price, subtotal FROM purchase_items WHERE business_id = ?", arrayOf(businessId)).use { cursor ->
+        db.query("SELECT id, uuid, business_id, purchase_uuid, product_uuid, product_name, quantity, purchase_price, subtotal, taxable, tax_rate_snapshot, tax_amount_snapshot FROM purchase_items WHERE business_id = ?", arrayOf(businessId)).use { cursor ->
             while (cursor.moveToNext()) {
                 val uuid = cursor.getString(1)
                 val bId = cursor.getString(2)
@@ -377,6 +403,9 @@ class BackupRestoreManager(
                 val qty = cursor.getDouble(6)
                 val price = cursor.getLong(7)
                 val subtotal = cursor.getLong(8)
+                val taxable = cursor.getInt(9) == 1
+                val taxRateSnapshot = if (cursor.isNull(10)) null else cursor.getDouble(10)
+                val taxAmountSnapshot = if (cursor.isNull(11)) null else cursor.getLong(11)
 
                 purchaseItemRows.add(
                     listOf(
@@ -387,14 +416,17 @@ class BackupRestoreManager(
                         CanonicalSerializer.sanitize(productName),
                         CanonicalSerializer.formatDouble(qty),
                         price.toString(),
-                        subtotal.toString()
+                        subtotal.toString(),
+                        taxable.toString(),
+                        CanonicalSerializer.formatDouble(taxRateSnapshot),
+                        CanonicalSerializer.formatLong(taxAmountSnapshot)
                     )
                 )
             }
         }
         val tab09 = SheetTab(
             name = "09_PurchaseItems",
-            headers = listOf("uuid", "business_id", "purchase_uuid", "product_uuid", "product_name", "quantity", "purchase_price", "subtotal"),
+            headers = listOf("uuid", "business_id", "purchase_uuid", "product_uuid", "product_name", "quantity", "purchase_price", "subtotal", "taxable", "tax_rate_snapshot", "tax_amount_snapshot"),
             rows = CanonicalSerializer.sortTabRows("09_PurchaseItems", purchaseItemRows)
         )
 
@@ -857,7 +889,13 @@ class BackupRestoreManager(
             appVersion = "1.0.0",
             totalRecords = totalRecords,
             checksum = checksum,
-            capabilities = resolvedProfile.capabilities.map { it.id }.toSet()
+            capabilities = resolvedProfile.capabilities.map { it.id }.toSet(),
+            taxEnabled = userSettings.taxEnabled,
+            taxRate = userSettings.taxRate,
+            taxPriceMode = userSettings.taxPriceMode.name,
+            taxApplicability = userSettings.taxApplicability.name,
+            taxRoundingMode = userSettings.taxRoundingMode,
+            taxEffectiveDate = userSettings.taxEffectiveDate
         )
 
         val metadataRows = listOf(
@@ -869,7 +907,13 @@ class BackupRestoreManager(
             listOf("app_version", metadata.appVersion),
             listOf("capabilities", metadata.capabilities.sorted().joinToString(",")),
             listOf("total_records", metadata.totalRecords.toString()),
-            listOf("checksum", metadata.checksum)
+            listOf("checksum", metadata.checksum),
+            listOf("tax_enabled", metadata.taxEnabled.toString()),
+            listOf("tax_rate", metadata.taxRate.toString()),
+            listOf("tax_price_mode", metadata.taxPriceMode),
+            listOf("tax_applicability", metadata.taxApplicability),
+            listOf("tax_rounding_mode", metadata.taxRoundingMode),
+            listOf("tax_effective_date", metadata.taxEffectiveDate.toString())
         )
         val tab00 = SheetTab(
             name = CanonicalSerializer.METADATA_TAB_NAME,
@@ -1028,6 +1072,8 @@ class BackupRestoreManager(
                     val updatedAt = row[13].toLongOrNull() ?: System.currentTimeMillis()
                     val barcode = if (row[14] == "NULL") null else row[14]
                     val imageUri = if (row[15] == "NULL") null else row[15]
+                    val taxable = if (row.size > 16) row[16].toBoolean() else true
+                    val taxRateOverride = if (row.size > 17 && row[17] != "NULL") row[17].toDoubleOrNull() else null
 
                     val cv = ContentValues().apply {
                         put("uuid", uuid)
@@ -1046,6 +1092,8 @@ class BackupRestoreManager(
                         put("updated_at", updatedAt)
                         if (barcode != null) put("barcode", barcode) else putNull("barcode")
                         if (imageUri != null) put("image_uri", imageUri) else putNull("image_uri")
+                        put("taxable", if (taxable) 1 else 0)
+                        if (taxRateOverride != null) put("tax_rate_override", taxRateOverride) else putNull("tax_rate_override")
                     }
                     val newId = db.insert("products", 0, cv)
                     productUuidToId[uuid] = newId
@@ -1065,6 +1113,10 @@ class BackupRestoreManager(
                     val customerUuid = if (row[8] == "NULL") null else row[8]
                     val customerId = if (customerUuid != null) customerUuidToId[customerUuid] else null
                     val discountAmount = if (row.size > 9) row[9].toLongOrNull() ?: 0L else 0L
+                    val subtotalAmount = if (row.size > 10) row[10].toLongOrNull() ?: 0L else 0L
+                    val taxableBaseSnapshot = if (row.size > 11) row[11].toLongOrNull() ?: 0L else 0L
+                    val taxRateSnapshot = if (row.size > 12) row[12].toDoubleOrNull() ?: 0.0 else 0.0
+                    val taxAmountSnapshot = if (row.size > 13) row[13].toLongOrNull() ?: 0L else 0L
 
                     val cv = ContentValues().apply {
                         put("uuid", uuid)
@@ -1075,6 +1127,10 @@ class BackupRestoreManager(
                         put("total_amount", totalAmount)
                         put("payment_method", paymentMethod)
                         put("discount_amount", discountAmount)
+                        put("subtotal_amount", subtotalAmount)
+                        put("taxable_base_snapshot", taxableBaseSnapshot)
+                        put("tax_rate_snapshot", taxRateSnapshot)
+                        put("tax_amount_snapshot", taxAmountSnapshot)
                         put("created_at", createdAt)
                         if (customerId != null) put("customer_id", customerId) else putNull("customer_id")
                     }
@@ -1094,6 +1150,9 @@ class BackupRestoreManager(
                     val price = row[6].toLongOrNull() ?: 0L
                     val purchasePrice = if (row.size > 8) row[7].toLongOrNull() ?: 0L else 0L
                     val subtotal = if (row.size > 8) row[8].toLongOrNull() ?: 0L else (row.getOrNull(7)?.toLongOrNull() ?: 0L)
+                    val taxable = if (row.size > 9) row[9].toBoolean() else true
+                    val taxRateSnapshot = if (row.size > 10 && row[10] != "NULL") row[10].toDoubleOrNull() else null
+                    val taxAmountSnapshot = if (row.size > 11 && row[11] != "NULL") row[11].toLongOrNull() else null
 
                     val txId = saleUuidToId[saleUuid]
                         ?: throw CorruptedBackupException("Unknown sale_uuid '$saleUuid' for sale item '$uuid'")
@@ -1112,6 +1171,9 @@ class BackupRestoreManager(
                         put("price", price)
                         put("purchase_price", purchasePrice)
                         put("subtotal", subtotal)
+                        put("taxable", if (taxable) 1 else 0)
+                        if (taxRateSnapshot != null) put("tax_rate_snapshot", taxRateSnapshot) else putNull("tax_rate_snapshot")
+                        if (taxAmountSnapshot != null) put("tax_amount_snapshot", taxAmountSnapshot) else putNull("tax_amount_snapshot")
                     }
                     val newId = db.insert("sale_items", 0, cv)
                     saleItemUuidToId[uuid] = newId
@@ -1130,6 +1192,10 @@ class BackupRestoreManager(
                     val createdAt = row[7].toLongOrNull() ?: System.currentTimeMillis()
                     val supplierUuid = if (row[8] == "NULL") null else row[8]
                     val supplierId = if (supplierUuid != null) supplierUuidToId[supplierUuid] else null
+                    val subtotalAmount = if (row.size > 9) row[9].toLongOrNull() ?: 0L else 0L
+                    val taxableBaseSnapshot = if (row.size > 10) row[10].toLongOrNull() ?: 0L else 0L
+                    val taxRateSnapshot = if (row.size > 11) row[11].toDoubleOrNull() ?: 0.0 else 0.0
+                    val taxAmountSnapshot = if (row.size > 12) row[12].toLongOrNull() ?: 0L else 0L
 
                     val cv = ContentValues().apply {
                         put("uuid", uuid)
@@ -1140,6 +1206,10 @@ class BackupRestoreManager(
                         put("total_amount", totalAmount)
                         put("payment_method", paymentMethod)
                         put("created_at", createdAt)
+                        put("subtotal_amount", subtotalAmount)
+                        put("taxable_base_snapshot", taxableBaseSnapshot)
+                        put("tax_rate_snapshot", taxRateSnapshot)
+                        put("tax_amount_snapshot", taxAmountSnapshot)
                         if (supplierId != null) put("supplier_id", supplierId) else putNull("supplier_id")
                     }
                     val newId = db.insert("purchase_transactions", 0, cv)
@@ -1156,6 +1226,9 @@ class BackupRestoreManager(
                     val qty = row[5].toDoubleOrNull() ?: 0.0
                     val price = row[6].toLongOrNull() ?: 0L
                     val subtotal = row[7].toLongOrNull() ?: 0L
+                    val taxable = if (row.size > 8) row[8].toBoolean() else true
+                    val taxRateSnapshot = if (row.size > 9 && row[9] != "NULL") row[9].toDoubleOrNull() else null
+                    val taxAmountSnapshot = if (row.size > 10 && row[10] != "NULL") row[10].toLongOrNull() else null
 
                     val txId = purchaseUuidToId[purchaseUuid]
                         ?: throw CorruptedBackupException("Unknown purchase_uuid '$purchaseUuid' for purchase item '$uuid'")
@@ -1173,6 +1246,9 @@ class BackupRestoreManager(
                         put("quantity", qty)
                         put("purchase_price", price)
                         put("subtotal", subtotal)
+                        put("taxable", if (taxable) 1 else 0)
+                        if (taxRateSnapshot != null) put("tax_rate_snapshot", taxRateSnapshot) else putNull("tax_rate_snapshot")
+                        if (taxAmountSnapshot != null) put("tax_amount_snapshot", taxAmountSnapshot) else putNull("tax_amount_snapshot")
                     }
                     db.insert("purchase_items", 0, cv)
                 }
@@ -1599,6 +1675,23 @@ class BackupRestoreManager(
                         )
                     }
                 }
+
+                // PR-12.6 Tax/PPN configuration restore from BackupMetadata
+                val metadata = snapshot.metadata
+                userPreferencesRepository.updateTaxSettings(
+                    enabled = metadata.taxEnabled,
+                    rate = metadata.taxRate,
+                    priceMode = when (metadata.taxPriceMode) {
+                        "INCLUSIVE" -> id.skmnetwork.bukuwarung.domain.tax.TaxPriceMode.INCLUSIVE
+                        else -> id.skmnetwork.bukuwarung.domain.tax.TaxPriceMode.EXCLUSIVE
+                    },
+                    applicability = when (metadata.taxApplicability) {
+                        "GLOBAL" -> id.skmnetwork.bukuwarung.domain.tax.TaxApplicability.GLOBAL
+                        "PRODUCT" -> id.skmnetwork.bukuwarung.domain.tax.TaxApplicability.PRODUCT
+                        else -> id.skmnetwork.bukuwarung.domain.tax.TaxApplicability.NONE
+                    },
+                    roundingMode = metadata.taxRoundingMode
+                )
             } catch (e: Exception) {
                 // IMPORTANT: Do NOT attempt to rollback Room. Room is already committed and authoritative.
                 // Log exception and allow deterministic startup reconciliation to resolve DataStore later.

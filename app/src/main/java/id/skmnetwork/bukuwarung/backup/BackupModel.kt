@@ -6,15 +6,21 @@ package id.skmnetwork.bukuwarung.backup
  */
 
 data class BackupMetadata(
-    val backupFormatVersion: String = "1.1",
-    val roomSchemaVersion: Int = 15,
+    val backupFormatVersion: String = "1.2",
+    val roomSchemaVersion: Int = 16,
     val exportedAt: Long = System.currentTimeMillis(),
     val businessId: String = "",
     val deviceId: String = "",
     val appVersion: String = "1.0.0",
     val totalRecords: Int = 0,
     val checksum: String = "",
-    val capabilities: Set<String> = emptySet()
+    val capabilities: Set<String> = emptySet(),
+    val taxEnabled: Boolean = false,
+    val taxRate: Double = 0.0,
+    val taxPriceMode: String = "EXCLUSIVE",
+    val taxApplicability: String = "GLOBAL",
+    val taxRoundingMode: String = "HALF_UP",
+    val taxEffectiveDate: Long = 0L
 )
 
 data class SheetTab(

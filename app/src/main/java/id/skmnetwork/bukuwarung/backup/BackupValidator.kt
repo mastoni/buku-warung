@@ -14,7 +14,7 @@ object BackupValidator {
         // 1. Backup Format Version check
         // Accept current format "1.1" and legacy format "1.0" per design §19.2/§20.4.
         // Any other format is rejected as incompatible.
-        val supportedFormats = setOf(CanonicalSerializer.BACKUP_FORMAT_VERSION, "1.0")
+        val supportedFormats = setOf(CanonicalSerializer.BACKUP_FORMAT_VERSION, "1.0", "1.1", "1.2")
         if (metadata.backupFormatVersion !in supportedFormats) {
             throw IncompatibleBackupFormatException(
                 "Unsupported backup format version: expected one of $supportedFormats, got '${metadata.backupFormatVersion}'"

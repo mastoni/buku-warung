@@ -87,6 +87,12 @@ class GoogleSheetsApiTransport(
                 put(JSONArray().apply { put("app_version"); put(snapshot.metadata.appVersion) })
                 put(JSONArray().apply { put("total_records"); put(snapshot.metadata.totalRecords.toString()) })
                 put(JSONArray().apply { put("checksum"); put(snapshot.metadata.checksum) })
+                put(JSONArray().apply { put("tax_enabled"); put(snapshot.metadata.taxEnabled.toString()) })
+                put(JSONArray().apply { put("tax_rate"); put(snapshot.metadata.taxRate.toString()) })
+                put(JSONArray().apply { put("tax_price_mode"); put(snapshot.metadata.taxPriceMode) })
+                put(JSONArray().apply { put("tax_applicability"); put(snapshot.metadata.taxApplicability) })
+                put(JSONArray().apply { put("tax_rounding_mode"); put(snapshot.metadata.taxRoundingMode) })
+                put(JSONArray().apply { put("tax_effective_date"); put(snapshot.metadata.taxEffectiveDate.toString()) })
             }
             put("values", rowsArray)
         }
@@ -222,7 +228,13 @@ class GoogleSheetsApiTransport(
                         appVersion = metadataMap["app_version"] ?: "1.0.0",
                         totalRecords = metadataMap["total_records"]?.toIntOrNull() ?: 0,
                         checksum = metadataMap["checksum"] ?: "",
-                        capabilities = metadataMap["capabilities"]?.split(",")?.filter { it.isNotBlank() }?.toSet() ?: emptySet()
+                        capabilities = metadataMap["capabilities"]?.split(",")?.filter { it.isNotBlank() }?.toSet() ?: emptySet(),
+                        taxEnabled = metadataMap["tax_enabled"]?.toBoolean() ?: false,
+                        taxRate = metadataMap["tax_rate"]?.toDoubleOrNull() ?: 0.0,
+                        taxPriceMode = metadataMap["tax_price_mode"] ?: "EXCLUSIVE",
+                        taxApplicability = metadataMap["tax_applicability"] ?: "GLOBAL",
+                        taxRoundingMode = metadataMap["tax_rounding_mode"] ?: "HALF_UP",
+                        taxEffectiveDate = metadataMap["tax_effective_date"]?.toLongOrNull() ?: 0L
                     )
                 } else if (CanonicalSerializer.DATA_TAB_NAMES.contains(tabName)) {
                     val headers = mutableListOf<String>()
