@@ -29,7 +29,7 @@ class ProductImageRenderingTest {
             AppDatabase::class.java
         ).allowMainThreadQueries().build()
 
-        productRepository = ProductRepository(database)
+        productRepository = ProductRepository(database, "LEGACY_BUSINESS")
     }
 
     @After
@@ -109,3 +109,5 @@ class ProductImageRenderingTest {
         assertEquals(newImagePath, replacedProd2?.imageUri) // Image replaced
     }
 }
+
+

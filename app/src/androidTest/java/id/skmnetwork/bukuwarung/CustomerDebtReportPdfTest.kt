@@ -65,12 +65,12 @@ class CustomerDebtReportPdfTest {
             .allowMainThreadQueries()
             .build()
 
-        customerRepository = CustomerRepository(database)
-        saleRepository = SaleRepository(database)
-        productRepository = ProductRepository(database)
-        purchaseRepository = PurchaseRepository(database)
-        supplierRepository = SupplierRepository(database)
-        reportRepository = ReportRepository(database)
+        customerRepository = CustomerRepository(database, "LEGACY_BUSINESS")
+        saleRepository = SaleRepository(database, "LEGACY_BUSINESS")
+        productRepository = ProductRepository(database, "LEGACY_BUSINESS")
+        purchaseRepository = PurchaseRepository(database, "LEGACY_BUSINESS")
+        supplierRepository = SupplierRepository(database, "LEGACY_BUSINESS")
+        reportRepository = ReportRepository(database, "LEGACY_BUSINESS")
         reportViewModel = ReportViewModel(reportRepository)
         pdfGenerator = PdfReportGenerator(context)
     }
@@ -159,7 +159,7 @@ class CustomerDebtReportPdfTest {
         val prodId = createProduct("Minyak 2L", purchasePrice = 28000L, sellingPrice = 34000L, stock = 10.0)
 
         customerRepository.processAtomicCreditCheckout(mapOf(prodId to 1.0), custId).getOrThrow()
-        val debts = database.debtDao().getOpenDebtsForCustomerList(custId)
+        val debts = database.debtDao().getOpenDebtsForCustomerList(custId, "LEGACY_BUSINESS")
         val debtId = debts.first().id
 
         // Pay full amount
@@ -195,7 +195,7 @@ class CustomerDebtReportPdfTest {
 
         // Credit sale: 2 pcs @ 17,500 = 35,000
         customerRepository.processAtomicCreditCheckout(mapOf(prodId to 2.0), custId).getOrThrow()
-        val debtId = database.debtDao().getOpenDebtsForCustomerList(custId).first().id
+        val debtId = database.debtDao().getOpenDebtsForCustomerList(custId, "LEGACY_BUSINESS").first().id
 
         // Partial payment of 20,000 -> remaining 15,000
         customerRepository.processAtomicDebtPayment(debtId, 20000L, "Bayar separuh").getOrThrow()
@@ -293,7 +293,7 @@ class CustomerDebtReportPdfTest {
         val prodId = createProduct("Telur 1kg", purchasePrice = 24000L, sellingPrice = 28000L, stock = 50.0)
 
         supplierRepository.processAtomicCreditPurchase(mapOf(prodId to 5.0), suppId).getOrThrow()
-        val payableId = database.supplierPayableDao().getOpenPayablesForSupplierList(suppId).first().id
+        val payableId = database.supplierPayableDao().getOpenPayablesForSupplierList(suppId, "LEGACY_BUSINESS").first().id
         supplierRepository.processAtomicSupplierPayment(payableId, 50000L, "Bayar hutang supplier").getOrThrow()
 
         val outstandingData = reportViewModel.buildCustomerDebtReportData(
@@ -384,7 +384,7 @@ class CustomerDebtReportPdfTest {
 
         // 1. Cust1 buys 2 pcs = 40,000, pays 15,000 -> remaining 25,000
         customerRepository.processAtomicCreditCheckout(mapOf(prodId to 2.0), cust1).getOrThrow()
-        val debt1Id = database.debtDao().getOpenDebtsForCustomerList(cust1).first().id
+        val debt1Id = database.debtDao().getOpenDebtsForCustomerList(cust1, "LEGACY_BUSINESS").first().id
         customerRepository.processAtomicDebtPayment(debt1Id, 15000L, "Bayar 15rb").getOrThrow()
 
         // 2. Cust2 buys 3 pcs = 60,000, pays 0 -> remaining 60,000
@@ -527,11 +527,11 @@ class CustomerDebtReportPdfTest {
         val prodId = createProduct("Produk RO", purchasePrice = 5000L, sellingPrice = 10000L, stock = 20.0)
         customerRepository.processAtomicCreditCheckout(mapOf(prodId to 1.0), custId).getOrThrow()
 
-        val beforeCustomers = database.customerDao().getAllCustomers().first().size
-        val beforeDebts = database.debtDao().getAllOpenDebts().first().size
-        val beforePayments = database.debtDao().getPaymentsForDebt(1L).first().size
-        val beforeSales = database.saleDao().getAllTransactions().first().size
-        val beforeCash = database.cashDao().getAllCashTransactions().first().size
+        val beforeCustomers = database.customerDao().getAllCustomers("LEGACY_BUSINESS").first().size
+        val beforeDebts = database.debtDao().getAllOpenDebts("LEGACY_BUSINESS").first().size
+        val beforePayments = database.debtDao().getPaymentsForDebt(1L, "LEGACY_BUSINESS").first().size
+        val beforeSales = database.saleDao().getAllTransactions("LEGACY_BUSINESS").first().size
+        val beforeCash = database.cashDao().getAllCashTransactions("LEGACY_BUSINESS").first().size
 
         // Build data & generate PDF
         val outstandingData = reportViewModel.buildCustomerDebtReportData(
@@ -543,11 +543,11 @@ class CustomerDebtReportPdfTest {
         assertTrue(result.isSuccess)
 
         // Assert all Room tables remain untouched
-        assertEquals(beforeCustomers, database.customerDao().getAllCustomers().first().size)
-        assertEquals(beforeDebts, database.debtDao().getAllOpenDebts().first().size)
-        assertEquals(beforePayments, database.debtDao().getPaymentsForDebt(1L).first().size)
-        assertEquals(beforeSales, database.saleDao().getAllTransactions().first().size)
-        assertEquals(beforeCash, database.cashDao().getAllCashTransactions().first().size)
+        assertEquals(beforeCustomers, database.customerDao().getAllCustomers("LEGACY_BUSINESS").first().size)
+        assertEquals(beforeDebts, database.debtDao().getAllOpenDebts("LEGACY_BUSINESS").first().size)
+        assertEquals(beforePayments, database.debtDao().getPaymentsForDebt(1L, "LEGACY_BUSINESS").first().size)
+        assertEquals(beforeSales, database.saleDao().getAllTransactions("LEGACY_BUSINESS").first().size)
+        assertEquals(beforeCash, database.cashDao().getAllCashTransactions("LEGACY_BUSINESS").first().size)
     }
 
     // 19. Accounting regression test
@@ -562,7 +562,7 @@ class CustomerDebtReportPdfTest {
 
         // 2. CREDIT sale = 150,000 (2 pcs) -> Sale + Debt OPEN (150,000) (NO Cash)
         val creditSaleId = customerRepository.processAtomicCreditCheckout(mapOf(prodId to 2.0), custId).getOrThrow()
-        val debtId = database.debtDao().getOpenDebtsForCustomerList(custId).first().id
+        val debtId = database.debtDao().getOpenDebtsForCustomerList(custId, "LEGACY_BUSINESS").first().id
 
         // 3. Debt Payment = 50,000 -> Debt paidAmount=50,000, remaining=100,000, Cash INCOME (NO Sale)
         customerRepository.processAtomicDebtPayment(debtId, 50000L, "Cicilan 1").getOrThrow()
@@ -579,7 +579,7 @@ class CustomerDebtReportPdfTest {
         supplierRepository.processAtomicCreditPurchase(mapOf(prodId to 2.0), suppId).getOrThrow()
 
         // 6. Supplier Payment = 40,000 -> SupplierPayment + Cash EXPENSE (NO Customer Debt)
-        val payableId = database.supplierPayableDao().getOpenPayablesForSupplierList(suppId).first().id
+        val payableId = database.supplierPayableDao().getOpenPayablesForSupplierList(suppId, "LEGACY_BUSINESS").first().id
         supplierRepository.processAtomicSupplierPayment(payableId, 40000L, "Bayar ke supplier").getOrThrow()
 
         // VERIFY CUSTOMER DEBT REPORT
@@ -601,3 +601,10 @@ class CustomerDebtReportPdfTest {
         assertEquals(authoritativeOutstanding, outstandingData.totalOutstanding)
     }
 }
+
+
+
+
+
+
+

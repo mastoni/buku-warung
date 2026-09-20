@@ -170,11 +170,11 @@ class PurchaseOrderUiIntegrationTest {
                     orders.values.find { it.orderNumber == orderNumber }
                 }
                 "getItemsForPurchaseOrder" -> {
-                    val orderId = args[0] as Long
+                    val orderId = args[1] as Long
                     orderItems.filter { it.purchaseOrderId == orderId }
                 }
                 "getItemsForPurchaseOrderByUuid" -> {
-                    val poUuid = args[0] as String
+                    val poUuid = args[1] as String
                     orderItems.filter { it.poUuid == poUuid }
                 }
                 "getAllPurchaseOrders" -> {
@@ -184,15 +184,15 @@ class PurchaseOrderUiIntegrationTest {
                     orders.values.sortedByDescending { it.createdAt }.toList()
                 }
                 "getPurchaseOrdersByStatus" -> {
-                    val status = args[0] as String
+                    val status = args[1] as String
                     flowOf(orders.values.filter { it.status.equals(status, ignoreCase = true) })
                 }
                 "getPurchaseOrdersBySupplier" -> {
-                    val supplierId = args[0] as Long
+                    val supplierId = args[1] as Long
                     flowOf(orders.values.filter { it.supplierId == supplierId })
                 }
                 "deleteItemsForPurchaseOrder" -> {
-                    val orderId = args[0] as Long
+                    val orderId = args[1] as Long
                     orderItems.removeAll { it.purchaseOrderId == orderId }
                     null
                 }
@@ -374,7 +374,7 @@ class PurchaseOrderUiIntegrationTest {
             }
         }
 
-        purchaseOrderRepository = PurchaseOrderRepository(fakeAppDatabase, transactionRunner = { it() })
+        purchaseOrderRepository = PurchaseOrderRepository(fakeAppDatabase, businessId = "LEGACY_BUSINESS", transactionRunner = { it() })
         poViewModel = PurchaseOrderViewModel(purchaseOrderRepository)
     }
 

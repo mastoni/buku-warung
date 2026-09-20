@@ -79,10 +79,10 @@ class PurchaseReportPdfTest {
         database = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java)
             .allowMainThreadQueries()
             .build()
-        productRepository = ProductRepository(database)
-        purchaseRepository = PurchaseRepository(database)
-        supplierRepository = SupplierRepository(database)
-        reportRepository = ReportRepository(database)
+        productRepository = ProductRepository(database, "LEGACY_BUSINESS")
+        purchaseRepository = PurchaseRepository(database, "LEGACY_BUSINESS")
+        supplierRepository = SupplierRepository(database, "LEGACY_BUSINESS")
+        reportRepository = ReportRepository(database, "LEGACY_BUSINESS")
         reportViewModel = ReportViewModel(reportRepository)
         pdfGenerator = PdfReportGenerator(context)
     }
@@ -292,7 +292,7 @@ class PurchaseReportPdfTest {
 
         // 1. Credit Purchase = 80,000
         supplierRepository.processAtomicCreditPurchase(mapOf(prodId to 10.0), suppId).getOrThrow()
-        val payableId = database.supplierPayableDao().getOpenPayablesForSupplierList(suppId).first().id
+        val payableId = database.supplierPayableDao().getOpenPayablesForSupplierList(suppId, "LEGACY_BUSINESS").first().id
 
         // 2. Cash Purchase = 24,000
         purchaseRepository.completePurchase(mapOf(prodId to 3.0), "CASH").getOrThrow()
@@ -315,7 +315,7 @@ class PurchaseReportPdfTest {
         val suppId = supplierRepository.saveSupplier("Agen Biskuit", "0855", "Alamat")
 
         supplierRepository.processAtomicCreditPurchase(mapOf(prodId to 5.0), suppId).getOrThrow() // 20,000
-        val payableId = database.supplierPayableDao().getOpenPayablesForSupplierList(suppId).first().id
+        val payableId = database.supplierPayableDao().getOpenPayablesForSupplierList(suppId, "LEGACY_BUSINESS").first().id
         supplierRepository.processAtomicSupplierPayment(payableId, 20000L, "Bayar lunas").getOrThrow()
 
         val purchaseData = reportViewModel.buildPurchaseReportData(sampleSettings, ReportPeriod.TODAY)
@@ -407,12 +407,12 @@ class PurchaseReportPdfTest {
         val prodId = createProduct("Permen", purchasePrice = 500L, sellingPrice = 1000L, stock = 50.0)
         purchaseRepository.completePurchase(purchaseItems = mapOf(prodId to 2.0), paymentMethod = "CASH").getOrThrow()
 
-        val beforeCategories = database.categoryDao().getAllCategories().first().size
-        val beforeProducts = database.productDao().getAllProducts().first().size
-        val beforePurchases = database.purchaseDao().getAllPurchaseTransactions().first().size
-        val beforeCash = database.cashDao().getAllCashTransactions().first().size
-        val beforeDebts = database.debtDao().getOpenDebtsCount().first()
-        val beforePayables = database.supplierPayableDao().getOpenPayablesCount().first()
+        val beforeCategories = database.categoryDao().getAllCategories("LEGACY_BUSINESS").first().size
+        val beforeProducts = database.productDao().getAllProducts("LEGACY_BUSINESS").first().size
+        val beforePurchases = database.purchaseDao().getAllPurchaseTransactions("LEGACY_BUSINESS").first().size
+        val beforeCash = database.cashDao().getAllCashTransactions("LEGACY_BUSINESS").first().size
+        val beforeDebts = database.debtDao().getOpenDebtsCount("LEGACY_BUSINESS").first()
+        val beforePayables = database.supplierPayableDao().getOpenPayablesCount("LEGACY_BUSINESS").first()
 
         // Build data & generate PDF
         val purchaseData = reportViewModel.buildPurchaseReportData(sampleSettings, ReportPeriod.TODAY)
@@ -421,12 +421,12 @@ class PurchaseReportPdfTest {
         assertTrue(result.isSuccess)
 
         // Assert all Room tables remain untouched
-        assertEquals(beforeCategories, database.categoryDao().getAllCategories().first().size)
-        assertEquals(beforeProducts, database.productDao().getAllProducts().first().size)
-        assertEquals(beforePurchases, database.purchaseDao().getAllPurchaseTransactions().first().size)
-        assertEquals(beforeCash, database.cashDao().getAllCashTransactions().first().size)
-        assertEquals(beforeDebts, database.debtDao().getOpenDebtsCount().first())
-        assertEquals(beforePayables, database.supplierPayableDao().getOpenPayablesCount().first())
+        assertEquals(beforeCategories, database.categoryDao().getAllCategories("LEGACY_BUSINESS").first().size)
+        assertEquals(beforeProducts, database.productDao().getAllProducts("LEGACY_BUSINESS").first().size)
+        assertEquals(beforePurchases, database.purchaseDao().getAllPurchaseTransactions("LEGACY_BUSINESS").first().size)
+        assertEquals(beforeCash, database.cashDao().getAllCashTransactions("LEGACY_BUSINESS").first().size)
+        assertEquals(beforeDebts, database.debtDao().getOpenDebtsCount("LEGACY_BUSINESS").first())
+        assertEquals(beforePayables, database.supplierPayableDao().getOpenPayablesCount("LEGACY_BUSINESS").first())
     }
 
     // 16. Accounting regression test: CASH + CREDIT + Supplier Payment separation
@@ -440,7 +440,7 @@ class PurchaseReportPdfTest {
 
         // 2. CREDIT Purchase = 150,000 (3 pcs @ 50,000) -> creates PurchaseTransaction + SupplierPayable (NO CashTransaction)
         supplierRepository.processAtomicCreditPurchase(mapOf(prodId to 3.0), suppId).getOrThrow()
-        val payableId = database.supplierPayableDao().getOpenPayablesForSupplierList(suppId).first().id
+        val payableId = database.supplierPayableDao().getOpenPayablesForSupplierList(suppId, "LEGACY_BUSINESS").first().id
 
         // 3. Supplier Payment = 80,000 -> creates SupplierPayment + CashTransaction EXPENSE (NO PurchaseTransaction)
         supplierRepository.processAtomicSupplierPayment(payableId, 80000L, "Bayar hutang").getOrThrow()
@@ -465,3 +465,8 @@ class PurchaseReportPdfTest {
         assertEquals(2, purchaseCount)
     }
 }
+
+
+
+
+

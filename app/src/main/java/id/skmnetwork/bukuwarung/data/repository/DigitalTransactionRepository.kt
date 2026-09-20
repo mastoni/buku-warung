@@ -15,7 +15,8 @@ import javax.inject.Singleton
 @Singleton
 class DigitalTransactionRepository @Inject constructor(
     private val digitalTransactionDao: DigitalTransactionDao,
-    private val backendApi: BackendApi? = null
+    private val backendApi: BackendApi? = null,
+    private val businessId: String = "LEGACY_BUSINESS"
 ) {
     suspend fun createDraft(
         saleItemId: Long,
@@ -26,6 +27,7 @@ class DigitalTransactionRepository @Inject constructor(
         actualPurchasePrice: Long = sellingPrice
     ): Long {
         val transaction = DigitalTransactionEntity(
+            businessId = businessId,
             saleItemId = saleItemId,
             providerId = providerId,
             providerProductCode = providerProductCode,
@@ -38,7 +40,7 @@ class DigitalTransactionRepository @Inject constructor(
     }
 
     suspend fun submitDraft(id: Long): DigitalTransactionEntity {
-        val current = digitalTransactionDao.getById(id)
+        val current = digitalTransactionDao.getById(id, businessId)
             ?: throw IllegalStateException("Digital transaction not found: $id")
         if (current.status != DigitalTransactionStatus.DRAFT.name) {
             throw IllegalStateException("Cannot submit draft: current status is ${current.status}")
@@ -65,7 +67,7 @@ class DigitalTransactionRepository @Inject constructor(
     }
 
     suspend fun checkStatus(id: Long): DigitalTransactionEntity {
-        val current = digitalTransactionDao.getById(id)
+        val current = digitalTransactionDao.getById(id, businessId)
             ?: throw IllegalStateException("Digital transaction not found: $id")
         val backend = backendApi ?: throw IllegalStateException("Backend API not configured")
         val response = backend.checkDigitalTransactionStatus(
@@ -103,7 +105,7 @@ class DigitalTransactionRepository @Inject constructor(
                 timestamp = System.currentTimeMillis()
             )
         )
-        val current = digitalTransactionDao.getByUuid(idempotencyKey) ?: return
+        val current = digitalTransactionDao.getByUuid(idempotencyKey, businessId) ?: return
         val updated = current.copy(
             status = status,
             providerReferenceId = providerReferenceId ?: current.providerReferenceId,
@@ -115,7 +117,7 @@ class DigitalTransactionRepository @Inject constructor(
     }
 
     suspend fun recoverUnknown() {
-        val unknown = digitalTransactionDao.getByStatus(DigitalTransactionStatus.UNKNOWN.name).first()
+        val unknown = digitalTransactionDao.getByStatus(DigitalTransactionStatus.UNKNOWN.name, businessId).first()
         for (tx in unknown) {
             try {
                 checkStatus(tx.id)
@@ -126,11 +128,11 @@ class DigitalTransactionRepository @Inject constructor(
 
     suspend fun getBySaleItemIds(saleItemIds: List<Long>): List<DigitalTransactionEntity> {
         if (saleItemIds.isEmpty()) return emptyList()
-        return digitalTransactionDao.getBySaleItemIds(saleItemIds.distinct())
+        return digitalTransactionDao.getBySaleItemIds(saleItemIds.distinct(), businessId)
     }
 
     suspend fun transitionState(id: Long, newState: DigitalTransactionStatus, failureReason: String? = null, snToken: String? = null) {
-        val current = digitalTransactionDao.getById(id) ?: return
+        val current = digitalTransactionDao.getById(id, businessId) ?: return
         val currentState = DigitalTransactionStatus.valueOf(current.status)
 
         val isValid = when (currentState) {
@@ -155,7 +157,7 @@ class DigitalTransactionRepository @Inject constructor(
     }
 
     suspend fun updateProviderReference(id: Long, providerRefId: String) {
-        val current = digitalTransactionDao.getById(id) ?: return
+        val current = digitalTransactionDao.getById(id, businessId) ?: return
         digitalTransactionDao.update(
             current.copy(
                 providerReferenceId = providerRefId,
@@ -165,10 +167,10 @@ class DigitalTransactionRepository @Inject constructor(
     }
 
     fun getPendingTransactions(): Flow<List<DigitalTransactionEntity>> {
-        return digitalTransactionDao.getByStatus(DigitalTransactionStatus.PENDING.name)
+        return digitalTransactionDao.getByStatus(DigitalTransactionStatus.PENDING.name, businessId)
     }
 
     fun getUnknownTransactions(): Flow<List<DigitalTransactionEntity>> {
-        return digitalTransactionDao.getByStatus(DigitalTransactionStatus.UNKNOWN.name)
+        return digitalTransactionDao.getByStatus(DigitalTransactionStatus.UNKNOWN.name, businessId)
     }
 }

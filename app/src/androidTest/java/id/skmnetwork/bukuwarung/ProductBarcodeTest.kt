@@ -29,7 +29,7 @@ class ProductBarcodeTest {
             AppDatabase::class.java
         ).allowMainThreadQueries().build()
 
-        productRepository = ProductRepository(database)
+        productRepository = ProductRepository(database, "LEGACY_BUSINESS")
     }
 
     @After
@@ -67,3 +67,5 @@ class ProductBarcodeTest {
         assertNull("Product with non-existent barcode must return null", missingProduct)
     }
 }
+
+

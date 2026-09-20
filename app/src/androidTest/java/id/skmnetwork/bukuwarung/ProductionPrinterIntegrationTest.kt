@@ -43,8 +43,8 @@ class ProductionPrinterIntegrationTest {
             .allowMainThreadQueries()
             .build()
         userPreferencesRepository = UserPreferencesRepository(context)
-        productRepository = ProductRepository(database)
-        saleRepository = SaleRepository(database)
+        productRepository = ProductRepository(database, "LEGACY_BUSINESS")
+        saleRepository = SaleRepository(database, "LEGACY_BUSINESS")
     }
 
     @After
@@ -152,7 +152,7 @@ class ProductionPrinterIntegrationTest {
         val sale = saleRepository.getTransactionById(saleId)
         assertNotNull(sale)
         assertEquals(10000L, sale!!.totalAmount)
-        assertEquals(8.0, database.productDao().getProductById(prodId)!!.stock, 0.001)
+        assertEquals(8.0, database.productDao().getProductById(prodId, "LEGACY_BUSINESS")!!.stock, 0.001)
 
         // Asynchronous post-commit print attempt fails safely
         val receiptData = saleRepository.getReceiptData(
@@ -167,7 +167,7 @@ class ProductionPrinterIntegrationTest {
         // Verify DB is untouched by printer error
         val postPrintSale = saleRepository.getTransactionById(saleId)
         assertNotNull(postPrintSale)
-        assertEquals(8.0, database.productDao().getProductById(prodId)!!.stock, 0.001)
+        assertEquals(8.0, database.productDao().getProductById(prodId, "LEGACY_BUSINESS")!!.stock, 0.001)
     }
 
     @Test
@@ -247,3 +247,6 @@ class ProductionPrinterIntegrationTest {
         assertTrue("Connection should now be connected", conn.isConnected)
     }
 }
+
+
+

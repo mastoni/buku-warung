@@ -16,18 +16,18 @@ interface StockMovementDao {
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insertMovements(movements: List<StockMovementEntity>)
 
-    @Query("SELECT * FROM stock_movements WHERE product_uuid = :productUuid ORDER BY created_at ASC")
-    fun getMovementsForProduct(productUuid: String): Flow<List<StockMovementEntity>>
+    @Query("SELECT * FROM stock_movements WHERE business_id = :businessId AND product_uuid = :productUuid ORDER BY created_at ASC")
+    fun getMovementsForProduct(businessId: String, productUuid: String): Flow<List<StockMovementEntity>>
 
-    @Query("SELECT * FROM stock_movements WHERE product_uuid = :productUuid ORDER BY created_at ASC")
-    suspend fun getMovementsListForProduct(productUuid: String): List<StockMovementEntity>
+    @Query("SELECT * FROM stock_movements WHERE business_id = :businessId AND product_uuid = :productUuid ORDER BY created_at ASC")
+    suspend fun getMovementsListForProduct(businessId: String, productUuid: String): List<StockMovementEntity>
 
-    @Query("SELECT COALESCE(SUM(delta_quantity), 0.0) FROM stock_movements WHERE product_uuid = :productUuid")
-    suspend fun getCalculatedStockForProduct(productUuid: String): Double
+    @Query("SELECT COALESCE(SUM(delta_quantity), 0.0) FROM stock_movements WHERE business_id = :businessId AND product_uuid = :productUuid")
+    suspend fun getCalculatedStockForProduct(businessId: String, productUuid: String): Double
 
-    @Query("SELECT * FROM stock_movements ORDER BY created_at DESC")
-    fun getAllMovements(): Flow<List<StockMovementEntity>>
+    @Query("SELECT * FROM stock_movements WHERE business_id = :businessId ORDER BY created_at DESC")
+    fun getAllMovements(businessId: String): Flow<List<StockMovementEntity>>
 
-    @Query("SELECT COUNT(*) FROM stock_movements")
-    suspend fun getMovementCount(): Int
+    @Query("SELECT COUNT(*) FROM stock_movements WHERE business_id = :businessId")
+    suspend fun getMovementCount(businessId: String): Int
 }

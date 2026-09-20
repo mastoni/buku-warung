@@ -712,6 +712,13 @@ val MIGRATION_13_14 = object : Migration(13, 14) {
     }
 }
 
+val MIGRATION_14_15 = object : Migration(14, 15) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE `digital_transactions` ADD COLUMN `business_id` TEXT NOT NULL DEFAULT 'LEGACY_BUSINESS'")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_digital_transactions_business_id` ON `digital_transactions` (`business_id`)")
+    }
+}
+
 @Database(
     entities = [
         CategoryEntity::class,
@@ -735,7 +742,7 @@ val MIGRATION_13_14 = object : Migration(13, 14) {
         PurchaseOrderEntity::class,
         PurchaseOrderItemEntity::class
     ],
-    version = 14,
+    version = 15,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -779,7 +786,8 @@ abstract class AppDatabase : RoomDatabase() {
                         MIGRATION_10_11,
                         MIGRATION_11_12,
                         MIGRATION_12_13,
-                        MIGRATION_13_14
+                        MIGRATION_13_14,
+                        MIGRATION_14_15
                     )
                     .build()
                 INSTANCE = instance

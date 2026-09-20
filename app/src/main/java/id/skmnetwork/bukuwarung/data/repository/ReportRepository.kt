@@ -5,7 +5,8 @@ import id.skmnetwork.bukuwarung.data.local.database.AppDatabase
 import kotlinx.coroutines.flow.Flow
 
 class ReportRepository(
-    private val appDatabase: AppDatabase
+    private val appDatabase: AppDatabase,
+    private val businessId: String
 ) {
     private val saleDao = appDatabase.saleDao()
     private val saleReturnDao = appDatabase.saleReturnDao()
@@ -16,27 +17,27 @@ class ReportRepository(
     private val supplierPayableDao = appDatabase.supplierPayableDao()
 
     // Sales Aggregations
-    fun getSalesTotal(startDate: Long, endDate: Long): Flow<Long?> = saleDao.getSalesTotal(startDate, endDate)
+    fun getSalesTotal(startDate: Long, endDate: Long): Flow<Long?> = saleDao.getSalesTotal(businessId, startDate, endDate)
     fun getSalesWithCustomerByDateRange(startDate: Long, endDate: Long): Flow<List<id.skmnetwork.bukuwarung.data.local.dao.SaleWithCustomerItem>> =
-        saleDao.getSalesWithCustomerByDateRange(startDate, endDate)
-    fun getSalesReturnTotal(startDate: Long, endDate: Long): Flow<Long?> = saleReturnDao.getSalesReturnTotal(startDate, endDate)
-    suspend fun getAllReturnsList(): List<id.skmnetwork.bukuwarung.data.local.entity.SaleReturnTransactionEntity> = saleReturnDao.getAllReturnsList()
-    fun getSalesCount(startDate: Long, endDate: Long): Flow<Int> = saleDao.getSalesCount(startDate, endDate)
-    fun getSalesReturnCount(startDate: Long, endDate: Long): Flow<Int> = saleReturnDao.getReturnCount(startDate, endDate)
-    fun getItemsSoldTotal(startDate: Long, endDate: Long): Flow<Double?> = saleDao.getItemsSoldTotal(startDate, endDate)
-    fun getItemsReturnedTotal(startDate: Long, endDate: Long): Flow<Double?> = saleReturnDao.getItemsReturnedTotal(startDate, endDate)
-    fun getCashSalesTotal(startDate: Long, endDate: Long): Flow<Long?> = saleDao.getCashSalesTotal(startDate, endDate)
-    fun getCreditSalesTotal(startDate: Long, endDate: Long): Flow<Long?> = saleDao.getCreditSalesTotal(startDate, endDate)
+        saleDao.getSalesWithCustomerByDateRange(businessId, startDate, endDate)
+    fun getSalesReturnTotal(startDate: Long, endDate: Long): Flow<Long?> = saleReturnDao.getSalesReturnTotal(businessId, startDate, endDate)
+    suspend fun getAllReturnsList(): List<id.skmnetwork.bukuwarung.data.local.entity.SaleReturnTransactionEntity> = saleReturnDao.getAllReturnsList(businessId)
+    fun getSalesCount(startDate: Long, endDate: Long): Flow<Int> = saleDao.getSalesCount(businessId, startDate, endDate)
+    fun getSalesReturnCount(startDate: Long, endDate: Long): Flow<Int> = saleReturnDao.getReturnCount(businessId, startDate, endDate)
+    fun getItemsSoldTotal(startDate: Long, endDate: Long): Flow<Double?> = saleDao.getItemsSoldTotal(businessId, startDate, endDate)
+    fun getItemsReturnedTotal(startDate: Long, endDate: Long): Flow<Double?> = saleReturnDao.getItemsReturnedTotal(businessId, startDate, endDate)
+    fun getCashSalesTotal(startDate: Long, endDate: Long): Flow<Long?> = saleDao.getCashSalesTotal(businessId, startDate, endDate)
+    fun getCreditSalesTotal(startDate: Long, endDate: Long): Flow<Long?> = saleDao.getCreditSalesTotal(businessId, startDate, endDate)
     fun getTopSellingProducts(startDate: Long, endDate: Long, limit: Int = 5): Flow<List<TopProductSummary>> =
-        saleDao.getTopSellingProducts(startDate, endDate, limit)
+        saleDao.getTopSellingProducts(businessId, startDate, endDate, limit)
     fun getProductSalesSummaryByDateRange(startDate: Long, endDate: Long): Flow<List<id.skmnetwork.bukuwarung.data.local.dao.ProductSalesSummaryItem>> =
-        saleDao.getProductSalesSummaryByDateRange(startDate, endDate)
+        saleDao.getProductSalesSummaryByDateRange(businessId, startDate, endDate)
     fun getProductReturnsSummaryByDateRange(startDate: Long, endDate: Long): Flow<List<id.skmnetwork.bukuwarung.data.local.dao.ProductReturnSummaryItem>> =
-        saleReturnDao.getProductReturnsSummaryByDateRange(startDate, endDate)
+        saleReturnDao.getProductReturnsSummaryByDateRange(businessId, startDate, endDate)
 
     // COGS & Profit Aggregations
-    fun getSaleCogsTotal(startDate: Long, endDate: Long): Flow<Long?> = saleDao.getSaleCogsTotal(startDate, endDate)
-    fun getReturnCogsTotal(startDate: Long, endDate: Long): Flow<Long?> = saleReturnDao.getReturnCogsTotal(startDate, endDate)
+    fun getSaleCogsTotal(startDate: Long, endDate: Long): Flow<Long?> = saleDao.getSaleCogsTotal(businessId, startDate, endDate)
+    fun getReturnCogsTotal(startDate: Long, endDate: Long): Flow<Long?> = saleReturnDao.getReturnCogsTotal(businessId, startDate, endDate)
     fun getNetSalesTotal(startDate: Long, endDate: Long): Flow<Long> = kotlinx.coroutines.flow.combine(
         getSalesTotal(startDate, endDate),
         getSalesReturnTotal(startDate, endDate)
@@ -55,7 +56,7 @@ class ReportRepository(
     ) { netSales, netCogs ->
         netSales - netCogs
     }
-    fun getOperatingExpenseTotal(startDate: Long, endDate: Long): Flow<Long?> = cashDao.getOperatingExpenseTotal(startDate, endDate)
+    fun getOperatingExpenseTotal(startDate: Long, endDate: Long): Flow<Long?> = cashDao.getOperatingExpenseTotal(businessId, startDate, endDate)
     fun getNetProfitTotal(startDate: Long, endDate: Long): Flow<Long> = kotlinx.coroutines.flow.combine(
         getGrossProfitTotal(startDate, endDate),
         getOperatingExpenseTotal(startDate, endDate)
@@ -64,36 +65,36 @@ class ReportRepository(
     }
 
     // Purchase Aggregations
-    fun getPurchaseTotal(startDate: Long, endDate: Long): Flow<Long?> = purchaseDao.getPurchaseTotal(startDate, endDate)
-    fun getPurchaseCount(startDate: Long, endDate: Long): Flow<Int> = purchaseDao.getPurchaseCount(startDate, endDate)
-    fun getItemsPurchasedTotal(startDate: Long, endDate: Long): Flow<Double?> = purchaseDao.getItemsPurchasedTotal(startDate, endDate)
+    fun getPurchaseTotal(startDate: Long, endDate: Long): Flow<Long?> = purchaseDao.getPurchaseTotal(businessId, startDate, endDate)
+    fun getPurchaseCount(startDate: Long, endDate: Long): Flow<Int> = purchaseDao.getPurchaseCount(businessId, startDate, endDate)
+    fun getItemsPurchasedTotal(startDate: Long, endDate: Long): Flow<Double?> = purchaseDao.getItemsPurchasedTotal(businessId, startDate, endDate)
     fun getPurchasesWithSupplierByDateRange(startDate: Long, endDate: Long): Flow<List<id.skmnetwork.bukuwarung.data.local.dao.PurchaseWithSupplierItem>> =
-        purchaseDao.getPurchasesWithSupplierByDateRange(startDate, endDate)
+        purchaseDao.getPurchasesWithSupplierByDateRange(businessId, startDate, endDate)
 
     // Cash Aggregations
-    fun getCashIncomeTotal(startDate: Long, endDate: Long): Flow<Long?> = cashDao.getCashIncomeTotal(startDate, endDate)
-    fun getCashExpenseTotal(startDate: Long, endDate: Long): Flow<Long?> = cashDao.getCashExpenseTotal(startDate, endDate)
-    val totalCashBalance: Flow<Long?> = cashDao.getTotalCashBalance()
+    fun getCashIncomeTotal(startDate: Long, endDate: Long): Flow<Long?> = cashDao.getCashIncomeTotal(businessId, startDate, endDate)
+    fun getCashExpenseTotal(startDate: Long, endDate: Long): Flow<Long?> = cashDao.getCashExpenseTotal(businessId, startDate, endDate)
+    val totalCashBalance: Flow<Long?> = cashDao.getTotalCashBalance(businessId)
 
     // Stock Valuation (All-time / Current)
-    val totalStockValue: Flow<Long?> = productDao.getTotalStockValue()
+    val totalStockValue: Flow<Long?> = productDao.getTotalStockValue(businessId)
 
     // Customer Debt Aggregations
-    val totalOutstandingDebt: Flow<Long?> = debtDao.getTotalOutstandingDebt()
-    val totalPaidDebt: Flow<Long?> = debtDao.getTotalPaidDebt()
-    val totalDebtCreated: Flow<Long?> = debtDao.getTotalDebtCreated()
-    val openDebtsCount: Flow<Int> = debtDao.getOpenDebtsCount()
-    val paidDebtsCount: Flow<Int> = debtDao.getPaidDebtsCount()
+    val totalOutstandingDebt: Flow<Long?> = debtDao.getTotalOutstandingDebt(businessId)
+    val totalPaidDebt: Flow<Long?> = debtDao.getTotalPaidDebt(businessId)
+    val totalDebtCreated: Flow<Long?> = debtDao.getTotalDebtCreated(businessId)
+    val openDebtsCount: Flow<Int> = debtDao.getOpenDebtsCount(businessId)
+    val paidDebtsCount: Flow<Int> = debtDao.getPaidDebtsCount(businessId)
     fun getOpenDebtsWithCustomer(): Flow<List<id.skmnetwork.bukuwarung.data.local.dao.DebtWithCustomerItem>> =
-        debtDao.getOpenDebtsWithCustomer()
+        debtDao.getOpenDebtsWithCustomer(businessId)
     fun getDebtsWithCustomerByDateRange(startDate: Long, endDate: Long): Flow<List<id.skmnetwork.bukuwarung.data.local.dao.DebtWithCustomerItem>> =
-        debtDao.getDebtsWithCustomerByDateRange(startDate, endDate)
+        debtDao.getDebtsWithCustomerByDateRange(businessId, startDate, endDate)
 
 
     // Supplier Payable Aggregations
-    val totalOutstandingPayable: Flow<Long?> = supplierPayableDao.getTotalOutstandingPayable()
-    val totalPaidPayable: Flow<Long?> = supplierPayableDao.getTotalPaidPayable()
-    val totalPayableCreated: Flow<Long?> = supplierPayableDao.getTotalPayableCreated()
-    val openPayablesCount: Flow<Int> = supplierPayableDao.getOpenPayablesCount()
-    val paidPayablesCount: Flow<Int> = supplierPayableDao.getPaidPayablesCount()
+    val totalOutstandingPayable: Flow<Long?> = supplierPayableDao.getTotalOutstandingPayable(businessId)
+    val totalPaidPayable: Flow<Long?> = supplierPayableDao.getTotalPaidPayable(businessId)
+    val totalPayableCreated: Flow<Long?> = supplierPayableDao.getTotalPayableCreated(businessId)
+    val openPayablesCount: Flow<Int> = supplierPayableDao.getOpenPayablesCount(businessId)
+    val paidPayablesCount: Flow<Int> = supplierPayableDao.getPaidPayablesCount(businessId)
 }

@@ -17,7 +17,8 @@ import kotlinx.coroutines.withContext
 import java.util.UUID
 
 class SupplierRepository(
-    private val appDatabase: AppDatabase
+    private val appDatabase: AppDatabase,
+    private val businessId: String
 ) {
     private val supplierDao = appDatabase.supplierDao()
     private val supplierPayableDao = appDatabase.supplierPayableDao()
@@ -27,30 +28,30 @@ class SupplierRepository(
     private val stockMovementDao = appDatabase.stockMovementDao()
     private val syncQueueDao = appDatabase.syncQueueDao()
 
-    val allSuppliers: Flow<List<SupplierEntity>> = supplierDao.getAllSuppliers()
+    val allSuppliers: Flow<List<SupplierEntity>> = supplierDao.getAllSuppliers(businessId)
 
     fun searchSuppliers(query: String): Flow<List<SupplierEntity>> {
         return if (query.trim().isEmpty()) {
-            supplierDao.getAllSuppliers()
+            supplierDao.getAllSuppliers(businessId)
         } else {
-            supplierDao.searchSuppliers(query.trim())
+            supplierDao.searchSuppliers(query.trim(), businessId)
         }
     }
 
     suspend fun getSupplierById(id: Long): SupplierEntity? = withContext(Dispatchers.IO) {
-        supplierDao.getSupplierById(id)
+        supplierDao.getSupplierById(id, businessId)
     }
 
     fun getPayablesForSupplier(supplierId: Long): Flow<List<SupplierPayableEntity>> {
-        return supplierPayableDao.getPayablesForSupplier(supplierId)
+        return supplierPayableDao.getPayablesForSupplier(supplierId, businessId)
     }
 
     fun getPaymentsForPayable(payableId: Long): Flow<List<SupplierPaymentEntity>> {
-        return supplierPayableDao.getPaymentsForPayable(payableId)
+        return supplierPayableDao.getPaymentsForPayable(payableId, businessId)
     }
 
     fun getTotalOutstandingForSupplier(supplierId: Long): Flow<Long?> {
-        return supplierPayableDao.getTotalOutstandingForSupplier(supplierId)
+        return supplierPayableDao.getTotalOutstandingForSupplier(supplierId, businessId)
     }
 
     suspend fun saveSupplier(
@@ -66,6 +67,7 @@ class SupplierRepository(
         val now = System.currentTimeMillis()
         val supplier = SupplierEntity(
             uuid = UUID.randomUUID().toString(),
+            businessId = businessId,
             name = trimmedName,
             phone = phone?.trim()?.ifEmpty { null },
             address = address?.trim()?.ifEmpty { null },
@@ -76,7 +78,7 @@ class SupplierRepository(
             val id = supplierDao.insertSupplier(supplier)
             syncQueueDao.insert(
                 SyncQueueEntity(
-                    businessId = supplier.businessId,
+                    businessId = businessId,
                     deviceId = "LEGACY_DEVICE",
                     entityType = "SUPPLIER",
                     entityUuid = supplier.uuid,
@@ -100,7 +102,7 @@ class SupplierRepository(
             throw IllegalArgumentException("Nama supplier wajib diisi")
         }
 
-        val existing = supplierDao.getSupplierById(id)
+        val existing = supplierDao.getSupplierById(id, businessId)
             ?: throw Exception("Supplier tidak ditemukan")
 
         val now = System.currentTimeMillis()
@@ -114,7 +116,7 @@ class SupplierRepository(
             supplierDao.updateSupplier(updated)
             syncQueueDao.insert(
                 SyncQueueEntity(
-                    businessId = updated.businessId,
+                    businessId = businessId,
                     deviceId = "LEGACY_DEVICE",
                     entityType = "SUPPLIER",
                     entityUuid = updated.uuid,
@@ -127,15 +129,15 @@ class SupplierRepository(
     }
 
     suspend fun deleteSupplier(id: Long) = withContext(Dispatchers.IO) {
-        val existing = supplierDao.getSupplierById(id)
+        val existing = supplierDao.getSupplierById(id, businessId)
             ?: throw Exception("Supplier tidak ditemukan")
         val now = System.currentTimeMillis()
 
         appDatabase.withTransaction {
-            supplierDao.softDeleteSupplier(id, now)
+            supplierDao.softDeleteSupplier(id, now, businessId)
             syncQueueDao.insert(
                 SyncQueueEntity(
-                    businessId = existing.businessId,
+                    businessId = businessId,
                     deviceId = "LEGACY_DEVICE",
                     entityType = "SUPPLIER",
                     entityUuid = existing.uuid,
@@ -147,7 +149,7 @@ class SupplierRepository(
         }
     }
 
-    private val purchaseRepository = PurchaseRepository(appDatabase)
+    private val purchaseRepository = PurchaseRepository(appDatabase, businessId)
 
     suspend fun processAtomicCreditPurchase(
         purchaseItems: Map<Long, Double>,
@@ -167,7 +169,7 @@ class SupplierRepository(
     ): Result<Unit> = withContext(Dispatchers.IO) {
         runCatching {
             appDatabase.withTransaction {
-                val payable = supplierPayableDao.getSupplierPayableById(payableId)
+                val payable = supplierPayableDao.getSupplierPayableById(payableId, businessId)
                     ?: throw Exception("Data hutang supplier tidak ditemukan")
 
                 if (payable.status == "PAID") {
@@ -188,6 +190,7 @@ class SupplierRepository(
                 // 1. Insert Supplier Payment
                 val payment = SupplierPaymentEntity(
                     uuid = paymentUuid,
+                    businessId = businessId,
                     payableId = payable.id,
                     payableUuid = payable.uuid,
                     amount = amount,
@@ -209,10 +212,11 @@ class SupplierRepository(
                 supplierPayableDao.updateSupplierPayable(updatedPayable)
 
                 // 3. Record Cash Expense Transaction
-                val supplier = supplierDao.getSupplierById(payable.supplierId)
+                val supplier = supplierDao.getSupplierById(payable.supplierId, businessId)
                 val supplierName = supplier?.name ?: "Supplier"
 
                 val cashExpense = CashTransactionEntity(
+                    businessId = businessId,
                     type = "EXPENSE",
                     amount = amount,
                     description = "Pembayaran Hutang Supplier $supplierName",
@@ -225,7 +229,7 @@ class SupplierRepository(
                 // 4. Enqueue SUPPLIER_PAYMENT sync event
                 syncQueueDao.insert(
                     SyncQueueEntity(
-                        businessId = payable.businessId,
+                        businessId = businessId,
                         deviceId = "LEGACY_DEVICE",
                         entityType = "SUPPLIER_PAYMENT",
                         entityUuid = paymentUuid,

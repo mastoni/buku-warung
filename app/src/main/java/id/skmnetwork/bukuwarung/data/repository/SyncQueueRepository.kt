@@ -8,30 +8,31 @@ import kotlinx.coroutines.withContext
 import java.util.UUID
 
 class SyncQueueRepository(
-    private val appDatabase: AppDatabase
+    private val appDatabase: AppDatabase,
+    private val businessId: String
 ) {
     private val syncQueueDao = appDatabase.syncQueueDao()
 
-    val allQueueItems: Flow<List<SyncQueueEntity>> = syncQueueDao.getAllItems()
-    val pendingCount: Flow<Int> = syncQueueDao.getPendingCount()
+    val allQueueItems: Flow<List<SyncQueueEntity>> = syncQueueDao.getAllItems(businessId)
+    val pendingCount: Flow<Int> = syncQueueDao.getPendingCount(businessId)
 
     suspend fun getQueueItemBySyncId(syncId: String): SyncQueueEntity? = withContext(Dispatchers.IO) {
-        syncQueueDao.getItemBySyncId(syncId)
+        syncQueueDao.getItemBySyncId(syncId, businessId)
     }
 
     suspend fun getQueueItemById(id: Long): SyncQueueEntity? = withContext(Dispatchers.IO) {
-        syncQueueDao.getItemById(id)
+        syncQueueDao.getItemById(id, businessId)
     }
 
     suspend fun getPendingItems(currentTime: Long = System.currentTimeMillis(), limit: Int = 20): List<SyncQueueEntity> = withContext(Dispatchers.IO) {
-        syncQueueDao.getPendingItems(currentTime, limit)
+        syncQueueDao.getPendingItems(businessId, currentTime, limit)
     }
 
     suspend fun enqueueEvent(
         entityType: String,
         entityUuid: String,
         operation: String,
-        businessId: String = "LEGACY_BUSINESS",
+        businessId: String = this.businessId,
         deviceId: String = "LEGACY_DEVICE",
         payloadJson: String? = null,
         syncId: String = UUID.randomUUID().toString(),
@@ -56,10 +57,10 @@ class SyncQueueRepository(
     }
 
     suspend fun retryFailedItem(id: Long, now: Long = System.currentTimeMillis()) = withContext(Dispatchers.IO) {
-        syncQueueDao.resetFailedToPending(id = id, nextAttemptAt = now, updatedAt = now)
+        syncQueueDao.resetFailedToPending(id = id, nextAttemptAt = now, updatedAt = now, businessId = businessId)
     }
 
     suspend fun deleteSynced(olderThanMillis: Long): Int = withContext(Dispatchers.IO) {
-        syncQueueDao.deleteSyncedItems(olderThanMillis)
+        syncQueueDao.deleteSyncedItems(businessId, olderThanMillis)
     }
 }

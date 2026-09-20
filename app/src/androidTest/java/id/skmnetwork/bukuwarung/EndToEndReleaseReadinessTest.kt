@@ -50,12 +50,12 @@ class EndToEndReleaseReadinessTest {
             .build()
 
         userPreferencesRepository = UserPreferencesRepository(context)
-        productRepository = ProductRepository(database)
-        stockRepository = StockRepository(database)
-        saleRepository = SaleRepository(database)
-        cashRepository = CashRepository(database)
-        customerRepository = CustomerRepository(database)
-        supplierRepository = SupplierRepository(database)
+        productRepository = ProductRepository(database, "LEGACY_BUSINESS")
+        stockRepository = StockRepository(database, "LEGACY_BUSINESS")
+        saleRepository = SaleRepository(database, "LEGACY_BUSINESS")
+        cashRepository = CashRepository(database, "LEGACY_BUSINESS")
+        customerRepository = CustomerRepository(database, "LEGACY_BUSINESS")
+        supplierRepository = SupplierRepository(database, "LEGACY_BUSINESS")
     }
 
     @After
@@ -140,9 +140,9 @@ class EndToEndReleaseReadinessTest {
         )
 
         // Verify initial master data
-        val beras = database.productDao().getProductById(prodBerasId)!!
-        val minyak = database.productDao().getProductById(prodMinyakId)!!
-        val jasa = database.productDao().getProductById(prodJasaAntarId)!!
+        val beras = database.productDao().getProductById(prodBerasId, "LEGACY_BUSINESS")!!
+        val minyak = database.productDao().getProductById(prodMinyakId, "LEGACY_BUSINESS")!!
+        val jasa = database.productDao().getProductById(prodJasaAntarId, "LEGACY_BUSINESS")!!
 
         assertEquals(10.0, beras.stock, 0.001)
         assertEquals(20.0, minyak.stock, 0.001)
@@ -157,7 +157,7 @@ class EndToEndReleaseReadinessTest {
         )
         assertTrue("Cash purchase must succeed", cashPurchaseResult.isSuccess)
 
-        val berasAfterPurch = database.productDao().getProductById(prodBerasId)!!
+        val berasAfterPurch = database.productDao().getProductById(prodBerasId, "LEGACY_BUSINESS")!!
         assertEquals(15.0, berasAfterPurch.stock, 0.001)
 
         // B) Credit Purchase: 10 pch Minyak @ 14.000 = 140.000 (Increases Minyak stock from 20 -> 30)
@@ -167,7 +167,7 @@ class EndToEndReleaseReadinessTest {
         )
         assertTrue("Credit purchase must succeed", creditPurchaseResult.isSuccess)
 
-        val minyakAfterPurch = database.productDao().getProductById(prodMinyakId)!!
+        val minyakAfterPurch = database.productDao().getProductById(prodMinyakId, "LEGACY_BUSINESS")!!
         assertEquals(30.0, minyakAfterPurch.stock, 0.001)
 
         // Verify Supplier Payable created
@@ -187,7 +187,7 @@ class EndToEndReleaseReadinessTest {
         )
         assertTrue(cashSaleResult.isSuccess)
         val cashSaleId = cashSaleResult.getOrThrow()
-        assertEquals(13.0, database.productDao().getProductById(prodBerasId)!!.stock, 0.001)
+        assertEquals(13.0, database.productDao().getProductById(prodBerasId, "LEGACY_BUSINESS")!!.stock, 0.001)
 
         // B) QRIS Sale: 5 pch Minyak @ 17.500 = 87.500 (Stock 30 -> 25)
         val qrisSaleResult = productRepository.processAtomicCheckout(
@@ -195,7 +195,7 @@ class EndToEndReleaseReadinessTest {
             paymentMethod = "QRIS"
         )
         assertTrue(qrisSaleResult.isSuccess)
-        assertEquals(25.0, database.productDao().getProductById(prodMinyakId)!!.stock, 0.001)
+        assertEquals(25.0, database.productDao().getProductById(prodMinyakId, "LEGACY_BUSINESS")!!.stock, 0.001)
 
         // C) Credit Sale: 1 sak Beras (75.000) + 2 pch Minyak (35.000) = 110.000
         val creditSaleResult = customerRepository.processAtomicCreditCheckout(
@@ -205,8 +205,8 @@ class EndToEndReleaseReadinessTest {
         assertTrue(creditSaleResult.isSuccess)
         val creditSaleId = creditSaleResult.getOrThrow()
 
-        assertEquals(12.0, database.productDao().getProductById(prodBerasId)!!.stock, 0.001)
-        assertEquals(23.0, database.productDao().getProductById(prodMinyakId)!!.stock, 0.001)
+        assertEquals(12.0, database.productDao().getProductById(prodBerasId, "LEGACY_BUSINESS")!!.stock, 0.001)
+        assertEquals(23.0, database.productDao().getProductById(prodMinyakId, "LEGACY_BUSINESS")!!.stock, 0.001)
 
         // Verify Customer Debt created
         val custDebts = customerRepository.getDebtsForCustomer(custId).first()
@@ -226,7 +226,7 @@ class EndToEndReleaseReadinessTest {
         )
         assertTrue(debtPayResult.isSuccess)
 
-        val updatedDebt = database.debtDao().getDebtById(custDebts[0].id)!!
+        val updatedDebt = database.debtDao().getDebtById(custDebts[0].id, "LEGACY_BUSINESS")!!
         assertEquals(50000L, updatedDebt.paidAmount)
         assertEquals(60000L, updatedDebt.totalDebt - updatedDebt.paidAmount)
         assertEquals("OPEN", updatedDebt.status)
@@ -239,7 +239,7 @@ class EndToEndReleaseReadinessTest {
         )
         assertTrue(payablePayResult.isSuccess)
 
-        val updatedPayable = database.supplierPayableDao().getSupplierPayableById(payables[0].id)!!
+        val updatedPayable = database.supplierPayableDao().getSupplierPayableById(payables[0].id, "LEGACY_BUSINESS")!!
         assertEquals(100000L, updatedPayable.paidAmount)
         assertEquals(40000L, updatedPayable.totalDebt - updatedPayable.paidAmount)
         assertEquals("OPEN", updatedPayable.status)
@@ -258,13 +258,13 @@ class EndToEndReleaseReadinessTest {
             minimumStock = minyak.minimumStock,
             unit = minyak.unit
         )
-        assertEquals(24.0, database.productDao().getProductById(prodMinyakId)!!.stock, 0.001)
+        assertEquals(24.0, database.productDao().getProductById(prodMinyakId, "LEGACY_BUSINESS")!!.stock, 0.001)
 
         // =========================================================================
         // 7. DATA INVARIANTS VERIFICATION
         // =========================================================================
         // Invariant 1: Stock Invariant: SUM(StockMovement.deltaQuantity) == Product.stock
-        val allPhysicalProducts = database.productDao().getAllProducts().first().filter { it.itemType == ItemType.PHYSICAL.name }
+        val allPhysicalProducts = database.productDao().getAllProducts("LEGACY_BUSINESS").first().filter { it.itemType == ItemType.PHYSICAL.name }
         for (prod in allPhysicalProducts) {
             val movements = stockRepository.getStockMovementList(prod.uuid)
             val calculatedSum = movements.sumOf { it.deltaQuantity }
@@ -283,7 +283,7 @@ class EndToEndReleaseReadinessTest {
         // - Debt Payment Received: +50.000 (INCOME)
         // - Supplier Payment Made: -100.000 (EXPENSE)
         // Total Expected Cash Delta = -300.000 + 150.000 + 50.000 - 100.000 = -200.000
-        val allCashTxs = database.cashDao().getAllCashTransactions().first()
+        val allCashTxs = database.cashDao().getAllCashTransactions("LEGACY_BUSINESS").first()
         val totalIncome = allCashTxs.filter { it.type == "INCOME" }.sumOf { it.amount }
         val totalExpense = allCashTxs.filter { it.type == "EXPENSE" }.sumOf { it.amount }
         assertEquals(200000L, totalIncome) // 150.000 sale + 50.000 debt repayment
@@ -294,14 +294,14 @@ class EndToEndReleaseReadinessTest {
         fun assertUnique(uuid: String, table: String) {
             assertTrue("Duplicate UUID '$uuid' in $table", allUuids.add(uuid))
         }
-        database.categoryDao().getAllCategories().first().forEach { assertUnique(it.uuid, "categories") }
-        database.productDao().getAllProducts().first().forEach { assertUnique(it.uuid, "products") }
-        database.customerDao().getAllCustomers().first().forEach { assertUnique(it.uuid, "customers") }
-        database.supplierDao().getAllSuppliers().first().forEach { assertUnique(it.uuid, "suppliers") }
-        database.saleDao().getAllTransactions().first().forEach { assertUnique(it.uuid, "sales_transactions") }
-        database.purchaseDao().getAllPurchaseTransactions().first().forEach { assertUnique(it.uuid, "purchase_transactions") }
-        database.debtDao().getAllOpenDebts().first().forEach { assertUnique(it.uuid, "debts") }
-        database.supplierPayableDao().getPayablesForSupplier(suppId).first().forEach { assertUnique(it.uuid, "supplier_payables") }
+        database.categoryDao().getAllCategories("LEGACY_BUSINESS").first().forEach { assertUnique(it.uuid, "categories") }
+        database.productDao().getAllProducts("LEGACY_BUSINESS").first().forEach { assertUnique(it.uuid, "products") }
+        database.customerDao().getAllCustomers("LEGACY_BUSINESS").first().forEach { assertUnique(it.uuid, "customers") }
+        database.supplierDao().getAllSuppliers("LEGACY_BUSINESS").first().forEach { assertUnique(it.uuid, "suppliers") }
+        database.saleDao().getAllTransactions("LEGACY_BUSINESS").first().forEach { assertUnique(it.uuid, "sales_transactions") }
+        database.purchaseDao().getAllPurchaseTransactions("LEGACY_BUSINESS").first().forEach { assertUnique(it.uuid, "purchase_transactions") }
+        database.debtDao().getAllOpenDebts("LEGACY_BUSINESS").first().forEach { assertUnique(it.uuid, "debts") }
+        database.supplierPayableDao().getPayablesForSupplier(suppId, "LEGACY_BUSINESS").first().forEach { assertUnique(it.uuid, "supplier_payables") }
 
         // =========================================================================
         // 8. RECEIPT & PRINTER ISOLATION
@@ -322,7 +322,7 @@ class EndToEndReleaseReadinessTest {
         // Verify DB not affected by printer failure
         val postPrintSale = saleRepository.getTransactionById(cashSaleId)
         assertNotNull(postPrintSale)
-        assertEquals(12.0, database.productDao().getProductById(prodBerasId)!!.stock, 0.001)
+        assertEquals(12.0, database.productDao().getProductById(prodBerasId, "LEGACY_BUSINESS")!!.stock, 0.001)
 
         // =========================================================================
         // 9. BACKUP & RESTORE INTEGRITY
@@ -356,7 +356,7 @@ class EndToEndReleaseReadinessTest {
         assertTrue("Restore into clean database must succeed", restoreResult.isSuccess)
 
         // Verify restored data in new database
-        val restoredProducts = restoredDb.productDao().getAllProducts().first()
+        val restoredProducts = restoredDb.productDao().getAllProducts("LEGACY_BUSINESS").first()
         assertEquals(3, restoredProducts.size)
         val restoredBeras = restoredProducts.find { it.name == "Beras Rojolele 5kg" }!!
         assertEquals(12.0, restoredBeras.stock, 0.001)
@@ -365,9 +365,13 @@ class EndToEndReleaseReadinessTest {
         assertEquals(24.0, restoredMinyak.stock, 0.001)
 
         // Verify stock invariant in restored database
-        val restoredMovements = restoredDb.stockMovementDao().getMovementsListForProduct(restoredBeras.uuid)
+        val restoredMovements = restoredDb.stockMovementDao().getMovementsListForProduct("LEGACY_BUSINESS", restoredBeras.uuid)
         assertEquals(12.0, restoredMovements.sumOf { it.deltaQuantity }, 0.001)
 
         restoredDb.close()
     }
 }
+
+
+
+

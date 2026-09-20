@@ -29,6 +29,7 @@ class DigitalTransactionDomainTest {
 
     private lateinit var db: AppDatabase
     private lateinit var repository: DigitalTransactionRepository
+    private val TEST_BUSINESS_ID = "TEST_BUSINESS"
 
     @Before
     fun createDb() {
@@ -37,7 +38,7 @@ class DigitalTransactionDomainTest {
             context, AppDatabase::class.java
         ).allowMainThreadQueries().build()
 
-        repository = DigitalTransactionRepository(db.digitalTransactionDao())
+        repository = DigitalTransactionRepository(db.digitalTransactionDao(), businessId = TEST_BUSINESS_ID)
     }
 
     @After
@@ -87,22 +88,22 @@ class DigitalTransactionDomainTest {
             actualPurchasePrice = product.purchasePrice
         )
 
-        var dt = db.digitalTransactionDao().getById(dtId)
+        var dt = db.digitalTransactionDao().getById(dtId, TEST_BUSINESS_ID)
         assertEquals(DigitalTransactionStatus.DRAFT.name, dt?.status)
 
         // 2. DRAFT -> PENDING
         repository.transitionState(dtId, DigitalTransactionStatus.PENDING)
-        dt = db.digitalTransactionDao().getById(dtId)
+        dt = db.digitalTransactionDao().getById(dtId, TEST_BUSINESS_ID)
         assertEquals(DigitalTransactionStatus.PENDING.name, dt?.status)
 
         // 3. PENDING -> UNKNOWN
         repository.transitionState(dtId, DigitalTransactionStatus.UNKNOWN)
-        dt = db.digitalTransactionDao().getById(dtId)
+        dt = db.digitalTransactionDao().getById(dtId, TEST_BUSINESS_ID)
         assertEquals(DigitalTransactionStatus.UNKNOWN.name, dt?.status)
 
         // 4. UNKNOWN -> SUCCESS
         repository.transitionState(dtId, DigitalTransactionStatus.SUCCESS, snToken = "SN123456")
-        dt = db.digitalTransactionDao().getById(dtId)
+        dt = db.digitalTransactionDao().getById(dtId, TEST_BUSINESS_ID)
         assertEquals(DigitalTransactionStatus.SUCCESS.name, dt?.status)
         assertEquals("SN123456", dt?.snToken)
     }
@@ -206,7 +207,7 @@ class DigitalTransactionDomainTest {
         db.productDao().updateProduct(product.copy(id = productId, purchasePrice = 26500L))
 
         // Assert DigitalTransaction actualPurchasePrice remains 24000
-        val dt = db.digitalTransactionDao().getById(dtId)
+        val dt = db.digitalTransactionDao().getById(dtId, TEST_BUSINESS_ID)
         assertEquals(initialPurchasePrice, dt?.actualPurchasePrice)
     }
 
@@ -231,12 +232,13 @@ class DigitalTransactionDomainTest {
             actualPurchasePrice = 24000
         )
 
-        assertNotNull(db.digitalTransactionDao().getById(dtId))
+        assertNotNull(db.digitalTransactionDao().getById(dtId, TEST_BUSINESS_ID))
 
         // Delete Sale Transaction -> Cascades to SaleItem -> Cascades to DigitalTransaction
         db.query("PRAGMA foreign_keys = ON", null)
         db.compileStatement("DELETE FROM sales_transactions WHERE id = $saleId").execute()
 
-        assertNull("Digital transaction should be cascade deleted", db.digitalTransactionDao().getById(dtId))
+        assertNull("Digital transaction should be cascade deleted", db.digitalTransactionDao().getById(dtId, TEST_BUSINESS_ID))
     }
 }
+

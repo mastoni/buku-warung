@@ -58,12 +58,12 @@ class SimpleAccountingReportTest {
             AppDatabase::class.java
         ).allowMainThreadQueries().build()
 
-        productRepository = ProductRepository(database)
-        saleRepository = SaleRepository(database)
-        customerRepository = CustomerRepository(database)
-        supplierRepository = SupplierRepository(database)
-        cashRepository = CashRepository(database)
-        reportRepository = ReportRepository(database)
+        productRepository = ProductRepository(database, "LEGACY_BUSINESS")
+        saleRepository = SaleRepository(database, "LEGACY_BUSINESS")
+        customerRepository = CustomerRepository(database, "LEGACY_BUSINESS")
+        supplierRepository = SupplierRepository(database, "LEGACY_BUSINESS")
+        cashRepository = CashRepository(database, "LEGACY_BUSINESS")
+        reportRepository = ReportRepository(database, "LEGACY_BUSINESS")
         reportViewModel = ReportViewModel(reportRepository)
 
         catId = database.categoryDao().insertCategory(CategoryEntity(name = "Makanan"))
@@ -220,7 +220,7 @@ class SimpleAccountingReportTest {
         )
 
         // 2. Debt Payment Rp 10.000
-        val debts = database.debtDao().getDebtsForCustomer(customerId).first()
+        val debts = database.debtDao().getDebtsForCustomer(customerId, "LEGACY_BUSINESS").first()
         val debtId = debts.first().id
         customerRepository.processAtomicDebtPayment(debtId, 10000L, "Cicilan 1")
 
@@ -236,7 +236,7 @@ class SimpleAccountingReportTest {
         )
 
         // 5. Supplier Payment Rp 15.000
-        val payables = database.supplierPayableDao().getPayablesForSupplier(supplierId).first()
+        val payables = database.supplierPayableDao().getPayablesForSupplier(supplierId, "LEGACY_BUSINESS").first()
         val payableId = payables.first().id
         supplierRepository.processAtomicSupplierPayment(payableId, 15000L, "Bayar Hutang 1")
 
@@ -395,3 +395,7 @@ class SimpleAccountingReportTest {
         composeTestRule.onNodeWithText("Retur Penjualan").assertIsDisplayed()
     }
 }
+
+
+
+

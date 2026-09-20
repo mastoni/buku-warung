@@ -228,7 +228,7 @@ class PurchaseOrderLifecycleUnitTest {
             }
         }
 
-        repository = PurchaseOrderRepository(fakeAppDatabase, transactionRunner = { it() })
+        repository = PurchaseOrderRepository(fakeAppDatabase, businessId = "LEGACY_BUSINESS", transactionRunner = { it() })
     }
 
     private fun createFakePurchaseOrderDao(): PurchaseOrderDao {
@@ -274,23 +274,23 @@ class PurchaseOrderLifecycleUnitTest {
                     orders.values.find { it.orderNumber == num }
                 }
                 "getPurchaseOrdersByStatus" -> {
-                    val status = args[0] as String
+                    val status = args[1] as String
                     flowOf(orders.values.filter { it.status == status }.sortedByDescending { it.createdAt })
                 }
                 "getPurchaseOrdersBySupplier" -> {
-                    val suppId = args[0] as Long
+                    val suppId = args[1] as Long
                     flowOf(orders.values.filter { it.supplierId == suppId }.sortedByDescending { it.createdAt })
                 }
                 "getItemsForPurchaseOrder" -> {
-                    val poId = args[0] as Long
+                    val poId = args[1] as Long
                     orderItems[poId] ?: emptyList<PurchaseOrderItemEntity>()
                 }
                 "getItemsForPurchaseOrderByUuid" -> {
-                    val poUuid = args[0] as String
+                    val poUuid = args[1] as String
                     orderItems.values.flatten().filter { it.poUuid == poUuid }
                 }
                 "deleteItemsForPurchaseOrder" -> {
-                    val poId = args[0] as Long
+                    val poId = args[1] as Long
                     orderItems.remove(poId)
                     null
                 }

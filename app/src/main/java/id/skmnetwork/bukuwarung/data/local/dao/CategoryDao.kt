@@ -21,21 +21,21 @@ interface CategoryDao {
     @Delete
     suspend fun deleteCategory(category: CategoryEntity)
 
-    @Query("UPDATE categories SET is_deleted = 1, deleted_at = :deletedAt WHERE id = :categoryId")
-    suspend fun softDeleteCategory(categoryId: Long, deletedAt: Long = System.currentTimeMillis())
+    @Query("UPDATE categories SET is_deleted = 1, deleted_at = :deletedAt WHERE id = :categoryId AND business_id = :businessId")
+    suspend fun softDeleteCategory(categoryId: Long, deletedAt: Long = System.currentTimeMillis(), businessId: String)
 
-    @Query("SELECT * FROM categories WHERE is_deleted = 0 ORDER BY name ASC")
-    fun getAllCategories(): Flow<List<CategoryEntity>>
+    @Query("SELECT * FROM categories WHERE business_id = :businessId AND is_deleted = 0 ORDER BY name ASC")
+    fun getAllCategories(businessId: String): Flow<List<CategoryEntity>>
 
-    @Query("SELECT * FROM categories WHERE id = :id AND is_deleted = 0")
-    suspend fun getCategoryById(id: Long): CategoryEntity?
+    @Query("SELECT * FROM categories WHERE id = :id AND business_id = :businessId AND is_deleted = 0")
+    suspend fun getCategoryById(id: Long, businessId: String): CategoryEntity?
 
-    @Query("SELECT * FROM categories WHERE uuid = :uuid AND is_deleted = 0 LIMIT 1")
-    suspend fun getCategoryByUuid(uuid: String): CategoryEntity?
+    @Query("SELECT * FROM categories WHERE uuid = :uuid AND business_id = :businessId AND is_deleted = 0 LIMIT 1")
+    suspend fun getCategoryByUuid(uuid: String, businessId: String): CategoryEntity?
 
-    @Query("SELECT * FROM categories WHERE name = :name AND is_deleted = 0 LIMIT 1")
-    suspend fun getCategoryByName(name: String): CategoryEntity?
+    @Query("SELECT * FROM categories WHERE name = :name AND business_id = :businessId AND is_deleted = 0 LIMIT 1")
+    suspend fun getCategoryByName(name: String, businessId: String): CategoryEntity?
 
-    @Query("SELECT * FROM categories WHERE LOWER(name) = LOWER(:name) AND is_deleted = 0 LIMIT 1")
-    suspend fun getCategoryByNameIgnoreCase(name: String): CategoryEntity?
+    @Query("SELECT * FROM categories WHERE LOWER(name) = LOWER(:name) AND business_id = :businessId AND is_deleted = 0 LIMIT 1")
+    suspend fun getCategoryByNameIgnoreCase(name: String, businessId: String): CategoryEntity?
 }

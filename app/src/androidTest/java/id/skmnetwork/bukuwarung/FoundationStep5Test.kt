@@ -75,13 +75,13 @@ class FoundationStep5Test {
             transport = mockTransport
         )
 
-        productRepository = ProductRepository(database)
-        saleRepository = SaleRepository(database)
-        purchaseRepository = PurchaseRepository(database)
-        customerRepository = CustomerRepository(database)
-        supplierRepository = SupplierRepository(database)
-        cashRepository = CashRepository(database)
-        stockRepository = StockRepository(database)
+        productRepository = ProductRepository(database, "LEGACY_BUSINESS")
+        saleRepository = SaleRepository(database, "LEGACY_BUSINESS")
+        purchaseRepository = PurchaseRepository(database, "LEGACY_BUSINESS")
+        customerRepository = CustomerRepository(database, "LEGACY_BUSINESS")
+        supplierRepository = SupplierRepository(database, "LEGACY_BUSINESS")
+        cashRepository = CashRepository(database, "LEGACY_BUSINESS")
+        stockRepository = StockRepository(database, "LEGACY_BUSINESS")
     }
 
     @After
@@ -93,6 +93,7 @@ class FoundationStep5Test {
      * Helper to populate standard realistic seed data.
      */
     private suspend fun seedStandardData() {
+        userPreferencesRepository.setBusinessId("LEGACY_BUSINESS")
         val p1Id = productRepository.insertProductWithCategory(
             name = "Beras Rojolele 5kg",
             categoryName = "Sembako",
@@ -291,10 +292,10 @@ class FoundationStep5Test {
     fun test06_immutableUuidPreservation() = runBlocking {
         seedStandardData()
 
-        val originalProducts = database.productDao().getAllProducts().first()
-        val originalSales = database.saleDao().getAllTransactions().first()
-        val originalCustomers = database.customerDao().getAllCustomers().first()
-        val originalSuppliers = database.supplierDao().getAllSuppliers().first()
+        val originalProducts = database.productDao().getAllProducts("LEGACY_BUSINESS").first()
+        val originalSales = database.saleDao().getAllTransactions("LEGACY_BUSINESS").first()
+        val originalCustomers = database.customerDao().getAllCustomers("LEGACY_BUSINESS").first()
+        val originalSuppliers = database.supplierDao().getAllSuppliers("LEGACY_BUSINESS").first()
 
         val snapshot = backupRestoreManager.exportSnapshot()
 
@@ -317,10 +318,10 @@ class FoundationStep5Test {
         val restoreResult = backupRestoreManager.restoreSnapshot(snapshot)
         assertTrue("Restore must succeed", restoreResult.isSuccess)
 
-        val restoredProducts = database.productDao().getAllProducts().first()
-        val restoredSales = database.saleDao().getAllTransactions().first()
-        val restoredCustomers = database.customerDao().getAllCustomers().first()
-        val restoredSuppliers = database.supplierDao().getAllSuppliers().first()
+        val restoredProducts = database.productDao().getAllProducts("LEGACY_BUSINESS").first()
+        val restoredSales = database.saleDao().getAllTransactions("LEGACY_BUSINESS").first()
+        val restoredCustomers = database.customerDao().getAllCustomers("LEGACY_BUSINESS").first()
+        val restoredSuppliers = database.supplierDao().getAllSuppliers("LEGACY_BUSINESS").first()
 
         assertEquals(originalProducts.map { it.uuid }.sorted(), restoredProducts.map { it.uuid }.sorted())
         assertEquals(originalSales.map { it.uuid }.sorted(), restoredSales.map { it.uuid }.sorted())
@@ -472,7 +473,7 @@ class FoundationStep5Test {
     @Test
     fun test12_atomicRollbackOnFailure() = runBlocking {
         seedStandardData()
-        val originalProductCount = database.productDao().getAllProducts().first().size
+        val originalProductCount = database.productDao().getAllProducts("LEGACY_BUSINESS").first().size
         assertTrue(originalProductCount > 0)
 
         val snapshot = backupRestoreManager.exportSnapshot()
@@ -499,7 +500,7 @@ class FoundationStep5Test {
         assertTrue(restoreResult.isFailure)
 
         // Original database must remain intact (rollback occurred)
-        val postProductCount = database.productDao().getAllProducts().first().size
+        val postProductCount = database.productDao().getAllProducts("LEGACY_BUSINESS").first().size
         assertEquals("Database should roll back to original state", originalProductCount, postProductCount)
     }
 
@@ -532,7 +533,7 @@ class FoundationStep5Test {
             )
         )
 
-        val pendingBefore = syncDao.getAllItems().first().size
+        val pendingBefore = syncDao.getAllItems("LEGACY_BUSINESS").first().size
         assertTrue("Sync queue should have items before restore", pendingBefore > 0)
 
         val snapshot = backupRestoreManager.exportSnapshot()
@@ -540,21 +541,21 @@ class FoundationStep5Test {
         assertTrue(restoreResult.isSuccess)
 
         // sync_queue must be cleanly truncated
-        val pendingAfter = syncDao.getAllItems().first().size
+        val pendingAfter = syncDao.getAllItems("LEGACY_BUSINESS").first().size
         assertEquals(0, pendingAfter)
     }
 
     @Test
     fun test14_transportFailureIsolation() = runBlocking {
         seedStandardData()
-        val originalProducts = database.productDao().getAllProducts().first()
+        val originalProducts = database.productDao().getAllProducts("LEGACY_BUSINESS").first()
 
         mockTransport.simulateNetworkFailure = true
         val backupResult = backupRestoreManager.performBackup("SHEET_123")
         assertTrue(backupResult.isFailure)
 
         // Database remains unchanged
-        val afterProducts = database.productDao().getAllProducts().first()
+        val afterProducts = database.productDao().getAllProducts("LEGACY_BUSINESS").first()
         assertEquals(originalProducts.size, afterProducts.size)
     }
 
@@ -578,11 +579,11 @@ class FoundationStep5Test {
     fun test16_fullRoundtripBackupAndRestore() = runBlocking {
         seedStandardData()
 
-        val pCount = database.productDao().getAllProducts().first().size
-        val sCount = database.saleDao().getAllTransactions().first().size
-        val purCount = database.purchaseDao().getAllPurchaseTransactions().first().size
-        val cCount = database.customerDao().getAllCustomers().first().size
-        val supCount = database.supplierDao().getAllSuppliers().first().size
+        val pCount = database.productDao().getAllProducts("LEGACY_BUSINESS").first().size
+        val sCount = database.saleDao().getAllTransactions("LEGACY_BUSINESS").first().size
+        val purCount = database.purchaseDao().getAllPurchaseTransactions("LEGACY_BUSINESS").first().size
+        val cCount = database.customerDao().getAllCustomers("LEGACY_BUSINESS").first().size
+        val supCount = database.supplierDao().getAllSuppliers("LEGACY_BUSINESS").first().size
 
         val spreadsheetId = "SHEET_ROUNDTRIP_1001"
         val backupRes = backupRestoreManager.performBackup(spreadsheetId)
@@ -604,18 +605,18 @@ class FoundationStep5Test {
         database.openHelper.writableDatabase.execSQL("DELETE FROM customers")
         database.openHelper.writableDatabase.execSQL("DELETE FROM suppliers")
 
-        assertEquals(0, database.productDao().getAllProducts().first().size)
+        assertEquals(0, database.productDao().getAllProducts("LEGACY_BUSINESS").first().size)
 
         // Restore from transport
         val restoreRes = backupRestoreManager.performRestore(spreadsheetId)
         assertTrue(restoreRes.isSuccess)
 
         // Assert 100% matched counts and state
-        assertEquals(pCount, database.productDao().getAllProducts().first().size)
-        assertEquals(sCount, database.saleDao().getAllTransactions().first().size)
-        assertEquals(purCount, database.purchaseDao().getAllPurchaseTransactions().first().size)
-        assertEquals(cCount, database.customerDao().getAllCustomers().first().size)
-        assertEquals(supCount, database.supplierDao().getAllSuppliers().first().size)
+        assertEquals(pCount, database.productDao().getAllProducts("LEGACY_BUSINESS").first().size)
+        assertEquals(sCount, database.saleDao().getAllTransactions("LEGACY_BUSINESS").first().size)
+        assertEquals(purCount, database.purchaseDao().getAllPurchaseTransactions("LEGACY_BUSINESS").first().size)
+        assertEquals(cCount, database.customerDao().getAllCustomers("LEGACY_BUSINESS").first().size)
+        assertEquals(supCount, database.supplierDao().getAllSuppliers("LEGACY_BUSINESS").first().size)
     }
 
     @Test
@@ -640,7 +641,7 @@ class FoundationStep5Test {
         assertTrue(saleRes.isSuccess)
 
         // Verify stock ledger updated
-        val updatedProduct = database.productDao().getProductById(prodId)!!
+        val updatedProduct = database.productDao().getProductById(prodId, "LEGACY_BUSINESS")!!
         assertEquals(45.0, updatedProduct.stock, 0.001)
 
         // Verify snapshot export works with newly created transactions
@@ -649,3 +650,9 @@ class FoundationStep5Test {
         BackupValidator.validate(snapshot)
     }
 }
+
+
+
+
+
+

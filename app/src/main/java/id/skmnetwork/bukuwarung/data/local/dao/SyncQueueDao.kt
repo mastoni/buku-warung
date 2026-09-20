@@ -17,36 +17,36 @@ interface SyncQueueDao {
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insertAll(items: List<SyncQueueEntity>)
 
-    @Query("SELECT * FROM sync_queue ORDER BY created_at ASC")
-    fun getAllItems(): Flow<List<SyncQueueEntity>>
+    @Query("SELECT * FROM sync_queue WHERE business_id = :businessId ORDER BY created_at ASC")
+    fun getAllItems(businessId: String): Flow<List<SyncQueueEntity>>
 
-    @Query("SELECT COUNT(*) FROM sync_queue WHERE status = 'PENDING'")
-    fun getPendingCount(): Flow<Int>
+    @Query("SELECT COUNT(*) FROM sync_queue WHERE business_id = :businessId AND status = 'PENDING'")
+    fun getPendingCount(businessId: String): Flow<Int>
 
-    @Query("SELECT * FROM sync_queue WHERE sync_id = :syncId")
-    suspend fun getItemBySyncId(syncId: String): SyncQueueEntity?
+    @Query("SELECT * FROM sync_queue WHERE sync_id = :syncId AND business_id = :businessId")
+    suspend fun getItemBySyncId(syncId: String, businessId: String): SyncQueueEntity?
 
-    @Query("SELECT * FROM sync_queue WHERE id = :id")
-    suspend fun getItemById(id: Long): SyncQueueEntity?
+    @Query("SELECT * FROM sync_queue WHERE id = :id AND business_id = :businessId")
+    suspend fun getItemById(id: Long, businessId: String): SyncQueueEntity?
 
     @Query(
         """
         SELECT * FROM sync_queue 
-        WHERE status = 'PENDING' AND next_attempt_at <= :currentTime 
+        WHERE business_id = :businessId AND status = 'PENDING' AND next_attempt_at <= :currentTime 
         ORDER BY created_at ASC 
         LIMIT :limit
         """
     )
-    suspend fun getPendingItems(currentTime: Long, limit: Int = 20): List<SyncQueueEntity>
+    suspend fun getPendingItems(businessId: String, currentTime: Long, limit: Int = 20): List<SyncQueueEntity>
 
     @Query(
         """
         UPDATE sync_queue 
         SET status = 'PROCESSING', updated_at = :claimTime 
-        WHERE id = :id AND status = 'PENDING' AND next_attempt_at <= :claimTime
+        WHERE id = :id AND business_id = :businessId AND status = 'PENDING' AND next_attempt_at <= :claimTime
         """
     )
-    suspend fun claimSingleItem(id: Long, claimTime: Long): Int
+    suspend fun claimSingleItem(id: Long, claimTime: Long, businessId: String): Int
 
     @Query(
         """
@@ -54,25 +54,25 @@ interface SyncQueueDao {
         SET status = 'PROCESSING', updated_at = :claimTime 
         WHERE id IN (
             SELECT id FROM sync_queue 
-            WHERE status = 'PENDING' AND next_attempt_at <= :claimTime 
+            WHERE business_id = :businessId AND status = 'PENDING' AND next_attempt_at <= :claimTime 
             ORDER BY created_at ASC 
             LIMIT :limit
         )
         """
     )
-    suspend fun claimPendingBatch(claimTime: Long, limit: Int = 20): Int
+    suspend fun claimPendingBatch(claimTime: Long, limit: Int = 20, businessId: String): Int
 
-    @Query("SELECT * FROM sync_queue WHERE status = 'PROCESSING' AND updated_at = :claimTime ORDER BY created_at ASC")
-    suspend fun getClaimedBatch(claimTime: Long): List<SyncQueueEntity>
+    @Query("SELECT * FROM sync_queue WHERE business_id = :businessId AND status = 'PROCESSING' AND updated_at = :claimTime ORDER BY created_at ASC")
+    suspend fun getClaimedBatch(businessId: String, claimTime: Long): List<SyncQueueEntity>
 
-    @Query("UPDATE sync_queue SET status = 'SYNCED', updated_at = :updatedAt WHERE id = :id")
-    suspend fun markSynced(id: Long, updatedAt: Long = System.currentTimeMillis())
+    @Query("UPDATE sync_queue SET status = 'SYNCED', updated_at = :updatedAt WHERE id = :id AND business_id = :businessId")
+    suspend fun markSynced(id: Long, updatedAt: Long = System.currentTimeMillis(), businessId: String)
 
     @Query(
         """
         UPDATE sync_queue 
         SET status = 'FAILED', last_error = :error, attempt_count = :attemptCount, next_attempt_at = :nextAttemptAt, updated_at = :updatedAt 
-        WHERE id = :id
+        WHERE id = :id AND business_id = :businessId
         """
     )
     suspend fun markFailed(
@@ -80,22 +80,24 @@ interface SyncQueueDao {
         error: String,
         attemptCount: Int,
         nextAttemptAt: Long,
-        updatedAt: Long = System.currentTimeMillis()
+        updatedAt: Long = System.currentTimeMillis(),
+        businessId: String
     )
 
     @Query(
         """
         UPDATE sync_queue 
         SET status = 'PENDING', next_attempt_at = :nextAttemptAt, updated_at = :updatedAt 
-        WHERE id = :id
+        WHERE id = :id AND business_id = :businessId
         """
     )
     suspend fun resetFailedToPending(
         id: Long,
         nextAttemptAt: Long = System.currentTimeMillis(),
-        updatedAt: Long = System.currentTimeMillis()
+        updatedAt: Long = System.currentTimeMillis(),
+        businessId: String
     )
 
-    @Query("DELETE FROM sync_queue WHERE status = 'SYNCED' AND updated_at < :olderThanMillis")
-    suspend fun deleteSyncedItems(olderThanMillis: Long): Int
+    @Query("DELETE FROM sync_queue WHERE business_id = :businessId AND status = 'SYNCED' AND updated_at < :olderThanMillis")
+    suspend fun deleteSyncedItems(businessId: String, olderThanMillis: Long): Int
 }

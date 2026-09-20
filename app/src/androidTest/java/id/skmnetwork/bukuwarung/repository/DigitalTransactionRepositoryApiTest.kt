@@ -30,10 +30,11 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class DigitalTransactionRepositoryApiTest {
 
-    private lateinit var db: AppDatabase
+private lateinit var db: AppDatabase
     private lateinit var dao: DigitalTransactionDao
     private lateinit var repository: DigitalTransactionRepository
     private lateinit var mockBackend: MockBackendApi
+    private val TEST_BUSINESS_ID = "TEST_BUSINESS"
 
     @Before
     fun setup() {
@@ -43,7 +44,7 @@ class DigitalTransactionRepositoryApiTest {
             .build()
         dao = db.digitalTransactionDao()
         mockBackend = MockBackendApi()
-        repository = DigitalTransactionRepository(dao, mockBackend)
+        repository = DigitalTransactionRepository(dao, mockBackend, TEST_BUSINESS_ID)
     }
 
     @After
@@ -80,7 +81,8 @@ class DigitalTransactionRepositoryApiTest {
         )
         val saleItemId = db.saleDao().insertSaleItems(listOf(saleItem)).single()
 
-        val entity = DigitalTransactionEntity(
+val entity = DigitalTransactionEntity(
+            businessId = TEST_BUSINESS_ID,
             saleItemId = saleItemId,
             providerId = product.digitalProviderId!!,
             providerProductCode = product.digitalProductCode!!,
@@ -95,7 +97,7 @@ class DigitalTransactionRepositoryApiTest {
 
         assertEquals(DigitalTransactionStatus.PENDING.name, result.status)
         assertNotNull(result.providerReferenceId)
-        val updated = dao.getById(id)!!
+        val updated = dao.getById(id, TEST_BUSINESS_ID)!!
         assertEquals(DigitalTransactionStatus.PENDING.name, updated.status)
         assertNotNull(updated.providerReferenceId)
     }
@@ -129,6 +131,7 @@ class DigitalTransactionRepositoryApiTest {
         val saleItemId = db.saleDao().insertSaleItems(listOf(saleItem)).single()
 
         val entity = DigitalTransactionEntity(
+            businessId = TEST_BUSINESS_ID,
             saleItemId = saleItemId,
             providerId = "PROV1",
             providerProductCode = "CODE1",
@@ -149,6 +152,7 @@ class DigitalTransactionRepositoryApiTest {
     @Test
     fun processCallback_updatesStatusFromBackend() = runBlocking {
         val entity = DigitalTransactionEntity(
+            businessId = TEST_BUSINESS_ID,
             saleItemId = 1L,
             providerId = "PROV1",
             providerProductCode = "CODE1",
@@ -168,7 +172,7 @@ class DigitalTransactionRepositoryApiTest {
             failureReason = null
         )
 
-        val updated = dao.getById(id)!!
+        val updated = dao.getById(id, TEST_BUSINESS_ID)!!
         assertEquals(DigitalTransactionStatus.SUCCESS.name, updated.status)
         assertEquals("SN-456", updated.snToken)
     }
@@ -176,6 +180,7 @@ class DigitalTransactionRepositoryApiTest {
     @Test
     fun recoverUnknown_usesCheckStatusNotCreate() = runBlocking {
         val entity = DigitalTransactionEntity(
+            businessId = TEST_BUSINESS_ID,
             saleItemId = 1L,
             providerId = "PROV1",
             providerProductCode = "CODE1",
@@ -190,13 +195,14 @@ class DigitalTransactionRepositoryApiTest {
         val result = repository.checkStatus(id)
 
         assertNotNull(result)
-        val updated = dao.getById(id)!!
+        val updated = dao.getById(id, TEST_BUSINESS_ID)!!
         assertEquals(DigitalTransactionStatus.UNKNOWN.name, updated.status)
     }
 
     @Test
     fun duplicateCallback_isIdempotent() = runBlocking {
         val entity = DigitalTransactionEntity(
+            businessId = TEST_BUSINESS_ID,
             saleItemId = 1L,
             providerId = "PROV1",
             providerProductCode = "CODE1",
@@ -223,13 +229,14 @@ class DigitalTransactionRepositoryApiTest {
             failureReason = null
         )
 
-        val updated = dao.getById(id)!!
+        val updated = dao.getById(id, TEST_BUSINESS_ID)!!
         assertEquals(DigitalTransactionStatus.SUCCESS.name, updated.status)
     }
 
     @Test
     fun submitDraft_usesUuidAsIdempotencyKey() = runBlocking {
         val entity = DigitalTransactionEntity(
+            businessId = TEST_BUSINESS_ID,
             saleItemId = 1L,
             providerId = "PROV1",
             providerProductCode = "CODE1",
@@ -255,6 +262,7 @@ class DigitalTransactionRepositoryApiTest {
     @Test
     fun checkStatus_usesUuidNotNewTransaction() = runBlocking {
         val entity = DigitalTransactionEntity(
+            businessId = TEST_BUSINESS_ID,
             saleItemId = 1L,
             providerId = "PROV1",
             providerProductCode = "CODE1",
@@ -279,6 +287,7 @@ class DigitalTransactionRepositoryApiTest {
     @Test
     fun processCallback_usesUuidToFindEntity() = runBlocking {
         val entity = DigitalTransactionEntity(
+            businessId = TEST_BUSINESS_ID,
             saleItemId = 1L,
             providerId = "PROV1",
             providerProductCode = "CODE1",
@@ -298,7 +307,7 @@ class DigitalTransactionRepositoryApiTest {
             failureReason = "Insufficient balance"
         )
 
-        val all = dao.getByStatus(DigitalTransactionStatus.FAILED.name).first()
+        val all = dao.getByStatus(DigitalTransactionStatus.FAILED.name, TEST_BUSINESS_ID).first()
         assertEquals(1, all.size)
         assertEquals(entity.uuid, all[0].uuid)
         assertEquals("Insufficient balance", all[0].failureReason)

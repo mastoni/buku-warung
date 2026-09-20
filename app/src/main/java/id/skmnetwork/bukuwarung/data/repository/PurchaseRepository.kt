@@ -18,6 +18,7 @@ import java.util.UUID
 
 class PurchaseRepository(
     private val appDatabase: AppDatabase,
+    private val businessId: String,
     private val transactionRunner: (suspend (suspend () -> Any?) -> Any?)? = null
 ) {
     private val purchaseDao = appDatabase.purchaseDao()
@@ -28,7 +29,7 @@ class PurchaseRepository(
     private val stockMovementDao = appDatabase.stockMovementDao()
     private val syncQueueDao = appDatabase.syncQueueDao()
 
-    val allTransactions: Flow<List<PurchaseTransactionEntity>> = purchaseDao.getAllPurchaseTransactions()
+    val allTransactions: Flow<List<PurchaseTransactionEntity>> = purchaseDao.getAllPurchaseTransactions(businessId)
 
     private suspend fun <T> runInTransaction(block: suspend () -> T): T {
         return if (transactionRunner != null) {
@@ -40,11 +41,11 @@ class PurchaseRepository(
     }
 
     suspend fun getTransactionById(id: Long): PurchaseTransactionEntity? = withContext(Dispatchers.IO) {
-        purchaseDao.getTransactionById(id)
+        purchaseDao.getTransactionById(id, businessId)
     }
 
     suspend fun getItemsForTransaction(transactionId: Long): List<PurchaseItemEntity> = withContext(Dispatchers.IO) {
-        purchaseDao.getItemsForPurchase(transactionId)
+        purchaseDao.getItemsForPurchase(transactionId, businessId)
     }
 
     suspend fun completePurchase(
@@ -66,7 +67,7 @@ class PurchaseRepository(
             runInTransaction {
                 // 1. Validate supplier if provided or if credit purchase
                 val supplier = if (supplierId != null) {
-                    supplierDao.getSupplierById(supplierId)
+                    supplierDao.getSupplierById(supplierId, businessId)
                         ?: throw IllegalStateException("Supplier tidak ditemukan")
                 } else null
 
@@ -80,7 +81,7 @@ class PurchaseRepository(
                     if (qty <= 0) {
                         throw IllegalArgumentException("Jumlah kuantitas harus lebih dari 0")
                     }
-                    val product = productDao.getProductById(productId)
+                    val product = productDao.getProductById(productId, businessId)
                         ?: throw IllegalStateException("Produk tidak ditemukan")
                     productMap[productId] = product
                 }
@@ -101,6 +102,7 @@ class PurchaseRepository(
                 // 4. Create Purchase Transaction Record
                 val purchaseTransaction = PurchaseTransactionEntity(
                     uuid = purUuid,
+                    businessId = businessId,
                     transactionNumber = purNumber,
                     transactionDate = now,
                     totalAmount = totalAmount,
@@ -114,6 +116,8 @@ class PurchaseRepository(
                 val itemsList = purchaseItems.map { (prodId, qty) ->
                     val prod = productMap[prodId]!!
                     PurchaseItemEntity(
+                        uuid = UUID.randomUUID().toString(),
+                        businessId = businessId,
                         purchaseUuid = purUuid,
                         productUuid = prod.uuid,
                         transactionId = purchaseId,
@@ -131,9 +135,10 @@ class PurchaseRepository(
                     val prod = productMap[prodId]!!
                     if (ItemType.isStockable(prod.itemType)) {
                         val newStock = prod.stock + qty
-                        productDao.addProductStock(prodId, qty, now)
+                        productDao.addProductStock(prodId, qty, now, businessId)
                         stockMovementDao.insertMovement(
                             StockMovementEntity(
+                                businessId = businessId,
                                 productUuid = prod.uuid,
                                 movementType = "PURCHASE",
                                 deltaQuantity = qty,
@@ -150,6 +155,7 @@ class PurchaseRepository(
                 when (methodUpper) {
                     "CASH" -> {
                         val cashExpense = CashTransactionEntity(
+                            businessId = businessId,
                             type = "EXPENSE",
                             amount = totalAmount,
                             description = "Belanja Barang $purNumber",
@@ -162,6 +168,7 @@ class PurchaseRepository(
                     "CREDIT" -> {
                         val payable = SupplierPayableEntity(
                             uuid = UUID.randomUUID().toString(),
+                            businessId = businessId,
                             supplierId = supplier!!.id,
                             purchaseTransactionId = purchaseId,
                             supplierUuid = supplier.uuid,
@@ -179,8 +186,8 @@ class PurchaseRepository(
                 // 8. Atomic Sync Queue Enqueue (Aggregate PURCHASE event)
                 syncQueueDao.insert(
                     SyncQueueEntity(
-                        businessId = purchaseTransaction.businessId,
-                        deviceId = purchaseTransaction.deviceId,
+                        businessId = businessId,
+                        deviceId = "LEGACY_DEVICE",
                         entityType = "PURCHASE",
                         entityUuid = purUuid,
                         operation = "INSERT",

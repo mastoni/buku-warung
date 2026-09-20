@@ -41,9 +41,9 @@ class SaleReturnUiTest {
             AppDatabase::class.java
         ).allowMainThreadQueries().build()
 
-        productRepository = ProductRepository(database)
-        customerRepository = CustomerRepository(database)
-        saleRepository = SaleRepository(database)
+        productRepository = ProductRepository(database, "LEGACY_BUSINESS")
+        customerRepository = CustomerRepository(database, "LEGACY_BUSINESS")
+        saleRepository = SaleRepository(database, "LEGACY_BUSINESS")
 
         val catId = database.categoryDao().insertCategory(CategoryEntity(name = "Sembako"))
         prodId1 = database.productDao().insertProduct(
@@ -207,7 +207,7 @@ class SaleReturnUiTest {
         assertEquals(3.0, returnableMap[saleItem.id] ?: 0.0, 0.001)
 
         // Stock restored +2
-        val updatedStock = database.productDao().getProductById(prodId1)!!.stock
+        val updatedStock = database.productDao().getProductById(prodId1, "LEGACY_BUSINESS")!!.stock
         assertEquals(17.0, updatedStock, 0.001) // 20 - 5 + 2 = 17
     }
 
@@ -235,7 +235,7 @@ class SaleReturnUiTest {
         assertEquals(0.0, returnableMap[saleItem.id] ?: 0.0, 0.001)
 
         // Stock completely restored
-        val updatedStock = database.productDao().getProductById(prodId1)!!.stock
+        val updatedStock = database.productDao().getProductById(prodId1, "LEGACY_BUSINESS")!!.stock
         assertEquals(20.0, updatedStock, 0.001)
     }
 
@@ -452,7 +452,7 @@ class SaleReturnUiTest {
         )
         assertTrue(returnResult.isSuccess)
 
-        val returnTx = database.saleReturnDao().getReturnById(returnResult.getOrThrow())!!
+        val returnTx = database.saleReturnDao().getReturnById(returnResult.getOrThrow(), "LEGACY_BUSINESS")!!
         assertEquals("CASH", returnTx.refundMethod)
         assertEquals(65000L, returnTx.totalRefundAmount)
     }
@@ -475,7 +475,7 @@ class SaleReturnUiTest {
         )
         assertTrue(returnResult.isSuccess)
 
-        val returnTx = database.saleReturnDao().getReturnById(returnResult.getOrThrow())!!
+        val returnTx = database.saleReturnDao().getReturnById(returnResult.getOrThrow(), "LEGACY_BUSINESS")!!
         assertEquals("CASH", returnTx.refundMethod)
         assertEquals(65000L, returnTx.totalRefundAmount)
     }
@@ -499,7 +499,7 @@ class SaleReturnUiTest {
         )
         assertTrue(returnResult.isSuccess)
 
-        val returnTx = database.saleReturnDao().getReturnById(returnResult.getOrThrow())!!
+        val returnTx = database.saleReturnDao().getReturnById(returnResult.getOrThrow(), "LEGACY_BUSINESS")!!
         assertEquals("CREDIT", returnTx.refundMethod)
         assertEquals(65000L, returnTx.totalRefundAmount)
     }
@@ -527,3 +527,10 @@ class SaleReturnUiTest {
         assertTrue("No return created while duplicate submit is prevented", returns.isEmpty())
     }
 }
+
+
+
+
+
+
+

@@ -44,13 +44,13 @@ class FoundationStep2Test {
             .allowMainThreadQueries()
             .build()
 
-        productRepository = ProductRepository(database)
-        stockRepository = StockRepository(database)
-        saleRepository = SaleRepository(database)
-        purchaseRepository = PurchaseRepository(database)
-        cashRepository = CashRepository(database)
-        customerRepository = CustomerRepository(database)
-        supplierRepository = SupplierRepository(database)
+        productRepository = ProductRepository(database, "LEGACY_BUSINESS")
+        stockRepository = StockRepository(database, "LEGACY_BUSINESS")
+        saleRepository = SaleRepository(database, "LEGACY_BUSINESS")
+        purchaseRepository = PurchaseRepository(database, "LEGACY_BUSINESS")
+        cashRepository = CashRepository(database, "LEGACY_BUSINESS")
+        customerRepository = CustomerRepository(database, "LEGACY_BUSINESS")
+        supplierRepository = SupplierRepository(database, "LEGACY_BUSINESS")
     }
 
     @After
@@ -421,3 +421,5 @@ class FoundationStep2Test {
         assertEquals(saleTx.uuid, saleCashTx.refUuid)
     }
 }
+
+

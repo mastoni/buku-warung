@@ -14,19 +14,20 @@ data class SyncProcessResult(
 class SyncProcessor(
     private val syncQueueDao: SyncQueueDao,
     private val provider: SyncProvider,
-    private val retryPolicy: RetryPolicy = LinearBackoffRetryPolicy()
+    private val retryPolicy: RetryPolicy = LinearBackoffRetryPolicy(),
+    private val businessId: String
 ) {
 
     suspend fun processBatch(
         batchSize: Int = 20,
         now: Long = System.currentTimeMillis()
     ): SyncProcessResult = withContext(Dispatchers.IO) {
-        val affected = syncQueueDao.claimPendingBatch(claimTime = now, limit = batchSize)
+        val affected = syncQueueDao.claimPendingBatch(claimTime = now, limit = batchSize, businessId = businessId)
         if (affected <= 0) {
             return@withContext SyncProcessResult(0, 0, 0)
         }
 
-        val claimedItems = syncQueueDao.getClaimedBatch(claimTime = now)
+        val claimedItems = syncQueueDao.getClaimedBatch(businessId = businessId, claimTime = now)
         var successCount = 0
         var failedCount = 0
 
@@ -50,12 +51,12 @@ class SyncProcessor(
         id: Long,
         now: Long = System.currentTimeMillis()
     ): Boolean = withContext(Dispatchers.IO) {
-        val affected = syncQueueDao.claimSingleItem(id = id, claimTime = now)
+        val affected = syncQueueDao.claimSingleItem(id = id, claimTime = now, businessId = businessId)
         if (affected <= 0) {
             return@withContext false
         }
 
-        val item = syncQueueDao.getItemById(id) ?: return@withContext false
+        val item = syncQueueDao.getItemById(id, businessId) ?: return@withContext false
         processSingleClaimedItem(item, now)
     }
 
@@ -68,7 +69,7 @@ class SyncProcessor(
             val now = System.currentTimeMillis()
 
             if (result.isSuccess) {
-                syncQueueDao.markSynced(id = item.id, updatedAt = now)
+                syncQueueDao.markSynced(id = item.id, updatedAt = now, businessId = businessId)
                 true
             } else {
                 val errorMsg = result.exceptionOrNull()?.message ?: "Unknown sync error"
@@ -79,7 +80,8 @@ class SyncProcessor(
                     error = errorMsg,
                     attemptCount = newAttemptCount,
                     nextAttemptAt = nextAttempt,
-                    updatedAt = now
+                    updatedAt = now,
+                    businessId = businessId
                 )
                 false
             }
@@ -93,7 +95,8 @@ class SyncProcessor(
                 error = errorMsg,
                 attemptCount = newAttemptCount,
                 nextAttemptAt = nextAttempt,
-                updatedAt = now
+                updatedAt = now,
+                businessId = businessId
             )
             false
         }

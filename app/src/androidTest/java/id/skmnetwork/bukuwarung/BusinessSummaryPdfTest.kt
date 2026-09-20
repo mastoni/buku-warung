@@ -71,11 +71,11 @@ class BusinessSummaryPdfTest {
         database = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java)
             .allowMainThreadQueries()
             .build()
-        productRepository = ProductRepository(database)
-        customerRepository = CustomerRepository(database)
-        supplierRepository = SupplierRepository(database)
-        saleRepository = SaleRepository(database)
-        reportRepository = ReportRepository(database)
+        productRepository = ProductRepository(database, "LEGACY_BUSINESS")
+        customerRepository = CustomerRepository(database, "LEGACY_BUSINESS")
+        supplierRepository = SupplierRepository(database, "LEGACY_BUSINESS")
+        saleRepository = SaleRepository(database, "LEGACY_BUSINESS")
+        reportRepository = ReportRepository(database, "LEGACY_BUSINESS")
         reportViewModel = ReportViewModel(reportRepository)
         pdfGenerator = PdfReportGenerator(context)
     }
@@ -354,12 +354,12 @@ class BusinessSummaryPdfTest {
         val prodId = createProduct("Mie Instan", purchasePrice = 2500L, sellingPrice = 3500L, stock = 50.0)
         saleRepository.completeSale(cartItems = mapOf(prodId to 2.0), paymentMethod = "CASH").getOrThrow()
 
-        val beforeCategories = database.categoryDao().getAllCategories().first().size
-        val beforeProducts = database.productDao().getAllProducts().first().size
-        val beforeSales = database.saleDao().getAllTransactions().first().size
-        val beforeCash = database.cashDao().getAllCashTransactions().first().size
-        val beforeDebts = database.debtDao().getOpenDebtsCount().first()
-        val beforePayables = database.supplierPayableDao().getOpenPayablesCount().first()
+        val beforeCategories = database.categoryDao().getAllCategories("LEGACY_BUSINESS").first().size
+        val beforeProducts = database.productDao().getAllProducts("LEGACY_BUSINESS").first().size
+        val beforeSales = database.saleDao().getAllTransactions("LEGACY_BUSINESS").first().size
+        val beforeCash = database.cashDao().getAllCashTransactions("LEGACY_BUSINESS").first().size
+        val beforeDebts = database.debtDao().getOpenDebtsCount("LEGACY_BUSINESS").first()
+        val beforePayables = database.supplierPayableDao().getOpenPayablesCount("LEGACY_BUSINESS").first()
 
         // Build data & generate PDF
         val summaryData = reportViewModel.buildBusinessSummaryData(sampleSettings, ReportPeriod.TODAY)
@@ -368,11 +368,15 @@ class BusinessSummaryPdfTest {
         assertTrue(result.isSuccess)
 
         // Assert all Room tables remain unchanged
-        assertEquals(beforeCategories, database.categoryDao().getAllCategories().first().size)
-        assertEquals(beforeProducts, database.productDao().getAllProducts().first().size)
-        assertEquals(beforeSales, database.saleDao().getAllTransactions().first().size)
-        assertEquals(beforeCash, database.cashDao().getAllCashTransactions().first().size)
-        assertEquals(beforeDebts, database.debtDao().getOpenDebtsCount().first())
-        assertEquals(beforePayables, database.supplierPayableDao().getOpenPayablesCount().first())
+        assertEquals(beforeCategories, database.categoryDao().getAllCategories("LEGACY_BUSINESS").first().size)
+        assertEquals(beforeProducts, database.productDao().getAllProducts("LEGACY_BUSINESS").first().size)
+        assertEquals(beforeSales, database.saleDao().getAllTransactions("LEGACY_BUSINESS").first().size)
+        assertEquals(beforeCash, database.cashDao().getAllCashTransactions("LEGACY_BUSINESS").first().size)
+        assertEquals(beforeDebts, database.debtDao().getOpenDebtsCount("LEGACY_BUSINESS").first())
+        assertEquals(beforePayables, database.supplierPayableDao().getOpenPayablesCount("LEGACY_BUSINESS").first())
     }
 }
+
+
+
+

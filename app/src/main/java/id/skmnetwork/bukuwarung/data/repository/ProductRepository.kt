@@ -24,7 +24,8 @@ import java.util.Calendar
 import java.util.UUID
 
 class ProductRepository(
-    private val appDatabase: AppDatabase
+    private val appDatabase: AppDatabase,
+    private val businessId: String
 ) {
     private val categoryDao = appDatabase.categoryDao()
     private val productDao = appDatabase.productDao()
@@ -34,11 +35,11 @@ class ProductRepository(
     private val stockMovementDao = appDatabase.stockMovementDao()
     private val syncQueueDao = appDatabase.syncQueueDao()
 
-    val allProducts: Flow<List<ProductEntity>> = productDao.getAllProducts()
-    val allCategories: Flow<List<CategoryEntity>> = categoryDao.getAllCategories()
-    val totalCashBalance: Flow<Long?> = cashDao.getTotalCashBalance()
-    val allCashTransactions: Flow<List<CashTransactionEntity>> = cashDao.getAllCashTransactions()
-    val allPurchases: Flow<List<PurchaseTransactionEntity>> = purchaseDao.getAllPurchaseTransactions()
+    val allProducts: Flow<List<ProductEntity>> = productDao.getAllProducts(businessId)
+    val allCategories: Flow<List<CategoryEntity>> = categoryDao.getAllCategories(businessId)
+    val totalCashBalance: Flow<Long?> = cashDao.getTotalCashBalance(businessId)
+    val allCashTransactions: Flow<List<CashTransactionEntity>> = cashDao.getAllCashTransactions(businessId)
+    val allPurchases: Flow<List<PurchaseTransactionEntity>> = purchaseDao.getAllPurchaseTransactions(businessId)
 
     fun getTodaySalesTotalFlow(): Flow<Long?> {
         val calendar = Calendar.getInstance()
@@ -54,7 +55,7 @@ class ProductRepository(
         calendar.set(Calendar.MILLISECOND, 999)
         val endOfDay = calendar.timeInMillis
 
-        return saleDao.getTodaySalesTotal(startOfDay, endOfDay)
+        return saleDao.getTodaySalesTotal(businessId, startOfDay, endOfDay)
     }
 
     fun getTodayExpenseTotalFlow(): Flow<Long?> {
@@ -71,20 +72,20 @@ class ProductRepository(
         calendar.set(Calendar.MILLISECOND, 999)
         val endOfDay = calendar.timeInMillis
 
-        return cashDao.getCashExpenseTotal(startOfDay, endOfDay)
+        return cashDao.getCashExpenseTotal(businessId, startOfDay, endOfDay)
     }
 
     suspend fun getProductById(id: Long): ProductEntity? = withContext(Dispatchers.IO) {
-        productDao.getProductById(id)
+        productDao.getProductById(id, businessId)
     }
 
     suspend fun getProductByBarcode(barcode: String): ProductEntity? = withContext(Dispatchers.IO) {
         val trimmed = barcode.trim()
-        if (trimmed.isEmpty()) null else productDao.getProductByBarcode(trimmed)
+        if (trimmed.isEmpty()) null else productDao.getProductByBarcode(trimmed, businessId)
     }
 
     suspend fun getCategoryById(id: Long): CategoryEntity? = withContext(Dispatchers.IO) {
-        categoryDao.getCategoryById(id)
+        categoryDao.getCategoryById(id, businessId)
     }
 
     suspend fun createCategory(name: String): Result<CategoryEntity> = withContext(Dispatchers.IO) {
@@ -92,11 +93,11 @@ class ProductRepository(
         if (trimmed.isEmpty()) {
             return@withContext Result.failure(IllegalArgumentException("Nama kategori tidak boleh kosong"))
         }
-        val existing = categoryDao.getCategoryByNameIgnoreCase(trimmed)
+        val existing = categoryDao.getCategoryByNameIgnoreCase(trimmed, businessId)
         if (existing != null) {
             return@withContext Result.success(existing)
         }
-        val newCategory = CategoryEntity(name = trimmed)
+        val newCategory = CategoryEntity(name = trimmed, businessId = businessId)
         val id = categoryDao.insertCategory(newCategory)
         Result.success(newCategory.copy(id = id))
     }
@@ -117,13 +118,13 @@ class ProductRepository(
         digitalProviderId: String? = null,
         digitalProductCode: String? = null
     ): Long = withContext(Dispatchers.IO) {
-        val resolvedCategoryId = if (categoryId != null && categoryId > 0 && categoryDao.getCategoryById(categoryId) != null) {
+        val resolvedCategoryId = if (categoryId != null && categoryId > 0 && categoryDao.getCategoryById(categoryId, businessId) != null) {
             categoryId
         } else {
             val finalCategoryName = categoryName.trim().ifEmpty { "Umum" }
-            val existingCategory = categoryDao.getCategoryByNameIgnoreCase(finalCategoryName)
+            val existingCategory = categoryDao.getCategoryByNameIgnoreCase(finalCategoryName, businessId)
             existingCategory?.id ?: categoryDao.insertCategory(
-                CategoryEntity(name = finalCategoryName)
+                CategoryEntity(name = finalCategoryName, businessId = businessId)
             )
         }
 
@@ -131,6 +132,7 @@ class ProductRepository(
         val now = System.currentTimeMillis()
         val product = ProductEntity(
             uuid = prodUuid,
+            businessId = businessId,
             categoryId = resolvedCategoryId,
             name = name.trim(),
             purchasePrice = purchasePrice,
@@ -153,6 +155,7 @@ class ProductRepository(
             if (itemType.isStockable && stock != 0.0) {
                 stockMovementDao.insertMovement(
                     StockMovementEntity(
+                        businessId = businessId,
                         productUuid = prodUuid,
                         movementType = "INITIAL",
                         deltaQuantity = stock,
@@ -164,7 +167,7 @@ class ProductRepository(
             }
             syncQueueDao.insert(
                 SyncQueueEntity(
-                    businessId = product.businessId,
+                    businessId = businessId,
                     deviceId = "LEGACY_DEVICE",
                     entityType = "PRODUCT",
                     entityUuid = prodUuid,
@@ -194,17 +197,17 @@ class ProductRepository(
         digitalProviderId: String? = null,
         digitalProductCode: String? = null
     ) = withContext(Dispatchers.IO) {
-        val resolvedCategoryId = if (categoryId != null && categoryId > 0 && categoryDao.getCategoryById(categoryId) != null) {
+        val resolvedCategoryId = if (categoryId != null && categoryId > 0 && categoryDao.getCategoryById(categoryId, businessId) != null) {
             categoryId
         } else {
             val finalCategoryName = categoryName.trim().ifEmpty { "Umum" }
-            val existingCategory = categoryDao.getCategoryByNameIgnoreCase(finalCategoryName)
+            val existingCategory = categoryDao.getCategoryByNameIgnoreCase(finalCategoryName, businessId)
             existingCategory?.id ?: categoryDao.insertCategory(
-                CategoryEntity(name = finalCategoryName)
+                CategoryEntity(name = finalCategoryName, businessId = businessId)
             )
         }
 
-        val existingProduct = productDao.getProductById(productId)
+        val existingProduct = productDao.getProductById(productId, businessId)
             ?: throw Exception("Produk tidak ditemukan")
 
         val resolvedItemType = itemType?.name ?: existingProduct.itemType
@@ -239,6 +242,7 @@ class ProductRepository(
             if (stockDiff != 0.0 && ItemType.isStockable(existingProduct.itemType)) {
                 stockMovementDao.insertMovement(
                     StockMovementEntity(
+                        businessId = businessId,
                         productUuid = existingProduct.uuid,
                         movementType = "ADJUSTMENT",
                         deltaQuantity = stockDiff,
@@ -251,7 +255,7 @@ class ProductRepository(
             productDao.updateProduct(product)
             syncQueueDao.insert(
                 SyncQueueEntity(
-                    businessId = product.businessId,
+                    businessId = businessId,
                     deviceId = "LEGACY_DEVICE",
                     entityType = "PRODUCT",
                     entityUuid = existingProduct.uuid,
@@ -264,15 +268,15 @@ class ProductRepository(
     }
 
     suspend fun deleteProductById(productId: Long) = withContext(Dispatchers.IO) {
-        val existingProduct = productDao.getProductById(productId)
+        val existingProduct = productDao.getProductById(productId, businessId)
             ?: throw Exception("Produk tidak ditemukan")
         val now = System.currentTimeMillis()
 
         appDatabase.withTransaction {
-            productDao.softDeleteProduct(productId, now)
+            productDao.softDeleteProduct(productId, now, businessId)
             syncQueueDao.insert(
                 SyncQueueEntity(
-                    businessId = existingProduct.businessId,
+                    businessId = businessId,
                     deviceId = "LEGACY_DEVICE",
                     entityType = "PRODUCT",
                     entityUuid = existingProduct.uuid,
@@ -284,11 +288,11 @@ class ProductRepository(
         }
     }
 
-    private val saleRepository = SaleRepository(appDatabase)
+    private val saleRepository = SaleRepository(appDatabase, businessId)
     private val digitalTransactionRepository = DigitalTransactionRepository(appDatabase.digitalTransactionDao())
-    private val purchaseRepository = PurchaseRepository(appDatabase)
-    private val cashRepository = CashRepository(appDatabase)
-    private val stockRepository = StockRepository(appDatabase)
+    private val purchaseRepository = PurchaseRepository(appDatabase, businessId)
+    private val cashRepository = CashRepository(appDatabase, businessId)
+    private val stockRepository = StockRepository(appDatabase, businessId)
 
     suspend fun processAtomicCheckout(
         cartItems: Map<Long, Double>,
@@ -323,7 +327,7 @@ class ProductRepository(
     ): id.skmnetwork.bukuwarung.domain.receipt.ReceiptData? = saleRepository.getReceiptData(saleId, userSettings, cashGiven)
 
     suspend fun getPurchaseItems(transactionId: Long): List<PurchaseItemEntity> = withContext(Dispatchers.IO) {
-        purchaseDao.getItemsForPurchase(transactionId)
+        purchaseDao.getItemsForPurchase(transactionId, businessId)
     }
 
     suspend fun processAtomicPurchase(

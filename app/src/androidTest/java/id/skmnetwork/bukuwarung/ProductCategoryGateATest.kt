@@ -29,7 +29,7 @@ class ProductCategoryGateATest {
             AppDatabase::class.java
         ).allowMainThreadQueries().build()
 
-        repository = ProductRepository(database)
+        repository = ProductRepository(database, "LEGACY_BUSINESS")
     }
 
     @After
@@ -151,3 +151,5 @@ class ProductCategoryGateATest {
         assertEquals(1, allCats.size)
     }
 }
+
+

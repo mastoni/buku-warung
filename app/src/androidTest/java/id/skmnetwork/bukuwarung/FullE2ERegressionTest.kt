@@ -42,10 +42,10 @@ class FullE2ERegressionTest {
             AppDatabase::class.java
         ).allowMainThreadQueries().build()
 
-        productRepository = ProductRepository(database)
-        customerRepository = CustomerRepository(database)
-        supplierRepository = SupplierRepository(database)
-        reportRepository = ReportRepository(database)
+        productRepository = ProductRepository(database, "LEGACY_BUSINESS")
+        customerRepository = CustomerRepository(database, "LEGACY_BUSINESS")
+        supplierRepository = SupplierRepository(database, "LEGACY_BUSINESS")
+        reportRepository = ReportRepository(database, "LEGACY_BUSINESS")
 
         // Setup Categories & Products (Workflow A)
         val catSembako = database.categoryDao().insertCategory(CategoryEntity(name = "Sembako"))
@@ -80,7 +80,7 @@ class FullE2ERegressionTest {
             paymentMethod = "CASH"
         )
         assertTrue(cashSaleResult.isSuccess)
-        assertEquals(48.0, database.productDao().getProductById(indomieId)?.stock ?: 0.0, 0.001)
+        assertEquals(48.0, database.productDao().getProductById(indomieId, "LEGACY_BUSINESS")?.stock ?: 0.0, 0.001)
 
         // ==========================================
         // WORKFLOW C: QRIS SALE
@@ -91,7 +91,7 @@ class FullE2ERegressionTest {
             paymentMethod = "QRIS"
         )
         assertTrue(qrisSaleResult.isSuccess)
-        assertEquals(96.0, database.productDao().getProductById(telurId)?.stock ?: 0.0, 0.001)
+        assertEquals(96.0, database.productDao().getProductById(telurId, "LEGACY_BUSINESS")?.stock ?: 0.0, 0.001)
 
         // ==========================================
         // WORKFLOW D: CREDIT SALE (HUTANG PELANGGAN)
@@ -102,10 +102,10 @@ class FullE2ERegressionTest {
             customerId = customerId
         )
         assertTrue(creditSaleResult.isSuccess)
-        assertEquals(18.0, database.productDao().getProductById(berasId)?.stock ?: 0.0, 0.001)
+        assertEquals(18.0, database.productDao().getProductById(berasId, "LEGACY_BUSINESS")?.stock ?: 0.0, 0.001)
 
         // Verify Debt Created (120.000 OPEN)
-        var debts = database.debtDao().getDebtsForCustomer(customerId).first()
+        var debts = database.debtDao().getDebtsForCustomer(customerId, "LEGACY_BUSINESS").first()
         assertEquals(1, debts.size)
         val debt = debts.first()
         assertEquals(120000L, debt.totalDebt)
@@ -117,13 +117,13 @@ class FullE2ERegressionTest {
         // Partial: 50.000, then Full: 70.000
         // ==========================================
         customerRepository.processAtomicDebtPayment(debt.id, 50000L, "Cicilan 1")
-        var updatedDebt = database.debtDao().getDebtById(debt.id)
+        var updatedDebt = database.debtDao().getDebtById(debt.id, "LEGACY_BUSINESS")
         assertNotNull(updatedDebt)
         assertEquals(50000L, updatedDebt!!.paidAmount)
         assertEquals("OPEN", updatedDebt.status)
 
         customerRepository.processAtomicDebtPayment(debt.id, 70000L, "Pelunasan")
-        updatedDebt = database.debtDao().getDebtById(debt.id)
+        updatedDebt = database.debtDao().getDebtById(debt.id, "LEGACY_BUSINESS")
         assertEquals(120000L, updatedDebt!!.paidAmount)
         assertEquals("PAID", updatedDebt.status)
 
@@ -133,7 +133,7 @@ class FullE2ERegressionTest {
         // ==========================================
         val cashPurResult = productRepository.processAtomicPurchase(mapOf(indomieId to 10.0))
         assertTrue(cashPurResult.isSuccess)
-        assertEquals(58.0, database.productDao().getProductById(indomieId)?.stock ?: 0.0, 0.001) // 48 + 10 = 58
+        assertEquals(58.0, database.productDao().getProductById(indomieId, "LEGACY_BUSINESS")?.stock ?: 0.0, 0.001) // 48 + 10 = 58
 
         // ==========================================
         // WORKFLOW G: CREDIT PURCHASE (BELANJA KREDIT)
@@ -144,9 +144,9 @@ class FullE2ERegressionTest {
             supplierId = supplierId
         )
         assertTrue(creditPurResult.isSuccess)
-        assertEquals(23.0, database.productDao().getProductById(berasId)?.stock ?: 0.0, 0.001) // 18 + 5 = 23
+        assertEquals(23.0, database.productDao().getProductById(berasId, "LEGACY_BUSINESS")?.stock ?: 0.0, 0.001) // 18 + 5 = 23
 
-        var payables = database.supplierPayableDao().getPayablesForSupplier(supplierId).first()
+        var payables = database.supplierPayableDao().getPayablesForSupplier(supplierId, "LEGACY_BUSINESS").first()
         assertEquals(1, payables.size)
         val payable = payables.first()
         assertEquals(250000L, payable.totalDebt)
@@ -158,13 +158,13 @@ class FullE2ERegressionTest {
         // Partial: 100.000, then Full: 150.000
         // ==========================================
         supplierRepository.processAtomicSupplierPayment(payable.id, 100000L, "Bayar DP Supplier")
-        var updatedPayable = database.supplierPayableDao().getSupplierPayableById(payable.id)
+        var updatedPayable = database.supplierPayableDao().getSupplierPayableById(payable.id, "LEGACY_BUSINESS")
         assertNotNull(updatedPayable)
         assertEquals(100000L, updatedPayable!!.paidAmount)
         assertEquals("OPEN", updatedPayable.status)
 
         supplierRepository.processAtomicSupplierPayment(payable.id, 150000L, "Pelunasan Supplier")
-        updatedPayable = database.supplierPayableDao().getSupplierPayableById(payable.id)
+        updatedPayable = database.supplierPayableDao().getSupplierPayableById(payable.id, "LEGACY_BUSINESS")
         assertEquals(250000L, updatedPayable!!.paidAmount)
         assertEquals("PAID", updatedPayable.status)
 
@@ -248,3 +248,6 @@ class FullE2ERegressionTest {
         assertEquals(120000L, topProducts[2].totalRevenue)
     }
 }
+
+
+

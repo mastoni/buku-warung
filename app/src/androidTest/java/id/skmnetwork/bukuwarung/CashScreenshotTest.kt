@@ -54,9 +54,9 @@ class CashScreenshotTest {
                 AppDatabase::class.java
             ).allowMainThreadQueries().build()
 
-            productRepository = ProductRepository(database)
-            customerRepository = CustomerRepository(database)
-            supplierRepository = SupplierRepository(database)
+            productRepository = ProductRepository(database, "LEGACY_BUSINESS")
+            customerRepository = CustomerRepository(database, "LEGACY_BUSINESS")
+            supplierRepository = SupplierRepository(database, "LEGACY_BUSINESS")
 
             val catId = database.categoryDao().insertCategory(CategoryEntity(name = "Sembako"))
             val supId = database.supplierDao().insertSupplier(
@@ -198,7 +198,7 @@ class CashScreenshotTest {
             context,
             AppDatabase::class.java
         ).allowMainThreadQueries().build()
-        val emptyRepo = ProductRepository(emptyDb)
+        val emptyRepo = ProductRepository(emptyDb, "LEGACY_BUSINESS")
         val emptyVm = ProductViewModel(emptyRepo)
 
         composeTestRule.setContent {
@@ -213,3 +213,6 @@ class CashScreenshotTest {
         emptyDb.close()
     }
 }
+
+
+

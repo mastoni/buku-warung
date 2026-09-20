@@ -108,11 +108,11 @@ class CrossScreenScreenshotTest {
                 debtReminderEnabled = true
             )
 
-            productRepository = ProductRepository(database)
-            customerRepository = CustomerRepository(database)
-            supplierRepository = SupplierRepository(database)
-            reportRepository = ReportRepository(database)
-            notificationRepository = NotificationRepository(database, prefsRepo)
+            productRepository = ProductRepository(database, "LEGACY_BUSINESS")
+            customerRepository = CustomerRepository(database, "LEGACY_BUSINESS")
+            supplierRepository = SupplierRepository(database, "LEGACY_BUSINESS")
+            reportRepository = ReportRepository(database, "LEGACY_BUSINESS")
+            notificationRepository = NotificationRepository(database, prefsRepo, "LEGACY_BUSINESS")
 
             // Seed Categories & Products
             val catSembako = database.categoryDao().insertCategory(CategoryEntity(name = "Sembako"))
@@ -377,3 +377,5 @@ class CrossScreenScreenshotTest {
         saveScreenshot("I12_NOTIFICATION_EVIDENCE.png")
     }
 }
+
+

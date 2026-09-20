@@ -42,11 +42,11 @@ class PostFoundationIntegration1Test {
             .allowMainThreadQueries()
             .build()
 
-        productRepository = ProductRepository(database)
-        stockRepository = StockRepository(database)
-        saleRepository = SaleRepository(database)
-        cashRepository = CashRepository(database)
-        customerRepository = CustomerRepository(database)
+        productRepository = ProductRepository(database, "LEGACY_BUSINESS")
+        stockRepository = StockRepository(database, "LEGACY_BUSINESS")
+        saleRepository = SaleRepository(database, "LEGACY_BUSINESS")
+        cashRepository = CashRepository(database, "LEGACY_BUSINESS")
+        customerRepository = CustomerRepository(database, "LEGACY_BUSINESS")
     }
 
     @After
@@ -133,7 +133,7 @@ class PostFoundationIntegration1Test {
         // 4. Verify DB transaction remains fully intact
         val sale = saleRepository.getTransactionById(saleId)
         assertNotNull("Sale transaction must remain persisted", sale)
-        val stock = database.productDao().getProductById(prodId)!!.stock
+        val stock = database.productDao().getProductById(prodId, "LEGACY_BUSINESS")!!.stock
         assertEquals(4.0, stock, 0.001)
     }
 
@@ -236,7 +236,7 @@ class PostFoundationIntegration1Test {
         assertTrue(printResult.isFailure)
 
         // Verify Product Stock
-        val product = database.productDao().getProductById(prodId)!!
+        val product = database.productDao().getProductById(prodId, "LEGACY_BUSINESS")!!
         assertEquals(10.0, product.stock, 0.001)
 
         // Verify Stock Ledger Movement
@@ -275,7 +275,7 @@ class PostFoundationIntegration1Test {
         assertTrue(printResult.isFailure)
 
         // Verify Cash Transaction
-        val cashTxs = database.cashDao().getAllCashTransactions().first()
+        val cashTxs = database.cashDao().getAllCashTransactions("LEGACY_BUSINESS").first()
         val saleCashTx = cashTxs.find { it.refId == saleId }
         assertNotNull("Cash transaction for sale must exist", saleCashTx)
         assertEquals(39000L, saleCashTx!!.amount)
@@ -511,9 +511,12 @@ class PostFoundationIntegration1Test {
 
         // Verify SyncQueueEntity is persisted for the sale transaction
         val sale = saleRepository.getTransactionById(saleId)!!
-        val syncItems = database.syncQueueDao().getAllItems().first()
+        val syncItems = database.syncQueueDao().getAllItems("LEGACY_BUSINESS").first()
         val saleSync = syncItems.find { it.entityUuid == sale.uuid && it.entityType == "SALE" }
         assertNotNull("SyncQueue record must be committed for SALE", saleSync)
         assertEquals("PENDING", saleSync!!.status)
     }
 }
+
+
+

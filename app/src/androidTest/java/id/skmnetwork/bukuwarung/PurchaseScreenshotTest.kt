@@ -58,8 +58,8 @@ class PurchaseScreenshotTest {
                 AppDatabase::class.java
             ).allowMainThreadQueries().build()
 
-            productRepository = ProductRepository(database)
-            supplierRepository = SupplierRepository(database)
+            productRepository = ProductRepository(database, "LEGACY_BUSINESS")
+            supplierRepository = SupplierRepository(database, "LEGACY_BUSINESS")
 
             val catId = database.categoryDao().insertCategory(CategoryEntity(name = "Sembako"))
             val catMinumanId = database.categoryDao().insertCategory(CategoryEntity(name = "Minuman"))
@@ -253,8 +253,8 @@ class PurchaseScreenshotTest {
             context,
             AppDatabase::class.java
         ).allowMainThreadQueries().build()
-        val emptyRepo = ProductRepository(emptyDb)
-        val emptySupRepo = SupplierRepository(emptyDb)
+        val emptyRepo = ProductRepository(emptyDb, "LEGACY_BUSINESS")
+        val emptySupRepo = SupplierRepository(emptyDb, "LEGACY_BUSINESS")
         val emptyVm = ProductViewModel(emptyRepo)
         val emptySupVm = SupplierViewModel(emptySupRepo)
 
@@ -274,3 +274,6 @@ class PurchaseScreenshotTest {
         emptyDb.close()
     }
 }
+
+
+

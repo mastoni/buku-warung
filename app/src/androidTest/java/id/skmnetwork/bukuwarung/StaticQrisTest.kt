@@ -75,8 +75,8 @@ class StaticQrisTest {
             AppDatabase::class.java
         ).allowMainThreadQueries().build()
 
-        productRepository = ProductRepository(database)
-        saleRepository = SaleRepository(database)
+        productRepository = ProductRepository(database, "LEGACY_BUSINESS")
+        saleRepository = SaleRepository(database, "LEGACY_BUSINESS")
 
         val catId = database.categoryDao().insertCategory(CategoryEntity(name = "Minuman"))
         testProductId = database.productDao().insertProduct(
@@ -209,7 +209,7 @@ class StaticQrisTest {
     @Test
     fun test6_qrisCheckout_stockDeductedPaymentMethodQrisCashUnaffected() = runBlocking {
         // Initial state
-        val stockBefore = database.productDao().getProductById(testProductId)!!.stock
+        val stockBefore = database.productDao().getProductById(testProductId, "LEGACY_BUSINESS")!!.stock
         assertEquals(20.0, stockBefore, 0.001)
 
         // Execute QRIS checkout
@@ -217,17 +217,17 @@ class StaticQrisTest {
         assertTrue(result.isSuccess)
 
         // Verify Stock = 18.0
-        val stockAfter = database.productDao().getProductById(testProductId)!!.stock
+        val stockAfter = database.productDao().getProductById(testProductId, "LEGACY_BUSINESS")!!.stock
         assertEquals(18.0, stockAfter, 0.001)
 
         // Verify Payment Method == "QRIS"
-        val sales = database.saleDao().getAllTransactions().first()
+        val sales = database.saleDao().getAllTransactions("LEGACY_BUSINESS").first()
         assertEquals(1, sales.size)
         assertEquals("QRIS", sales[0].paymentMethod)
         assertEquals(24000L, sales[0].totalAmount)
 
         // Verify Cash Transaction Balance is NOT increased (0 cash transactions)
-        val cashTxs = database.cashDao().getAllCashTransactions().first()
+        val cashTxs = database.cashDao().getAllCashTransactions("LEGACY_BUSINESS").first()
         assertEquals(0, cashTxs.size)
     }
 
@@ -246,8 +246,8 @@ class StaticQrisTest {
         val checkoutResult = productRepository.processAtomicCheckout(mapOf(testProductId to 2.0), "QRIS")
         assertTrue(checkoutResult.isSuccess)
 
-        val sale = database.saleDao().getAllTransactions().first()[0]
-        val saleItems = database.saleDao().getItemsForTransaction(sale.id)
+        val sale = database.saleDao().getAllTransactions("LEGACY_BUSINESS").first()[0]
+        val saleItems = database.saleDao().getItemsForTransaction(sale.id, "LEGACY_BUSINESS")
 
         // 3. Process Full Return for QRIS sale
         val returnResult = saleRepository.processSaleReturn(
@@ -258,17 +258,17 @@ class StaticQrisTest {
         assertTrue(returnResult.isSuccess)
 
         // Verify Stock Restored to 20.0
-        val stockRestored = database.productDao().getProductById(testProductId)!!.stock
+        val stockRestored = database.productDao().getProductById(testProductId, "LEGACY_BUSINESS")!!.stock
         assertEquals(20.0, stockRestored, 0.001)
 
         // Verify Refund is recorded as CASH EXPENSE (24.000)
-        val cashTxs = database.cashDao().getAllCashTransactions().first()
+        val cashTxs = database.cashDao().getAllCashTransactions("LEGACY_BUSINESS").first()
         val expenseTx = cashTxs.find { it.type == "EXPENSE" }
         assertNotNull("Return must record cash EXPENSE refund", expenseTx)
         assertEquals(24000L, expenseTx!!.amount)
 
         // Net cash balance should be 50.000 - 24.000 = 26.000
-        val netBalance = database.cashDao().getTotalCashBalance().first()
+        val netBalance = database.cashDao().getTotalCashBalance("LEGACY_BUSINESS").first()
         assertEquals(26000L, netBalance)
     }
 
@@ -329,3 +329,6 @@ class StaticQrisTest {
         assertTrue(confirmed)
     }
 }
+
+
+

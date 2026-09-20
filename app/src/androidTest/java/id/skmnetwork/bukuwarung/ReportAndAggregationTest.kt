@@ -37,9 +37,9 @@ class ReportAndAggregationTest {
             AppDatabase::class.java
         ).allowMainThreadQueries().build()
 
-        productRepository = ProductRepository(database)
-        customerRepository = CustomerRepository(database)
-        reportRepository = ReportRepository(database)
+        productRepository = ProductRepository(database, "LEGACY_BUSINESS")
+        customerRepository = CustomerRepository(database, "LEGACY_BUSINESS")
+        reportRepository = ReportRepository(database, "LEGACY_BUSINESS")
 
         val catId = database.categoryDao().insertCategory(CategoryEntity(name = "Sembako"))
         productId = database.productDao().insertProduct(
@@ -132,7 +132,7 @@ class ReportAndAggregationTest {
         assertEquals(0L, cashIncomeAfterCredit) // Credit sale does NOT increase cash
 
         // Debt Payment Rp 5.000
-        val debtId = database.debtDao().getDebtsForCustomer(customerId).first()[0].id
+        val debtId = database.debtDao().getDebtsForCustomer(customerId, "LEGACY_BUSINESS").first()[0].id
         customerRepository.processAtomicDebtPayment(debtId, 5000L, "Cicilan")
 
         val cashIncomeAfterPayment = reportRepository.getCashIncomeTotal(start, end).first() ?: 0L
@@ -154,7 +154,7 @@ class ReportAndAggregationTest {
         productRepository.addManualCashTransaction("INCOME", 50000L, "Modal Awal")
 
         // 5. Debt Payment: Rp 10.000
-        val debtId = database.debtDao().getDebtsForCustomer(customerId).first()[0].id
+        val debtId = database.debtDao().getDebtsForCustomer(customerId, "LEGACY_BUSINESS").first()[0].id
         customerRepository.processAtomicDebtPayment(debtId, 10000L, "Pelunasan Sebagian")
 
         val start = 0L
@@ -177,3 +177,6 @@ class ReportAndAggregationTest {
         assertEquals(5000L, outstanding)
     }
 }
+
+
+

@@ -44,7 +44,7 @@ class WhatsAppCatalogInstrumentationTest {
                 AppDatabase::class.java
             ).allowMainThreadQueries().build()
 
-            productRepository = ProductRepository(database)
+            productRepository = ProductRepository(database, "LEGACY_BUSINESS")
 
             catSembakoId = database.categoryDao().insertCategory(CategoryEntity(name = "Sembako"))
             catMinumanId = database.categoryDao().insertCategory(CategoryEntity(name = "Minuman"))
@@ -209,7 +209,7 @@ class WhatsAppCatalogInstrumentationTest {
 
     @Test
     fun test9_noProductMutationDuringCatalog_stockAndPricesUnchanged() = runBlocking {
-        val initialProduct = database.productDao().getProductById(sampleProducts[0].id)
+        val initialProduct = database.productDao().getProductById(sampleProducts[0].id, "LEGACY_BUSINESS")
         assertNotNull(initialProduct)
         val initialStock = initialProduct!!.stock
         val initialPrice = initialProduct.sellingPrice
@@ -223,7 +223,7 @@ class WhatsAppCatalogInstrumentationTest {
         assertNotNull(catalogText)
 
         // Verify product in database remains completely unmodified
-        val afterProduct = database.productDao().getProductById(sampleProducts[0].id)
+        val afterProduct = database.productDao().getProductById(sampleProducts[0].id, "LEGACY_BUSINESS")
         assertNotNull(afterProduct)
         assertEquals(initialStock, afterProduct!!.stock, 0.001)
         assertEquals(initialPrice, afterProduct.sellingPrice)
@@ -292,13 +292,13 @@ class WhatsAppCatalogInstrumentationTest {
 
     @Test
     fun test14_readOnlyGuarantee_zeroDbTransactionsOrEventsProduced() = runBlocking {
-        val initialSalesCount = database.saleDao().getAllTransactions().first().size
-        val initialCashCount = database.cashDao().getAllCashTransactions().first().size
-        val initialDebtCount = database.debtDao().getAllOpenDebts().first().size
-        val initialSyncQueueCount = database.syncQueueDao().getPendingCount().first()
+        val initialSalesCount = database.saleDao().getAllTransactions("LEGACY_BUSINESS").first().size
+        val initialCashCount = database.cashDao().getAllCashTransactions("LEGACY_BUSINESS").first().size
+        val initialDebtCount = database.debtDao().getAllOpenDebts("LEGACY_BUSINESS").first().size
+        val initialSyncQueueCount = database.syncQueueDao().getPendingCount("LEGACY_BUSINESS").first()
 
         // Perform full catalog formation workflow
-        val products = database.productDao().getAllProducts().first()
+        val products = database.productDao().getAllProducts("LEGACY_BUSINESS").first()
         val text = WhatsAppCatalogFormatter.formatCatalogText(
             shopName = "Warung ReadOnly",
             ownerName = "Owner",
@@ -309,9 +309,12 @@ class WhatsAppCatalogInstrumentationTest {
         assertTrue(text.isNotBlank())
 
         // Verify zero mutations across all tables
-        assertEquals(initialSalesCount, database.saleDao().getAllTransactions().first().size)
-        assertEquals(initialCashCount, database.cashDao().getAllCashTransactions().first().size)
-        assertEquals(initialDebtCount, database.debtDao().getAllOpenDebts().first().size)
-        assertEquals(initialSyncQueueCount, database.syncQueueDao().getPendingCount().first())
+        assertEquals(initialSalesCount, database.saleDao().getAllTransactions("LEGACY_BUSINESS").first().size)
+        assertEquals(initialCashCount, database.cashDao().getAllCashTransactions("LEGACY_BUSINESS").first().size)
+        assertEquals(initialDebtCount, database.debtDao().getAllOpenDebts("LEGACY_BUSINESS").first().size)
+        assertEquals(initialSyncQueueCount, database.syncQueueDao().getPendingCount("LEGACY_BUSINESS").first())
     }
 }
+
+
+

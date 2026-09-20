@@ -41,9 +41,9 @@ class FoundationStep1Test {
         database = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java)
             .allowMainThreadQueries()
             .build()
-        productRepository = ProductRepository(database)
-        customerRepository = CustomerRepository(database)
-        supplierRepository = SupplierRepository(database)
+        productRepository = ProductRepository(database, "LEGACY_BUSINESS")
+        customerRepository = CustomerRepository(database, "LEGACY_BUSINESS")
+        supplierRepository = SupplierRepository(database, "LEGACY_BUSINESS")
         userPreferencesRepository = UserPreferencesRepository(context)
     }
 
@@ -108,7 +108,7 @@ class FoundationStep1Test {
         val product = productRepository.getProductById(prodId)!!
 
         // Verify Initial StockMovement
-        var movements = database.stockMovementDao().getMovementsListForProduct(product.uuid)
+        var movements = database.stockMovementDao().getMovementsListForProduct("LEGACY_BUSINESS", product.uuid)
         assertEquals(1, movements.size)
         assertEquals("INITIAL", movements[0].movementType)
         assertEquals(20.0, movements[0].deltaQuantity, 0.001)
@@ -124,7 +124,7 @@ class FoundationStep1Test {
         val afterSaleProd = productRepository.getProductById(prodId)!!
         assertEquals(15.0, afterSaleProd.stock, 0.001)
 
-        movements = database.stockMovementDao().getMovementsListForProduct(product.uuid)
+        movements = database.stockMovementDao().getMovementsListForProduct("LEGACY_BUSINESS", product.uuid)
         assertEquals(2, movements.size)
         assertEquals("SALE", movements[1].movementType)
         assertEquals(-5.0, movements[1].deltaQuantity, 0.001)
@@ -140,14 +140,14 @@ class FoundationStep1Test {
         val afterPurchaseProd = productRepository.getProductById(prodId)!!
         assertEquals(25.0, afterPurchaseProd.stock, 0.001)
 
-        movements = database.stockMovementDao().getMovementsListForProduct(product.uuid)
+        movements = database.stockMovementDao().getMovementsListForProduct("LEGACY_BUSINESS", product.uuid)
         assertEquals(3, movements.size)
         assertEquals("PURCHASE", movements[2].movementType)
         assertEquals(10.0, movements[2].deltaQuantity, 0.001)
         assertEquals(25.0, movements[2].currentStockSnapshot, 0.001)
 
         // 4. CRITICAL INVARIANT VERIFICATION: SUM(deltaQuantity) == Product.stock
-        val calculatedStock = database.stockMovementDao().getCalculatedStockForProduct(product.uuid)
+        val calculatedStock = database.stockMovementDao().getCalculatedStockForProduct("LEGACY_BUSINESS", product.uuid)
         assertEquals(afterPurchaseProd.stock, calculatedStock, 0.001)
         assertEquals(25.0, calculatedStock, 0.001)
     }
@@ -175,12 +175,12 @@ class FoundationStep1Test {
         val updatedProd = productRepository.getProductById(prodId)!!
         assertEquals(7.0, updatedProd.stock, 0.001)
 
-        val movements = database.stockMovementDao().getMovementsListForProduct(product.uuid)
+        val movements = database.stockMovementDao().getMovementsListForProduct("LEGACY_BUSINESS", product.uuid)
         assertEquals(2, movements.size)
         assertEquals("SALE", movements[1].movementType)
         assertEquals(-3.0, movements[1].deltaQuantity, 0.001)
 
-        val calculatedStock = database.stockMovementDao().getCalculatedStockForProduct(product.uuid)
+        val calculatedStock = database.stockMovementDao().getCalculatedStockForProduct("LEGACY_BUSINESS", product.uuid)
         assertEquals(7.0, calculatedStock, 0.001)
     }
 
@@ -207,12 +207,12 @@ class FoundationStep1Test {
         val updatedProd = productRepository.getProductById(prodId)!!
         assertEquals(20.0, updatedProd.stock, 0.001)
 
-        val movements = database.stockMovementDao().getMovementsListForProduct(product.uuid)
+        val movements = database.stockMovementDao().getMovementsListForProduct("LEGACY_BUSINESS", product.uuid)
         assertEquals(2, movements.size)
         assertEquals("PURCHASE", movements[1].movementType)
         assertEquals(15.0, movements[1].deltaQuantity, 0.001)
 
-        val calculatedStock = database.stockMovementDao().getCalculatedStockForProduct(product.uuid)
+        val calculatedStock = database.stockMovementDao().getCalculatedStockForProduct("LEGACY_BUSINESS", product.uuid)
         assertEquals(20.0, calculatedStock, 0.001)
     }
 
@@ -255,7 +255,10 @@ class FoundationStep1Test {
         val persistentBusinessId = UUID.randomUUID().toString()
         userPreferencesRepository.reconcileLegacyBusinessIdentity(database, persistentBusinessId)
 
-        val updatedCategory = database.categoryDao().getAllCategories().first()[0]
+        val updatedCategory = database.categoryDao().getAllCategories(persistentBusinessId).first()[0]
         assertEquals("businessId must be reconciled", persistentBusinessId, updatedCategory.businessId)
     }
 }
+
+
+

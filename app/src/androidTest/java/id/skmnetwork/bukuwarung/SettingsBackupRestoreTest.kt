@@ -70,7 +70,7 @@ class SettingsBackupRestoreTest {
             userPreferencesRepository = prefsRepo,
             transport = mockTransport
         )
-        productRepository = ProductRepository(database)
+        productRepository = ProductRepository(database, "LEGACY_BUSINESS")
         backupViewModel = BackupViewModel(backupRestoreManager, prefsRepo)
     }
 
@@ -312,3 +312,5 @@ class SettingsBackupRestoreTest {
         assertEquals(null, mockTransport.getSnapshotDirectly("OFFLINE_ID"))
     }
 }
+
+

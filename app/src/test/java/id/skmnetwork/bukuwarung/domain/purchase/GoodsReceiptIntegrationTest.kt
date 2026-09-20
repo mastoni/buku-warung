@@ -154,7 +154,7 @@ class GoodsReceiptIntegrationTest {
                 "getAllPurchaseOrders" -> flowOf(orders.values.sortedByDescending { it.createdAt }.toList())
                 "getAllPurchaseOrdersList" -> orders.values.sortedByDescending { it.createdAt }.toList()
                 "getItemsForPurchaseOrder" -> {
-                    val id = args[0] as Long
+                    val id = args[1] as Long
                     orderItems.filter { it.purchaseOrderId == id }
                 }
                 "updatePurchaseOrder" -> {
@@ -203,7 +203,7 @@ class GoodsReceiptIntegrationTest {
                     null
                 }
                 "deleteItemsForPurchaseOrder" -> {
-                    val id = args[0] as Long
+                    val id = args[1] as Long
                     orderItems.removeAll { it.purchaseOrderId == id }
                     null
                 }
@@ -506,8 +506,8 @@ class GoodsReceiptIntegrationTest {
             }
         }
 
-        poRepository = PurchaseOrderRepository(fakeAppDatabase, transactionRunner = { it() })
-        directPurchaseRepository = PurchaseRepository(fakeAppDatabase, transactionRunner = { it() })
+        poRepository = PurchaseOrderRepository(fakeAppDatabase, businessId = "LEGACY_BUSINESS", transactionRunner = { it() })
+        directPurchaseRepository = PurchaseRepository(fakeAppDatabase, businessId = "LEGACY_BUSINESS", transactionRunner = { it() })
         poViewModel = PurchaseOrderViewModel(poRepository)
     }
 

@@ -37,6 +37,9 @@ data class UserSettings(
     val secondaryActivities: Set<String> = setOf("ACTIVITY_GOODS_SELLING"),
     val profileVersion: Int = 1,
 
+    // 16. BUSINESS TYPE LOCKING (PR-11.1)
+    val businessTypeLocked: Boolean = false,
+
     // 2. POS Settings
     val showProductImage: Boolean = true,
     val showStock: Boolean = true,
@@ -177,6 +180,9 @@ class UserPreferencesRepository(
         val PRIMARY_BUSINESS_TYPE = stringPreferencesKey("primary_business_type")
         val SECONDARY_ACTIVITIES = androidx.datastore.preferences.core.stringSetPreferencesKey("secondary_activities")
         val PROFILE_VERSION = intPreferencesKey("profile_version")
+
+        // 16. BUSINESS TYPE LOCKING (PR-11.1)
+        val BUSINESS_TYPE_LOCKED = booleanPreferencesKey("business_type_locked")
     }
 
     val userSettings: Flow<UserSettings> = dataStore.data.map { prefs ->
@@ -206,6 +212,7 @@ class UserPreferencesRepository(
             primaryBusinessType = prefs[Keys.PRIMARY_BUSINESS_TYPE] ?: "WARUNG_SEMBAKO",
             secondaryActivities = prefs[Keys.SECONDARY_ACTIVITIES] ?: setOf("ACTIVITY_GOODS_SELLING"),
             profileVersion = prefs[Keys.PROFILE_VERSION] ?: 1,
+            businessTypeLocked = prefs[Keys.BUSINESS_TYPE_LOCKED] ?: false,
 
             showProductImage = prefs[Keys.SHOW_PRODUCT_IMAGE] ?: true,
             showStock = prefs[Keys.SHOW_STOCK] ?: true,
@@ -288,6 +295,12 @@ class UserPreferencesRepository(
             editPrefs[Keys.BUSINESS_ID] = newBusinessId
         }
         return newBusinessId
+    }
+
+    suspend fun setBusinessId(businessId: String) {
+        dataStore.edit { prefs ->
+            prefs[Keys.BUSINESS_ID] = businessId
+        }
     }
 
     suspend fun getOrCreateDeviceId(): String {
@@ -483,6 +496,7 @@ class UserPreferencesRepository(
             prefs[Keys.OWNER_NAME] = ownerName.trim()
             prefs[Keys.PHONE] = phone.trim()
             prefs[Keys.ADDRESS] = address.trim()
+            prefs[Keys.BUSINESS_TYPE_LOCKED] = true
         }
     }
 
@@ -507,6 +521,7 @@ class UserPreferencesRepository(
             prefs[Keys.PRIMARY_BUSINESS_TYPE] = primaryBusinessType.trim()
             prefs[Keys.SECONDARY_ACTIVITIES] = secondaryActivities
             prefs[Keys.PROFILE_VERSION] = profileVersion
+            prefs[Keys.BUSINESS_TYPE_LOCKED] = true
         }
     }
 
@@ -654,6 +669,11 @@ class UserPreferencesRepository(
     suspend fun isOwnerTestActivated(): Boolean {
         val prefs = dataStore.data.first()
         return prefs[Keys.OWNER_TEST_ACTIVATED] ?: false
+    }
+
+    suspend fun isBusinessTypeLocked(): Boolean {
+        val prefs = dataStore.data.first()
+        return prefs[Keys.BUSINESS_TYPE_LOCKED] ?: false
     }
 
     suspend fun setOwnerTestActivated(activated: Boolean) {

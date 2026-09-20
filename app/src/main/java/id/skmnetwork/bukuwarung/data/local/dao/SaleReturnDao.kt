@@ -17,44 +17,44 @@ interface SaleReturnDao {
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insertReturnItems(items: List<SaleReturnItemEntity>)
 
-    @Query("SELECT * FROM sale_return_transactions ORDER BY return_date DESC")
-    fun getAllReturns(): Flow<List<SaleReturnTransactionEntity>>
+    @Query("SELECT * FROM sale_return_transactions WHERE business_id = :businessId ORDER BY return_date DESC")
+    fun getAllReturns(businessId: String): Flow<List<SaleReturnTransactionEntity>>
 
-    @Query("SELECT * FROM sale_return_transactions ORDER BY return_date DESC")
-    suspend fun getAllReturnsList(): List<SaleReturnTransactionEntity>
+    @Query("SELECT * FROM sale_return_transactions WHERE business_id = :businessId ORDER BY return_date DESC")
+    suspend fun getAllReturnsList(businessId: String): List<SaleReturnTransactionEntity>
 
-    @Query("SELECT * FROM sale_return_transactions WHERE id = :id")
-    suspend fun getReturnById(id: Long): SaleReturnTransactionEntity?
+    @Query("SELECT * FROM sale_return_transactions WHERE id = :id AND business_id = :businessId")
+    suspend fun getReturnById(id: Long, businessId: String): SaleReturnTransactionEntity?
 
-    @Query("SELECT * FROM sale_return_transactions WHERE uuid = :uuid LIMIT 1")
-    suspend fun getReturnByUuid(uuid: String): SaleReturnTransactionEntity?
+    @Query("SELECT * FROM sale_return_transactions WHERE uuid = :uuid AND business_id = :businessId LIMIT 1")
+    suspend fun getReturnByUuid(uuid: String, businessId: String): SaleReturnTransactionEntity?
 
-    @Query("SELECT * FROM sale_return_transactions WHERE sale_transaction_id = :saleTransactionId ORDER BY return_date DESC")
-    fun getReturnsForSale(saleTransactionId: Long): Flow<List<SaleReturnTransactionEntity>>
+    @Query("SELECT * FROM sale_return_transactions WHERE business_id = :businessId AND sale_transaction_id = :saleTransactionId ORDER BY return_date DESC")
+    fun getReturnsForSale(businessId: String, saleTransactionId: Long): Flow<List<SaleReturnTransactionEntity>>
 
-    @Query("SELECT * FROM sale_return_transactions WHERE sale_transaction_id = :saleTransactionId ORDER BY return_date DESC")
-    suspend fun getReturnsListForSale(saleTransactionId: Long): List<SaleReturnTransactionEntity>
+    @Query("SELECT * FROM sale_return_transactions WHERE business_id = :businessId AND sale_transaction_id = :saleTransactionId ORDER BY return_date DESC")
+    suspend fun getReturnsListForSale(businessId: String, saleTransactionId: Long): List<SaleReturnTransactionEntity>
 
-    @Query("SELECT * FROM sale_return_items WHERE return_transaction_id = :returnTransactionId")
-    suspend fun getItemsForReturn(returnTransactionId: Long): List<SaleReturnItemEntity>
+    @Query("SELECT * FROM sale_return_items WHERE return_transaction_id = :returnTransactionId AND business_id = :businessId")
+    suspend fun getItemsForReturn(businessId: String, returnTransactionId: Long): List<SaleReturnItemEntity>
 
-    @Query("SELECT SUM(quantity) FROM sale_return_items WHERE sale_item_id = :saleItemId")
-    suspend fun getReturnedQuantityForSaleItem(saleItemId: Long): Double?
+    @Query("SELECT SUM(quantity) FROM sale_return_items WHERE sale_item_id = :saleItemId AND business_id = :businessId")
+    suspend fun getReturnedQuantityForSaleItem(saleItemId: Long, businessId: String): Double?
 
-    @Query("SELECT SUM(total_refund_amount) FROM sale_return_transactions WHERE sale_transaction_id = :saleTransactionId")
-    suspend fun getTotalReturnedForSale(saleTransactionId: Long): Long?
+    @Query("SELECT SUM(total_refund_amount) FROM sale_return_transactions WHERE business_id = :businessId AND sale_transaction_id = :saleTransactionId")
+    suspend fun getTotalReturnedForSale(businessId: String, saleTransactionId: Long): Long?
 
-    @Query("SELECT SUM(total_refund_amount) FROM sale_return_transactions WHERE return_date >= :startDate AND return_date <= :endDate")
-    fun getSalesReturnTotal(startDate: Long, endDate: Long): Flow<Long?>
+    @Query("SELECT SUM(total_refund_amount) FROM sale_return_transactions WHERE business_id = :businessId AND return_date >= :startDate AND return_date <= :endDate")
+    fun getSalesReturnTotal(businessId: String, startDate: Long, endDate: Long): Flow<Long?>
 
-    @Query("SELECT SUM(quantity) FROM sale_return_items JOIN sale_return_transactions ON sale_return_items.return_transaction_id = sale_return_transactions.id WHERE return_date >= :startDate AND return_date <= :endDate")
-    fun getItemsReturnedTotal(startDate: Long, endDate: Long): Flow<Double?>
+    @Query("SELECT SUM(quantity) FROM sale_return_items JOIN sale_return_transactions ON sale_return_items.return_transaction_id = sale_return_transactions.id WHERE sale_return_transactions.business_id = :businessId AND return_date >= :startDate AND return_date <= :endDate")
+    fun getItemsReturnedTotal(businessId: String, startDate: Long, endDate: Long): Flow<Double?>
 
-    @Query("SELECT COUNT(*) FROM sale_return_transactions WHERE return_date >= :startDate AND return_date <= :endDate")
-    fun getReturnCount(startDate: Long, endDate: Long): Flow<Int>
+    @Query("SELECT COUNT(*) FROM sale_return_transactions WHERE business_id = :businessId AND return_date >= :startDate AND return_date <= :endDate")
+    fun getReturnCount(businessId: String, startDate: Long, endDate: Long): Flow<Int>
 
-    @Query("SELECT SUM(CAST(quantity * purchase_price AS INTEGER)) FROM sale_return_items JOIN sale_return_transactions ON sale_return_items.return_transaction_id = sale_return_transactions.id WHERE return_date >= :startDate AND return_date <= :endDate")
-    fun getReturnCogsTotal(startDate: Long, endDate: Long): Flow<Long?>
+    @Query("SELECT SUM(CAST(quantity * purchase_price AS INTEGER)) FROM sale_return_items JOIN sale_return_transactions ON sale_return_items.return_transaction_id = sale_return_transactions.id WHERE sale_return_transactions.business_id = :businessId AND return_date >= :startDate AND return_date <= :endDate")
+    fun getReturnCogsTotal(businessId: String, startDate: Long, endDate: Long): Flow<Long?>
 
     @Query("""
         SELECT 
@@ -66,10 +66,10 @@ interface SaleReturnDao {
             SUM(CAST(quantity * purchase_price AS INTEGER)) AS returnedCogs
         FROM sale_return_items
         JOIN sale_return_transactions ON sale_return_items.return_transaction_id = sale_return_transactions.id
-        WHERE return_date >= :startDate AND return_date <= :endDate
+        WHERE sale_return_transactions.business_id = :businessId AND return_date >= :startDate AND return_date <= :endDate
         GROUP BY COALESCE(NULLIF(product_uuid, ''), CAST(product_id AS TEXT)), product_id, product_name
     """)
-    fun getProductReturnsSummaryByDateRange(startDate: Long, endDate: Long): Flow<List<ProductReturnSummaryItem>>
+    fun getProductReturnsSummaryByDateRange(businessId: String, startDate: Long, endDate: Long): Flow<List<ProductReturnSummaryItem>>
 }
 
 data class ProductReturnSummaryItem(

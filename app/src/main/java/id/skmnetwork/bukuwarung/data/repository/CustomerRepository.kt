@@ -20,7 +20,8 @@ import kotlinx.coroutines.withContext
 import java.util.UUID
 
 class CustomerRepository(
-    private val appDatabase: AppDatabase
+    private val appDatabase: AppDatabase,
+    private val businessId: String
 ) {
     private val customerDao = appDatabase.customerDao()
     private val debtDao = appDatabase.debtDao()
@@ -30,30 +31,30 @@ class CustomerRepository(
     private val stockMovementDao = appDatabase.stockMovementDao()
     private val syncQueueDao = appDatabase.syncQueueDao()
 
-    val allCustomers: Flow<List<CustomerEntity>> = customerDao.getAllCustomers()
+    val allCustomers: Flow<List<CustomerEntity>> = customerDao.getAllCustomers(businessId)
 
     fun searchCustomers(query: String): Flow<List<CustomerEntity>> {
         return if (query.trim().isEmpty()) {
-            customerDao.getAllCustomers()
+            customerDao.getAllCustomers(businessId)
         } else {
-            customerDao.searchCustomers(query.trim())
+            customerDao.searchCustomers(query.trim(), businessId)
         }
     }
 
     suspend fun getCustomerById(id: Long): CustomerEntity? = withContext(Dispatchers.IO) {
-        customerDao.getCustomerById(id)
+        customerDao.getCustomerById(id, businessId)
     }
 
     fun getDebtsForCustomer(customerId: Long): Flow<List<DebtEntity>> {
-        return debtDao.getDebtsForCustomer(customerId)
+        return debtDao.getDebtsForCustomer(customerId, businessId)
     }
 
     fun getPaymentsForDebt(debtId: Long): Flow<List<DebtPaymentEntity>> {
-        return debtDao.getPaymentsForDebt(debtId)
+        return debtDao.getPaymentsForDebt(debtId, businessId)
     }
 
     fun getTotalOutstandingForCustomer(customerId: Long): Flow<Long?> {
-        return debtDao.getTotalOutstandingForCustomer(customerId)
+        return debtDao.getTotalOutstandingForCustomer(customerId, businessId)
     }
 
     suspend fun saveCustomer(
@@ -69,6 +70,7 @@ class CustomerRepository(
         val now = System.currentTimeMillis()
         val customer = CustomerEntity(
             uuid = UUID.randomUUID().toString(),
+            businessId = businessId,
             name = trimmedName,
             phone = phone?.trim()?.ifEmpty { null },
             address = address?.trim()?.ifEmpty { null },
@@ -103,7 +105,7 @@ class CustomerRepository(
             throw IllegalArgumentException("Nama pelanggan wajib diisi")
         }
 
-        val existing = customerDao.getCustomerById(id)
+        val existing = customerDao.getCustomerById(id, businessId)
             ?: throw Exception("Pelanggan tidak ditemukan")
 
         val now = System.currentTimeMillis()
@@ -130,12 +132,12 @@ class CustomerRepository(
     }
 
     suspend fun deleteCustomer(id: Long) = withContext(Dispatchers.IO) {
-        val existing = customerDao.getCustomerById(id)
+        val existing = customerDao.getCustomerById(id, businessId)
             ?: throw Exception("Pelanggan tidak ditemukan")
         val now = System.currentTimeMillis()
 
         appDatabase.withTransaction {
-            customerDao.softDeleteCustomer(id, now)
+            customerDao.softDeleteCustomer(id, now, businessId)
             syncQueueDao.insert(
                 SyncQueueEntity(
                     businessId = existing.businessId,
@@ -150,7 +152,7 @@ class CustomerRepository(
         }
     }
 
-    private val saleRepository = SaleRepository(appDatabase)
+    private val saleRepository = SaleRepository(appDatabase, businessId)
 
     suspend fun processAtomicCreditCheckout(
         cartItems: Map<Long, Double>,
@@ -195,7 +197,7 @@ class CustomerRepository(
     ): Result<Unit> = withContext(Dispatchers.IO) {
         runCatching {
             appDatabase.withTransaction {
-                val debt = debtDao.getDebtById(debtId)
+                val debt = debtDao.getDebtById(debtId, businessId)
                     ?: throw Exception("Data hutang tidak ditemukan")
 
                 if (debt.status == "PAID") {
@@ -237,7 +239,7 @@ class CustomerRepository(
                 debtDao.updateDebt(updatedDebt)
 
                 // 3. Record Cash Income Transaction
-                val customer = customerDao.getCustomerById(debt.customerId)
+                val customer = customerDao.getCustomerById(debt.customerId, businessId)
                 val customerName = customer?.name ?: "Pelanggan"
 
                 val cashIncome = CashTransactionEntity(

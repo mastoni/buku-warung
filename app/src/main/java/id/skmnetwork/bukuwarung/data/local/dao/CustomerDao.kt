@@ -21,18 +21,18 @@ interface CustomerDao {
     @Delete
     suspend fun deleteCustomer(customer: CustomerEntity)
 
-    @Query("UPDATE customers SET is_deleted = 1, deleted_at = :deletedAt, updated_at = :deletedAt WHERE id = :customerId")
-    suspend fun softDeleteCustomer(customerId: Long, deletedAt: Long = System.currentTimeMillis())
+    @Query("UPDATE customers SET is_deleted = 1, deleted_at = :deletedAt, updated_at = :deletedAt WHERE id = :customerId AND business_id = :businessId")
+    suspend fun softDeleteCustomer(customerId: Long, deletedAt: Long = System.currentTimeMillis(), businessId: String)
 
-    @Query("SELECT * FROM customers WHERE is_deleted = 0 ORDER BY name ASC")
-    fun getAllCustomers(): Flow<List<CustomerEntity>>
+    @Query("SELECT * FROM customers WHERE business_id = :businessId AND is_deleted = 0 ORDER BY name ASC")
+    fun getAllCustomers(businessId: String): Flow<List<CustomerEntity>>
 
-    @Query("SELECT * FROM customers WHERE id = :id AND is_deleted = 0")
-    suspend fun getCustomerById(id: Long): CustomerEntity?
+    @Query("SELECT * FROM customers WHERE id = :id AND business_id = :businessId AND is_deleted = 0")
+    suspend fun getCustomerById(id: Long, businessId: String): CustomerEntity?
 
-    @Query("SELECT * FROM customers WHERE uuid = :uuid AND is_deleted = 0 LIMIT 1")
-    suspend fun getCustomerByUuid(uuid: String): CustomerEntity?
+    @Query("SELECT * FROM customers WHERE uuid = :uuid AND business_id = :businessId AND is_deleted = 0 LIMIT 1")
+    suspend fun getCustomerByUuid(uuid: String, businessId: String): CustomerEntity?
 
-    @Query("SELECT * FROM customers WHERE name LIKE '%' || :query || '%' AND is_deleted = 0 ORDER BY name ASC")
-    fun searchCustomers(query: String): Flow<List<CustomerEntity>>
+    @Query("SELECT * FROM customers WHERE name LIKE '%' || :query || '%' AND business_id = :businessId AND is_deleted = 0 ORDER BY name ASC")
+    fun searchCustomers(query: String, businessId: String): Flow<List<CustomerEntity>>
 }

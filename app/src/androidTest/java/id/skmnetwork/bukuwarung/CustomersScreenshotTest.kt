@@ -53,7 +53,7 @@ class CustomersScreenshotTest {
                 AppDatabase::class.java
             ).allowMainThreadQueries().build()
 
-            customerRepository = CustomerRepository(database)
+            customerRepository = CustomerRepository(database, "LEGACY_BUSINESS")
 
             // Setup categories & product
             val catId = database.categoryDao().insertCategory(CategoryEntity(name = "Sembako"))
@@ -83,7 +83,7 @@ class CustomersScreenshotTest {
                 cartItems = mapOf(productId to 1.0),
                 customerId = customerSitiId
             )
-            val sitiDebts = database.debtDao().getDebtsForCustomer(customerSitiId).first()
+            val sitiDebts = database.debtDao().getDebtsForCustomer(customerSitiId, "LEGACY_BUSINESS").first()
             if (sitiDebts.isNotEmpty()) {
                 customerRepository.processAtomicDebtPayment(
                     debtId = sitiDebts.first().id,
@@ -161,7 +161,7 @@ class CustomersScreenshotTest {
             context,
             AppDatabase::class.java
         ).allowMainThreadQueries().build()
-        val emptyRepo = CustomerRepository(emptyDb)
+        val emptyRepo = CustomerRepository(emptyDb, "LEGACY_BUSINESS")
         val emptyViewModel = CustomerViewModel(emptyRepo)
 
         composeTestRule.setContent {
@@ -199,3 +199,6 @@ class CustomersScreenshotTest {
         saveScreenshot("CUSTOMER_DETAIL_EVIDENCE.png")
     }
 }
+
+
+

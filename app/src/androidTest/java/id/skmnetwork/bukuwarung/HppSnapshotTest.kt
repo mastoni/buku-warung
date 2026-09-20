@@ -54,9 +54,9 @@ class HppSnapshotTest {
             .allowMainThreadQueries()
             .build()
 
-        productRepository = ProductRepository(database)
-        saleRepository = SaleRepository(database)
-        reportRepository = ReportRepository(database)
+        productRepository = ProductRepository(database, "LEGACY_BUSINESS")
+        saleRepository = SaleRepository(database, "LEGACY_BUSINESS")
+        reportRepository = ReportRepository(database, "LEGACY_BUSINESS")
         userPreferencesRepository = UserPreferencesRepository(context)
     }
 
@@ -84,7 +84,7 @@ class HppSnapshotTest {
         assertTrue(saleRes.isSuccess)
         val saleId = saleRes.getOrThrow()
 
-        val items = database.saleDao().getItemsForTransaction(saleId)
+        val items = database.saleDao().getItemsForTransaction(saleId, "LEGACY_BUSINESS")
         assertEquals(1, items.size)
         assertEquals(10000L, items[0].price)
         assertEquals(6000L, items[0].purchasePrice)
@@ -111,7 +111,7 @@ class HppSnapshotTest {
         val sale1Id = sale1Res.getOrThrow()
 
         // 3. Update master Product purchasePrice to 7.000
-        val prod = database.productDao().getProductById(prodId)!!
+        val prod = database.productDao().getProductById(prodId, "LEGACY_BUSINESS")!!
         productRepository.updateProductWithCategory(
             productId = prodId,
             name = prod.name,
@@ -124,7 +124,7 @@ class HppSnapshotTest {
         )
 
         // 4. TEST 2: Old sale item HPP must REMAIN 6.000
-        val oldSaleItems = database.saleDao().getItemsForTransaction(sale1Id)
+        val oldSaleItems = database.saleDao().getItemsForTransaction(sale1Id, "LEGACY_BUSINESS")
         assertEquals(1, oldSaleItems.size)
         assertEquals(6000L, oldSaleItems[0].purchasePrice)
         assertEquals(10000L, oldSaleItems[0].price)
@@ -136,7 +136,7 @@ class HppSnapshotTest {
         )
         val sale2Id = sale2Res.getOrThrow()
 
-        val newSaleItems = database.saleDao().getItemsForTransaction(sale2Id)
+        val newSaleItems = database.saleDao().getItemsForTransaction(sale2Id, "LEGACY_BUSINESS")
         assertEquals(1, newSaleItems.size)
         assertEquals(7000L, newSaleItems[0].purchasePrice)
         assertEquals(12000L, newSaleItems[0].price)
@@ -167,7 +167,7 @@ class HppSnapshotTest {
         assertEquals(12000L, cogs1)
 
         // Update product HPP to 7.000
-        val prod = database.productDao().getProductById(prodId)!!
+        val prod = database.productDao().getProductById(prodId, "LEGACY_BUSINESS")!!
         productRepository.updateProductWithCategory(
             productId = prodId,
             name = prod.name,
@@ -210,10 +210,10 @@ class HppSnapshotTest {
             now = now
         )
         val saleId = saleRes.getOrThrow()
-        val saleItem = database.saleDao().getItemsForTransaction(saleId)[0]
+        val saleItem = database.saleDao().getItemsForTransaction(saleId, "LEGACY_BUSINESS")[0]
 
         // Update master product HPP to 7.000
-        val prod = database.productDao().getProductById(prodId)!!
+        val prod = database.productDao().getProductById(prodId, "LEGACY_BUSINESS")!!
         productRepository.updateProductWithCategory(
             productId = prodId,
             name = prod.name,
@@ -233,7 +233,7 @@ class HppSnapshotTest {
         assertTrue(retRes.isSuccess)
         val retId = retRes.getOrThrow()
 
-        val returnItems = database.saleReturnDao().getItemsForReturn(retId)
+        val returnItems = database.saleReturnDao().getItemsForReturn("LEGACY_BUSINESS", retId)
         assertEquals(1, returnItems.size)
         assertEquals("Return item purchasePrice must equal original sale item purchasePrice (6.000)", 6000L, returnItems[0].purchasePrice)
 
@@ -266,7 +266,7 @@ class HppSnapshotTest {
             now = now
         )
         val saleId = saleRes.getOrThrow()
-        val saleItem = database.saleDao().getItemsForTransaction(saleId)[0]
+        val saleItem = database.saleDao().getItemsForTransaction(saleId, "LEGACY_BUSINESS")[0]
 
         // Return qty 2 -> Return COGS = 2 * 5.000 = 10.000
         val retRes = saleRepository.processSaleReturn(
@@ -302,7 +302,7 @@ class HppSnapshotTest {
             now = now
         )
         val saleId = saleRes.getOrThrow()
-        val saleItem = database.saleDao().getItemsForTransaction(saleId)[0]
+        val saleItem = database.saleDao().getItemsForTransaction(saleId, "LEGACY_BUSINESS")[0]
 
         // Full return 3 pcs
         val retRes = saleRepository.processSaleReturn(
@@ -343,7 +343,7 @@ class HppSnapshotTest {
         productRepository.updateProductWithCategory(prodId, "Minyak Kelapa", "Sembako", 18000L, 23000L, 9.0, 2.0, "botol")
         productRepository.updateProductWithCategory(prodId, "Minyak Kelapa", "Sembako", 22000L, 28000L, 9.0, 2.0, "botol")
 
-        val items = database.saleDao().getItemsForTransaction(saleId)
+        val items = database.saleDao().getItemsForTransaction(saleId, "LEGACY_BUSINESS")
         assertEquals(15000L, items[0].purchasePrice)
         assertEquals(20000L, items[0].price)
     }
@@ -365,7 +365,7 @@ class HppSnapshotTest {
             paymentMethod = "CASH"
         )
         val saleId = saleRes.getOrThrow()
-        val saleItem = database.saleDao().getItemsForTransaction(saleId)[0]
+        val saleItem = database.saleDao().getItemsForTransaction(saleId, "LEGACY_BUSINESS")[0]
 
         val retRes = saleRepository.processSaleReturn(
             saleId = saleId,
@@ -397,15 +397,15 @@ class HppSnapshotTest {
         assertTrue("Restore must succeed", restoreRes.isSuccess)
 
         // TEST 10: Assert restored sale item preserves purchase_price
-        val restoredSaleItems = restoredDb.saleDao().getItemsForTransaction(saleId)
+        val restoredSaleItems = restoredDb.saleDao().getItemsForTransaction(saleId, "LEGACY_BUSINESS")
         assertEquals(1, restoredSaleItems.size)
         assertEquals(8000L, restoredSaleItems[0].purchasePrice)
         assertEquals(12000L, restoredSaleItems[0].price)
 
         // TEST 11: Assert restored return item preserves purchase_price
-        val restoredReturns = restoredDb.saleReturnDao().getAllReturnsList()
+        val restoredReturns = restoredDb.saleReturnDao().getAllReturnsList("LEGACY_BUSINESS")
         assertEquals(1, restoredReturns.size)
-        val restoredReturnItems = restoredDb.saleReturnDao().getItemsForReturn(restoredReturns[0].id)
+        val restoredReturnItems = restoredDb.saleReturnDao().getItemsForReturn("LEGACY_BUSINESS", restoredReturns[0].id)
         assertEquals(1, restoredReturnItems.size)
         assertEquals(8000L, restoredReturnItems[0].purchasePrice)
         assertEquals(12000L, restoredReturnItems[0].price)
@@ -476,7 +476,7 @@ class HppSnapshotTest {
             .allowMainThreadQueries()
             .build()
 
-        val items = v11Db.saleDao().getItemsForTransaction(1)
+        val items = v11Db.saleDao().getItemsForTransaction(1, "LEGACY_BUSINESS")
         assertEquals(1, items.size)
         assertEquals(11000L, items[0].purchasePrice)
         assertEquals(15000L, items[0].price)
@@ -489,3 +489,8 @@ class HppSnapshotTest {
         context.deleteDatabase(testDbName)
     }
 }
+
+
+
+
+

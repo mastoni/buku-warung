@@ -58,11 +58,11 @@ class PostFoundationIntegration2Test {
             .build()
 
         userPreferencesRepository = UserPreferencesRepository(context)
-        productRepository = ProductRepository(database)
-        stockRepository = StockRepository(database)
-        saleRepository = SaleRepository(database)
-        cashRepository = CashRepository(database)
-        customerRepository = CustomerRepository(database)
+        productRepository = ProductRepository(database, "LEGACY_BUSINESS")
+        stockRepository = StockRepository(database, "LEGACY_BUSINESS")
+        saleRepository = SaleRepository(database, "LEGACY_BUSINESS")
+        cashRepository = CashRepository(database, "LEGACY_BUSINESS")
+        customerRepository = CustomerRepository(database, "LEGACY_BUSINESS")
     }
 
     @After
@@ -373,7 +373,7 @@ class PostFoundationIntegration2Test {
         assertTrue(writeResult.exceptionOrNull() is IOException)
 
         // Room DB must remain unaffected
-        val categories = database.categoryDao().getAllCategories().first()
+        val categories = database.categoryDao().getAllCategories("LEGACY_BUSINESS").first()
         assertNotNull(categories)
     }
 
@@ -445,7 +445,7 @@ class PostFoundationIntegration2Test {
             unit = "kg"
         )
 
-        val productsBefore = database.productDao().getAllProducts().first()
+        val productsBefore = database.productDao().getAllProducts("LEGACY_BUSINESS").first()
         val countBefore = productsBefore.size
 
         val httpEngine = InMemoryGoogleSheetsHttpEngine()
@@ -462,7 +462,7 @@ class PostFoundationIntegration2Test {
         val writeResult = transport.writeBackup("test_no_mutation", snapshot)
         assertTrue(writeResult.isSuccess)
 
-        val productsAfter = database.productDao().getAllProducts().first()
+        val productsAfter = database.productDao().getAllProducts("LEGACY_BUSINESS").first()
         assertEquals(countBefore, productsAfter.size)
         assertEquals(20.0, productsAfter[0].stock, 0.001)
     }
@@ -505,8 +505,11 @@ class PostFoundationIntegration2Test {
         assertTrue(restoreResult.exceptionOrNull() is ChecksumMismatchException)
 
         // Verify Room was NOT cleared or mutated
-        val products = database.productDao().getAllProducts().first()
+        val products = database.productDao().getAllProducts("LEGACY_BUSINESS").first()
         assertEquals(1, products.size)
         assertEquals("Beras Premium 5kg", products[0].name)
     }
 }
+
+
+

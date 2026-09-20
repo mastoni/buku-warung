@@ -38,8 +38,8 @@ class SaleReturnTest {
         database = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java)
             .allowMainThreadQueries()
             .build()
-        saleRepository = SaleRepository(database)
-        productRepository = ProductRepository(database)
+        saleRepository = SaleRepository(database, "LEGACY_BUSINESS")
+        productRepository = ProductRepository(database, "LEGACY_BUSINESS")
     }
 
     @After
@@ -102,7 +102,7 @@ class SaleReturnTest {
         assertEquals(7.0, product.stock, 0.001)
 
         // Assert Cash balance reduced by 20.000 (Income was 50k, Expense 20k -> Net 30k)
-        val cashBalance = database.cashDao().getTotalCashBalance().first()
+        val cashBalance = database.cashDao().getTotalCashBalance("LEGACY_BUSINESS").first()
         assertEquals(30000L, cashBalance)
 
         // Assert Return row
@@ -139,7 +139,7 @@ class SaleReturnTest {
         assertEquals(10.0, product.stock, 0.001)
 
         // Net cash balance is 0 (50k in - 50k out)
-        val cashBalance = database.cashDao().getTotalCashBalance().first()
+        val cashBalance = database.cashDao().getTotalCashBalance("LEGACY_BUSINESS").first()
         assertEquals(0L, cashBalance)
 
         // Remaining returnable is 0.0
@@ -157,7 +157,7 @@ class SaleReturnTest {
         ).getOrThrow()
 
         // QRIS sale creates NO physical cash income
-        val initialCash = database.cashDao().getTotalCashBalance().first() ?: 0L
+        val initialCash = database.cashDao().getTotalCashBalance("LEGACY_BUSINESS").first() ?: 0L
         assertEquals(0L, initialCash)
 
         val saleItemId = saleRepository.getItemsForTransaction(saleId).first().id
@@ -169,10 +169,10 @@ class SaleReturnTest {
         assertTrue(returnResult.isSuccess)
 
         // QRIS return creates CASH EXPENSE refund of 20.000
-        val cashBalance = database.cashDao().getTotalCashBalance().first()
+        val cashBalance = database.cashDao().getTotalCashBalance("LEGACY_BUSINESS").first()
         assertEquals(-20000L, cashBalance)
 
-        val cashTx = database.cashDao().getAllCashTransactions().first()
+        val cashTx = database.cashDao().getAllCashTransactions("LEGACY_BUSINESS").first()
         assertEquals(1, cashTx.size)
         assertEquals("EXPENSE", cashTx.first().type)
         assertEquals(20000L, cashTx.first().amount)
@@ -200,7 +200,7 @@ class SaleReturnTest {
         assertTrue(returnResult.isSuccess)
 
         // Full 50.000 cash expense refund
-        val cashBalance = database.cashDao().getTotalCashBalance().first()
+        val cashBalance = database.cashDao().getTotalCashBalance("LEGACY_BUSINESS").first()
         assertEquals(-50000L, cashBalance)
 
         val product = productRepository.getProductById(prodId)!!
@@ -220,7 +220,7 @@ class SaleReturnTest {
         ).getOrThrow()
 
         // Debt was created for 50.000 (OPEN)
-        val initialDebt = database.debtDao().getOpenDebtsForCustomerList(custId).first()
+        val initialDebt = database.debtDao().getOpenDebtsForCustomerList(custId, "LEGACY_BUSINESS").first()
         assertEquals(50000L, initialDebt.totalDebt)
         assertEquals(0L, initialDebt.paidAmount)
         assertEquals("OPEN", initialDebt.status)
@@ -235,13 +235,13 @@ class SaleReturnTest {
         assertTrue(returnResult.isSuccess)
 
         // Debt reduced to 30.000 (still OPEN)
-        val updatedDebt = database.debtDao().getDebtById(initialDebt.id)!!
+        val updatedDebt = database.debtDao().getDebtById(initialDebt.id, "LEGACY_BUSINESS")!!
         assertEquals(30000L, updatedDebt.totalDebt)
         assertEquals(0L, updatedDebt.paidAmount)
         assertEquals("OPEN", updatedDebt.status)
 
         // No cash expense created since entire amount was absorbed by debt
-        val cashTxs = database.cashDao().getAllCashTransactions().first()
+        val cashTxs = database.cashDao().getAllCashTransactions("LEGACY_BUSINESS").first()
         assertTrue(cashTxs.isEmpty())
     }
 
@@ -257,7 +257,7 @@ class SaleReturnTest {
             customerId = custId
         ).getOrThrow()
 
-        val initialDebt = database.debtDao().getOpenDebtsForCustomerList(custId).first()
+        val initialDebt = database.debtDao().getOpenDebtsForCustomerList(custId, "LEGACY_BUSINESS").first()
         val saleItemId = saleRepository.getItemsForTransaction(saleId).first().id
 
         val returnResult = saleRepository.processSaleReturn(
@@ -267,7 +267,7 @@ class SaleReturnTest {
         assertTrue(returnResult.isSuccess)
 
         // Debt reduced to 0L and status becomes PAID
-        val updatedDebt = database.debtDao().getDebtById(initialDebt.id)!!
+        val updatedDebt = database.debtDao().getDebtById(initialDebt.id, "LEGACY_BUSINESS")!!
         assertEquals(0L, updatedDebt.totalDebt)
         assertEquals("PAID", updatedDebt.status)
     }
@@ -284,7 +284,7 @@ class SaleReturnTest {
             customerId = custId
         ).getOrThrow()
 
-        val debt = database.debtDao().getOpenDebtsForCustomerList(custId).first()
+        val debt = database.debtDao().getOpenDebtsForCustomerList(custId, "LEGACY_BUSINESS").first()
 
         // Customer pays 40k towards 100k debt -> remaining unpaid debt = 60k
         database.debtDao().insertDebtPayment(
@@ -305,14 +305,14 @@ class SaleReturnTest {
         )
         assertTrue(returnResult.isSuccess)
 
-        val updatedDebt = database.debtDao().getDebtById(debt.id)!!
+        val updatedDebt = database.debtDao().getDebtById(debt.id, "LEGACY_BUSINESS")!!
         // totalDebt becomes 100k - 30k = 70k. paidAmount remains 40k. Unpaid balance = 30k.
         assertEquals(70000L, updatedDebt.totalDebt)
         assertEquals(40000L, updatedDebt.paidAmount)
         assertEquals("OPEN", updatedDebt.status)
 
         // No cash refund needed
-        val cashTxs = database.cashDao().getAllCashTransactions().first()
+        val cashTxs = database.cashDao().getAllCashTransactions("LEGACY_BUSINESS").first()
         assertTrue(cashTxs.isEmpty())
     }
 
@@ -328,7 +328,7 @@ class SaleReturnTest {
             customerId = custId
         ).getOrThrow()
 
-        val debt = database.debtDao().getOpenDebtsForCustomerList(custId).first()
+        val debt = database.debtDao().getOpenDebtsForCustomerList(custId, "LEGACY_BUSINESS").first()
 
         // Customer pays 80k towards 100k debt -> remaining unpaid = 20k
         database.debtDao().insertDebtPayment(
@@ -351,13 +351,13 @@ class SaleReturnTest {
         )
         assertTrue(returnResult.isSuccess)
 
-        val updatedDebt = database.debtDao().getDebtById(debt.id)!!
+        val updatedDebt = database.debtDao().getDebtById(debt.id, "LEGACY_BUSINESS")!!
         assertEquals(80000L, updatedDebt.totalDebt)
         assertEquals(80000L, updatedDebt.paidAmount)
         assertEquals("PAID", updatedDebt.status)
 
         // Cash expense created for the 30k overpayment
-        val cashTxs = database.cashDao().getAllCashTransactions().first()
+        val cashTxs = database.cashDao().getAllCashTransactions("LEGACY_BUSINESS").first()
         assertEquals(1, cashTxs.size)
         assertEquals(30000L, cashTxs.first().amount)
         assertEquals("EXPENSE", cashTxs.first().type)
@@ -502,7 +502,7 @@ class SaleReturnTest {
         assertEquals(38.0, productAfter.stock, 0.001)
 
         // Invariant: SUM(StockMovement.deltaQuantity) == Product.stock
-        val ledgerStock = database.stockMovementDao().getCalculatedStockForProduct(productBefore.uuid)
+        val ledgerStock = database.stockMovementDao().getCalculatedStockForProduct("LEGACY_BUSINESS", productBefore.uuid)
         assertEquals(productAfter.stock, ledgerStock, 0.001)
     }
 
@@ -532,7 +532,7 @@ class SaleReturnTest {
         assertEquals(0.0, product.stock, 0.001)
 
         // No movements inserted
-        val movements = database.stockMovementDao().getMovementsListForProduct(product.uuid)
+        val movements = database.stockMovementDao().getMovementsListForProduct("LEGACY_BUSINESS", product.uuid)
         assertTrue(movements.isEmpty())
     }
 
@@ -552,9 +552,9 @@ class SaleReturnTest {
             itemsToReturn = mapOf(saleItemId to 1.0) // 15k
         ).getOrThrow()
 
-        val cashIncome = database.cashDao().getCashIncomeTotal(0, System.currentTimeMillis() + 10000).first() ?: 0L
-        val cashExpense = database.cashDao().getCashExpenseTotal(0, System.currentTimeMillis() + 10000).first() ?: 0L
-        val netBalance = database.cashDao().getTotalCashBalance().first() ?: 0L
+        val cashIncome = database.cashDao().getCashIncomeTotal("LEGACY_BUSINESS", 0, System.currentTimeMillis() + 10000).first() ?: 0L
+        val cashExpense = database.cashDao().getCashExpenseTotal("LEGACY_BUSINESS", 0, System.currentTimeMillis() + 10000).first() ?: 0L
+        val netBalance = database.cashDao().getTotalCashBalance("LEGACY_BUSINESS").first() ?: 0L
 
         assertEquals(60000L, cashIncome)
         assertEquals(15000L, cashExpense)
@@ -580,7 +580,7 @@ class SaleReturnTest {
             itemsToReturn = mapOf(saleItemId to 2.0) // 50k
         ).getOrThrow()
 
-        val outstanding = database.debtDao().getTotalOutstandingDebt().first() ?: 0L
+        val outstanding = database.debtDao().getTotalOutstandingDebt("LEGACY_BUSINESS").first() ?: 0L
         assertEquals(50000L, outstanding)
     }
 
@@ -620,7 +620,7 @@ class SaleReturnTest {
         val returnId = saleRepository.processSaleReturn(saleId, mapOf(saleItemId to 1.0)).getOrThrow()
         val returnTrx = saleRepository.getReturnById(returnId)!!
 
-        val syncQueues = database.syncQueueDao().getAllItems().first().filter { it.entityType == "RETURN" }
+        val syncQueues = database.syncQueueDao().getAllItems("LEGACY_BUSINESS").first().filter { it.entityType == "RETURN" }
         assertEquals(1, syncQueues.size)
         assertEquals(returnTrx.uuid, syncQueues.first().entityUuid)
         assertEquals("INSERT", syncQueues.first().operation)
@@ -636,8 +636,8 @@ class SaleReturnTest {
         ).getOrThrow()
 
         val initialStock = productRepository.getProductById(prodId)!!.stock
-        val initialMovementsCount = database.stockMovementDao().getAllMovements().first().size
-        val initialCashCount = database.cashDao().getAllCashTransactions().first().size
+        val initialMovementsCount = database.stockMovementDao().getAllMovements("LEGACY_BUSINESS").first().size
+        val initialCashCount = database.cashDao().getAllCashTransactions("LEGACY_BUSINESS").first().size
 
         // Attempting invalid return (qty > sold)
         val saleItemId = saleRepository.getItemsForTransaction(saleId).first().id
@@ -646,9 +646,9 @@ class SaleReturnTest {
 
         // Assert no mutations took place
         assertEquals(initialStock, productRepository.getProductById(prodId)!!.stock, 0.001)
-        assertEquals(initialMovementsCount, database.stockMovementDao().getAllMovements().first().size)
-        assertEquals(initialCashCount, database.cashDao().getAllCashTransactions().first().size)
-        assertEquals(0, database.saleReturnDao().getAllReturns().first().size)
+        assertEquals(initialMovementsCount, database.stockMovementDao().getAllMovements("LEGACY_BUSINESS").first().size)
+        assertEquals(initialCashCount, database.cashDao().getAllCashTransactions("LEGACY_BUSINESS").first().size)
+        assertEquals(0, database.saleReturnDao().getAllReturns("LEGACY_BUSINESS").first().size)
     }
 
     // 22. Optional reason empty (null in DB, no placeholder)
@@ -786,3 +786,13 @@ class SaleReturnTest {
         assertTrue(res.isSuccess)
     }
 }
+
+
+
+
+
+
+
+
+
+

@@ -56,8 +56,8 @@ class NotificationScreenshotTest {
         ).allowMainThreadQueries().build()
 
         prefsRepo = UserPreferencesRepository(context)
-        productRepository = ProductRepository(database)
-        notificationRepo = NotificationRepository(database, prefsRepo)
+        productRepository = ProductRepository(database, "LEGACY_BUSINESS")
+        notificationRepo = NotificationRepository(database, prefsRepo, "LEGACY_BUSINESS")
 
         categoryId = database.categoryDao().insertCategory(CategoryEntity(name = "Sembako"))
         customerId = database.customerDao().insertCustomer(CustomerEntity(name = "Budi Santoso", phone = "08123456789"))
@@ -170,3 +170,6 @@ class NotificationScreenshotTest {
         saveScreenshot("E_NOTIFICATION_CENTER_EMPTY.png")
     }
 }
+
+
+

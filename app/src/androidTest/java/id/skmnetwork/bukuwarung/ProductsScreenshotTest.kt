@@ -52,7 +52,7 @@ class ProductsScreenshotTest {
                 AppDatabase::class.java
             ).allowMainThreadQueries().build()
 
-            productRepository = ProductRepository(database)
+            productRepository = ProductRepository(database, "LEGACY_BUSINESS")
 
             catSembakoId = database.categoryDao().insertCategory(CategoryEntity(name = "Sembako"))
             catMinumanId = database.categoryDao().insertCategory(CategoryEntity(name = "Minuman"))
@@ -199,7 +199,7 @@ class ProductsScreenshotTest {
             context,
             AppDatabase::class.java
         ).allowMainThreadQueries().build()
-        val emptyRepo = ProductRepository(emptyDb)
+        val emptyRepo = ProductRepository(emptyDb, "LEGACY_BUSINESS")
         val emptyVm = ProductViewModel(emptyRepo)
 
         composeTestRule.setContent {
@@ -219,3 +219,6 @@ class ProductsScreenshotTest {
         emptyDb.close()
     }
 }
+
+
+

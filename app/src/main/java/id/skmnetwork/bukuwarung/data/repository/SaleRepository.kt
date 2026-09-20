@@ -23,7 +23,8 @@ import id.skmnetwork.bukuwarung.data.local.entity.SaleReturnItemEntity
 import id.skmnetwork.bukuwarung.data.local.entity.SaleReturnTransactionEntity
 
 class SaleRepository(
-    private val appDatabase: AppDatabase
+    private val appDatabase: AppDatabase,
+    private val businessId: String
 ) {
     private val saleDao = appDatabase.saleDao()
     private val productDao = appDatabase.productDao()
@@ -34,34 +35,34 @@ class SaleRepository(
     private val syncQueueDao = appDatabase.syncQueueDao()
     private val saleReturnDao = appDatabase.saleReturnDao()
 
-    val allTransactions: Flow<List<SaleTransactionEntity>> = saleDao.getAllTransactions()
-    val allReturns: Flow<List<SaleReturnTransactionEntity>> = saleReturnDao.getAllReturns()
+    val allTransactions: Flow<List<SaleTransactionEntity>> = saleDao.getAllTransactions(businessId)
+    val allReturns: Flow<List<SaleReturnTransactionEntity>> = saleReturnDao.getAllReturns(businessId)
 
     fun getReturnsForSale(saleTransactionId: Long): Flow<List<SaleReturnTransactionEntity>> {
-        return saleReturnDao.getReturnsForSale(saleTransactionId)
+        return saleReturnDao.getReturnsForSale(businessId, saleTransactionId)
     }
 
     suspend fun getReturnById(id: Long): SaleReturnTransactionEntity? = withContext(Dispatchers.IO) {
-        saleReturnDao.getReturnById(id)
+        saleReturnDao.getReturnById(id, businessId)
     }
 
     suspend fun getItemsForReturn(returnTransactionId: Long): List<SaleReturnItemEntity> = withContext(Dispatchers.IO) {
-        saleReturnDao.getItemsForReturn(returnTransactionId)
+        saleReturnDao.getItemsForReturn(businessId, returnTransactionId)
     }
 
     suspend fun getReturnsListForSale(saleTransactionId: Long): List<SaleReturnTransactionEntity> = withContext(Dispatchers.IO) {
-        saleReturnDao.getReturnsListForSale(saleTransactionId)
+        saleReturnDao.getReturnsListForSale(businessId, saleTransactionId)
     }
 
     suspend fun getReturnedQuantityForSaleItem(saleItemId: Long): Double = withContext(Dispatchers.IO) {
-        saleReturnDao.getReturnedQuantityForSaleItem(saleItemId) ?: 0.0
+        saleReturnDao.getReturnedQuantityForSaleItem(saleItemId, businessId) ?: 0.0
     }
 
     suspend fun getReturnableQuantitiesForSale(saleTransactionId: Long): Map<Long, Double> = withContext(Dispatchers.IO) {
-        val saleItems = saleDao.getItemsForTransaction(saleTransactionId)
+        val saleItems = saleDao.getItemsForTransaction(saleTransactionId, businessId)
         val result = mutableMapOf<Long, Double>()
         for (item in saleItems) {
-            val returnedQty = saleReturnDao.getReturnedQuantityForSaleItem(item.id) ?: 0.0
+            val returnedQty = saleReturnDao.getReturnedQuantityForSaleItem(item.id, businessId) ?: 0.0
             val remaining = (item.quantity - returnedQty).coerceAtLeast(0.0)
             result[item.id] = remaining
         }
@@ -82,15 +83,15 @@ class SaleRepository(
         calendar.set(Calendar.MILLISECOND, 999)
         val endOfDay = calendar.timeInMillis
 
-        return saleDao.getTodaySalesTotal(startOfDay, endOfDay)
+        return saleDao.getTodaySalesTotal(businessId, startOfDay, endOfDay)
     }
 
     suspend fun getTransactionById(id: Long): SaleTransactionEntity? = withContext(Dispatchers.IO) {
-        saleDao.getTransactionById(id)
+        saleDao.getTransactionById(id, businessId)
     }
 
     suspend fun getItemsForTransaction(transactionId: Long): List<SaleItemEntity> = withContext(Dispatchers.IO) {
-        saleDao.getItemsForTransaction(transactionId)
+        saleDao.getItemsForTransaction(transactionId, businessId)
     }
 
     suspend fun completeSale(
@@ -166,7 +167,7 @@ class SaleRepository(
 
         val methodUpper = paymentMethod.uppercase()
         val customer = customerId?.let { id ->
-            customerDao.getCustomerById(id)
+            customerDao.getCustomerById(id, businessId)
                 ?: if (methodUpper == "CREDIT") throw IllegalStateException("Pelanggan tidak ditemukan") else null
         }
         val productMap = linkedMapOf<Long, ProductEntity>()
@@ -174,7 +175,7 @@ class SaleRepository(
             require(item.quantity.isFinite() && item.quantity > 0.0) {
                 "Jumlah item harus lebih besar dari 0"
             }
-            val product = productDao.getProductById(item.productId)
+            val product = productDao.getProductById(item.productId, businessId)
                 ?: throw IllegalStateException("Produk tidak ditemukan")
             if (product.itemType == ItemType.DIGITAL.name &&
                 product.fulfillmentMode == FulfillmentMode.PROVIDER.name
@@ -216,6 +217,7 @@ class SaleRepository(
             discountAmount = safeDiscount,
             paymentMethod = methodUpper,
             customerId = customer?.id,
+            businessId = businessId,
             createdAt = now
         )
         val saleId = saleDao.insertTransaction(saleTransaction)
@@ -231,7 +233,8 @@ class SaleRepository(
                 quantity = item.quantity,
                 price = product.sellingPrice,
                 purchasePrice = product.purchasePrice,
-                subtotal = product.sellingPrice * item.quantity.toLong()
+                subtotal = product.sellingPrice * item.quantity.toLong(),
+                businessId = businessId
             )
         }
         val saleItemIds = saleDao.insertSaleItems(saleItems)
@@ -243,9 +246,10 @@ class SaleRepository(
             val product = productMap.getValue(item.productId)
             if (ItemType.isStockable(product.itemType)) {
                 val newStock = product.stock - item.quantity
-                productDao.deductProductStock(item.productId, item.quantity, now)
+                productDao.deductProductStock(item.productId, item.quantity, now, businessId)
                 stockMovementDao.insertMovement(
                     StockMovementEntity(
+                        businessId = businessId,
                         productUuid = product.uuid,
                         movementType = "SALE",
                         deltaQuantity = -item.quantity,
@@ -268,6 +272,7 @@ class SaleRepository(
                             description = "Penjualan $trxNumber",
                             refId = saleId,
                             refUuid = trxUuid,
+                            businessId = businessId,
                             createdAt = now
                         )
                     )
@@ -284,6 +289,7 @@ class SaleRepository(
                         totalDebt = netTotal,
                         paidAmount = 0L,
                         status = if (netTotal == 0L) "PAID" else "OPEN",
+                        businessId = businessId,
                         createdAt = now,
                         updatedAt = now
                     )
@@ -294,7 +300,7 @@ class SaleRepository(
 
         syncQueueDao.insert(
             SyncQueueEntity(
-                businessId = saleTransaction.businessId,
+                businessId = businessId,
                 deviceId = saleTransaction.deviceId,
                 entityType = "SALE",
                 entityUuid = trxUuid,
@@ -330,11 +336,11 @@ class SaleRepository(
         runCatching {
             appDatabase.withTransaction {
                 // 1. Validate original sale
-                val sale = saleDao.getTransactionById(saleId)
+                val sale = saleDao.getTransactionById(saleId, businessId)
                     ?: throw IllegalStateException("Transaksi penjualan tidak ditemukan")
 
                 // 2. Validate requested items belong to this sale and within returnable limit
-                val originalSaleItems = saleDao.getItemsForTransaction(saleId)
+                val originalSaleItems = saleDao.getItemsForTransaction(saleId, businessId)
                 val saleItemMap = originalSaleItems.associateBy { it.id }
 
                 var calculatedItemRefund = 0L
@@ -347,7 +353,7 @@ class SaleRepository(
                     val saleItem = saleItemMap[saleItemId]
                         ?: throw IllegalArgumentException("Item penjualan ID $saleItemId tidak ditemukan pada transaksi ini")
 
-                    val alreadyReturned = saleReturnDao.getReturnedQuantityForSaleItem(saleItemId) ?: 0.0
+                    val alreadyReturned = saleReturnDao.getReturnedQuantityForSaleItem(saleItemId, businessId) ?: 0.0
                     val remainingReturnable = saleItem.quantity - alreadyReturned
                     if (returnQty > remainingReturnable) {
                         throw IllegalArgumentException(
@@ -361,7 +367,7 @@ class SaleRepository(
                 }
 
                 // Invariant: refund <= amount actually paid (net total of sale)
-                val previousReturns = saleReturnDao.getReturnsListForSale(saleId)
+                val previousReturns = saleReturnDao.getReturnsListForSale(businessId, saleId)
                 val totalAlreadyRefunded = previousReturns.sumOf { it.totalRefundAmount }
                 val maxRemainingRefundable = (sale.totalAmount - totalAlreadyRefunded).coerceAtLeast(0L)
                 val totalRefundAmount = calculatedItemRefund.coerceAtMost(maxRemainingRefundable)
@@ -372,7 +378,7 @@ class SaleRepository(
 
                 val returnNumber = "RET-$now"
                 val returnUuid = UUID.randomUUID().toString()
-                val customer = sale.customerId?.let { customerDao.getCustomerById(it) }
+                val customer = sale.customerId?.let { customerDao.getCustomerById(it, businessId) }
 
                 val cleanedReason = reason?.trim()?.ifEmpty { null }
                 val cleanedNotes = notes?.trim()?.ifEmpty { null }
@@ -380,7 +386,7 @@ class SaleRepository(
                 // 3. Create Return Transaction Record
                 val returnTransaction = SaleReturnTransactionEntity(
                     uuid = returnUuid,
-                    businessId = sale.businessId,
+                    businessId = businessId,
                     deviceId = sale.deviceId,
                     returnNumber = returnNumber,
                     returnDate = now,
@@ -401,7 +407,7 @@ class SaleRepository(
                     val subtotal = (saleItem.price * returnQty).toLong()
                     SaleReturnItemEntity(
                         uuid = UUID.randomUUID().toString(),
-                        businessId = sale.businessId,
+                        businessId = businessId,
                         returnUuid = returnUuid,
                         saleItemUuid = saleItem.uuid,
                         productUuid = saleItem.productUuid,
@@ -422,10 +428,11 @@ class SaleRepository(
                 for ((saleItem, returnQty) in validatedReturnItems) {
                     val product = productDao.getProductByIdRaw(saleItem.productId)
                     if (product != null && ItemType.isStockable(product.itemType)) {
-                        productDao.addProductStock(product.id, returnQty, now)
+                        productDao.addProductStock(product.id, returnQty, now, businessId)
                         val newStock = product.stock + returnQty
                         stockMovementDao.insertMovement(
                             StockMovementEntity(
+                                businessId = businessId,
                                 productUuid = product.uuid,
                                 movementType = "RETURN",
                                 deltaQuantity = returnQty,
@@ -449,13 +456,14 @@ class SaleRepository(
                             description = "Refund Retur Penjualan $returnNumber",
                             refId = returnId,
                             refUuid = returnUuid,
+                            businessId = businessId,
                             createdAt = now
                         )
                         cashDao.insertCashTransaction(cashExpense)
                     }
                     "CREDIT" -> {
-                        val linkedDebt = debtDao.getDebtBySaleId(sale.id)
-                            ?: (if (sale.uuid.isNotBlank()) debtDao.getDebtBySaleUuid(sale.uuid) else null)
+                        val linkedDebt = debtDao.getDebtBySaleId(sale.id, businessId)
+                            ?: (if (sale.uuid.isNotBlank()) debtDao.getDebtBySaleUuid(sale.uuid, businessId) else null)
 
                         if (linkedDebt != null) {
                             val currentUnpaidDebt = (linkedDebt.totalDebt - linkedDebt.paidAmount).coerceAtLeast(0L)
@@ -484,6 +492,7 @@ class SaleRepository(
                                 )
                                 if (cashOverpaymentRefund > 0L) {
                                     val cashExpense = CashTransactionEntity(
+                                        businessId = businessId,
                                         type = "EXPENSE",
                                         amount = cashOverpaymentRefund,
                                         description = "Refund Kelebihan Bayar Retur $returnNumber",
@@ -497,6 +506,7 @@ class SaleRepository(
                         } else {
                             // Fallback if no debt record exists
                             val cashExpense = CashTransactionEntity(
+                                businessId = businessId,
                                 type = "EXPENSE",
                                 amount = totalRefundAmount,
                                 description = "Refund Retur Penjualan $returnNumber",
@@ -532,11 +542,11 @@ class SaleRepository(
         userSettings: id.skmnetwork.bukuwarung.data.preferences.UserSettings? = null,
         cashGiven: Long? = null
     ): id.skmnetwork.bukuwarung.domain.receipt.ReceiptData? = withContext(Dispatchers.IO) {
-        val sale = saleDao.getTransactionById(saleId) ?: return@withContext null
-        val items = saleDao.getItemsForTransaction(saleId)
-        val customer = sale.customerId?.let { customerDao.getCustomerById(it) }
+        val sale = saleDao.getTransactionById(saleId, businessId) ?: return@withContext null
+        val items = saleDao.getItemsForTransaction(saleId, businessId)
+        val customer = sale.customerId?.let { customerDao.getCustomerById(it, businessId) }
         val debt = if (sale.paymentMethod == "CREDIT" && sale.customerId != null) {
-            debtDao.getOpenDebtsForCustomerList(sale.customerId).find { it.saleTransactionId == saleId }
+            debtDao.getOpenDebtsForCustomerList(sale.customerId, businessId).find { it.saleTransactionId == saleId }
         } else null
 
         id.skmnetwork.bukuwarung.domain.receipt.ReceiptMapper.mapFromSale(

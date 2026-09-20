@@ -27,6 +27,7 @@ data class PurchaseOrderItemInput(
 
 class PurchaseOrderRepository(
     private val appDatabase: AppDatabase,
+    private val businessId: String,
     private val transactionRunner: (suspend (suspend () -> Any?) -> Any?)? = null
 ) {
     private val purchaseOrderDao = appDatabase.purchaseOrderDao()
@@ -38,26 +39,26 @@ class PurchaseOrderRepository(
     private val supplierPayableDao = appDatabase.supplierPayableDao()
     private val stockMovementDao = appDatabase.stockMovementDao()
 
-    val allOrders: Flow<List<PurchaseOrderEntity>> = purchaseOrderDao.getAllPurchaseOrders()
+    val allOrders: Flow<List<PurchaseOrderEntity>> = purchaseOrderDao.getAllPurchaseOrders(businessId)
 
     fun getOrdersByStatus(status: String): Flow<List<PurchaseOrderEntity>> {
-        return purchaseOrderDao.getPurchaseOrdersByStatus(status)
+        return purchaseOrderDao.getPurchaseOrdersByStatus(businessId, status)
     }
 
     fun getOrdersBySupplier(supplierId: Long): Flow<List<PurchaseOrderEntity>> {
-        return purchaseOrderDao.getPurchaseOrdersBySupplier(supplierId)
+        return purchaseOrderDao.getPurchaseOrdersBySupplier(businessId, supplierId)
     }
 
     suspend fun getOrderById(id: Long): PurchaseOrderEntity? = withContext(Dispatchers.IO) {
-        purchaseOrderDao.getPurchaseOrderById(id)
+        purchaseOrderDao.getPurchaseOrderById(id, businessId)
     }
 
     suspend fun getOrderByUuid(uuid: String): PurchaseOrderEntity? = withContext(Dispatchers.IO) {
-        purchaseOrderDao.getPurchaseOrderByUuid(uuid)
+        purchaseOrderDao.getPurchaseOrderByUuid(uuid, businessId)
     }
 
     suspend fun getItemsForOrder(orderId: Long): List<PurchaseOrderItemEntity> = withContext(Dispatchers.IO) {
-        purchaseOrderDao.getItemsForPurchaseOrder(orderId)
+        purchaseOrderDao.getItemsForPurchaseOrder(businessId, orderId)
     }
 
     private suspend fun <T> runInTransaction(block: suspend () -> T): T {
@@ -82,7 +83,7 @@ class PurchaseOrderRepository(
         runCatching {
             runInTransaction {
                 // 1. Validate supplier
-                val supplier = supplierDao.getSupplierById(supplierId)
+                val supplier = supplierDao.getSupplierById(supplierId, businessId)
                     ?: throw IllegalStateException("Supplier tidak ditemukan")
 
                 // 2. Validate products & quantities
@@ -91,7 +92,7 @@ class PurchaseOrderRepository(
                     if (item.quantity <= 0.0) {
                         throw IllegalArgumentException("Jumlah kuantitas harus lebih dari 0")
                     }
-                    val product = productDao.getProductById(item.productId)
+                    val product = productDao.getProductById(item.productId, businessId)
                         ?: throw IllegalStateException("Produk dengan ID ${item.productId} tidak ditemukan")
                     productMap[item.productId] = product
                 }
@@ -126,6 +127,7 @@ class PurchaseOrderRepository(
                 // 4. Create Purchase Order Entity
                 val poEntity = PurchaseOrderEntity(
                     uuid = poUuid,
+                    businessId = businessId,
                     orderNumber = poNumber,
                     supplierId = supplier.id,
                     supplierNameSnapshot = supplier.name,
@@ -149,8 +151,8 @@ class PurchaseOrderRepository(
                 // 6. Enqueue sync event
                 syncQueueDao.insert(
                     SyncQueueEntity(
-                        businessId = poEntity.businessId,
-                        deviceId = poEntity.deviceId,
+                        businessId = businessId,
+                        deviceId = "LEGACY_DEVICE",
                         entityType = "PURCHASE_ORDER",
                         entityUuid = poUuid,
                         operation = "INSERT",
@@ -189,7 +191,7 @@ class PurchaseOrderRepository(
 
         runCatching {
             runInTransaction {
-                val existingOrder = purchaseOrderDao.getPurchaseOrderById(orderId)
+                val existingOrder = purchaseOrderDao.getPurchaseOrderById(orderId, businessId)
                     ?: throw IllegalStateException("Purchase Order tidak ditemukan")
 
                 if (existingOrder.status != PurchaseOrderStatus.DRAFT.name) {
@@ -197,7 +199,7 @@ class PurchaseOrderRepository(
                 }
 
                 // Validate supplier & refresh snapshot
-                val supplier = supplierDao.getSupplierById(supplierId)
+                val supplier = supplierDao.getSupplierById(supplierId, businessId)
                     ?: throw IllegalStateException("Supplier tidak ditemukan")
 
                 // Validate products & calculate totals
@@ -206,7 +208,7 @@ class PurchaseOrderRepository(
                     if (item.quantity <= 0.0) {
                         throw IllegalArgumentException("Jumlah kuantitas harus lebih dari 0")
                     }
-                    val product = productDao.getProductById(item.productId)
+                    val product = productDao.getProductById(item.productId, businessId)
                         ?: throw IllegalStateException("Produk dengan ID ${item.productId} tidak ditemukan")
                     productMap[item.productId] = product
                 }
@@ -244,13 +246,13 @@ class PurchaseOrderRepository(
                 )
 
                 purchaseOrderDao.updatePurchaseOrder(updatedPo)
-                purchaseOrderDao.deleteItemsForPurchaseOrder(orderId)
+                purchaseOrderDao.deleteItemsForPurchaseOrder(businessId, orderId)
                 purchaseOrderDao.insertPurchaseOrderItems(orderItems)
 
                 syncQueueDao.insert(
                     SyncQueueEntity(
-                        businessId = updatedPo.businessId,
-                        deviceId = updatedPo.deviceId,
+                        businessId = businessId,
+                        deviceId = "LEGACY_DEVICE",
                         entityType = "PURCHASE_ORDER",
                         entityUuid = existingOrder.uuid,
                         operation = "UPDATE",
@@ -269,14 +271,14 @@ class PurchaseOrderRepository(
     ): Result<Unit> = withContext(Dispatchers.IO) {
         runCatching {
             runInTransaction {
-                val order = purchaseOrderDao.getPurchaseOrderById(orderId)
+                val order = purchaseOrderDao.getPurchaseOrderById(orderId, businessId)
                     ?: throw IllegalStateException("Purchase Order tidak ditemukan")
 
                 if (order.status != PurchaseOrderStatus.DRAFT.name) {
                     throw IllegalStateException("Hanya Purchase Order berstatus DRAFT yang dapat ditandai ORDERED (Status saat ini: ${order.status})")
                 }
 
-                val items = purchaseOrderDao.getItemsForPurchaseOrder(orderId)
+                val items = purchaseOrderDao.getItemsForPurchaseOrder(businessId, orderId)
                 if (items.isEmpty()) {
                     throw IllegalStateException("Purchase Order tidak memiliki item")
                 }
@@ -285,13 +287,14 @@ class PurchaseOrderRepository(
                     id = orderId,
                     status = PurchaseOrderStatus.ORDERED.name,
                     sentAt = now,
-                    updatedAt = now
+                    updatedAt = now,
+                    businessId = businessId
                 )
 
                 syncQueueDao.insert(
                     SyncQueueEntity(
-                        businessId = order.businessId,
-                        deviceId = order.deviceId,
+                        businessId = businessId,
+                        deviceId = "LEGACY_DEVICE",
                         entityType = "PURCHASE_ORDER",
                         entityUuid = order.uuid,
                         operation = "UPDATE",
@@ -310,7 +313,7 @@ class PurchaseOrderRepository(
     ): Result<Unit> = withContext(Dispatchers.IO) {
         runCatching {
             runInTransaction {
-                val order = purchaseOrderDao.getPurchaseOrderById(orderId)
+                val order = purchaseOrderDao.getPurchaseOrderById(orderId, businessId)
                     ?: throw IllegalStateException("Purchase Order tidak ditemukan")
 
                 if (order.status == PurchaseOrderStatus.RECEIVED.name) {
@@ -324,13 +327,14 @@ class PurchaseOrderRepository(
                 purchaseOrderDao.updatePurchaseOrderStatus(
                     id = orderId,
                     status = PurchaseOrderStatus.CANCELLED.name,
-                    updatedAt = now
+                    updatedAt = now,
+                    businessId = businessId
                 )
 
                 syncQueueDao.insert(
                     SyncQueueEntity(
-                        businessId = order.businessId,
-                        deviceId = order.deviceId,
+                        businessId = businessId,
+                        deviceId = "LEGACY_DEVICE",
                         entityType = "PURCHASE_ORDER",
                         entityUuid = order.uuid,
                         operation = "UPDATE",
@@ -361,7 +365,7 @@ class PurchaseOrderRepository(
         runCatching {
             runInTransaction {
                 // 1. Authoritative check: PO exists, status == ORDERED, finalPurchaseId == null
-                val po = purchaseOrderDao.getPurchaseOrderById(orderId)
+                val po = purchaseOrderDao.getPurchaseOrderById(orderId, businessId)
                     ?: throw IllegalStateException("Purchase Order tidak ditemukan")
 
                 if (po.status == PurchaseOrderStatus.RECEIVED.name || po.finalPurchaseId != null) {
@@ -373,11 +377,11 @@ class PurchaseOrderRepository(
                 }
 
                 // 2. Validate Supplier exists
-                val supplier = supplierDao.getSupplierById(po.supplierId)
+                val supplier = supplierDao.getSupplierById(po.supplierId, businessId)
                     ?: throw IllegalStateException("Supplier tidak ditemukan")
 
                 // 3. Validate items exist
-                val poItems = purchaseOrderDao.getItemsForPurchaseOrder(orderId)
+                val poItems = purchaseOrderDao.getItemsForPurchaseOrder(businessId, orderId)
                 if (poItems.isEmpty()) {
                     throw IllegalStateException("Purchase Order tidak memiliki item")
                 }
@@ -388,7 +392,7 @@ class PurchaseOrderRepository(
                     if (item.orderedQuantity <= 0.0) {
                         throw IllegalArgumentException("Jumlah kuantitas harus lebih dari 0")
                     }
-                    val product = productDao.getProductById(item.productId)
+                    val product = productDao.getProductById(item.productId, businessId)
                         ?: throw IllegalStateException("Produk ${item.productName} tidak ditemukan")
                     productMap[item.productId] = product
                 }
@@ -450,12 +454,10 @@ class PurchaseOrderRepository(
                     val qty = poItem.orderedQuantity
                     if (ItemType.isStockable(product.itemType)) {
                         val newStock = product.stock + qty
-                        productDao.addProductStock(product.id, qty, now)
+                        productDao.addProductStock(product.id, qty, now, businessId)
                         stockMovementDao.insertMovement(
                             StockMovementEntity(
-                                uuid = UUID.randomUUID().toString(),
-                                businessId = po.businessId,
-                                deviceId = po.deviceId,
+                                businessId = businessId,
                                 productUuid = product.uuid,
                                 movementType = "PURCHASE",
                                 deltaQuantity = qty,
@@ -466,7 +468,7 @@ class PurchaseOrderRepository(
                             )
                         )
                     }
-                    purchaseOrderDao.updatePurchaseOrderItemReceivedQuantity(poItem.id, qty)
+                    purchaseOrderDao.updatePurchaseOrderItemReceivedQuantity(poItem.id, qty, businessId)
                 }
 
                 // 9. Payment routing
@@ -509,14 +511,15 @@ class PurchaseOrderRepository(
                     status = PurchaseOrderStatus.RECEIVED.name,
                     receivedAt = now,
                     finalPurchaseId = purchaseId,
-                    updatedAt = now
+                    updatedAt = now,
+                    businessId = businessId
                 )
 
                 // 11. Sync Queue entries
                 syncQueueDao.insert(
                     SyncQueueEntity(
-                        businessId = purchaseTransaction.businessId,
-                        deviceId = purchaseTransaction.deviceId,
+                        businessId = businessId,
+                        deviceId = "LEGACY_DEVICE",
                         entityType = "PURCHASE",
                         entityUuid = purUuid,
                         operation = "INSERT",
@@ -527,8 +530,8 @@ class PurchaseOrderRepository(
 
                 syncQueueDao.insert(
                     SyncQueueEntity(
-                        businessId = po.businessId,
-                        deviceId = po.deviceId,
+                        businessId = businessId,
+                        deviceId = "LEGACY_DEVICE",
                         entityType = "PURCHASE_ORDER",
                         entityUuid = po.uuid,
                         operation = "UPDATE",

@@ -11,13 +11,14 @@ import java.util.Calendar
 import java.util.UUID
 
 class CashRepository(
-    private val appDatabase: AppDatabase
+    private val appDatabase: AppDatabase,
+    private val businessId: String
 ) {
     private val cashDao = appDatabase.cashDao()
     private val syncQueueDao = appDatabase.syncQueueDao()
 
-    val totalCashBalance: Flow<Long?> = cashDao.getTotalCashBalance()
-    val allCashTransactions: Flow<List<CashTransactionEntity>> = cashDao.getAllCashTransactions()
+    val totalCashBalance: Flow<Long?> = cashDao.getTotalCashBalance(businessId)
+    val allCashTransactions: Flow<List<CashTransactionEntity>> = cashDao.getAllCashTransactions(businessId)
 
     fun getTodayExpenseTotalFlow(): Flow<Long?> {
         val calendar = Calendar.getInstance()
@@ -33,7 +34,7 @@ class CashRepository(
         calendar.set(Calendar.MILLISECOND, 999)
         val endOfDay = calendar.timeInMillis
 
-        return cashDao.getCashExpenseTotal(startOfDay, endOfDay)
+        return cashDao.getCashExpenseTotal(businessId, startOfDay, endOfDay)
     }
 
     fun getTodayIncomeTotalFlow(): Flow<Long?> {
@@ -50,7 +51,7 @@ class CashRepository(
         calendar.set(Calendar.MILLISECOND, 999)
         val endOfDay = calendar.timeInMillis
 
-        return cashDao.getCashIncomeTotal(startOfDay, endOfDay)
+        return cashDao.getCashIncomeTotal(businessId, startOfDay, endOfDay)
     }
 
     suspend fun recordManualIncome(
@@ -70,6 +71,7 @@ class CashRepository(
             val txUuid = UUID.randomUUID().toString()
             val tx = CashTransactionEntity(
                 uuid = txUuid,
+                businessId = businessId,
                 type = "INCOME",
                 amount = amount,
                 description = cleanDesc,
@@ -112,6 +114,7 @@ class CashRepository(
             val txUuid = UUID.randomUUID().toString()
             val tx = CashTransactionEntity(
                 uuid = txUuid,
+                businessId = businessId,
                 type = "EXPENSE",
                 amount = amount,
                 description = cleanDesc,
@@ -145,6 +148,8 @@ class CashRepository(
         createdAt: Long = System.currentTimeMillis()
     ): Long = withContext(Dispatchers.IO) {
         val tx = CashTransactionEntity(
+            uuid = UUID.randomUUID().toString(),
+            businessId = businessId,
             type = "INCOME",
             amount = amount,
             description = description,
@@ -163,6 +168,8 @@ class CashRepository(
         createdAt: Long = System.currentTimeMillis()
     ): Long = withContext(Dispatchers.IO) {
         val tx = CashTransactionEntity(
+            uuid = UUID.randomUUID().toString(),
+            businessId = businessId,
             type = "EXPENSE",
             amount = amount,
             description = description,

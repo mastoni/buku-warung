@@ -75,7 +75,7 @@ class AtomicTransactionTest {
                 )
 
                 // Step C: Increase stock
-                database.productDao().addProductStock(prodId, 5.0)
+                database.productDao().addProductStock(prodId, 5.0, System.currentTimeMillis(), "LEGACY_BUSINESS")
 
                 // Step D: Insert Cash Expense
                 database.cashDao().insertCashTransaction(
@@ -93,15 +93,17 @@ class AtomicTransactionTest {
         assertTrue("Exception should have been thrown", exceptionThrown)
 
         // Verify Purchase Transaction was NOT saved
-        val purchases = database.purchaseDao().getAllPurchaseTransactions().first()
+        val purchases = database.purchaseDao().getAllPurchaseTransactions("LEGACY_BUSINESS").first()
         assertEquals(0, purchases.size)
 
         // Verify Stock was NOT increased (remains 10.0)
-        val product = database.productDao().getProductById(prodId)
+        val product = database.productDao().getProductById(prodId, "LEGACY_BUSINESS")
         assertEquals(10.0, product?.stock ?: 0.0, 0.001)
 
         // Verify Cash Transaction was NOT saved
-        val cashTxs = database.cashDao().getAllCashTransactions().first()
+        val cashTxs = database.cashDao().getAllCashTransactions("LEGACY_BUSINESS").first()
         assertEquals(0, cashTxs.size)
     }
 }
+
+

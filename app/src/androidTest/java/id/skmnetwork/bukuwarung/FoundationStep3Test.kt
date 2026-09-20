@@ -55,11 +55,11 @@ class FoundationStep3Test {
             .allowMainThreadQueries()
             .build()
 
-        productRepository = ProductRepository(database)
-        stockRepository = StockRepository(database)
-        saleRepository = SaleRepository(database)
-        cashRepository = CashRepository(database)
-        customerRepository = CustomerRepository(database)
+        productRepository = ProductRepository(database, "LEGACY_BUSINESS")
+        stockRepository = StockRepository(database, "LEGACY_BUSINESS")
+        saleRepository = SaleRepository(database, "LEGACY_BUSINESS")
+        cashRepository = CashRepository(database, "LEGACY_BUSINESS")
+        customerRepository = CustomerRepository(database, "LEGACY_BUSINESS")
     }
 
     @After
@@ -412,3 +412,5 @@ class FoundationStep3Test {
         assertEquals(50000L, committedSale!!.totalAmount)
     }
 }
+
+

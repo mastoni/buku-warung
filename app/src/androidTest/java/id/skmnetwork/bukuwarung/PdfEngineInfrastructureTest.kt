@@ -314,7 +314,7 @@ class PdfEngineInfrastructureTest {
     fun test10_pdfGenerator_doesNotMutateRoomDatabase() = runBlocking {
         // Insert sample baseline record
         database.categoryDao().insertCategory(CategoryEntity(name = "Makanan"))
-        val initialCategories = database.categoryDao().getAllCategories().first()
+        val initialCategories = database.categoryDao().getAllCategories("LEGACY_BUSINESS").first()
         val initialCount = initialCategories.size
 
         val doc = PdfReportDocument(
@@ -339,8 +339,10 @@ class PdfEngineInfrastructureTest {
         assertTrue(result2.isSuccess)
 
         // Verify Room database remains untouched
-        val afterCategories = database.categoryDao().getAllCategories().first()
+        val afterCategories = database.categoryDao().getAllCategories("LEGACY_BUSINESS").first()
         assertEquals("Room category count must remain identical before and after PDF generation", initialCount, afterCategories.size)
         assertEquals("Category data must remain untouched", "Makanan", afterCategories[0].name)
     }
 }
+
+

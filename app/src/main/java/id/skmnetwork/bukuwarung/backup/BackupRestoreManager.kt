@@ -91,7 +91,7 @@ class BackupRestoreManager(
         // Map Category ID -> Category UUID for product export
         val categoryIdToUuid = mutableMapOf<Long, String>()
         val categoryRows = mutableListOf<List<String>>()
-        db.query("SELECT id, uuid, business_id, name, is_deleted, deleted_at, created_at FROM categories").use { cursor ->
+        db.query("SELECT id, uuid, business_id, name, is_deleted, deleted_at, created_at FROM categories WHERE business_id = ?", arrayOf(businessId)).use { cursor ->
             while (cursor.moveToNext()) {
                 val id = cursor.getLong(0)
                 val uuid = cursor.getString(1)
@@ -123,7 +123,7 @@ class BackupRestoreManager(
         // Map Customer ID -> Customer UUID
         val customerIdToUuid = mutableMapOf<Long, String>()
         val customerRows = mutableListOf<List<String>>()
-        db.query("SELECT id, uuid, business_id, name, phone, address, is_deleted, deleted_at, created_at, updated_at FROM customers").use { cursor ->
+        db.query("SELECT id, uuid, business_id, name, phone, address, is_deleted, deleted_at, created_at, updated_at FROM customers WHERE business_id = ?", arrayOf(businessId)).use { cursor ->
             while (cursor.moveToNext()) {
                 val id = cursor.getLong(0)
                 val uuid = cursor.getString(1)
@@ -161,7 +161,7 @@ class BackupRestoreManager(
         // Map Supplier ID -> Supplier UUID
         val supplierIdToUuid = mutableMapOf<Long, String>()
         val supplierRows = mutableListOf<List<String>>()
-        db.query("SELECT id, uuid, business_id, name, phone, address, is_deleted, deleted_at, created_at, updated_at FROM suppliers").use { cursor ->
+        db.query("SELECT id, uuid, business_id, name, phone, address, is_deleted, deleted_at, created_at, updated_at FROM suppliers WHERE business_id = ?", arrayOf(businessId)).use { cursor ->
             while (cursor.moveToNext()) {
                 val id = cursor.getLong(0)
                 val uuid = cursor.getString(1)
@@ -198,7 +198,7 @@ class BackupRestoreManager(
 
         // 3. Tab 04_Products
         val productRows = mutableListOf<List<String>>()
-        db.query("SELECT id, uuid, business_id, category_id, name, purchase_price, selling_price, stock, minimum_stock, unit, item_type, is_deleted, deleted_at, created_at, updated_at, barcode, image_uri FROM products").use { cursor ->
+        db.query("SELECT id, uuid, business_id, category_id, name, purchase_price, selling_price, stock, minimum_stock, unit, item_type, is_deleted, deleted_at, created_at, updated_at, barcode, image_uri FROM products WHERE business_id = ?", arrayOf(businessId)).use { cursor ->
             while (cursor.moveToNext()) {
                 val uuid = cursor.getString(1)
                 val bId = cursor.getString(2)
@@ -248,7 +248,7 @@ class BackupRestoreManager(
 
         // 4. Tab 06_Sales
         val saleRows = mutableListOf<List<String>>()
-        db.query("SELECT id, uuid, business_id, device_id, transaction_number, transaction_date, total_amount, payment_method, created_at, customer_id, discount_amount FROM sales_transactions").use { cursor ->
+        db.query("SELECT id, uuid, business_id, device_id, transaction_number, transaction_date, total_amount, payment_method, created_at, customer_id, discount_amount FROM sales_transactions WHERE business_id = ?", arrayOf(businessId)).use { cursor ->
             while (cursor.moveToNext()) {
                 val uuid = cursor.getString(1)
                 val bId = cursor.getString(2)
@@ -286,7 +286,7 @@ class BackupRestoreManager(
 
         // 5. Tab 07_SaleItems
         val saleItemRows = mutableListOf<List<String>>()
-        db.query("SELECT id, uuid, business_id, sale_uuid, product_uuid, product_name, quantity, price, purchase_price, subtotal FROM sale_items").use { cursor ->
+        db.query("SELECT id, uuid, business_id, sale_uuid, product_uuid, product_name, quantity, price, purchase_price, subtotal FROM sale_items WHERE business_id = ?", arrayOf(businessId)).use { cursor ->
             while (cursor.moveToNext()) {
                 val uuid = cursor.getString(1)
                 val bId = cursor.getString(2)
@@ -321,7 +321,7 @@ class BackupRestoreManager(
 
         // 6. Tab 08_Purchases
         val purchaseRows = mutableListOf<List<String>>()
-        db.query("SELECT id, uuid, business_id, device_id, transaction_number, transaction_date, total_amount, payment_method, created_at, supplier_id FROM purchase_transactions").use { cursor ->
+        db.query("SELECT id, uuid, business_id, device_id, transaction_number, transaction_date, total_amount, payment_method, created_at, supplier_id FROM purchase_transactions WHERE business_id = ?", arrayOf(businessId)).use { cursor ->
             while (cursor.moveToNext()) {
                 val uuid = cursor.getString(1)
                 val bId = cursor.getString(2)
@@ -357,7 +357,7 @@ class BackupRestoreManager(
 
         // 7. Tab 09_PurchaseItems
         val purchaseItemRows = mutableListOf<List<String>>()
-        db.query("SELECT id, uuid, business_id, purchase_uuid, product_uuid, product_name, quantity, purchase_price, subtotal FROM purchase_items").use { cursor ->
+        db.query("SELECT id, uuid, business_id, purchase_uuid, product_uuid, product_name, quantity, purchase_price, subtotal FROM purchase_items WHERE business_id = ?", arrayOf(businessId)).use { cursor ->
             while (cursor.moveToNext()) {
                 val uuid = cursor.getString(1)
                 val bId = cursor.getString(2)
@@ -390,7 +390,7 @@ class BackupRestoreManager(
 
         // 8. Tab 10_Debts
         val debtRows = mutableListOf<List<String>>()
-        db.query("SELECT id, uuid, business_id, customer_uuid, sale_uuid, total_debt, paid_amount, status, created_at, updated_at FROM debts").use { cursor ->
+        db.query("SELECT id, uuid, business_id, customer_uuid, sale_uuid, total_debt, paid_amount, status, created_at, updated_at FROM debts WHERE business_id = ?", arrayOf(businessId)).use { cursor ->
             while (cursor.moveToNext()) {
                 val uuid = cursor.getString(1)
                 val bId = cursor.getString(2)
@@ -425,7 +425,7 @@ class BackupRestoreManager(
 
         // 9. Tab 11_DebtPayments
         val debtPaymentRows = mutableListOf<List<String>>()
-        db.query("SELECT id, uuid, business_id, device_id, debt_uuid, amount, payment_date, note, created_at FROM debt_payments").use { cursor ->
+        db.query("SELECT id, uuid, business_id, device_id, debt_uuid, amount, payment_date, note, created_at FROM debt_payments WHERE business_id = ?", arrayOf(businessId)).use { cursor ->
             while (cursor.moveToNext()) {
                 val uuid = cursor.getString(1)
                 val bId = cursor.getString(2)
@@ -458,7 +458,7 @@ class BackupRestoreManager(
 
         // 10. Tab 13_SupplierPayables
         val payableRows = mutableListOf<List<String>>()
-        db.query("SELECT id, uuid, business_id, supplier_uuid, purchase_uuid, total_debt, paid_amount, status, created_at, updated_at FROM supplier_payables").use { cursor ->
+        db.query("SELECT id, uuid, business_id, supplier_uuid, purchase_uuid, total_debt, paid_amount, status, created_at, updated_at FROM supplier_payables WHERE business_id = ?", arrayOf(businessId)).use { cursor ->
             while (cursor.moveToNext()) {
                 val uuid = cursor.getString(1)
                 val bId = cursor.getString(2)
@@ -493,7 +493,7 @@ class BackupRestoreManager(
 
         // 11. Tab 14_SupplierPayments
         val supplierPaymentRows = mutableListOf<List<String>>()
-        db.query("SELECT id, uuid, business_id, device_id, payable_uuid, amount, payment_date, note, created_at FROM supplier_payments").use { cursor ->
+        db.query("SELECT id, uuid, business_id, device_id, payable_uuid, amount, payment_date, note, created_at FROM supplier_payments WHERE business_id = ?", arrayOf(businessId)).use { cursor ->
             while (cursor.moveToNext()) {
                 val uuid = cursor.getString(1)
                 val bId = cursor.getString(2)
@@ -526,7 +526,7 @@ class BackupRestoreManager(
 
         // 12. Tab 15_CashTransactions
         val cashRows = mutableListOf<List<String>>()
-        db.query("SELECT id, uuid, business_id, device_id, type, amount, description, ref_uuid, created_at FROM cash_transactions").use { cursor ->
+        db.query("SELECT id, uuid, business_id, device_id, type, amount, description, ref_uuid, created_at FROM cash_transactions WHERE business_id = ?", arrayOf(businessId)).use { cursor ->
             while (cursor.moveToNext()) {
                 val uuid = cursor.getString(1)
                 val bId = cursor.getString(2)
@@ -559,7 +559,7 @@ class BackupRestoreManager(
 
         // 13. Tab 16_StockMovements
         val movementRows = mutableListOf<List<String>>()
-        db.query("SELECT id, uuid, business_id, device_id, product_uuid, movement_type, delta_quantity, current_stock_snapshot, reference_uuid, note, created_at FROM stock_movements").use { cursor ->
+        db.query("SELECT id, uuid, business_id, device_id, product_uuid, movement_type, delta_quantity, current_stock_snapshot, reference_uuid, note, created_at FROM stock_movements WHERE business_id = ?", arrayOf(businessId)).use { cursor ->
             while (cursor.moveToNext()) {
                 val uuid = cursor.getString(1)
                 val bId = cursor.getString(2)
@@ -596,7 +596,7 @@ class BackupRestoreManager(
 
         // 14. Tab 17_SaleReturns
         val returnRows = mutableListOf<List<String>>()
-        db.query("SELECT id, uuid, business_id, device_id, return_number, return_date, sale_uuid, customer_uuid, total_refund_amount, refund_method, reason, notes, created_at FROM sale_return_transactions").use { cursor ->
+        db.query("SELECT id, uuid, business_id, device_id, return_number, return_date, sale_uuid, customer_uuid, total_refund_amount, refund_method, reason, notes, created_at FROM sale_return_transactions WHERE business_id = ?", arrayOf(businessId)).use { cursor ->
             while (cursor.moveToNext()) {
                 val uuid = cursor.getString(1)
                 val bId = cursor.getString(2)
@@ -637,7 +637,7 @@ class BackupRestoreManager(
 
         // 15. Tab 18_SaleReturnItems
         val returnItemRows = mutableListOf<List<String>>()
-        db.query("SELECT id, uuid, business_id, return_uuid, sale_item_uuid, product_uuid, product_name, quantity, price, purchase_price, subtotal, created_at FROM sale_return_items").use { cursor ->
+        db.query("SELECT id, uuid, business_id, return_uuid, sale_item_uuid, product_uuid, product_name, quantity, price, purchase_price, subtotal, created_at FROM sale_return_items WHERE business_id = ?", arrayOf(businessId)).use { cursor ->
             while (cursor.moveToNext()) {
                 val uuid = cursor.getString(1)
                 val bId = cursor.getString(2)

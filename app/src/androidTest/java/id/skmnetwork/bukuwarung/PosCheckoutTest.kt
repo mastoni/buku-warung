@@ -35,8 +35,8 @@ class PosCheckoutTest {
             AppDatabase::class.java
         ).allowMainThreadQueries().build()
 
-        productRepository = ProductRepository(database)
-        customerRepository = CustomerRepository(database)
+        productRepository = ProductRepository(database, "LEGACY_BUSINESS")
+        customerRepository = CustomerRepository(database, "LEGACY_BUSINESS")
 
         val catId = database.categoryDao().insertCategory(CategoryEntity(name = "Snack"))
         productId = database.productDao().insertProduct(
@@ -70,11 +70,11 @@ class PosCheckoutTest {
         assertTrue(result.isSuccess)
 
         // Verify Stock = 9.0 (Exact 1x Deduction)
-        val stock = database.productDao().getProductById(productId)!!.stock
+        val stock = database.productDao().getProductById(productId, "LEGACY_BUSINESS")!!.stock
         assertEquals(9.0, stock, 0.001)
 
         // Verify Cash Income = 10.000
-        val cashTxs = database.cashDao().getAllCashTransactions().first()
+        val cashTxs = database.cashDao().getAllCashTransactions("LEGACY_BUSINESS").first()
         assertEquals(1, cashTxs.size)
         assertEquals(10000L, cashTxs[0].amount)
     }
@@ -93,11 +93,11 @@ class PosCheckoutTest {
         assertTrue(result.isSuccess)
 
         // Verify Stock = 9.0 (Exact 1x Deduction)
-        val stock = database.productDao().getProductById(productId)!!.stock
+        val stock = database.productDao().getProductById(productId, "LEGACY_BUSINESS")!!.stock
         assertEquals(9.0, stock, 0.001)
 
         // Verify Cash Income = 10.000 (MUST EQUAL Total Price, NOT 15.000 Tendered)
-        val cashTxs = database.cashDao().getAllCashTransactions().first()
+        val cashTxs = database.cashDao().getAllCashTransactions("LEGACY_BUSINESS").first()
         assertEquals(1, cashTxs.size)
         assertEquals(10000L, cashTxs[0].amount)
     }
@@ -111,13 +111,13 @@ class PosCheckoutTest {
         assertTrue("Underpaid cash tender must be marked as insufficient", isInsufficient)
 
         // Simulate UI rejection: No DB write executes if insufficient
-        val salesBefore = database.saleDao().getAllTransactions().first()
+        val salesBefore = database.saleDao().getAllTransactions("LEGACY_BUSINESS").first()
         assertEquals(0, salesBefore.size)
 
-        val cashBefore = database.cashDao().getAllCashTransactions().first()
+        val cashBefore = database.cashDao().getAllCashTransactions("LEGACY_BUSINESS").first()
         assertEquals(0, cashBefore.size)
 
-        val stockBefore = database.productDao().getProductById(productId)!!.stock
+        val stockBefore = database.productDao().getProductById(productId, "LEGACY_BUSINESS")!!.stock
         assertEquals(10.0, stockBefore, 0.001)
     }
 
@@ -130,7 +130,7 @@ class PosCheckoutTest {
         assertTrue("Zero cash tender must be marked as insufficient", isInsufficient)
 
         // Verify No DB Writes
-        val salesBefore = database.saleDao().getAllTransactions().first()
+        val salesBefore = database.saleDao().getAllTransactions("LEGACY_BUSINESS").first()
         assertEquals(0, salesBefore.size)
     }
 
@@ -141,16 +141,16 @@ class PosCheckoutTest {
         assertTrue(result1.isSuccess)
 
         // Verify exact single transaction records
-        val sales = database.saleDao().getAllTransactions().first()
+        val sales = database.saleDao().getAllTransactions("LEGACY_BUSINESS").first()
         assertEquals(1, sales.size)
 
-        val saleItems = database.saleDao().getItemsForTransaction(sales[0].id)
+        val saleItems = database.saleDao().getItemsForTransaction(sales[0].id, "LEGACY_BUSINESS")
         assertEquals(1, saleItems.size)
 
-        val stock = database.productDao().getProductById(productId)!!.stock
+        val stock = database.productDao().getProductById(productId, "LEGACY_BUSINESS")!!.stock
         assertEquals(9.0, stock, 0.001)
 
-        val cashTxs = database.cashDao().getAllCashTransactions().first()
+        val cashTxs = database.cashDao().getAllCashTransactions("LEGACY_BUSINESS").first()
         assertEquals(1, cashTxs.size)
         assertEquals(10000L, cashTxs[0].amount)
     }
@@ -161,15 +161,15 @@ class PosCheckoutTest {
         assertTrue(result.isSuccess)
 
         // Verify Stock = 9.0
-        val stock = database.productDao().getProductById(productId)!!.stock
+        val stock = database.productDao().getProductById(productId, "LEGACY_BUSINESS")!!.stock
         assertEquals(9.0, stock, 0.001)
 
         // Verify 0 CashTransaction for QRIS
-        val cashTxs = database.cashDao().getAllCashTransactions().first()
+        val cashTxs = database.cashDao().getAllCashTransactions("LEGACY_BUSINESS").first()
         assertEquals(0, cashTxs.size)
 
         // Verify SaleTransaction paymentMethod == "QRIS"
-        val sales = database.saleDao().getAllTransactions().first()
+        val sales = database.saleDao().getAllTransactions("LEGACY_BUSINESS").first()
         assertEquals(1, sales.size)
         assertEquals("QRIS", sales[0].paymentMethod)
     }
@@ -180,16 +180,19 @@ class PosCheckoutTest {
         assertTrue(result.isSuccess)
 
         // Verify Stock = 9.0
-        val stock = database.productDao().getProductById(productId)!!.stock
+        val stock = database.productDao().getProductById(productId, "LEGACY_BUSINESS")!!.stock
         assertEquals(9.0, stock, 0.001)
 
         // Verify 0 CashTransaction
-        val cashTxs = database.cashDao().getAllCashTransactions().first()
+        val cashTxs = database.cashDao().getAllCashTransactions("LEGACY_BUSINESS").first()
         assertEquals(0, cashTxs.size)
 
         // Verify Debt Created (10.000)
-        val debts = database.debtDao().getDebtsForCustomer(customerId).first()
+        val debts = database.debtDao().getDebtsForCustomer(customerId, "LEGACY_BUSINESS").first()
         assertEquals(1, debts.size)
         assertEquals(10000L, debts[0].totalDebt)
     }
 }
+
+
+

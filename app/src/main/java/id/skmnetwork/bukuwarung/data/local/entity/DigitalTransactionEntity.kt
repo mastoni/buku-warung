@@ -20,7 +20,8 @@ import java.util.UUID
     indices = [
         Index(value = ["uuid"], unique = true),
         Index(value = ["sale_item_id"]),
-        Index(value = ["status"])
+        Index(value = ["status"]),
+        Index(value = ["business_id"])
     ]
 )
 data class DigitalTransactionEntity(
@@ -29,6 +30,9 @@ data class DigitalTransactionEntity(
 
     @ColumnInfo(name = "uuid")
     val uuid: String = UUID.randomUUID().toString(),
+
+    @ColumnInfo(name = "business_id")
+    val businessId: String = "LEGACY_BUSINESS",
 
     @ColumnInfo(name = "sale_item_id")
     val saleItemId: Long,

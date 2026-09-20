@@ -38,9 +38,9 @@ class SupplierPayableTest {
             AppDatabase::class.java
         ).allowMainThreadQueries().build()
 
-        productRepository = ProductRepository(database)
-        customerRepository = CustomerRepository(database)
-        supplierRepository = SupplierRepository(database)
+        productRepository = ProductRepository(database, "LEGACY_BUSINESS")
+        customerRepository = CustomerRepository(database, "LEGACY_BUSINESS")
+        supplierRepository = SupplierRepository(database, "LEGACY_BUSINESS")
 
         val catId = database.categoryDao().insertCategory(CategoryEntity(name = "Umum"))
         productId = database.productDao().insertProduct(
@@ -63,30 +63,30 @@ class SupplierPayableTest {
 
     @Test
     fun test5_cashPurchaseDecreasesCashNoPayable() = runBlocking {
-        val initialCash = database.cashDao().getTotalCashBalance().first() ?: 0L
-        val initialStock = database.productDao().getProductById(productId)!!.stock
+        val initialCash = database.cashDao().getTotalCashBalance("LEGACY_BUSINESS").first() ?: 0L
+        val initialStock = database.productDao().getProductById(productId, "LEGACY_BUSINESS")!!.stock
 
         // CASH purchase: 1 x Gula = Rp 10.000
         val result = productRepository.processAtomicPurchase(mapOf(productId to 1.0))
         assertTrue(result.isSuccess)
 
         // Verify Cash Expense (-10.000)
-        val currentCash = database.cashDao().getTotalCashBalance().first() ?: 0L
+        val currentCash = database.cashDao().getTotalCashBalance("LEGACY_BUSINESS").first() ?: 0L
         assertEquals(initialCash - 10000L, currentCash)
 
         // Verify Stock Increased (+1.0)
-        val currentStock = database.productDao().getProductById(productId)!!.stock
+        val currentStock = database.productDao().getProductById(productId, "LEGACY_BUSINESS")!!.stock
         assertEquals(initialStock + 1.0, currentStock, 0.001)
 
         // Verify NO Supplier Payable created
-        val payables = database.supplierPayableDao().getPayablesForSupplier(supplierId).first()
+        val payables = database.supplierPayableDao().getPayablesForSupplier(supplierId, "LEGACY_BUSINESS").first()
         assertEquals(0, payables.size)
     }
 
     @Test
     fun test6_creditPurchaseCreatesPayableNoCashExpense() = runBlocking {
-        val initialCash = database.cashDao().getTotalCashBalance().first() ?: 0L
-        val initialStock = database.productDao().getProductById(productId)!!.stock
+        val initialCash = database.cashDao().getTotalCashBalance("LEGACY_BUSINESS").first() ?: 0L
+        val initialStock = database.productDao().getProductById(productId, "LEGACY_BUSINESS")!!.stock
 
         // CREDIT purchase: 1 x Gula = Rp 10.000
         val result = supplierRepository.processAtomicCreditPurchase(
@@ -96,15 +96,15 @@ class SupplierPayableTest {
         assertTrue(result.isSuccess)
 
         // Verify Stock Increased (+1.0)
-        val currentStock = database.productDao().getProductById(productId)!!.stock
+        val currentStock = database.productDao().getProductById(productId, "LEGACY_BUSINESS")!!.stock
         assertEquals(initialStock + 1.0, currentStock, 0.001)
 
         // Verify Cash Balance UNCHANGED
-        val currentCash = database.cashDao().getTotalCashBalance().first() ?: 0L
+        val currentCash = database.cashDao().getTotalCashBalance("LEGACY_BUSINESS").first() ?: 0L
         assertEquals(initialCash, currentCash)
 
         // Verify Supplier Payable Created
-        val payables = database.supplierPayableDao().getPayablesForSupplier(supplierId).first()
+        val payables = database.supplierPayableDao().getPayablesForSupplier(supplierId, "LEGACY_BUSINESS").first()
         assertEquals(1, payables.size)
         val payable = payables[0]
         assertEquals(10000L, payable.totalDebt)
@@ -116,21 +116,21 @@ class SupplierPayableTest {
     fun test7_supplierPartialPaymentUpdatesPaidAmountOutstandingAndCash() = runBlocking {
         // Step 1: Credit Purchase Rp 10.000
         supplierRepository.processAtomicCreditPurchase(mapOf(productId to 1.0), supplierId)
-        val payableId = database.supplierPayableDao().getPayablesForSupplier(supplierId).first()[0].id
+        val payableId = database.supplierPayableDao().getPayablesForSupplier(supplierId, "LEGACY_BUSINESS").first()[0].id
 
         // Step 2: Pay Supplier Rp 4.000
         val payResult = supplierRepository.processAtomicSupplierPayment(payableId, 4000L, "Cicilan 1")
         assertTrue(payResult.isSuccess)
 
         // Verify Payable State
-        val payable = database.supplierPayableDao().getSupplierPayableById(payableId)!!
+        val payable = database.supplierPayableDao().getSupplierPayableById(payableId, "LEGACY_BUSINESS")!!
         assertEquals(10000L, payable.totalDebt)
         assertEquals(4000L, payable.paidAmount)
         assertEquals(6000L, payable.totalDebt - payable.paidAmount)
         assertEquals("OPEN", payable.status)
 
         // Verify Cash Expense Created (-4.000)
-        val currentCash = database.cashDao().getTotalCashBalance().first() ?: 0L
+        val currentCash = database.cashDao().getTotalCashBalance("LEGACY_BUSINESS").first() ?: 0L
         assertEquals(-4000L, currentCash)
     }
 
@@ -138,7 +138,7 @@ class SupplierPayableTest {
     fun test8_finalSupplierPaymentMarksStatusPaidAndUpdatesCash() = runBlocking {
         // Step 1: Credit Purchase Rp 10.000
         supplierRepository.processAtomicCreditPurchase(mapOf(productId to 1.0), supplierId)
-        val payableId = database.supplierPayableDao().getPayablesForSupplier(supplierId).first()[0].id
+        val payableId = database.supplierPayableDao().getPayablesForSupplier(supplierId, "LEGACY_BUSINESS").first()[0].id
 
         // Step 2: Pay Rp 4.000
         supplierRepository.processAtomicSupplierPayment(payableId, 4000L, "Cicilan 1")
@@ -148,13 +148,13 @@ class SupplierPayableTest {
         assertTrue(payResult2.isSuccess)
 
         // Verify Payable State (paidAmount = 10000, outstanding = 0, status = PAID)
-        val payable = database.supplierPayableDao().getSupplierPayableById(payableId)!!
+        val payable = database.supplierPayableDao().getSupplierPayableById(payableId, "LEGACY_BUSINESS")!!
         assertEquals(10000L, payable.paidAmount)
         assertEquals(0L, payable.totalDebt - payable.paidAmount)
         assertEquals("PAID", payable.status)
 
         // Verify Cash Expense Total (-10.000)
-        val currentCash = database.cashDao().getTotalCashBalance().first() ?: 0L
+        val currentCash = database.cashDao().getTotalCashBalance("LEGACY_BUSINESS").first() ?: 0L
         assertEquals(-10000L, currentCash)
     }
 
@@ -162,28 +162,28 @@ class SupplierPayableTest {
     fun test9_supplierOverpaymentIsRejectedWithoutDbWrites() = runBlocking {
         // Step 1: Credit Purchase Rp 10.000
         supplierRepository.processAtomicCreditPurchase(mapOf(productId to 1.0), supplierId)
-        val payableId = database.supplierPayableDao().getPayablesForSupplier(supplierId).first()[0].id
+        val payableId = database.supplierPayableDao().getPayablesForSupplier(supplierId, "LEGACY_BUSINESS").first()[0].id
 
         // Step 2: Attempt Overpayment Rp 10.001
         val overpayResult = supplierRepository.processAtomicSupplierPayment(payableId, 10001L, "Overpay")
         assertTrue("Overpayment must fail", overpayResult.isFailure)
 
         // Verify Payable Unchanged
-        val payable = database.supplierPayableDao().getSupplierPayableById(payableId)!!
+        val payable = database.supplierPayableDao().getSupplierPayableById(payableId, "LEGACY_BUSINESS")!!
         assertEquals(0L, payable.paidAmount)
 
         // Verify No Payments Recorded
-        val payments = database.supplierPayableDao().getPaymentsListForPayable(payableId)
+        val payments = database.supplierPayableDao().getPaymentsListForPayable(payableId, "LEGACY_BUSINESS")
         assertEquals(0, payments.size)
 
         // Verify Cash Unchanged
-        val currentCash = database.cashDao().getTotalCashBalance().first() ?: 0L
+        val currentCash = database.cashDao().getTotalCashBalance("LEGACY_BUSINESS").first() ?: 0L
         assertEquals(0L, currentCash)
     }
 
     @Test
     fun test10_atomicRollbackOnCreditPurchaseAndPaymentFailure() = runBlocking {
-        val initialStock = database.productDao().getProductById(productId)!!.stock
+        val initialStock = database.productDao().getProductById(productId, "LEGACY_BUSINESS")!!.stock
 
         // Forced Failure in Credit Purchase
         var failedPurchase = false
@@ -198,26 +198,26 @@ class SupplierPayableTest {
         assertTrue(failedPurchase)
 
         // Verify 0 Purchases, 0 Payables, Stock Unchanged
-        val purchases = database.purchaseDao().getAllPurchaseTransactions().first()
+        val purchases = database.purchaseDao().getAllPurchaseTransactions("LEGACY_BUSINESS").first()
         assertEquals(0, purchases.size)
-        val payables = database.supplierPayableDao().getPayablesForSupplier(supplierId).first()
+        val payables = database.supplierPayableDao().getPayablesForSupplier(supplierId, "LEGACY_BUSINESS").first()
         assertEquals(0, payables.size)
-        assertEquals(initialStock, database.productDao().getProductById(productId)!!.stock, 0.001)
+        assertEquals(initialStock, database.productDao().getProductById(productId, "LEGACY_BUSINESS")!!.stock, 0.001)
     }
 
     @Test
     fun test11_reconciliationPaidAmountEqualsSumPaymentsAndOutstanding() = runBlocking {
         // Step 1: Credit Purchase Rp 10.000
         supplierRepository.processAtomicCreditPurchase(mapOf(productId to 1.0), supplierId)
-        val payableId = database.supplierPayableDao().getPayablesForSupplier(supplierId).first()[0].id
+        val payableId = database.supplierPayableDao().getPayablesForSupplier(supplierId, "LEGACY_BUSINESS").first()[0].id
 
         // Step 2: Multiple Payments (2500 + 2500 = 5000)
         supplierRepository.processAtomicSupplierPayment(payableId, 2500L, "Bayar 1")
         supplierRepository.processAtomicSupplierPayment(payableId, 2500L, "Bayar 2")
 
         // Reconciliation Assertion
-        val payable = database.supplierPayableDao().getSupplierPayableById(payableId)!!
-        val payments = database.supplierPayableDao().getPaymentsListForPayable(payableId)
+        val payable = database.supplierPayableDao().getSupplierPayableById(payableId, "LEGACY_BUSINESS")!!
+        val payments = database.supplierPayableDao().getPaymentsListForPayable(payableId, "LEGACY_BUSINESS")
         val paymentSum = payments.sumOf { it.amount }
 
         assertEquals(paymentSum, payable.paidAmount) // paidAmount == SUM(payments)
@@ -277,19 +277,19 @@ class SupplierPayableTest {
         )
         assertTrue(res1.isSuccess)
 
-        val purchases = database.purchaseDao().getAllPurchaseTransactions().first()
+        val purchases = database.purchaseDao().getAllPurchaseTransactions("LEGACY_BUSINESS").first()
         val p1 = purchases.first { it.totalAmount == 20000L }
         org.junit.Assert.assertNull("Cash purchase without supplier must have null supplierId", p1.supplierId)
         assertEquals("CASH", p1.paymentMethod)
 
         // Verify Cash Expense created
-        val cashTx1 = database.cashDao().getAllCashTransactions().first().find { it.refUuid == p1.uuid }
+        val cashTx1 = database.cashDao().getAllCashTransactions("LEGACY_BUSINESS").first().find { it.refUuid == p1.uuid }
         org.junit.Assert.assertNotNull("Cash purchase must create CashTransaction EXPENSE", cashTx1)
         assertEquals("EXPENSE", cashTx1!!.type)
         assertEquals(20000L, cashTx1.amount)
 
         // Verify NO SupplierPayable created
-        val payables1 = database.supplierPayableDao().getPayablesForSupplier(supplierId).first()
+        val payables1 = database.supplierPayableDao().getPayablesForSupplier(supplierId, "LEGACY_BUSINESS").first()
         assertEquals(0, payables1.size)
 
         // Cash purchase WITH supplier
@@ -299,19 +299,19 @@ class SupplierPayableTest {
         )
         assertTrue(res2.isSuccess)
 
-        val purchases2 = database.purchaseDao().getAllPurchaseTransactions().first()
+        val purchases2 = database.purchaseDao().getAllPurchaseTransactions("LEGACY_BUSINESS").first()
         val p2 = purchases2.first { it.totalAmount == 30000L }
         assertEquals("Cash purchase with supplier must store supplierId", supplierId, p2.supplierId)
         assertEquals("CASH", p2.paymentMethod)
 
         // Verify Cash Expense created
-        val cashTx2 = database.cashDao().getAllCashTransactions().first().find { it.refUuid == p2.uuid }
+        val cashTx2 = database.cashDao().getAllCashTransactions("LEGACY_BUSINESS").first().find { it.refUuid == p2.uuid }
         org.junit.Assert.assertNotNull("Cash purchase with supplier must create CashTransaction EXPENSE", cashTx2)
         assertEquals("EXPENSE", cashTx2!!.type)
         assertEquals(30000L, cashTx2.amount)
 
         // Verify still NO SupplierPayable created for CASH purchase
-        val payables2 = database.supplierPayableDao().getPayablesForSupplier(supplierId).first()
+        val payables2 = database.supplierPayableDao().getPayablesForSupplier(supplierId, "LEGACY_BUSINESS").first()
         assertEquals(0, payables2.size)
     }
 
@@ -335,7 +335,7 @@ class SupplierPayableTest {
         )
         assertTrue(result.isSuccess)
 
-        val purchases = database.purchaseDao().getAllPurchaseTransactions().first()
+        val purchases = database.purchaseDao().getAllPurchaseTransactions("LEGACY_BUSINESS").first()
         val purchase = purchases.first { it.totalAmount == (4 * 10000L + 2 * 7500L) }
         assertEquals(55000L, purchase.totalAmount)
         assertEquals(supplierId, purchase.supplierId)
@@ -363,7 +363,7 @@ class SupplierPayableTest {
     fun test16_creditPurchaseRequiresSupplierAndCreatesPayable() = runBlocking {
         // Credit purchase without supplier must fail
         val resFail = database.purchaseDao()
-        val purchaseRepo = id.skmnetwork.bukuwarung.data.repository.PurchaseRepository(database)
+        val purchaseRepo = id.skmnetwork.bukuwarung.data.repository.PurchaseRepository(database, "LEGACY_BUSINESS")
         val failResult = purchaseRepo.completePurchase(
             purchaseItems = mapOf(productId to 1.0),
             paymentMethod = "CREDIT",
@@ -380,20 +380,20 @@ class SupplierPayableTest {
         assertTrue(successResult.isSuccess)
 
         // Verify SupplierPayable created
-        val payables = database.supplierPayableDao().getPayablesForSupplier(supplierId).first()
+        val payables = database.supplierPayableDao().getPayablesForSupplier(supplierId, "LEGACY_BUSINESS").first()
         assertEquals(1, payables.size)
         assertEquals(20000L, payables[0].totalDebt)
         assertEquals(0L, payables[0].paidAmount)
 
         // Verify NO CashTransaction for purchase
-        val cashTxs = database.cashDao().getAllCashTransactions().first()
+        val cashTxs = database.cashDao().getAllCashTransactions("LEGACY_BUSINESS").first()
         val purchaseTx = cashTxs.find { it.refUuid == payables[0].purchaseUuid }
         org.junit.Assert.assertNull("Credit purchase must not create CashTransaction", purchaseTx)
     }
 
     @Test
     fun test17_physicalStockAndSyncQueueInvariant() = runBlocking {
-        val initialStock = database.productDao().getProductById(productId)!!.stock
+        val initialStock = database.productDao().getProductById(productId, "LEGACY_BUSINESS")!!.stock
 
         // Perform Cash Purchase
         productRepository.processAtomicPurchase(
@@ -402,20 +402,24 @@ class SupplierPayableTest {
         )
 
         // Verify physical stock increased
-        val updatedProduct = database.productDao().getProductById(productId)!!
+        val updatedProduct = database.productDao().getProductById(productId, "LEGACY_BUSINESS")!!
         assertEquals(initialStock + 5.0, updatedProduct.stock, 0.001)
 
         // Verify StockMovement recorded
-        val movements = database.stockMovementDao().getMovementsForProduct(updatedProduct.uuid).first()
+        val movements = database.stockMovementDao().getMovementsForProduct("LEGACY_BUSINESS", updatedProduct.uuid).first()
         val purchaseMovement = movements.find { it.movementType == "PURCHASE" }
         org.junit.Assert.assertNotNull("Stock movement for PURCHASE must be recorded", purchaseMovement)
         assertEquals(5.0, purchaseMovement!!.deltaQuantity, 0.001)
 
         // Verify SyncQueue contains PURCHASE event
-        val syncItems = database.syncQueueDao().getAllItems().first()
+        val syncItems = database.syncQueueDao().getAllItems("LEGACY_BUSINESS").first()
         val purchaseSync = syncItems.find { it.entityType == "PURCHASE" }
         org.junit.Assert.assertNotNull("SyncQueue must contain PURCHASE event", purchaseSync)
         assertEquals("INSERT", purchaseSync!!.operation)
     }
 }
+
+
+
+
 

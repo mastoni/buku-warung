@@ -39,8 +39,8 @@ class CheckoutOrchestratorTest {
             AppDatabase::class.java
         ).allowMainThreadQueries().build()
         db.categoryDao().insertCategory(CategoryEntity(name = "Test"))
-        saleRepository = SaleRepository(db)
-        digitalTransactionRepository = DigitalTransactionRepository(db.digitalTransactionDao())
+saleRepository = SaleRepository(db, "LEGACY_BUSINESS")
+        digitalTransactionRepository = DigitalTransactionRepository(db.digitalTransactionDao(), businessId = "LEGACY_BUSINESS")
         orchestrator = CheckoutOrchestrator(db, saleRepository, digitalTransactionRepository)
     }
 
@@ -87,9 +87,9 @@ class CheckoutOrchestratorTest {
 
         assertTrue(result.toString(), result.isSuccess)
         val saleId = result.getOrThrow()
-        val saleItems = db.saleDao().getItemsForTransaction(saleId)
+        val saleItems = db.saleDao().getItemsForTransaction(saleId, "LEGACY_BUSINESS")
         assertEquals(listOf(1.5, 2.5, 1.0, 1.5), saleItems.map { it.quantity })
-        assertEquals(8.5, db.productDao().getProductById(physical.id)!!.stock, 0.001)
+        assertEquals(8.5, db.productDao().getProductById(physical.id, "LEGACY_BUSINESS")!!.stock, 0.001)
 
         val drafts = digitalTransactionRepository.getBySaleItemIds(saleItems.map { it.id })
         assertEquals(2, drafts.size)
@@ -116,13 +116,13 @@ class CheckoutOrchestratorTest {
             paymentMethod = "CASH"
         )
 
-        assertFalse(result.toString(), result.isSuccess)
-        assertTrue(db.saleDao().getAllTransactions().first().isEmpty())
-        assertTrue(db.digitalTransactionDao().getBySaleItemIds(listOf(1L)).isEmpty())
-        assertTrue(db.cashDao().getAllCashTransactions().first().isEmpty())
-        assertTrue(db.stockMovementDao().getAllMovements().first().isEmpty())
-        assertTrue(db.syncQueueDao().getAllItems().first().isEmpty())
-        assertEquals(0.0, db.productDao().getProductById(provider.id)!!.stock, 0.001)
+assertFalse(result.toString(), result.isSuccess)
+        assertTrue(db.saleDao().getAllTransactions("LEGACY_BUSINESS").first().isEmpty())
+        assertTrue(db.digitalTransactionDao().getBySaleItemIds(listOf(1L), "LEGACY_BUSINESS").isEmpty())
+        assertTrue(db.cashDao().getAllCashTransactions("LEGACY_BUSINESS").first().isEmpty())
+        assertTrue(db.stockMovementDao().getAllMovements("LEGACY_BUSINESS").first().isEmpty())
+        assertTrue(db.syncQueueDao().getAllItems("LEGACY_BUSINESS").first().isEmpty())
+        assertEquals(0.0, db.productDao().getProductById(provider.id, "LEGACY_BUSINESS")!!.stock, 0.001)
     }
 
     private suspend fun insertProduct(
@@ -147,6 +147,7 @@ class CheckoutOrchestratorTest {
             updatedAt = 0L
         )
         val id = db.productDao().insertProduct(product)
-        return db.productDao().getProductById(id)!!
+        return db.productDao().getProductById(id, "LEGACY_BUSINESS")!!
     }
 }
+

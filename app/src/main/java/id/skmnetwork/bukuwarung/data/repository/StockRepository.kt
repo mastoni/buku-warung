@@ -10,30 +10,31 @@ import kotlinx.coroutines.withContext
 import java.util.UUID
 
 class StockRepository(
-    private val appDatabase: AppDatabase
+    private val appDatabase: AppDatabase,
+    private val businessId: String
 ) {
     private val stockMovementDao = appDatabase.stockMovementDao()
     private val productDao = appDatabase.productDao()
     private val syncQueueDao = appDatabase.syncQueueDao()
 
     fun getStockMovementHistory(productUuid: String): Flow<List<StockMovementEntity>> {
-        return stockMovementDao.getMovementsForProduct(productUuid)
+        return stockMovementDao.getMovementsForProduct(businessId, productUuid)
     }
 
     suspend fun getStockMovementList(productUuid: String): List<StockMovementEntity> = withContext(Dispatchers.IO) {
-        stockMovementDao.getMovementsListForProduct(productUuid)
+        stockMovementDao.getMovementsListForProduct(businessId, productUuid)
     }
 
     fun getAllStockMovements(): Flow<List<StockMovementEntity>> {
-        return stockMovementDao.getAllMovements()
+        return stockMovementDao.getAllMovements(businessId)
     }
 
     suspend fun getStockBalanceFromLedger(productUuid: String): Double = withContext(Dispatchers.IO) {
-        stockMovementDao.getCalculatedStockForProduct(productUuid)
+        stockMovementDao.getCalculatedStockForProduct(businessId, productUuid)
     }
 
     suspend fun getProductStock(productId: Long): Double? = withContext(Dispatchers.IO) {
-        productDao.getProductById(productId)?.stock
+        productDao.getProductById(productId, businessId)?.stock
     }
 
     suspend fun recordSaleMovement(
@@ -45,6 +46,7 @@ class StockRepository(
         createdAt: Long = System.currentTimeMillis()
     ): Long = withContext(Dispatchers.IO) {
         val movement = StockMovementEntity(
+            businessId = businessId,
             productUuid = productUuid,
             movementType = "SALE",
             deltaQuantity = if (deltaQuantity > 0) -deltaQuantity else deltaQuantity,
@@ -65,6 +67,7 @@ class StockRepository(
         createdAt: Long = System.currentTimeMillis()
     ): Long = withContext(Dispatchers.IO) {
         val movement = StockMovementEntity(
+            businessId = businessId,
             productUuid = productUuid,
             movementType = "PURCHASE",
             deltaQuantity = if (deltaQuantity < 0) -deltaQuantity else deltaQuantity,
@@ -86,6 +89,7 @@ class StockRepository(
         val movementUuid = UUID.randomUUID().toString()
         val movement = StockMovementEntity(
             uuid = movementUuid,
+            businessId = businessId,
             productUuid = productUuid,
             movementType = "ADJUSTMENT",
             deltaQuantity = deltaQuantity,
@@ -98,7 +102,7 @@ class StockRepository(
             val id = stockMovementDao.insertMovement(movement)
             syncQueueDao.insert(
                 SyncQueueEntity(
-                    businessId = "LEGACY_BUSINESS",
+                    businessId = businessId,
                     deviceId = "LEGACY_DEVICE",
                     entityType = "STOCK_ADJUSTMENT",
                     entityUuid = movementUuid,
@@ -117,6 +121,7 @@ class StockRepository(
         createdAt: Long = System.currentTimeMillis()
     ): Long = withContext(Dispatchers.IO) {
         val movement = StockMovementEntity(
+            businessId = businessId,
             productUuid = productUuid,
             movementType = "INITIAL",
             deltaQuantity = stock,

@@ -15,18 +15,21 @@ interface DigitalTransactionDao {
     @Update
     suspend fun update(transaction: DigitalTransactionEntity)
 
-    @Query("SELECT * FROM digital_transactions WHERE id = :id")
-    suspend fun getById(id: Long): DigitalTransactionEntity?
+    @Query("SELECT * FROM digital_transactions WHERE id = :id AND business_id = :businessId")
+    suspend fun getById(id: Long, businessId: String): DigitalTransactionEntity?
 
-    @Query("SELECT * FROM digital_transactions WHERE sale_item_id = :saleItemId LIMIT 1")
-    suspend fun getBySaleItemId(saleItemId: Long): DigitalTransactionEntity?
+    @Query("SELECT * FROM digital_transactions WHERE sale_item_id = :saleItemId AND business_id = :businessId LIMIT 1")
+    suspend fun getBySaleItemId(saleItemId: Long, businessId: String): DigitalTransactionEntity?
 
-    @Query("SELECT * FROM digital_transactions WHERE sale_item_id IN (:saleItemIds)")
-    suspend fun getBySaleItemIds(saleItemIds: List<Long>): List<DigitalTransactionEntity>
+    @Query("SELECT * FROM digital_transactions WHERE sale_item_id IN (:saleItemIds) AND business_id = :businessId")
+    suspend fun getBySaleItemIds(saleItemIds: List<Long>, businessId: String): List<DigitalTransactionEntity>
 
-    @Query("SELECT * FROM digital_transactions WHERE status = :status")
-    fun getByStatus(status: String): Flow<List<DigitalTransactionEntity>>
+    @Query("SELECT * FROM digital_transactions WHERE business_id = :businessId")
+    fun getByBusinessId(businessId: String): Flow<List<DigitalTransactionEntity>>
 
-    @Query("SELECT * FROM digital_transactions WHERE uuid = :uuid")
-    suspend fun getByUuid(uuid: String): DigitalTransactionEntity?
+    @Query("SELECT * FROM digital_transactions WHERE status = :status AND business_id = :businessId")
+    fun getByStatus(status: String, businessId: String): Flow<List<DigitalTransactionEntity>>
+
+    @Query("SELECT * FROM digital_transactions WHERE uuid = :uuid AND business_id = :businessId")
+    suspend fun getByUuid(uuid: String, businessId: String): DigitalTransactionEntity?
 }

@@ -121,13 +121,13 @@ class RoomMigrationTest {
             .build()
 
         // Step 4: Verify ALL Historical Data was Preserved and Augmented with UUIDs
-        val category = v11Database.categoryDao().getCategoryById(1)
+        val category = v11Database.categoryDao().getCategoryById(1, "LEGACY_BUSINESS")
         assertNotNull("Category v7 must exist in v11", category)
         assertEquals("Sembako", category?.name)
         assertTrue("Category uuid must not be empty", category?.uuid?.isNotEmpty() == true)
         assertFalse("Category is_deleted must be false", category?.isDeleted ?: true)
 
-        val product1 = v11Database.productDao().getProductById(1)
+        val product1 = v11Database.productDao().getProductById(1, "LEGACY_BUSINESS")
         assertNotNull("Product 1 must exist in v11", product1)
         assertEquals("Beras 5kg", product1?.name)
         assertEquals(15.0, product1?.stock ?: 0.0, 0.001)
@@ -135,38 +135,38 @@ class RoomMigrationTest {
         assertTrue("Product uuid must be valid", product1?.uuid?.isNotEmpty() == true)
         assertFalse("Product is_deleted must be false", product1?.isDeleted ?: true)
 
-        val product2 = v11Database.productDao().getProductById(2)
+        val product2 = v11Database.productDao().getProductById(2, "LEGACY_BUSINESS")
         assertNotNull("Product 2 must exist in v11", product2)
         assertEquals(0.0, product2?.stock ?: 0.0, 0.001)
 
-        val customer = v11Database.customerDao().getCustomerById(1)
+        val customer = v11Database.customerDao().getCustomerById(1, "LEGACY_BUSINESS")
         assertNotNull("Customer must exist in v11", customer)
         assertEquals("Ibu Siti", customer?.name)
         assertTrue("Customer uuid must not be empty", customer?.uuid?.isNotEmpty() == true)
 
-        val supplier = v11Database.supplierDao().getSupplierById(1)
+        val supplier = v11Database.supplierDao().getSupplierById(1, "LEGACY_BUSINESS")
         assertNotNull("Supplier must exist in v11", supplier)
         assertEquals("Grosir Beras Jaya", supplier?.name)
 
-        val salesList = v11Database.saleDao().getAllTransactions().first()
+        val salesList = v11Database.saleDao().getAllTransactions("LEGACY_BUSINESS").first()
         assertEquals(1, salesList.size)
         assertEquals("TRX-V7-001", salesList[0].transactionNumber)
         assertTrue("Sale uuid must not be empty", salesList[0].uuid.isNotEmpty())
 
         // Step 5: Verify StockMovement INITIAL Records were Created for Every Product
-        val movementsCount = v11Database.stockMovementDao().getMovementCount()
+        val movementsCount = v11Database.stockMovementDao().getMovementCount("LEGACY_BUSINESS")
         assertEquals("Must have 2 initial stock movements for 2 products", 2, movementsCount)
 
-        val p1Movements = v11Database.stockMovementDao().getMovementsListForProduct(product1!!.uuid)
+        val p1Movements = v11Database.stockMovementDao().getMovementsListForProduct("LEGACY_BUSINESS", product1!!.uuid)
         assertEquals(1, p1Movements.size)
         assertEquals("INITIAL", p1Movements[0].movementType)
         assertEquals(15.0, p1Movements[0].deltaQuantity, 0.001)
 
         // Step 6: Verify Stock Invariant: SUM(deltaQuantity) == Product.stock
-        val p1Calculated = v11Database.stockMovementDao().getCalculatedStockForProduct(product1.uuid)
+        val p1Calculated = v11Database.stockMovementDao().getCalculatedStockForProduct("LEGACY_BUSINESS", product1.uuid)
         assertEquals(product1.stock, p1Calculated, 0.001)
 
-        val p2Calculated = v11Database.stockMovementDao().getCalculatedStockForProduct(product2!!.uuid)
+        val p2Calculated = v11Database.stockMovementDao().getCalculatedStockForProduct("LEGACY_BUSINESS", product2!!.uuid)
         assertEquals(product2.stock, p2Calculated, 0.001)
 
         // Step 7: PRAGMA Foreign Key Check Result
@@ -245,7 +245,7 @@ class RoomMigrationTest {
             .build()
 
         // Step 5: Verify Product & Category data intact
-        val prod = v11Database.productDao().getProductById(1)
+        val prod = v11Database.productDao().getProductById(1, "LEGACY_BUSINESS")
         assertNotNull("Product must exist after v11 upgrade", prod)
         assertEquals("Teh Botol", prod?.name)
         assertEquals(24.0, prod?.stock ?: 0.0, 0.001)
@@ -265,7 +265,7 @@ class RoomMigrationTest {
         val insertedId = syncQueueDao.insert(queueItem)
         assertTrue("SyncQueue insert should succeed and return positive id", insertedId > 0)
 
-        val fetched = syncQueueDao.getItemById(insertedId)
+        val fetched = syncQueueDao.getItemById(insertedId, "LEGACY_BUSINESS")
         assertNotNull("Fetched sync queue item must exist", fetched)
         assertEquals("test-sync-uuid-1", fetched?.syncId)
         assertEquals("PENDING", fetched?.status)
@@ -350,14 +350,14 @@ class RoomMigrationTest {
             .build()
 
         // Step 5: Verify Product & Category data intact
-        val prod = v11Database.productDao().getProductById(1)
+        val prod = v11Database.productDao().getProductById(1, "LEGACY_BUSINESS")
         assertNotNull("Product must exist after v12 upgrade", prod)
         assertEquals("Biskuit", prod?.name)
         assertEquals(10.0, prod?.stock ?: 0.0, 0.001)
 
         // Step 6: Verify sale_return_transactions and sale_return_items tables exist and work
         val returnDao = v11Database.saleReturnDao()
-        val allReturns = returnDao.getAllReturnsList()
+        val allReturns = returnDao.getAllReturnsList("LEGACY_BUSINESS")
         assertEquals(0, allReturns.size)
 
         // Step 7: Verify PRAGMA foreign key check
@@ -444,7 +444,7 @@ class RoomMigrationTest {
             .build()
 
         // Step 5: Verify legacy sale item purchase_price was populated from products table (12000)
-        val items = v11Database.saleDao().getItemsForTransaction(1)
+        val items = v11Database.saleDao().getItemsForTransaction(1, "LEGACY_BUSINESS")
         assertEquals(1, items.size)
         assertEquals("Gula 1kg", items[0].productName)
         assertEquals(15000L, items[0].price)
@@ -535,7 +535,7 @@ class RoomMigrationTest {
             .build()
 
         // Step 5: Verify legacy sale transaction discount defaults to 0L
-        val legacySale = v12Database.saleDao().getTransactionById(1)
+        val legacySale = v12Database.saleDao().getTransactionById(1, "LEGACY_BUSINESS")
         assertNotNull("Legacy sale transaction must exist in v12", legacySale)
         assertEquals("TRX-V11-001", legacySale?.transactionNumber)
         assertEquals(24000L, legacySale?.totalAmount)
@@ -617,11 +617,11 @@ class RoomMigrationTest {
             .allowMainThreadQueries()
             .build()
 
-        val item = v12Database.saleDao().getItemsForTransaction(1)[0]
+        val item = v12Database.saleDao().getItemsForTransaction(1, "LEGACY_BUSINESS")[0]
         assertEquals(20000L, item.purchasePrice)
         assertEquals(25000L, item.price)
 
-        val sale = v12Database.saleDao().getTransactionById(1)
+        val sale = v12Database.saleDao().getTransactionById(1, "LEGACY_BUSINESS")
         assertEquals(0L, sale?.discountAmount)
 
         val cursorFk = v12Database.openHelper.writableDatabase.query("PRAGMA foreign_key_check;")
@@ -632,3 +632,4 @@ class RoomMigrationTest {
         context.deleteDatabase(dbNameChain)
     }
 }
+

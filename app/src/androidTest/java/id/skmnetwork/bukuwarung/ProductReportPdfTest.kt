@@ -81,9 +81,9 @@ class ProductReportPdfTest {
         database = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java)
             .allowMainThreadQueries()
             .build()
-        productRepository = ProductRepository(database)
-        saleRepository = SaleRepository(database)
-        reportRepository = ReportRepository(database)
+        productRepository = ProductRepository(database, "LEGACY_BUSINESS")
+        saleRepository = SaleRepository(database, "LEGACY_BUSINESS")
+        reportRepository = ReportRepository(database, "LEGACY_BUSINESS")
         reportViewModel = ReportViewModel(reportRepository)
         pdfGenerator = PdfReportGenerator(context)
     }
@@ -389,7 +389,7 @@ class ProductReportPdfTest {
     @Test
     fun test14_productIdentityUsingUuid() = runBlocking {
         val prodId = createProduct("Teh Botol Kotak", purchasePrice = 3000L, sellingPrice = 4500L, stock = 50.0)
-        val prodEntity = database.productDao().getProductById(prodId)!!
+        val prodEntity = database.productDao().getProductById(prodId, "LEGACY_BUSINESS")!!
 
         saleRepository.completeSale(mapOf(prodId to 2.0), "CASH").getOrThrow()
 
@@ -406,7 +406,7 @@ class ProductReportPdfTest {
         saleRepository.completeSale(mapOf(prodId to 2.0), "CASH").getOrThrow()
 
         // Soft delete the product in DB
-        database.productDao().softDeleteProduct(prodId)
+        database.productDao().softDeleteProduct(prodId, System.currentTimeMillis(), "LEGACY_BUSINESS")
 
         val productData = reportViewModel.buildProductReportData(sampleSettings, ReportPeriod.TODAY)
 
@@ -501,12 +501,12 @@ class ProductReportPdfTest {
         val prodId = createProduct("Permen Karet", purchasePrice = 500L, sellingPrice = 1000L, stock = 50.0)
         saleRepository.completeSale(cartItems = mapOf(prodId to 2.0), paymentMethod = "CASH").getOrThrow()
 
-        val beforeCategories = database.categoryDao().getAllCategories().first().size
-        val beforeProducts = database.productDao().getAllProducts().first().size
-        val beforeSales = database.saleDao().getAllTransactions().first().size
-        val beforeCash = database.cashDao().getAllCashTransactions().first().size
-        val beforeDebts = database.debtDao().getOpenDebtsCount().first()
-        val beforePayables = database.supplierPayableDao().getOpenPayablesCount().first()
+        val beforeCategories = database.categoryDao().getAllCategories("LEGACY_BUSINESS").first().size
+        val beforeProducts = database.productDao().getAllProducts("LEGACY_BUSINESS").first().size
+        val beforeSales = database.saleDao().getAllTransactions("LEGACY_BUSINESS").first().size
+        val beforeCash = database.cashDao().getAllCashTransactions("LEGACY_BUSINESS").first().size
+        val beforeDebts = database.debtDao().getOpenDebtsCount("LEGACY_BUSINESS").first()
+        val beforePayables = database.supplierPayableDao().getOpenPayablesCount("LEGACY_BUSINESS").first()
 
         // Build data & generate PDF
         val productData = reportViewModel.buildProductReportData(sampleSettings, ReportPeriod.TODAY)
@@ -515,12 +515,12 @@ class ProductReportPdfTest {
         assertTrue(result.isSuccess)
 
         // Assert all Room tables remain untouched
-        assertEquals(beforeCategories, database.categoryDao().getAllCategories().first().size)
-        assertEquals(beforeProducts, database.productDao().getAllProducts().first().size)
-        assertEquals(beforeSales, database.saleDao().getAllTransactions().first().size)
-        assertEquals(beforeCash, database.cashDao().getAllCashTransactions().first().size)
-        assertEquals(beforeDebts, database.debtDao().getOpenDebtsCount().first())
-        assertEquals(beforePayables, database.supplierPayableDao().getOpenPayablesCount().first())
+        assertEquals(beforeCategories, database.categoryDao().getAllCategories("LEGACY_BUSINESS").first().size)
+        assertEquals(beforeProducts, database.productDao().getAllProducts("LEGACY_BUSINESS").first().size)
+        assertEquals(beforeSales, database.saleDao().getAllTransactions("LEGACY_BUSINESS").first().size)
+        assertEquals(beforeCash, database.cashDao().getAllCashTransactions("LEGACY_BUSINESS").first().size)
+        assertEquals(beforeDebts, database.debtDao().getOpenDebtsCount("LEGACY_BUSINESS").first())
+        assertEquals(beforePayables, database.supplierPayableDao().getOpenPayablesCount("LEGACY_BUSINESS").first())
     }
 
     // 20. Total product report reconciliation with authoritative accounting source
@@ -566,3 +566,7 @@ class ProductReportPdfTest {
         assertEquals("Product Report Gross Profit must match container totalGrossProfit", productData.totalGrossProfit, sumGrossProfit)
     }
 }
+
+
+
+

@@ -21,18 +21,18 @@ interface SupplierDao {
     @Delete
     suspend fun deleteSupplier(supplier: SupplierEntity)
 
-    @Query("UPDATE suppliers SET is_deleted = 1, deleted_at = :deletedAt, updated_at = :deletedAt WHERE id = :supplierId")
-    suspend fun softDeleteSupplier(supplierId: Long, deletedAt: Long = System.currentTimeMillis())
+    @Query("UPDATE suppliers SET is_deleted = 1, deleted_at = :deletedAt, updated_at = :deletedAt WHERE id = :supplierId AND business_id = :businessId")
+    suspend fun softDeleteSupplier(supplierId: Long, deletedAt: Long = System.currentTimeMillis(), businessId: String)
 
-    @Query("SELECT * FROM suppliers WHERE is_deleted = 0 ORDER BY name ASC")
-    fun getAllSuppliers(): Flow<List<SupplierEntity>>
+    @Query("SELECT * FROM suppliers WHERE business_id = :businessId AND is_deleted = 0 ORDER BY name ASC")
+    fun getAllSuppliers(businessId: String): Flow<List<SupplierEntity>>
 
-    @Query("SELECT * FROM suppliers WHERE id = :id AND is_deleted = 0")
-    suspend fun getSupplierById(id: Long): SupplierEntity?
+    @Query("SELECT * FROM suppliers WHERE id = :id AND business_id = :businessId AND is_deleted = 0")
+    suspend fun getSupplierById(id: Long, businessId: String): SupplierEntity?
 
-    @Query("SELECT * FROM suppliers WHERE uuid = :uuid AND is_deleted = 0 LIMIT 1")
-    suspend fun getSupplierByUuid(uuid: String): SupplierEntity?
+    @Query("SELECT * FROM suppliers WHERE uuid = :uuid AND business_id = :businessId AND is_deleted = 0 LIMIT 1")
+    suspend fun getSupplierByUuid(uuid: String, businessId: String): SupplierEntity?
 
-    @Query("SELECT * FROM suppliers WHERE name LIKE '%' || :query || '%' AND is_deleted = 0 ORDER BY name ASC")
-    fun searchSuppliers(query: String): Flow<List<SupplierEntity>>
+    @Query("SELECT * FROM suppliers WHERE name LIKE '%' || :query || '%' AND business_id = :businessId AND is_deleted = 0 ORDER BY name ASC")
+    fun searchSuppliers(query: String, businessId: String): Flow<List<SupplierEntity>>
 }

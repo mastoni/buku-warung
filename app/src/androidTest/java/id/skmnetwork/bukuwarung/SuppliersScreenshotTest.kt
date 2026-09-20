@@ -57,9 +57,9 @@ class SuppliersScreenshotTest {
                 AppDatabase::class.java
             ).allowMainThreadQueries().build()
 
-            supplierRepository = SupplierRepository(database)
-            purchaseRepository = PurchaseRepository(database)
-            productRepository = ProductRepository(database)
+            supplierRepository = SupplierRepository(database, "LEGACY_BUSINESS")
+            purchaseRepository = PurchaseRepository(database, "LEGACY_BUSINESS")
+            productRepository = ProductRepository(database, "LEGACY_BUSINESS")
 
             // Setup Category & Product
             val catId = database.categoryDao().insertCategory(CategoryEntity(name = "Sembako"))
@@ -89,7 +89,7 @@ class SuppliersScreenshotTest {
                 purchaseItems = mapOf(productId to 5.0),
                 supplierId = supplierWingsId
             )
-            val wingsPayables = database.supplierPayableDao().getPayablesForSupplier(supplierWingsId).first()
+            val wingsPayables = database.supplierPayableDao().getPayablesForSupplier(supplierWingsId, "LEGACY_BUSINESS").first()
             if (wingsPayables.isNotEmpty()) {
                 supplierRepository.processAtomicSupplierPayment(
                     payableId = wingsPayables.first().id,
@@ -167,7 +167,7 @@ class SuppliersScreenshotTest {
             context,
             AppDatabase::class.java
         ).allowMainThreadQueries().build()
-        val emptyRepo = SupplierRepository(emptyDb)
+        val emptyRepo = SupplierRepository(emptyDb, "LEGACY_BUSINESS")
         val emptyViewModel = SupplierViewModel(emptyRepo)
 
         composeTestRule.setContent {
@@ -205,3 +205,6 @@ class SuppliersScreenshotTest {
         saveScreenshot("SUPPLIER_DETAIL_EVIDENCE.png")
     }
 }
+
+
+

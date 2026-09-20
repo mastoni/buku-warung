@@ -94,18 +94,19 @@ fun BukuWarungApp() {
     var selectedProductId by remember { mutableStateOf<Long?>(null) }
 
     val database = remember { AppDatabase.getDatabase(context) }
-    val productRepository = remember { ProductRepository(database) }
-    val customerRepository = remember { CustomerRepository(database) }
-    val saleRepository = remember { SaleRepository(database) }
+    val businessId = userSettings.businessId.ifBlank { "LEGACY_BUSINESS" }
+    val productRepository = remember { ProductRepository(database, businessId) }
+    val customerRepository = remember { CustomerRepository(database, businessId) }
+    val saleRepository = remember { SaleRepository(database, businessId) }
     val mockBackendApi = remember { id.skmnetwork.bukuwarung.data.remote.MockBackendApi() }
     val digitalTransactionRepository = remember { DigitalTransactionRepository(database.digitalTransactionDao(), mockBackendApi) }
     val checkoutOrchestrator = remember {
         CheckoutOrchestrator(database, saleRepository, digitalTransactionRepository)
     }
-    val supplierRepository = remember { SupplierRepository(database) }
-    val reportRepository = remember { ReportRepository(database) }
+    val supplierRepository = remember { SupplierRepository(database, businessId) }
+    val reportRepository = remember { ReportRepository(database, businessId) }
     val notificationRepository = remember {
-        id.skmnetwork.bukuwarung.notification.NotificationRepository(database, userPreferencesRepository)
+        id.skmnetwork.bukuwarung.notification.NotificationRepository(database, userPreferencesRepository, businessId)
     }
 
     LaunchedEffect(Unit) {
@@ -205,7 +206,7 @@ fun BukuWarungApp() {
         factory = BackupViewModelFactory(backupRestoreManager, userPreferencesRepository, authCredentialProvider)
     )
     val purchaseOrderRepository = remember {
-        id.skmnetwork.bukuwarung.data.repository.PurchaseOrderRepository(database)
+        id.skmnetwork.bukuwarung.data.repository.PurchaseOrderRepository(database, businessId)
     }
     val purchaseOrderViewModel: id.skmnetwork.bukuwarung.ui.purchase.PurchaseOrderViewModel = viewModel(
         factory = id.skmnetwork.bukuwarung.ui.purchase.PurchaseOrderViewModelFactory(purchaseOrderRepository, userPreferencesRepository)

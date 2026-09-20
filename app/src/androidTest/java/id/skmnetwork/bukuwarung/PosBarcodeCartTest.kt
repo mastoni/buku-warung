@@ -34,7 +34,7 @@ class PosBarcodeCartTest {
             AppDatabase::class.java
         ).allowMainThreadQueries().build()
 
-        productRepository = ProductRepository(database)
+        productRepository = ProductRepository(database, "LEGACY_BUSINESS")
 
         val catId = database.categoryDao().insertCategory(CategoryEntity(name = "Minuman"))
 
@@ -201,3 +201,5 @@ class PosBarcodeCartTest {
         assertEquals(0, cart.size)
     }
 }
+
+

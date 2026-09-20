@@ -53,13 +53,13 @@ class FoundationStep4Test {
             AppDatabase::class.java
         ).allowMainThreadQueries().build()
 
-        productRepository = ProductRepository(database)
-        saleRepository = SaleRepository(database)
-        purchaseRepository = PurchaseRepository(database)
-        customerRepository = CustomerRepository(database)
-        supplierRepository = SupplierRepository(database)
-        cashRepository = CashRepository(database)
-        stockRepository = StockRepository(database)
+        productRepository = ProductRepository(database, "LEGACY_BUSINESS")
+        saleRepository = SaleRepository(database, "LEGACY_BUSINESS")
+        purchaseRepository = PurchaseRepository(database, "LEGACY_BUSINESS")
+        customerRepository = CustomerRepository(database, "LEGACY_BUSINESS")
+        supplierRepository = SupplierRepository(database, "LEGACY_BUSINESS")
+        cashRepository = CashRepository(database, "LEGACY_BUSINESS")
+        stockRepository = StockRepository(database, "LEGACY_BUSINESS")
     }
 
     @After
@@ -111,7 +111,7 @@ class FoundationStep4Test {
         dao.insert(
             SyncQueueEntity(
                 syncId = "S1",
-                businessId = "B1",
+                businessId = "LEGACY_BUSINESS",
                 deviceId = "D1",
                 entityType = "PRODUCT",
                 entityUuid = "P1",
@@ -123,7 +123,7 @@ class FoundationStep4Test {
         dao.insert(
             SyncQueueEntity(
                 syncId = "S2",
-                businessId = "B1",
+                businessId = "LEGACY_BUSINESS",
                 deviceId = "D1",
                 entityType = "PRODUCT",
                 entityUuid = "P2",
@@ -135,7 +135,7 @@ class FoundationStep4Test {
         dao.insert(
             SyncQueueEntity(
                 syncId = "S3",
-                businessId = "B1",
+                businessId = "LEGACY_BUSINESS",
                 deviceId = "D1",
                 entityType = "PRODUCT",
                 entityUuid = "P3",
@@ -146,10 +146,10 @@ class FoundationStep4Test {
         )
 
         // Atomic claim batch
-        val affected = dao.claimPendingBatch(claimTime = now, limit = 10)
+        val affected = dao.claimPendingBatch(claimTime = now, limit = 10, businessId = "LEGACY_BUSINESS")
         assertEquals(2, affected)
 
-        val claimed = dao.getClaimedBatch(claimTime = now)
+        val claimed = dao.getClaimedBatch(claimTime = now, businessId = "LEGACY_BUSINESS")
         assertEquals(2, claimed.size)
         assertEquals("S1", claimed[0].syncId)
         assertEquals("PROCESSING", claimed[0].status)
@@ -157,7 +157,7 @@ class FoundationStep4Test {
         assertEquals("PROCESSING", claimed[1].status)
 
         // S3 must remain PENDING
-        val s3 = dao.getItemBySyncId("S3")
+        val s3 = dao.getItemBySyncId("S3", "LEGACY_BUSINESS")
         assertNotNull(s3)
         assertEquals("PENDING", s3?.status)
     }
@@ -172,7 +172,7 @@ class FoundationStep4Test {
             dao.insert(
                 SyncQueueEntity(
                     syncId = "CONCUR-$i",
-                    businessId = "B1",
+                    businessId = "LEGACY_BUSINESS",
                     deviceId = "D1",
                     entityType = "PRODUCT",
                     entityUuid = "P-$i",
@@ -187,8 +187,8 @@ class FoundationStep4Test {
         val results = (1..5).map { workerId ->
             async(Dispatchers.IO) {
                 val claimTime = now + workerId
-                val affected = dao.claimPendingBatch(claimTime = claimTime, limit = 10)
-                val items = if (affected > 0) dao.getClaimedBatch(claimTime = claimTime) else emptyList()
+                val affected = dao.claimPendingBatch(claimTime = claimTime, limit = 10, businessId = "LEGACY_BUSINESS")
+                val items = if (affected > 0) dao.getClaimedBatch(claimTime = claimTime, businessId = "LEGACY_BUSINESS") else emptyList()
                 items.map { it.syncId }
             }
         }.awaitAll()
@@ -205,13 +205,13 @@ class FoundationStep4Test {
     fun testSyncProcessorSuccessWorkflow() = runBlocking {
         val dao = database.syncQueueDao()
         val mockProvider = MockSyncProvider()
-        val processor = SyncProcessor(dao, mockProvider)
+        val processor = SyncProcessor(dao, mockProvider, LinearBackoffRetryPolicy(), "LEGACY_BUSINESS")
 
         val now = 3000000L
         dao.insert(
             SyncQueueEntity(
                 syncId = "PROC-SUCCESS-1",
-                businessId = "B1",
+                businessId = "LEGACY_BUSINESS",
                 deviceId = "D1",
                 entityType = "SALE",
                 entityUuid = "SALE-UUID-1",
@@ -226,7 +226,7 @@ class FoundationStep4Test {
         assertEquals(1, result.successCount)
         assertEquals(0, result.failedCount)
 
-        val item = dao.getItemBySyncId("PROC-SUCCESS-1")
+        val item = dao.getItemBySyncId("PROC-SUCCESS-1", "LEGACY_BUSINESS")
         assertNotNull(item)
         assertEquals("SYNCED", item?.status)
         assertEquals(1, mockProvider.totalProcessed)
@@ -240,13 +240,13 @@ class FoundationStep4Test {
             failureErrorMessage = "Network timeout"
         }
         val retryPolicy = LinearBackoffRetryPolicy(initialDelayMillis = 5000L, maxAttempts = 3)
-        val processor = SyncProcessor(dao, mockProvider, retryPolicy)
+        val processor = SyncProcessor(dao, mockProvider, retryPolicy, "LEGACY_BUSINESS")
 
         val now = 4000000L
         dao.insert(
             SyncQueueEntity(
                 syncId = "PROC-FAIL-1",
-                businessId = "B1",
+                businessId = "LEGACY_BUSINESS",
                 deviceId = "D1",
                 entityType = "PURCHASE",
                 entityUuid = "PUR-UUID-1",
@@ -262,7 +262,7 @@ class FoundationStep4Test {
         assertEquals(0, result.successCount)
         assertEquals(1, result.failedCount)
 
-        val item = dao.getItemBySyncId("PROC-FAIL-1")
+        val item = dao.getItemBySyncId("PROC-FAIL-1", "LEGACY_BUSINESS")
         assertNotNull(item)
         assertEquals("FAILED", item?.status)
         assertEquals("Network timeout", item?.lastError)
@@ -283,7 +283,7 @@ class FoundationStep4Test {
         )
         val product = productRepository.getProductById(pId)!!
 
-        val initialQueueCount = database.syncQueueDao().getAllItems().first().size
+        val initialQueueCount = database.syncQueueDao().getAllItems("LEGACY_BUSINESS").first().size
 
         // Complete sale
         val saleResult = saleRepository.completeSale(
@@ -294,7 +294,7 @@ class FoundationStep4Test {
         val saleId = saleResult.getOrThrow()
         val sale = saleRepository.getTransactionById(saleId)!!
 
-        val allQueue = database.syncQueueDao().getAllItems().first()
+        val allQueue = database.syncQueueDao().getAllItems("LEGACY_BUSINESS").first()
         val newQueueItems = allQueue.subList(initialQueueCount, allQueue.size)
 
         // Must emit single aggregate SALE event
@@ -318,7 +318,7 @@ class FoundationStep4Test {
             unit = "kg"
         )
 
-        val initialQueueCount = database.syncQueueDao().getAllItems().first().size
+        val initialQueueCount = database.syncQueueDao().getAllItems("LEGACY_BUSINESS").first().size
 
         val purchaseResult = purchaseRepository.completePurchase(
             purchaseItems = mapOf(pId to 10.0),
@@ -328,7 +328,7 @@ class FoundationStep4Test {
         val purchaseId = purchaseResult.getOrThrow()
         val purchase = purchaseRepository.getTransactionById(purchaseId)!!
 
-        val allQueue = database.syncQueueDao().getAllItems().first()
+        val allQueue = database.syncQueueDao().getAllItems("LEGACY_BUSINESS").first()
         val newQueueItems = allQueue.subList(initialQueueCount, allQueue.size)
 
         // Must emit single aggregate PURCHASE event
@@ -354,7 +354,7 @@ class FoundationStep4Test {
         )
         val prod = productRepository.getProductById(pId)!!
 
-        var queue = database.syncQueueDao().getAllItems().first()
+        var queue = database.syncQueueDao().getAllItems("LEGACY_BUSINESS").first()
         val insertEvent = queue.find { it.entityType == "PRODUCT" && it.entityUuid == prod.uuid && it.operation == "INSERT" }
         assertNotNull(insertEvent)
 
@@ -370,13 +370,13 @@ class FoundationStep4Test {
             unit = "pcs"
         )
 
-        queue = database.syncQueueDao().getAllItems().first()
+        queue = database.syncQueueDao().getAllItems("LEGACY_BUSINESS").first()
         val updateEvent = queue.find { it.entityType == "PRODUCT" && it.entityUuid == prod.uuid && it.operation == "UPDATE" }
         assertNotNull(updateEvent)
 
         // Delete
         productRepository.deleteProductById(pId)
-        queue = database.syncQueueDao().getAllItems().first()
+        queue = database.syncQueueDao().getAllItems("LEGACY_BUSINESS").first()
         val deleteEvent = queue.find { it.entityType == "PRODUCT" && it.entityUuid == prod.uuid && it.operation == "DELETE" }
         assertNotNull(deleteEvent)
     }
@@ -391,7 +391,7 @@ class FoundationStep4Test {
         )
         val customer = customerRepository.getCustomerById(customerId)!!
 
-        var queue = database.syncQueueDao().getAllItems().first()
+        var queue = database.syncQueueDao().getAllItems("LEGACY_BUSINESS").first()
         val custInsertEvent = queue.find { it.entityType == "CUSTOMER" && it.entityUuid == customer.uuid && it.operation == "INSERT" }
         assertNotNull(custInsertEvent)
 
@@ -402,7 +402,7 @@ class FoundationStep4Test {
             phone = "081234567890",
             address = "Jl. Melati 5"
         )
-        queue = database.syncQueueDao().getAllItems().first()
+        queue = database.syncQueueDao().getAllItems("LEGACY_BUSINESS").first()
         val custUpdateEvent = queue.find { it.entityType == "CUSTOMER" && it.entityUuid == customer.uuid && it.operation == "UPDATE" }
         assertNotNull(custUpdateEvent)
 
@@ -429,7 +429,7 @@ class FoundationStep4Test {
         val payResult = customerRepository.processAtomicDebtPayment(debt.id, 30000L, "Cicilan 1")
         assertTrue(payResult.isSuccess)
 
-        queue = database.syncQueueDao().getAllItems().first()
+        queue = database.syncQueueDao().getAllItems("LEGACY_BUSINESS").first()
         val debtPayEvent = queue.find { it.entityType == "DEBT_PAYMENT" && it.operation == "INSERT" }
         assertNotNull(debtPayEvent)
     }
@@ -444,7 +444,7 @@ class FoundationStep4Test {
         )
         val supplier = supplierRepository.getSupplierById(supplierId)!!
 
-        var queue = database.syncQueueDao().getAllItems().first()
+        var queue = database.syncQueueDao().getAllItems("LEGACY_BUSINESS").first()
         val supInsertEvent = queue.find { it.entityType == "SUPPLIER" && it.entityUuid == supplier.uuid && it.operation == "INSERT" }
         assertNotNull(supInsertEvent)
 
@@ -455,7 +455,7 @@ class FoundationStep4Test {
             phone = "089876543210",
             address = "Komp. Pergudangan"
         )
-        queue = database.syncQueueDao().getAllItems().first()
+        queue = database.syncQueueDao().getAllItems("LEGACY_BUSINESS").first()
         val supUpdateEvent = queue.find { it.entityType == "SUPPLIER" && it.entityUuid == supplier.uuid && it.operation == "UPDATE" }
         assertNotNull(supUpdateEvent)
 
@@ -482,7 +482,7 @@ class FoundationStep4Test {
         val payResult = supplierRepository.processAtomicSupplierPayment(payable.id, 70000L, "Bayar DP")
         assertTrue(payResult.isSuccess)
 
-        queue = database.syncQueueDao().getAllItems().first()
+        queue = database.syncQueueDao().getAllItems("LEGACY_BUSINESS").first()
         val supPayEvent = queue.find { it.entityType == "SUPPLIER_PAYMENT" && it.operation == "INSERT" }
         assertNotNull(supPayEvent)
     }
@@ -495,7 +495,7 @@ class FoundationStep4Test {
         val expResult = cashRepository.recordManualExpense(25000L, "Beli Alat Tulis")
         assertTrue(expResult.isSuccess)
 
-        val queue = database.syncQueueDao().getAllItems().first()
+        val queue = database.syncQueueDao().getAllItems("LEGACY_BUSINESS").first()
         val cashEvents = queue.filter { it.entityType == "CASH_TRANSACTION" }
         assertEquals(2, cashEvents.size)
         assertEquals("INSERT", cashEvents[0].operation)
@@ -523,7 +523,7 @@ class FoundationStep4Test {
         )
         assertTrue(adjId > 0)
 
-        val queue = database.syncQueueDao().getAllItems().first()
+        val queue = database.syncQueueDao().getAllItems("LEGACY_BUSINESS").first()
         val stockAdjEvent = queue.find { it.entityType == "STOCK_ADJUSTMENT" }
         assertNotNull(stockAdjEvent)
         assertEquals("INSERT", stockAdjEvent?.operation)
@@ -554,7 +554,7 @@ class FoundationStep4Test {
             simulateFailure = true
             failureErrorMessage = "Cloud unreachable"
         }
-        val processor = SyncProcessor(database.syncQueueDao(), mockFailingProvider)
+        val processor = SyncProcessor(database.syncQueueDao(), mockFailingProvider, LinearBackoffRetryPolicy(), "LEGACY_BUSINESS")
 
         val syncResult = processor.processBatch(batchSize = 10)
         assertEquals(0, syncResult.successCount)
@@ -582,7 +582,7 @@ class FoundationStep4Test {
             minimumStock = 2.0,
             unit = "kotak"
         )
-        val prod = database.productDao().getProductById(pId)!!
+        val prod = database.productDao().getProductById(pId, "LEGACY_BUSINESS")!!
 
         // Soft delete
         productRepository.deleteProductById(pId)
@@ -601,8 +601,15 @@ class FoundationStep4Test {
         }
 
         // Sync queue must contain DELETE operation
-        val queue = database.syncQueueDao().getAllItems().first()
+        val queue = database.syncQueueDao().getAllItems("LEGACY_BUSINESS").first()
         val deleteEvent = queue.find { it.entityType == "PRODUCT" && it.entityUuid == prod.uuid && it.operation == "DELETE" }
         assertNotNull("SyncQueue must have DELETE event", deleteEvent)
     }
 }
+
+
+
+
+
+
+

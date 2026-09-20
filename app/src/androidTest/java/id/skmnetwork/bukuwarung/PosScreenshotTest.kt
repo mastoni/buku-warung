@@ -57,8 +57,8 @@ class PosScreenshotTest {
                 AppDatabase::class.java
             ).allowMainThreadQueries().build()
 
-            productRepository = ProductRepository(database)
-            customerRepository = CustomerRepository(database)
+            productRepository = ProductRepository(database, "LEGACY_BUSINESS")
+            customerRepository = CustomerRepository(database, "LEGACY_BUSINESS")
 
             catSembakoId = database.categoryDao().insertCategory(CategoryEntity(name = "Sembako"))
             catMinumanId = database.categoryDao().insertCategory(CategoryEntity(name = "Minuman"))
@@ -230,3 +230,5 @@ class PosScreenshotTest {
         composeTestRule.onNodeWithText("Beras Rojolele 5kg", substring = true).assertExists()
     }
 }
+
+

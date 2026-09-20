@@ -51,10 +51,10 @@ class ReportAggregationTest {
             AppDatabase::class.java
         ).allowMainThreadQueries().build()
 
-        productRepository = ProductRepository(database)
-        customerRepository = CustomerRepository(database)
-        supplierRepository = SupplierRepository(database)
-        reportRepository = ReportRepository(database)
+        productRepository = ProductRepository(database, "LEGACY_BUSINESS")
+        customerRepository = CustomerRepository(database, "LEGACY_BUSINESS")
+        supplierRepository = SupplierRepository(database, "LEGACY_BUSINESS")
+        reportRepository = ReportRepository(database, "LEGACY_BUSINESS")
 
         val catId = database.categoryDao().insertCategory(CategoryEntity(name = "General"))
 
@@ -95,7 +95,7 @@ class ReportAggregationTest {
         customerRepository.processAtomicCreditCheckout(mapOf(prodCreditSaleId to 3.0), customerId)
 
         // 4. Debt Payment: Rp 5.000
-        val debts = database.debtDao().getDebtsForCustomer(customerId).first()
+        val debts = database.debtDao().getDebtsForCustomer(customerId, "LEGACY_BUSINESS").first()
         val debtId = debts.first().id
         customerRepository.processAtomicDebtPayment(debtId, 5000L, "Cicilan 1")
 
@@ -106,7 +106,7 @@ class ReportAggregationTest {
         supplierRepository.processAtomicCreditPurchase(mapOf(prodCreditPurId to 4.0), supplierId)
 
         // 7. Supplier Payment: Rp 4.000
-        val payables = database.supplierPayableDao().getPayablesForSupplier(supplierId).first()
+        val payables = database.supplierPayableDao().getPayablesForSupplier(supplierId, "LEGACY_BUSINESS").first()
         val payableId = payables.first().id
         supplierRepository.processAtomicSupplierPayment(payableId, 4000L, "Bayar Hutang Supplier 1")
 
@@ -294,7 +294,7 @@ class ReportAggregationTest {
         assertEquals(0, paidCount)
 
         // Partial payment Rp 4.000
-        val payableId = database.supplierPayableDao().getPayablesForSupplier(supplierId).first().first().id
+        val payableId = database.supplierPayableDao().getPayablesForSupplier(supplierId, "LEGACY_BUSINESS").first().first().id
         supplierRepository.processAtomicSupplierPayment(payableId, 4000L, "Cicilan 1")
 
         outstanding = reportRepository.totalOutstandingPayable.first() ?: 0L
@@ -345,3 +345,6 @@ class ReportAggregationTest {
         assertEquals(11000L, reportCash) // 15.000 - 4.000
     }
 }
+
+
+

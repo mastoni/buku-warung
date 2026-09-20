@@ -28,7 +28,7 @@ class DigitalTransactionRepositoryApiTest {
     fun setup() {
         dao = FakeDigitalTransactionDao()
         mockBackend = MockBackendApi()
-        repository = DigitalTransactionRepository(dao, mockBackend)
+        repository = DigitalTransactionRepository(dao, mockBackend, "TEST_BUSINESS")
     }
 
     @After
@@ -39,6 +39,7 @@ class DigitalTransactionRepositoryApiTest {
     @Test
     fun submitDraft_transitionsDraftToPendingViaBackend() = runBlocking {
         val entity = DigitalTransactionEntity(
+            businessId = "TEST_BUSINESS",
             saleItemId = 1L,
             providerId = "PROV1",
             providerProductCode = "CODE1",
@@ -48,13 +49,13 @@ class DigitalTransactionRepositoryApiTest {
             status = DigitalTransactionStatus.DRAFT.name
         )
         val id = dao.insert(entity)
-        val loaded = dao.getById(id)!!
+        val loaded = dao.getById(id, "TEST_BUSINESS")!!
 
         val result = repository.submitDraft(id)
 
         assertEquals(DigitalTransactionStatus.PENDING.name, result.status)
         assertNotNull(result.providerReferenceId)
-        val updated = dao.getById(id)!!
+        val updated = dao.getById(id, "TEST_BUSINESS")!!
         assertEquals(DigitalTransactionStatus.PENDING.name, updated.status)
         assertNotNull(updated.providerReferenceId)
     }
@@ -62,6 +63,7 @@ class DigitalTransactionRepositoryApiTest {
     @Test
     fun checkStatus_returnsCurrentStatusFromBackend() = runBlocking {
         val entity = DigitalTransactionEntity(
+            businessId = "TEST_BUSINESS",
             saleItemId = 1L,
             providerId = "PROV1",
             providerProductCode = "CODE1",
@@ -72,7 +74,7 @@ class DigitalTransactionRepositoryApiTest {
             providerReferenceId = "REF-123"
         )
         val id = dao.insert(entity)
-        val loaded = dao.getById(id)!!
+        val loaded = dao.getById(id, "TEST_BUSINESS")!!
 
         val result = repository.checkStatus(id)
 
@@ -83,6 +85,7 @@ class DigitalTransactionRepositoryApiTest {
     @Test
     fun processCallback_updatesStatusFromBackend() = runBlocking {
         val entity = DigitalTransactionEntity(
+            businessId = "TEST_BUSINESS",
             saleItemId = 1L,
             providerId = "PROV1",
             providerProductCode = "CODE1",
@@ -102,7 +105,7 @@ class DigitalTransactionRepositoryApiTest {
             failureReason = null
         )
 
-        val updated = dao.getById(id)!!
+        val updated = dao.getById(id, "TEST_BUSINESS")!!
         assertEquals(DigitalTransactionStatus.SUCCESS.name, updated.status)
         assertEquals("SN-456", updated.snToken)
     }
@@ -110,6 +113,7 @@ class DigitalTransactionRepositoryApiTest {
     @Test
     fun recoverUnknown_usesCheckStatusNotCreate() = runBlocking {
         val entity = DigitalTransactionEntity(
+            businessId = "TEST_BUSINESS",
             saleItemId = 1L,
             providerId = "PROV1",
             providerProductCode = "CODE1",
@@ -124,13 +128,14 @@ class DigitalTransactionRepositoryApiTest {
         val result = repository.checkStatus(id)
 
         assertNotNull(result)
-        val updated = dao.getById(id)!!
+        val updated = dao.getById(id, "TEST_BUSINESS")!!
         assertEquals(DigitalTransactionStatus.UNKNOWN.name, updated.status)
     }
 
     @Test
     fun duplicateCallback_isIdempotent() = runBlocking {
         val entity = DigitalTransactionEntity(
+            businessId = "TEST_BUSINESS",
             saleItemId = 1L,
             providerId = "PROV1",
             providerProductCode = "CODE1",
@@ -157,13 +162,14 @@ class DigitalTransactionRepositoryApiTest {
             failureReason = null
         )
 
-        val updated = dao.getById(id)!!
+        val updated = dao.getById(id, "TEST_BUSINESS")!!
         assertEquals(DigitalTransactionStatus.SUCCESS.name, updated.status)
     }
 
     @Test
     fun submitDraft_usesUuidAsIdempotencyKey() = runBlocking {
         val entity = DigitalTransactionEntity(
+            businessId = "TEST_BUSINESS",
             saleItemId = 1L,
             providerId = "PROV1",
             providerProductCode = "CODE1",
@@ -189,6 +195,7 @@ class DigitalTransactionRepositoryApiTest {
     @Test
     fun checkStatus_usesUuidNotNewTransaction() = runBlocking {
         val entity = DigitalTransactionEntity(
+            businessId = "TEST_BUSINESS",
             saleItemId = 1L,
             providerId = "PROV1",
             providerProductCode = "CODE1",
@@ -225,17 +232,20 @@ private class FakeDigitalTransactionDao : DigitalTransactionDao {
         store[transaction.id] = transaction
     }
 
-    override suspend fun getById(id: Long): DigitalTransactionEntity? = store[id]
+    override suspend fun getById(id: Long, businessId: String): DigitalTransactionEntity? = store[id]?.takeIf { it.businessId == businessId }
 
-    override suspend fun getBySaleItemId(saleItemId: Long): DigitalTransactionEntity? =
-        store.values.find { it.saleItemId == saleItemId }
+    override suspend fun getBySaleItemId(saleItemId: Long, businessId: String): DigitalTransactionEntity? =
+        store.values.find { it.saleItemId == saleItemId && it.businessId == businessId }
 
-    override suspend fun getBySaleItemIds(saleItemIds: List<Long>): List<DigitalTransactionEntity> =
-        store.values.filter { it.saleItemId in saleItemIds }
+    override suspend fun getBySaleItemIds(saleItemIds: List<Long>, businessId: String): List<DigitalTransactionEntity> =
+        store.values.filter { it.saleItemId in saleItemIds && it.businessId == businessId }
 
-    override fun getByStatus(status: String): Flow<List<DigitalTransactionEntity>> =
-        flow { emit(store.values.filter { it.status == status }) }
+    override fun getByStatus(status: String, businessId: String): Flow<List<DigitalTransactionEntity>> =
+        flow { emit(store.values.filter { it.status == status && it.businessId == businessId }) }
 
-    override suspend fun getByUuid(uuid: String): DigitalTransactionEntity? =
-        store.values.find { it.uuid == uuid }
+    override suspend fun getByUuid(uuid: String, businessId: String): DigitalTransactionEntity? =
+        store.values.find { it.uuid == uuid && it.businessId == businessId }
+
+    override fun getByBusinessId(businessId: String): Flow<List<DigitalTransactionEntity>> =
+        flow { emit(store.values.filter { it.businessId == businessId }) }
 }

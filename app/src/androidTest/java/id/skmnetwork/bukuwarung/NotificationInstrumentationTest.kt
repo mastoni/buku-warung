@@ -50,7 +50,7 @@ class NotificationInstrumentationTest {
             ).allowMainThreadQueries().build()
 
             preferencesRepo = UserPreferencesRepository(context)
-            notificationRepo = NotificationRepository(database, preferencesRepo)
+            notificationRepo = NotificationRepository(database, preferencesRepo, "LEGACY_BUSINESS")
 
             categoryId = database.categoryDao().insertCategory(CategoryEntity(name = "Sembako"))
             customerId = database.customerDao().insertCustomer(
@@ -90,7 +90,7 @@ class NotificationInstrumentationTest {
         assertEquals(AppScreen.PRODUCTS, lowStockNotif?.targetScreen)
 
         // 2. Restock product -> self-healing (disappears)
-        database.productDao().addProductStock(prodId, 10.0)
+        database.productDao().addProductStock(prodId, 10.0, System.currentTimeMillis(), "LEGACY_BUSINESS")
         val healedNotifs = notificationRepo.notifications.first()
         val afterRestock = healedNotifs.find { it.id == "STOCK_LOW_$prodId" }
         assertTrue("Notification should disappear after restock", afterRestock == null)
@@ -176,3 +176,5 @@ class NotificationInstrumentationTest {
         assertEquals(AppNotificationPriority.CRITICAL, notifs[0].priority)
     }
 }
+
+

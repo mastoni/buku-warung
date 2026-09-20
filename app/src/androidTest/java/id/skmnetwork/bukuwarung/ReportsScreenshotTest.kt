@@ -71,13 +71,13 @@ class ReportsScreenshotTest {
                 AppDatabase::class.java
             ).allowMainThreadQueries().build()
 
-            productRepository = ProductRepository(database)
-            saleRepository = SaleRepository(database)
-            customerRepository = CustomerRepository(database)
-            supplierRepository = SupplierRepository(database)
-            purchaseRepository = PurchaseRepository(database)
-            cashRepository = CashRepository(database)
-            reportRepository = ReportRepository(database)
+            productRepository = ProductRepository(database, "LEGACY_BUSINESS")
+            saleRepository = SaleRepository(database, "LEGACY_BUSINESS")
+            customerRepository = CustomerRepository(database, "LEGACY_BUSINESS")
+            supplierRepository = SupplierRepository(database, "LEGACY_BUSINESS")
+            purchaseRepository = PurchaseRepository(database, "LEGACY_BUSINESS")
+            cashRepository = CashRepository(database, "LEGACY_BUSINESS")
+            reportRepository = ReportRepository(database, "LEGACY_BUSINESS")
 
             catId = database.categoryDao().insertCategory(CategoryEntity(name = "Sembako"))
             prodKopiId = database.productDao().insertProduct(
@@ -223,7 +223,7 @@ class ReportsScreenshotTest {
             context,
             AppDatabase::class.java
         ).allowMainThreadQueries().build()
-        val emptyRepo = ReportRepository(emptyDb)
+        val emptyRepo = ReportRepository(emptyDb, "LEGACY_BUSINESS")
         val emptyViewModel = ReportViewModel(emptyRepo)
         emptyViewModel.selectPeriod(ReportPeriod.TODAY)
 
@@ -264,3 +264,6 @@ class ReportsScreenshotTest {
         saveScreenshot("REPORTS_DETAIL_EVIDENCE.png")
     }
 }
+
+
+

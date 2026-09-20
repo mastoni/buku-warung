@@ -156,7 +156,7 @@ class FirstRunFlowScreenshotTest {
                 unit = "karung"
             )
         )
-        val productRepo = ProductRepository(database)
+        val productRepo = ProductRepository(database, "LEGACY_BUSINESS")
         val viewModel = ProductViewModel(productRepo)
 
         composeTestRule.setContent {
@@ -220,3 +220,5 @@ class FirstRunFlowScreenshotTest {
         composeTestRule.onNodeWithText("Mulai Sekarang").assertIsDisplayed()
     }
 }
+
+

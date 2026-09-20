@@ -17,16 +17,17 @@ import kotlinx.coroutines.flow.map
 
 class NotificationRepository(
     private val appDatabase: AppDatabase,
-    private val userPreferencesRepository: UserPreferencesRepository
+    private val userPreferencesRepository: UserPreferencesRepository,
+    private val businessId: String
 ) {
     private val productDao = appDatabase.productDao()
     private val debtDao = appDatabase.debtDao()
     private val supplierPayableDao = appDatabase.supplierPayableDao()
 
     val notifications: Flow<List<AppNotification>> = combine(
-        productDao.getAllProducts(),
-        debtDao.getOpenDebtsWithCustomer(),
-        supplierPayableDao.getOpenPayablesWithSupplier(),
+        productDao.getAllProducts(businessId),
+        debtDao.getOpenDebtsWithCustomer(businessId),
+        supplierPayableDao.getOpenPayablesWithSupplier(businessId),
         userPreferencesRepository.userSettings,
         userPreferencesRepository.readNotificationIds
     ) { products, debts, payables, userSettings, readIds ->

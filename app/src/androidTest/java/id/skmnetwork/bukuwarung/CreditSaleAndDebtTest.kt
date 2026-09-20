@@ -38,8 +38,8 @@ class CreditSaleAndDebtTest {
             AppDatabase::class.java
         ).allowMainThreadQueries().build()
 
-        productRepository = ProductRepository(database)
-        customerRepository = CustomerRepository(database)
+        productRepository = ProductRepository(database, "LEGACY_BUSINESS")
+        customerRepository = CustomerRepository(database, "LEGACY_BUSINESS")
 
         // Setup base Customer and Product
         val catId = database.categoryDao().insertCategory(CategoryEntity(name = "Umum"))
@@ -62,8 +62,8 @@ class CreditSaleAndDebtTest {
 
     @Test
     fun test1_creditSaleCreatesDebtNoCashAndDeductsStock() = runBlocking {
-        val initialCash = database.cashDao().getTotalCashBalance().first() ?: 0L
-        val initialStock = database.productDao().getProductById(productId)!!.stock
+        val initialCash = database.cashDao().getTotalCashBalance("LEGACY_BUSINESS").first() ?: 0L
+        val initialStock = database.productDao().getProductById(productId, "LEGACY_BUSINESS")!!.stock
 
         // Perform Credit Sale 1 x Beras = Rp 10.000
         val result = customerRepository.processAtomicCreditCheckout(
@@ -73,21 +73,21 @@ class CreditSaleAndDebtTest {
         assertTrue("Credit sale should succeed", result.isSuccess)
 
         // Verify Sales Transaction
-        val sales = database.saleDao().getAllTransactions().first()
+        val sales = database.saleDao().getAllTransactions("LEGACY_BUSINESS").first()
         assertEquals(1, sales.size)
         assertEquals("CREDIT", sales[0].paymentMethod)
         assertEquals(customerId, sales[0].customerId)
 
         // Verify Stock Deducted (20.0 - 1.0 = 19.0)
-        val currentStock = database.productDao().getProductById(productId)!!.stock
+        val currentStock = database.productDao().getProductById(productId, "LEGACY_BUSINESS")!!.stock
         assertEquals(19.0, currentStock, 0.001)
 
         // Verify NO Cash Income created (Cash Balance unchanged)
-        val currentCash = database.cashDao().getTotalCashBalance().first() ?: 0L
+        val currentCash = database.cashDao().getTotalCashBalance("LEGACY_BUSINESS").first() ?: 0L
         assertEquals(initialCash, currentCash)
 
         // Verify Debt Record Created (totalDebt = 10000, paidAmount = 0, status = OPEN)
-        val debts = database.debtDao().getDebtsForCustomer(customerId).first()
+        val debts = database.debtDao().getDebtsForCustomer(customerId, "LEGACY_BUSINESS").first()
         assertEquals(1, debts.size)
         val debt = debts[0]
         assertEquals(10000L, debt.totalDebt)
@@ -102,21 +102,21 @@ class CreditSaleAndDebtTest {
             cartItems = mapOf(productId to 1.0),
             customerId = customerId
         )
-        val debtId = database.debtDao().getDebtsForCustomer(customerId).first()[0].id
+        val debtId = database.debtDao().getDebtsForCustomer(customerId, "LEGACY_BUSINESS").first()[0].id
 
         // Step 2: Pay Rp 4.000
         val payResult = customerRepository.processAtomicDebtPayment(debtId, 4000L, "Cicilan 1")
         assertTrue("Debt payment should succeed", payResult.isSuccess)
 
         // Verify Debt State
-        val debt = database.debtDao().getDebtById(debtId)!!
+        val debt = database.debtDao().getDebtById(debtId, "LEGACY_BUSINESS")!!
         assertEquals(10000L, debt.totalDebt)
         assertEquals(4000L, debt.paidAmount)
         assertEquals("OPEN", debt.status)
         assertEquals(6000L, debt.totalDebt - debt.paidAmount)
 
         // Verify Cash Income Created (+4.000)
-        val currentCash = database.cashDao().getTotalCashBalance().first() ?: 0L
+        val currentCash = database.cashDao().getTotalCashBalance("LEGACY_BUSINESS").first() ?: 0L
         assertEquals(4000L, currentCash)
     }
 
@@ -127,7 +127,7 @@ class CreditSaleAndDebtTest {
             cartItems = mapOf(productId to 1.0),
             customerId = customerId
         )
-        val debtId = database.debtDao().getDebtsForCustomer(customerId).first()[0].id
+        val debtId = database.debtDao().getDebtsForCustomer(customerId, "LEGACY_BUSINESS").first()[0].id
 
         // Step 2: Pay Rp 4.000
         customerRepository.processAtomicDebtPayment(debtId, 4000L, "Cicilan 1")
@@ -137,13 +137,13 @@ class CreditSaleAndDebtTest {
         assertTrue("Final debt payment should succeed", payResult2.isSuccess)
 
         // Verify Debt State (paidAmount = 10000, outstanding = 0, status = PAID)
-        val debt = database.debtDao().getDebtById(debtId)!!
+        val debt = database.debtDao().getDebtById(debtId, "LEGACY_BUSINESS")!!
         assertEquals(10000L, debt.paidAmount)
         assertEquals(0L, debt.totalDebt - debt.paidAmount)
         assertEquals("PAID", debt.status)
 
         // Verify Cash Income Total (+10.000)
-        val currentCash = database.cashDao().getTotalCashBalance().first() ?: 0L
+        val currentCash = database.cashDao().getTotalCashBalance("LEGACY_BUSINESS").first() ?: 0L
         assertEquals(10000L, currentCash)
     }
 
@@ -154,28 +154,28 @@ class CreditSaleAndDebtTest {
             cartItems = mapOf(productId to 1.0),
             customerId = customerId
         )
-        val debtId = database.debtDao().getDebtsForCustomer(customerId).first()[0].id
+        val debtId = database.debtDao().getDebtsForCustomer(customerId, "LEGACY_BUSINESS").first()[0].id
 
         // Step 2: Attempt Overpayment Rp 10.001
         val overpayResult = customerRepository.processAtomicDebtPayment(debtId, 10001L, "Overpay")
         assertTrue("Overpayment must fail", overpayResult.isFailure)
 
         // Verify Debt Unchanged
-        val debt = database.debtDao().getDebtById(debtId)!!
+        val debt = database.debtDao().getDebtById(debtId, "LEGACY_BUSINESS")!!
         assertEquals(0L, debt.paidAmount)
 
         // Verify No Debt Payments recorded
-        val payments = database.debtDao().getPaymentsListForDebt(debtId)
+        val payments = database.debtDao().getPaymentsListForDebt(debtId, "LEGACY_BUSINESS")
         assertEquals(0, payments.size)
 
         // Verify No Cash Income recorded
-        val currentCash = database.cashDao().getTotalCashBalance().first() ?: 0L
+        val currentCash = database.cashDao().getTotalCashBalance("LEGACY_BUSINESS").first() ?: 0L
         assertEquals(0L, currentCash)
     }
 
     @Test
     fun test5_atomicRollbackOnCreditSaleAndPaymentFailure() = runBlocking {
-        val initialStock = database.productDao().getProductById(productId)!!.stock
+        val initialStock = database.productDao().getProductById(productId, "LEGACY_BUSINESS")!!.stock
 
         // Forced Failure in Credit Sale
         var failedSale = false
@@ -191,27 +191,27 @@ class CreditSaleAndDebtTest {
         assertTrue(failedSale)
 
         // Verify 0 Sales, 0 Debts, Stock Unchanged
-        val sales = database.saleDao().getAllTransactions().first()
+        val sales = database.saleDao().getAllTransactions("LEGACY_BUSINESS").first()
         assertEquals(0, sales.size)
-        val debts = database.debtDao().getDebtsForCustomer(customerId).first()
+        val debts = database.debtDao().getDebtsForCustomer(customerId, "LEGACY_BUSINESS").first()
         assertEquals(0, debts.size)
-        assertEquals(initialStock, database.productDao().getProductById(productId)!!.stock, 0.001)
+        assertEquals(initialStock, database.productDao().getProductById(productId, "LEGACY_BUSINESS")!!.stock, 0.001)
     }
 
     @Test
     fun test6_regressionCashSaleCreatesCashNoDebt() = runBlocking {
-        val initialCash = database.cashDao().getTotalCashBalance().first() ?: 0L
+        val initialCash = database.cashDao().getTotalCashBalance("LEGACY_BUSINESS").first() ?: 0L
 
         // Cash Sale 1 x Beras = Rp 10.000
         val result = productRepository.processAtomicCheckout(mapOf(productId to 1.0))
         assertTrue(result.isSuccess)
 
         // Verify Cash Transaction Created
-        val currentCash = database.cashDao().getTotalCashBalance().first() ?: 0L
+        val currentCash = database.cashDao().getTotalCashBalance("LEGACY_BUSINESS").first() ?: 0L
         assertEquals(initialCash + 10000L, currentCash)
 
         // Verify NO Debt Created
-        val debts = database.debtDao().getDebtsForCustomer(customerId).first()
+        val debts = database.debtDao().getDebtsForCustomer(customerId, "LEGACY_BUSINESS").first()
         assertEquals(0, debts.size)
     }
 
@@ -219,18 +219,25 @@ class CreditSaleAndDebtTest {
     fun test7_reconciliationPaidAmountEqualsSumPaymentsAndOutstanding() = runBlocking {
         // Step 1: Credit Sale Rp 10.000
         customerRepository.processAtomicCreditCheckout(mapOf(productId to 1.0), customerId)
-        val debtId = database.debtDao().getDebtsForCustomer(customerId).first()[0].id
+        val debtId = database.debtDao().getDebtsForCustomer(customerId, "LEGACY_BUSINESS").first()[0].id
 
         // Step 2: Multiple Payments (2500 + 2500 = 5000)
         customerRepository.processAtomicDebtPayment(debtId, 2500L, "Bayar 1")
         customerRepository.processAtomicDebtPayment(debtId, 2500L, "Bayar 2")
 
         // Reconciliation Assertion
-        val debt = database.debtDao().getDebtById(debtId)!!
-        val payments = database.debtDao().getPaymentsListForDebt(debtId)
+        val debt = database.debtDao().getDebtById(debtId, "LEGACY_BUSINESS")!!
+        val payments = database.debtDao().getPaymentsListForDebt(debtId, "LEGACY_BUSINESS")
         val paymentSum = payments.sumOf { it.amount }
 
         assertEquals(paymentSum, debt.paidAmount) // paidAmount == SUM(payments)
         assertEquals(debt.totalDebt - debt.paidAmount, 5000L) // outstanding == totalDebt - paidAmount
     }
 }
+
+
+
+
+
+
+
