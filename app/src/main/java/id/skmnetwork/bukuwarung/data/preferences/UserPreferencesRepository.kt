@@ -4,10 +4,14 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.doublePreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import id.skmnetwork.bukuwarung.domain.tax.TaxApplicability
+import id.skmnetwork.bukuwarung.domain.tax.TaxPriceMode
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -39,6 +43,14 @@ data class UserSettings(
 
     // 16. BUSINESS TYPE LOCKING (PR-11.1)
     val businessTypeLocked: Boolean = false,
+
+    // 17. TAX / PPN CONFIGURATION (PR-12.2)
+    val taxEnabled: Boolean = false,
+    val taxRate: Double = 0.0,
+    val taxPriceMode: TaxPriceMode = TaxPriceMode.EXCLUSIVE,
+    val taxApplicability: TaxApplicability = TaxApplicability.GLOBAL,
+    val taxRoundingMode: String = "HALF_UP",
+    val taxEffectiveDate: Long = 0L,
 
     // 2. POS Settings
     val showProductImage: Boolean = true,
@@ -183,6 +195,14 @@ class UserPreferencesRepository(
 
         // 16. BUSINESS TYPE LOCKING (PR-11.1)
         val BUSINESS_TYPE_LOCKED = booleanPreferencesKey("business_type_locked")
+
+        // 17. TAX / PPN CONFIGURATION (PR-12.2)
+        val TAX_ENABLED = booleanPreferencesKey("tax_enabled")
+        val TAX_RATE = doublePreferencesKey("tax_rate")
+        val TAX_PRICE_MODE = stringPreferencesKey("tax_price_mode")
+        val TAX_APPLICABILITY = stringPreferencesKey("tax_applicability")
+        val TAX_ROUNDING_MODE = stringPreferencesKey("tax_rounding_mode")
+        val TAX_EFFECTIVE_DATE = longPreferencesKey("tax_effective_date")
     }
 
     val userSettings: Flow<UserSettings> = dataStore.data.map { prefs ->
@@ -213,6 +233,20 @@ class UserPreferencesRepository(
             secondaryActivities = prefs[Keys.SECONDARY_ACTIVITIES] ?: setOf("ACTIVITY_GOODS_SELLING"),
             profileVersion = prefs[Keys.PROFILE_VERSION] ?: 1,
             businessTypeLocked = prefs[Keys.BUSINESS_TYPE_LOCKED] ?: false,
+
+            taxEnabled = prefs[Keys.TAX_ENABLED] ?: false,
+            taxRate = prefs[Keys.TAX_RATE] ?: 0.0,
+            taxPriceMode = when (prefs[Keys.TAX_PRICE_MODE]) {
+                TaxPriceMode.INCLUSIVE.name -> TaxPriceMode.INCLUSIVE
+                else -> TaxPriceMode.EXCLUSIVE
+            },
+            taxApplicability = when (prefs[Keys.TAX_APPLICABILITY]) {
+                TaxApplicability.GLOBAL.name -> TaxApplicability.GLOBAL
+                TaxApplicability.PRODUCT.name -> TaxApplicability.PRODUCT
+                else -> TaxApplicability.NONE
+            },
+            taxRoundingMode = prefs[Keys.TAX_ROUNDING_MODE] ?: "HALF_UP",
+            taxEffectiveDate = prefs[Keys.TAX_EFFECTIVE_DATE] ?: 0L,
 
             showProductImage = prefs[Keys.SHOW_PRODUCT_IMAGE] ?: true,
             showStock = prefs[Keys.SHOW_STOCK] ?: true,
@@ -483,6 +517,34 @@ class UserPreferencesRepository(
             prefs[Keys.PRIMARY_BUSINESS_TYPE] = primaryType.trim()
             prefs[Keys.SECONDARY_ACTIVITIES] = secondaryActivities
             prefs[Keys.PROFILE_VERSION] = version
+        }
+    }
+
+    suspend fun updateTaxSettings(
+        enabled: Boolean,
+        rate: Double,
+        priceMode: TaxPriceMode,
+        applicability: TaxApplicability,
+        roundingMode: String
+    ) {
+        val effectiveDate = System.currentTimeMillis()
+        dataStore.edit { prefs ->
+            prefs[Keys.TAX_ENABLED] = enabled
+            prefs[Keys.TAX_RATE] = rate
+            prefs[Keys.TAX_PRICE_MODE] = priceMode.name
+            prefs[Keys.TAX_APPLICABILITY] = applicability.name
+            prefs[Keys.TAX_ROUNDING_MODE] = roundingMode
+            prefs[Keys.TAX_EFFECTIVE_DATE] = effectiveDate
+        }
+    }
+
+    suspend fun setTaxEnabled(enabled: Boolean) {
+        val effectiveDate = System.currentTimeMillis()
+        dataStore.edit { prefs ->
+            prefs[Keys.TAX_ENABLED] = enabled
+            if (enabled) {
+                prefs[Keys.TAX_EFFECTIVE_DATE] = effectiveDate
+            }
         }
     }
 

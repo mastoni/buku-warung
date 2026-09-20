@@ -105,6 +105,8 @@ import id.skmnetwork.bukuwarung.domain.business.BusinessActivity
 import id.skmnetwork.bukuwarung.domain.business.BusinessCategory
 import id.skmnetwork.bukuwarung.domain.business.BusinessType
 import id.skmnetwork.bukuwarung.domain.business.BusinessTaxonomyRegistry
+import id.skmnetwork.bukuwarung.domain.tax.TaxApplicability
+import id.skmnetwork.bukuwarung.domain.tax.TaxPriceMode
 import id.skmnetwork.bukuwarung.domain.business.ResolvedBusinessProfile
 import id.skmnetwork.bukuwarung.license.LicenseManager
 import id.skmnetwork.bukuwarung.license.LicenseStatus
@@ -171,6 +173,13 @@ fun SettingsScreen(
 
     var showBusinessProfileDialog by remember { mutableStateOf(false) }
     var isCheckingLicense by remember { mutableStateOf(false) }
+
+    // 1.5 Pajak / PPN
+    var taxEnabled by remember { mutableStateOf(false) }
+    var taxRateInput by remember { mutableStateOf("") }
+    var taxPriceMode by remember { mutableStateOf(id.skmnetwork.bukuwarung.domain.tax.TaxPriceMode.EXCLUSIVE.name) }
+    var taxApplicability by remember { mutableStateOf(id.skmnetwork.bukuwarung.domain.tax.TaxApplicability.GLOBAL.name) }
+    var taxRoundingMode by remember { mutableStateOf("HALF_UP") }
 
     // 1. Profil Warung / Usaha
     var shopNameInput by remember { mutableStateOf("") }
@@ -332,6 +341,12 @@ fun SettingsScreen(
         debtReminderEnabled = settingsState.debtReminderEnabled
 
         themeMode = settingsState.themeMode
+
+        taxEnabled = settingsState.taxEnabled
+        taxRateInput = if (settingsState.taxRate > 0.0) settingsState.taxRate.toString() else ""
+        taxPriceMode = settingsState.taxPriceMode.name
+        taxApplicability = settingsState.taxApplicability.name
+        taxRoundingMode = settingsState.taxRoundingMode
     }
 
     Scaffold(
@@ -608,6 +623,89 @@ fun SettingsScreen(
                                 }
                             }
                         )
+                    }
+                }
+            }
+
+            // ==========================================
+            // 1.5 PAJAK / PPN
+            // ==========================================
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(
+                    text = "PAJAK / PPN",
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 11.sp,
+                        color = AppColors.GreenPrimary,
+                        letterSpacing = 0.5.sp
+                    )
+                )
+                Surface(
+                    shape = RoundedCornerShape(14.dp),
+                    color = Color.White,
+                    border = BorderStroke(1.dp, Color(0xFFEFF3F0)),
+                    shadowElevation = 0.5.dp,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(14.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        SettingSwitchRow("Aktifkan Pajak / PPN", taxEnabled) {
+                            taxEnabled = it
+                            scope.launch {
+                                prefsRepo.setTaxEnabled(it)
+                            }
+                        }
+                        if (taxEnabled) {
+                            HorizontalDivider(color = Color(0xFFF0F4F0))
+                            AppTextField(
+                                value = taxRateInput,
+                                onValueChange = { taxRateInput = it },
+                                label = "Tarif PPN (%)",
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                            )
+                            HorizontalDivider(color = Color(0xFFF0F4F0))
+                            Text(
+                                text = "Mode Harga: ${if (taxPriceMode == id.skmnetwork.bukuwarung.domain.tax.TaxPriceMode.EXCLUSIVE.name) "Exclusive (PPN ditambah)" else "Inclusive (PPN sudah termasuk)"}",
+                                style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp)
+                            )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                RadioButton(
+                                    selected = taxPriceMode == id.skmnetwork.bukuwarung.domain.tax.TaxPriceMode.EXCLUSIVE.name,
+                                    onClick = {
+                                        taxPriceMode = id.skmnetwork.bukuwarung.domain.tax.TaxPriceMode.EXCLUSIVE.name
+                                        scope.launch {
+                                            prefsRepo.updateTaxSettings(
+                                                enabled = taxEnabled,
+                                                rate = taxRateInput.toDoubleOrNull() ?: 0.0,
+                                                priceMode = id.skmnetwork.bukuwarung.domain.tax.TaxPriceMode.EXCLUSIVE,
+                                                applicability = id.skmnetwork.bukuwarung.domain.tax.TaxApplicability.GLOBAL,
+                                                roundingMode = taxRoundingMode
+                                            )
+                                        }
+                                    }
+                                )
+                                Text("Exclusive", modifier = Modifier.padding(start = 4.dp))
+                                Spacer(Modifier.width(16.dp))
+                                RadioButton(
+                                    selected = taxPriceMode == id.skmnetwork.bukuwarung.domain.tax.TaxPriceMode.INCLUSIVE.name,
+                                    onClick = {
+                                        taxPriceMode = id.skmnetwork.bukuwarung.domain.tax.TaxPriceMode.INCLUSIVE.name
+                                        scope.launch {
+                                            prefsRepo.updateTaxSettings(
+                                                enabled = taxEnabled,
+                                                rate = taxRateInput.toDoubleOrNull() ?: 0.0,
+                                                priceMode = id.skmnetwork.bukuwarung.domain.tax.TaxPriceMode.INCLUSIVE,
+                                                applicability = id.skmnetwork.bukuwarung.domain.tax.TaxApplicability.GLOBAL,
+                                                roundingMode = taxRoundingMode
+                                            )
+                                        }
+                                    }
+                                )
+                                Text("Inclusive", modifier = Modifier.padding(start = 4.dp))
+                            }
+                        }
                     }
                 }
             }

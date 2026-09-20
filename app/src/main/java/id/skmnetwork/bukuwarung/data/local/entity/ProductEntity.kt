@@ -84,5 +84,11 @@ data class ProductEntity(
     val digitalProviderId: String? = null,
 
     @ColumnInfo(name = "digital_product_code")
-    val digitalProductCode: String? = null
+    val digitalProductCode: String? = null,
+
+    @ColumnInfo(name = "taxable")
+    val taxable: Boolean = true,
+
+    @ColumnInfo(name = "tax_rate_override")
+    val taxRateOverride: Double? = null
 )

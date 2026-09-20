@@ -719,6 +719,39 @@ val MIGRATION_14_15 = object : Migration(14, 15) {
     }
 }
 
+val MIGRATION_15_16 = object : Migration(15, 16) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE `products` ADD COLUMN `taxable` INTEGER NOT NULL DEFAULT 0")
+        db.execSQL("ALTER TABLE `products` ADD COLUMN `tax_rate_override` REAL")
+        
+        db.execSQL("ALTER TABLE `sales_transactions` ADD COLUMN `subtotal_amount` INTEGER NOT NULL DEFAULT 0")
+        db.execSQL("ALTER TABLE `sales_transactions` ADD COLUMN `taxable_base_snapshot` INTEGER NOT NULL DEFAULT 0")
+        db.execSQL("ALTER TABLE `sales_transactions` ADD COLUMN `tax_rate_snapshot` REAL NOT NULL DEFAULT 0.0")
+        db.execSQL("ALTER TABLE `sales_transactions` ADD COLUMN `tax_amount_snapshot` INTEGER NOT NULL DEFAULT 0")
+        
+        db.execSQL("ALTER TABLE `sale_items` ADD COLUMN `taxable` INTEGER NOT NULL DEFAULT 1")
+        db.execSQL("ALTER TABLE `sale_items` ADD COLUMN `tax_rate_snapshot` REAL")
+        db.execSQL("ALTER TABLE `sale_items` ADD COLUMN `tax_amount_snapshot` INTEGER")
+        
+        db.execSQL("ALTER TABLE `purchase_transactions` ADD COLUMN `subtotal_amount` INTEGER NOT NULL DEFAULT 0")
+        db.execSQL("ALTER TABLE `purchase_transactions` ADD COLUMN `taxable_base_snapshot` INTEGER NOT NULL DEFAULT 0")
+        db.execSQL("ALTER TABLE `purchase_transactions` ADD COLUMN `tax_rate_snapshot` REAL NOT NULL DEFAULT 0.0")
+        db.execSQL("ALTER TABLE `purchase_transactions` ADD COLUMN `tax_amount_snapshot` INTEGER NOT NULL DEFAULT 0")
+        
+        db.execSQL("ALTER TABLE `purchase_items` ADD COLUMN `taxable` INTEGER NOT NULL DEFAULT 1")
+        db.execSQL("ALTER TABLE `purchase_items` ADD COLUMN `tax_rate_snapshot` REAL")
+        db.execSQL("ALTER TABLE `purchase_items` ADD COLUMN `tax_amount_snapshot` INTEGER")
+        
+        db.execSQL("ALTER TABLE `sale_return_transactions` ADD COLUMN `taxable_base_snapshot` INTEGER NOT NULL DEFAULT 0")
+        db.execSQL("ALTER TABLE `sale_return_transactions` ADD COLUMN `tax_rate_snapshot` REAL NOT NULL DEFAULT 0.0")
+        db.execSQL("ALTER TABLE `sale_return_transactions` ADD COLUMN `tax_amount_snapshot` INTEGER NOT NULL DEFAULT 0")
+        
+        db.execSQL("ALTER TABLE `sale_return_items` ADD COLUMN `taxable` INTEGER NOT NULL DEFAULT 1")
+        db.execSQL("ALTER TABLE `sale_return_items` ADD COLUMN `tax_rate_snapshot` REAL")
+        db.execSQL("ALTER TABLE `sale_return_items` ADD COLUMN `tax_amount_snapshot` INTEGER")
+    }
+}
+
 @Database(
     entities = [
         CategoryEntity::class,
@@ -742,7 +775,7 @@ val MIGRATION_14_15 = object : Migration(14, 15) {
         PurchaseOrderEntity::class,
         PurchaseOrderItemEntity::class
     ],
-    version = 15,
+    version = 16,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -787,7 +820,8 @@ abstract class AppDatabase : RoomDatabase() {
                         MIGRATION_11_12,
                         MIGRATION_12_13,
                         MIGRATION_13_14,
-                        MIGRATION_14_15
+                        MIGRATION_14_15,
+                        MIGRATION_15_16
                     )
                     .build()
                 INSTANCE = instance
