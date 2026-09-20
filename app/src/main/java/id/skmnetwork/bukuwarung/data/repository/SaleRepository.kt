@@ -13,6 +13,10 @@ import id.skmnetwork.bukuwarung.data.local.entity.StockMovementEntity
 import id.skmnetwork.bukuwarung.data.local.entity.SyncQueueEntity
 import id.skmnetwork.bukuwarung.domain.checkout.CartLineRequest
 import id.skmnetwork.bukuwarung.domain.checkout.SaleCommitResult
+import id.skmnetwork.bukuwarung.domain.tax.TaxCalculator
+import id.skmnetwork.bukuwarung.domain.tax.TaxCalculationResult
+import id.skmnetwork.bukuwarung.domain.tax.TaxPriceMode
+import id.skmnetwork.bukuwarung.domain.tax.TaxSettings
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
@@ -99,7 +103,8 @@ class SaleRepository(
         paymentMethod: String = "CASH",
         customerId: Long? = null,
         discountAmount: Long = 0L,
-        now: Long = System.currentTimeMillis()
+        now: Long = System.currentTimeMillis(),
+        taxSettings: TaxSettings? = null
     ): Result<Long> = withContext(Dispatchers.IO) {
         runCatching {
             appDatabase.withTransaction {
@@ -110,7 +115,8 @@ class SaleRepository(
                     paymentMethod = paymentMethod,
                     customerId = customerId,
                     discountAmount = discountAmount,
-                    now = now
+                    now = now,
+                    taxSettings = taxSettings
                 ).saleId
             }
         }
@@ -121,13 +127,15 @@ class SaleRepository(
         paymentMethod: String = "CASH",
         customerId: Long? = null,
         discountAmount: Long = 0L,
-        now: Long = System.currentTimeMillis()
+        now: Long = System.currentTimeMillis(),
+        taxSettings: TaxSettings? = null
     ): Result<Long> = completeSaleRequests(
         cartLineRequests = cartItems,
         paymentMethod = paymentMethod,
         customerId = customerId,
         discountAmount = discountAmount,
-        now = now
+        now = now,
+        taxSettings = taxSettings
     )
 
     suspend fun completeSaleRequests(
@@ -135,7 +143,8 @@ class SaleRepository(
         paymentMethod: String = "CASH",
         customerId: Long? = null,
         discountAmount: Long = 0L,
-        now: Long = System.currentTimeMillis()
+        now: Long = System.currentTimeMillis(),
+        taxSettings: TaxSettings? = null
     ): Result<Long> = withContext(Dispatchers.IO) {
         runCatching {
             appDatabase.withTransaction {
@@ -144,7 +153,8 @@ class SaleRepository(
                     paymentMethod = paymentMethod,
                     customerId = customerId,
                     discountAmount = discountAmount,
-                    now = now
+                    now = now,
+                    taxSettings = taxSettings
                 ).saleId
             }
         }
@@ -155,7 +165,8 @@ class SaleRepository(
         paymentMethod: String = "CASH",
         customerId: Long? = null,
         discountAmount: Long = 0L,
-        now: Long = System.currentTimeMillis()
+        now: Long = System.currentTimeMillis(),
+        taxSettings: TaxSettings? = null
     ): SaleCommitResult {
         require(cartItems.isNotEmpty()) { "Keranjang kosong" }
         require(paymentMethod.uppercase() in setOf("CASH", "QRIS", "CREDIT")) {
@@ -207,13 +218,60 @@ class SaleRepository(
         )
         val safeDiscount = discountResult.discountAmount
         val netTotal = discountResult.netTotal
+
+        data class ItemTaxContext(
+            val product: ProductEntity,
+            val itemDiscount: Long,
+            val taxResult: TaxCalculationResult,
+            val isTaxable: Boolean,
+            val effectiveRate: Double
+        )
+
+        val itemTaxResults = cartItems.map { item ->
+            val product = productMap.getValue(item.productId)
+            val lineSubtotal = product.sellingPrice * item.quantity.toLong()
+            val effectiveRate = when {
+                taxSettings == null || !taxSettings.enabled -> 0.0
+                !product.taxable -> 0.0
+                product.taxRateOverride != null -> product.taxRateOverride
+                else -> taxSettings.rate
+            }
+            val isTaxable = taxSettings != null && taxSettings.enabled && product.taxable
+            val itemDiscount = if (grossSubtotal > 0L) {
+                TaxCalculator.roundToLong(
+                    java.math.BigDecimal(safeDiscount) * java.math.BigDecimal(lineSubtotal) / java.math.BigDecimal(grossSubtotal),
+                    taxSettings?.roundingMode ?: java.math.RoundingMode.HALF_UP
+                )
+            } else {
+                0L
+            }
+            val discountedSubtotal = lineSubtotal - itemDiscount
+            val itemTaxResult = TaxCalculator.calculateItemTax(
+                lineSubtotal = discountedSubtotal,
+                rate = effectiveRate,
+                priceMode = taxSettings?.priceMode ?: TaxPriceMode.EXCLUSIVE,
+                roundingMode = taxSettings?.roundingMode ?: java.math.RoundingMode.HALF_UP,
+                taxable = isTaxable
+            )
+            ItemTaxContext(product, itemDiscount, itemTaxResult, isTaxable, effectiveRate)
+        }
+
+        val totalTaxableBase = itemTaxResults.sumOf { it.taxResult.taxableBase }
+        val totalTaxAmount = itemTaxResults.sumOf { it.taxResult.taxAmount }
+        val grandTotal = netTotal + totalTaxAmount
+        val transactionTaxRateSnapshot = if (taxSettings != null && taxSettings.enabled) taxSettings.rate else 0.0
+
         val trxNumber = "TRX-$now"
         val trxUuid = UUID.randomUUID().toString()
         val saleTransaction = SaleTransactionEntity(
             uuid = trxUuid,
             transactionNumber = trxNumber,
             transactionDate = now,
-            totalAmount = netTotal,
+            totalAmount = grandTotal,
+            subtotalAmount = grossSubtotal,
+            taxableBaseSnapshot = totalTaxableBase,
+            taxRateSnapshot = transactionTaxRateSnapshot,
+            taxAmountSnapshot = totalTaxAmount,
             discountAmount = safeDiscount,
             paymentMethod = methodUpper,
             customerId = customer?.id,
@@ -222,8 +280,9 @@ class SaleRepository(
         )
         val saleId = saleDao.insertTransaction(saleTransaction)
 
-        val saleItems = cartItems.map { item ->
+        val saleItems = cartItems.mapIndexed { index, item ->
             val product = productMap.getValue(item.productId)
+            val ctx = itemTaxResults[index]
             SaleItemEntity(
                 saleUuid = trxUuid,
                 productUuid = product.uuid,
@@ -233,7 +292,10 @@ class SaleRepository(
                 quantity = item.quantity,
                 price = product.sellingPrice,
                 purchasePrice = product.purchasePrice,
-                subtotal = product.sellingPrice * item.quantity.toLong(),
+                subtotal = ctx.taxResult.grandTotal,
+                taxable = ctx.isTaxable,
+                taxRateSnapshot = if (ctx.isTaxable) ctx.effectiveRate else null,
+                taxAmountSnapshot = if (ctx.isTaxable) ctx.taxResult.taxAmount else null,
                 businessId = businessId
             )
         }
@@ -264,11 +326,11 @@ class SaleRepository(
 
         when (methodUpper) {
             "CASH" -> {
-                if (netTotal > 0L) {
+                if (grandTotal > 0L) {
                     cashDao.insertCashTransaction(
                         CashTransactionEntity(
                             type = "INCOME",
-                            amount = netTotal,
+                            amount = grandTotal,
                             description = "Penjualan $trxNumber",
                             refId = saleId,
                             refUuid = trxUuid,
@@ -286,9 +348,9 @@ class SaleRepository(
                         saleTransactionId = saleId,
                         customerUuid = customer.uuid,
                         saleUuid = trxUuid,
-                        totalDebt = netTotal,
+                        totalDebt = grandTotal,
                         paidAmount = 0L,
-                        status = if (netTotal == 0L) "PAID" else "OPEN",
+                        status = if (grandTotal == 0L) "PAID" else "OPEN",
                         businessId = businessId,
                         createdAt = now,
                         updatedAt = now

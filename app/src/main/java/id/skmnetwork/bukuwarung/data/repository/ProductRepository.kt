@@ -13,6 +13,7 @@ import id.skmnetwork.bukuwarung.data.local.entity.SaleItemEntity
 import id.skmnetwork.bukuwarung.data.local.entity.SaleTransactionEntity
 import id.skmnetwork.bukuwarung.data.local.entity.StockMovementEntity
 import id.skmnetwork.bukuwarung.data.local.entity.SyncQueueEntity
+import id.skmnetwork.bukuwarung.domain.tax.TaxSettings
 import id.skmnetwork.bukuwarung.data.repository.DigitalTransactionRepository
 import id.skmnetwork.bukuwarung.domain.checkout.CartLine
 import id.skmnetwork.bukuwarung.domain.checkout.CartLineRequest
@@ -297,26 +298,30 @@ class ProductRepository(
     suspend fun processAtomicCheckout(
         cartItems: Map<Long, Double>,
         paymentMethod: String = "CASH",
-        discountAmount: Long = 0L
+        discountAmount: Long = 0L,
+        taxSettings: TaxSettings? = null
     ): Result<Long> = withContext(Dispatchers.IO) {
         saleRepository.completeSale(
             cartItems = cartItems.map { (productId, quantity) ->
                 CartLineRequest(productId = productId, quantity = quantity)
             },
             paymentMethod = paymentMethod,
-            discountAmount = discountAmount
+            discountAmount = discountAmount,
+            taxSettings = taxSettings
         )
     }
 
     suspend fun processAtomicCheckout(
         cartLines: List<CartLine>,
         paymentMethod: String = "CASH",
-        discountAmount: Long = 0L
+        discountAmount: Long = 0L,
+        taxSettings: TaxSettings? = null
     ): Result<Long> = withContext(Dispatchers.IO) {
         saleRepository.completeSaleRequests(
             cartLineRequests = cartLines.map { it.toRequest() },
             paymentMethod = paymentMethod,
-            discountAmount = discountAmount
+            discountAmount = discountAmount,
+            taxSettings = taxSettings
         )
     }
 

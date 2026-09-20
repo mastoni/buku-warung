@@ -67,5 +67,14 @@ data class SaleItemEntity(
     val purchasePrice: Long = 0L,
 
     @ColumnInfo(name = "subtotal")
-    val subtotal: Long
+    val subtotal: Long,
+
+    @ColumnInfo(name = "taxable")
+    val taxable: Boolean = true,
+
+    @ColumnInfo(name = "tax_rate_snapshot")
+    val taxRateSnapshot: Double? = null,
+
+    @ColumnInfo(name = "tax_amount_snapshot")
+    val taxAmountSnapshot: Long? = null
 )

@@ -5,6 +5,7 @@ import id.skmnetwork.bukuwarung.data.local.database.AppDatabase
 import id.skmnetwork.bukuwarung.data.local.entity.FulfillmentMode
 import id.skmnetwork.bukuwarung.data.repository.DigitalTransactionRepository
 import id.skmnetwork.bukuwarung.data.repository.SaleRepository
+import id.skmnetwork.bukuwarung.domain.tax.TaxSettings
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -18,7 +19,8 @@ class CheckoutOrchestrator(
         cartLines: List<CartLine>,
         paymentMethod: String,
         customerId: Long? = null,
-        discountAmount: Long = 0L
+        discountAmount: Long = 0L,
+        taxSettings: TaxSettings? = null
     ): Result<Long> = withContext(Dispatchers.IO) {
         runCatching {
             val normalizedLines = cartLines.aggregateByCheckoutIdentity()
@@ -29,7 +31,8 @@ class CheckoutOrchestrator(
                     cartItems = requests,
                     paymentMethod = paymentMethod,
                     customerId = customerId,
-                    discountAmount = discountAmount
+                    discountAmount = discountAmount,
+                    taxSettings = taxSettings
                 )
                 beforeDigitalDrafts(commit.saleItemIds)
                 normalizedLines.zip(commit.saleItemIds).forEach { (line, saleItemId) ->

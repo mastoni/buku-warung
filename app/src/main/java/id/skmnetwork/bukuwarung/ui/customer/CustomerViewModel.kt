@@ -144,6 +144,7 @@ class CustomerViewModel(
         cartItems: Map<Long, Double>,
         customerId: Long,
         discountAmount: Long = 0L,
+        taxSettings: id.skmnetwork.bukuwarung.domain.tax.TaxSettings? = null,
         onSuccess: (Long) -> Unit,
         onError: (String) -> Unit
     ) {
@@ -153,7 +154,12 @@ class CustomerViewModel(
         }
 
         viewModelScope.launch(Dispatchers.IO) {
-            val result = repository.processAtomicCreditCheckout(cartItems, customerId, discountAmount)
+            val result = repository.processAtomicCreditCheckout(
+                cartItems = cartItems,
+                customerId = customerId,
+                discountAmount = discountAmount,
+                taxSettings = taxSettings
+            )
             withContext(Dispatchers.Main) {
                 result.fold(
                     onSuccess = { saleId -> onSuccess(saleId) },
@@ -167,6 +173,7 @@ class CustomerViewModel(
         cartLines: List<CartLine>,
         customerId: Long,
         discountAmount: Long = 0L,
+        taxSettings: id.skmnetwork.bukuwarung.domain.tax.TaxSettings? = null,
         onSuccess: (Long) -> Unit,
         onError: (String) -> Unit
     ) {
@@ -180,8 +187,14 @@ class CustomerViewModel(
                 cartLines = cartLines,
                 paymentMethod = "CREDIT",
                 customerId = customerId,
-                discountAmount = discountAmount
-            ) ?: repository.processAtomicCreditCheckout(cartLines, customerId, discountAmount)
+                discountAmount = discountAmount,
+                taxSettings = taxSettings
+            ) ?: repository.processAtomicCreditCheckout(
+                cartLines = cartLines,
+                customerId = customerId,
+                discountAmount = discountAmount,
+                taxSettings = taxSettings
+            )
             withContext(Dispatchers.Main) {
                 result.fold(
                     onSuccess = { saleId -> onSuccess(saleId) },

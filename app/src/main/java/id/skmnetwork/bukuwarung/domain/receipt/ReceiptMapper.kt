@@ -72,12 +72,16 @@ object ReceiptMapper {
         val discountAmount = sale.discountAmount
         val subtotalAmount = if (discountAmount > 0L) grossSubtotal else null
         val finalDiscount = if (discountAmount > 0L) discountAmount else null
+        val taxableBase = if (sale.taxAmountSnapshot > 0L) sale.taxableBaseSnapshot else null
+        val taxAmount = if (sale.taxAmountSnapshot > 0L) sale.taxAmountSnapshot else null
 
         val paymentInfo = ReceiptPaymentInfo(
             method = methodUpper,
             totalAmount = sale.totalAmount,
             subtotalAmount = subtotalAmount,
             discountAmount = finalDiscount,
+            taxableBase = taxableBase,
+            taxAmount = taxAmount,
             payAmount = if (methodUpper == "CASH") cashGiven else null,
             changeAmount = changeAmount,
             customerName = customer?.name,

@@ -26,6 +26,18 @@ data class ItemTaxInput(
     val taxable: Boolean
 )
 
+data class SaleItemTaxInput(
+    val lineSubtotal: Long,
+    val taxable: Boolean,
+    val taxRateOverride: Double? = null
+)
+
+data class SaleTaxBreakdown(
+    val totalTaxableBase: Long,
+    val totalTaxAmount: Long,
+    val grandTotal: Long
+)
+
 object TaxCalculator {
 
     fun calculateItemTax(
@@ -118,6 +130,65 @@ object TaxCalculator {
         )
     }
 
+    fun calculateSaleTax(
+        items: List<SaleItemTaxInput>,
+        discountAmount: Long,
+        rate: Double,
+        priceMode: TaxPriceMode,
+        roundingMode: RoundingMode
+    ): SaleTaxBreakdown {
+        val grossSubtotal = items.sumOf { it.lineSubtotal }
+        val safeDiscount = discountAmount.coerceAtLeast(0L).coerceAtMost(grossSubtotal)
+        val safeRate = validateRate(rate)
+        
+        var totalTaxableBase = 0L
+        var totalTaxAmount = 0L
+        
+        items.forEach { item ->
+            val itemDiscount = if (grossSubtotal > 0L) {
+                roundToLong(BigDecimal(safeDiscount) * BigDecimal(item.lineSubtotal) / BigDecimal(grossSubtotal), roundingMode)
+            } else {
+                0L
+            }
+            val discountedSubtotal = item.lineSubtotal - itemDiscount
+            
+            val effectiveRate = when {
+                !item.taxable -> 0.0
+                item.taxRateOverride != null -> item.taxRateOverride
+                else -> safeRate
+            }
+            
+            if (item.taxable && effectiveRate > 0.0) {
+                when (priceMode) {
+                    EXCLUSIVE -> {
+                        val taxAmount = roundToLong(BigDecimal(discountedSubtotal) * BigDecimal(effectiveRate) / BigDecimal(100), roundingMode)
+                        totalTaxableBase += discountedSubtotal
+                        totalTaxAmount += taxAmount
+                    }
+                    INCLUSIVE -> {
+                        val divisor = BigDecimal(100) + BigDecimal(effectiveRate)
+                        val taxableBase = roundToLong(BigDecimal(discountedSubtotal) * BigDecimal(100) / divisor, roundingMode)
+                        val taxAmount = discountedSubtotal - taxableBase
+                        totalTaxableBase += taxableBase
+                        totalTaxAmount += taxAmount
+                    }
+                }
+            }
+        }
+        
+        val netSubtotal = grossSubtotal - safeDiscount
+        val grandTotal = when (priceMode) {
+            EXCLUSIVE -> netSubtotal + totalTaxAmount
+            INCLUSIVE -> netSubtotal
+        }
+        
+        return SaleTaxBreakdown(
+            totalTaxableBase = totalTaxableBase,
+            totalTaxAmount = totalTaxAmount,
+            grandTotal = grandTotal
+        )
+    }
+
     fun validateRate(rate: Double): Double {
         val clamped = rate.coerceIn(0.0, 100.0)
         return if (clamped.isNaN() || clamped.isInfinite()) 0.0 else clamped
@@ -157,7 +228,7 @@ object TaxCalculator {
         )
     }
 
-    private fun roundToLong(value: BigDecimal, roundingMode: RoundingMode): Long {
+    fun roundToLong(value: BigDecimal, roundingMode: RoundingMode): Long {
         return value.setScale(0, roundingMode).toLong()
     }
 }

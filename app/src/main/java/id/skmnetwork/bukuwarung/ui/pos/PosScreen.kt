@@ -102,6 +102,8 @@ import id.skmnetwork.bukuwarung.ui.theme.AppColors
 import id.skmnetwork.bukuwarung.ui.theme.AppShapes
 import id.skmnetwork.bukuwarung.ui.theme.AppSpacing
 import id.skmnetwork.bukuwarung.util.formatRupiah
+import id.skmnetwork.bukuwarung.domain.tax.TaxSettings
+import id.skmnetwork.bukuwarung.domain.tax.TaxPriceMode
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -260,6 +262,32 @@ fun PosScreen(
     val discountAmount = discountCalcResult.discountAmount
     val netTotal = discountCalcResult.netTotal
 
+    val taxSettings = remember(userSettings.taxEnabled, userSettings.taxRate, userSettings.taxPriceMode) {
+        id.skmnetwork.bukuwarung.domain.tax.TaxSettings(
+            enabled = userSettings.taxEnabled,
+            rate = userSettings.taxRate,
+            priceMode = userSettings.taxPriceMode,
+            roundingMode = java.math.RoundingMode.HALF_UP
+        )
+    }
+    val taxBreakdown = remember(cart, taxSettings, discountAmount) {
+        id.skmnetwork.bukuwarung.domain.tax.TaxCalculator.calculateSaleTax(
+            items = cart.map { cartLine ->
+                id.skmnetwork.bukuwarung.domain.tax.SaleItemTaxInput(
+                    lineSubtotal = (cartLine.product.sellingPrice * cartLine.quantity.toLong()),
+                    taxable = taxSettings.enabled && cartLine.product.taxable,
+                    taxRateOverride = if (taxSettings.enabled && cartLine.product.taxable) cartLine.product.taxRateOverride else null
+                )
+            },
+            discountAmount = discountAmount,
+            rate = taxSettings.rate,
+            priceMode = taxSettings.priceMode,
+            roundingMode = taxSettings.roundingMode
+        )
+    }
+    val totalTaxAmount = taxBreakdown.totalTaxAmount
+    val grandTotal = netTotal + totalTaxAmount
+
     val cartSummaryList = cart.map { Pair(it.product.name, it.quantity) }
     val hasMissingProviderDestination = cart.any {
         isProvider(it.product) && it.destinationNumber.isNullOrBlank()
@@ -367,7 +395,7 @@ fun PosScreen(
 
     if (showCashPaymentDialog) {
         CashPaymentDialog(
-            totalPrice = netTotal,
+            totalPrice = grandTotal,
             isCheckingOut = isCheckingOut,
             cashReceivedEnabled = userSettings.cashReceivedEnabled,
             onDismiss = { showCashPaymentDialog = false },
@@ -378,6 +406,7 @@ fun PosScreen(
                     cartLines = cart.toList(),
                     paymentMethod = "CASH",
                     discountAmount = discountAmount,
+                    taxSettings = taxSettings,
                     onSuccess = { saleId ->
                         scope.launch {
                             val receiptData = viewModel.getReceiptData(saleId, userSettings, cashReceived)
@@ -386,12 +415,14 @@ fun PosScreen(
                             showPaymentSelectorDialog = false
                             lastCheckoutData = CheckoutSuccessData(
                                 items = cartSummaryList,
-                                totalAmount = netTotal,
+                                totalAmount = grandTotal,
                                 paymentMethodLabel = "Tunai (Cash)",
                                 cashReceivedAmount = cashReceived,
                                 changeAmount = change,
                                 saleId = saleId,
-                                receiptData = receiptData
+                                receiptData = receiptData,
+                                taxAmount = totalTaxAmount.takeIf { it > 0 },
+                                subtotalAmount = grossSubtotal
                             )
                             cart.clear()
                             discountInputText = ""
@@ -422,7 +453,7 @@ fun PosScreen(
 
     if (showQrisPaymentDialog) {
         QrisPaymentDialog(
-            totalPrice = netTotal,
+            totalPrice = grandTotal,
             isCheckingOut = isCheckingOut,
             qrisImagePath = userSettings.qrisImagePath,
             onNavigateToSettings = onNavigateToSettings,
@@ -434,6 +465,7 @@ fun PosScreen(
                     cartLines = cart.toList(),
                     paymentMethod = "QRIS",
                     discountAmount = discountAmount,
+                    taxSettings = taxSettings,
                     onSuccess = { saleId ->
                         scope.launch {
                             val receiptData = viewModel.getReceiptData(saleId, userSettings)
@@ -442,10 +474,12 @@ fun PosScreen(
                             showPaymentSelectorDialog = false
                             lastCheckoutData = CheckoutSuccessData(
                                 items = cartSummaryList,
-                                totalAmount = netTotal,
+                                totalAmount = grandTotal,
                                 paymentMethodLabel = "QRIS",
                                 saleId = saleId,
-                                receiptData = receiptData
+                                receiptData = receiptData,
+                                taxAmount = totalTaxAmount.takeIf { it > 0 },
+                                subtotalAmount = grossSubtotal
                             )
                             cart.clear()
                             discountInputText = ""
@@ -601,6 +635,25 @@ fun PosScreen(
                                     Text("-${formatRupiah(discountAmount)}", style = MaterialTheme.typography.bodySmall, color = AppColors.RedExpense, fontWeight = FontWeight.Bold)
                                 }
                             }
+                            if (totalTaxAmount > 0) {
+                                HorizontalDivider(modifier = Modifier.padding(vertical = 2.dp), color = Color(0xFFE2EBE5))
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text("DPP / Taxable Base", style = MaterialTheme.typography.bodySmall, color = AppColors.TextSecondary)
+                                    Spacer(Modifier.weight(1f))
+                                    Text(formatRupiah(taxBreakdown.totalTaxableBase), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold)
+                                }
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text("PPN (${(taxSettings.rate)}%)", style = MaterialTheme.typography.bodySmall, color = AppColors.TextSecondary)
+                                    Spacer(Modifier.weight(1f))
+                                    Text(formatRupiah(totalTaxAmount), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold)
+                                }
+                            }
                             HorizontalDivider(modifier = Modifier.padding(vertical = 2.dp), color = Color(0xFFE2EBE5))
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
@@ -608,7 +661,7 @@ fun PosScreen(
                             ) {
                                 Text("TOTAL BAYAR", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
                                 Spacer(Modifier.weight(1f))
-                                Text(formatRupiah(netTotal), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = AppColors.GreenPrimary)
+                                Text(formatRupiah(grandTotal), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = AppColors.GreenPrimary)
                             }
                         }
                     }
@@ -712,6 +765,7 @@ fun PosScreen(
                                     cartLines = cart.toList(),
                                     customerId = selectedCustomerForCredit!!.id,
                                     discountAmount = discountAmount,
+                                    taxSettings = taxSettings,
                                     onSuccess = { saleId ->
                                         scope.launch {
                                             val receiptData = customerViewModel.getReceiptData(saleId, userSettings)
@@ -719,11 +773,13 @@ fun PosScreen(
                                             showPaymentSelectorDialog = false
                                             lastCheckoutData = CheckoutSuccessData(
                                                 items = cartSummaryList,
-                                                totalAmount = netTotal,
+                                                totalAmount = grandTotal,
                                                 paymentMethodLabel = "Hutang (${selectedCustomerForCredit?.name ?: terminology.customerLabel})",
                                                 customerName = selectedCustomerForCredit?.name,
                                                 saleId = saleId,
-                                                receiptData = receiptData
+                                                receiptData = receiptData,
+                                                taxAmount = totalTaxAmount.takeIf { it > 0 },
+                                                subtotalAmount = grossSubtotal
                                             )
                                             cart.clear()
                                             discountInputText = ""
@@ -808,6 +864,13 @@ fun PosScreen(
                             Text("TOTAL", fontWeight = FontWeight.Bold)
                             Spacer(Modifier.weight(1f))
                             Text(formatRupiah(data.totalAmount), fontWeight = FontWeight.Bold, color = AppColors.GreenPrimary)
+                        }
+                        if (data.taxAmount != null && data.taxAmount > 0) {
+                            Row(modifier = Modifier.fillMaxWidth()) {
+                                Text("PPN", style = MaterialTheme.typography.bodySmall, color = AppColors.TextSecondary)
+                                Spacer(Modifier.weight(1f))
+                                Text(formatRupiah(data.taxAmount), style = MaterialTheme.typography.bodySmall, color = AppColors.TextSecondary)
+                            }
                         }
 
                         if (data.cashReceivedAmount != null) {

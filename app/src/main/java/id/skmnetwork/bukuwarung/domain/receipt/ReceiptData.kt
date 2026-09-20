@@ -34,6 +34,8 @@ data class ReceiptPaymentInfo(
     val totalAmount: Long,
     val subtotalAmount: Long? = null,
     val discountAmount: Long? = null,
+    val taxableBase: Long? = null,
+    val taxAmount: Long? = null,
     val payAmount: Long? = null,
     val changeAmount: Long? = null,
     val customerName: String? = null,

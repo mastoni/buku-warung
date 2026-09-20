@@ -157,7 +157,8 @@ class CustomerRepository(
     suspend fun processAtomicCreditCheckout(
         cartItems: Map<Long, Double>,
         customerId: Long,
-        discountAmount: Long = 0L
+        discountAmount: Long = 0L,
+        taxSettings: id.skmnetwork.bukuwarung.domain.tax.TaxSettings? = null
     ): Result<Long> = withContext(Dispatchers.IO) {
         saleRepository.completeSale(
             cartItems = cartItems.map { (productId, quantity) ->
@@ -168,20 +169,23 @@ class CustomerRepository(
             },
             paymentMethod = "CREDIT",
             customerId = customerId,
-            discountAmount = discountAmount
+            discountAmount = discountAmount,
+            taxSettings = taxSettings
         )
     }
 
     suspend fun processAtomicCreditCheckout(
         cartLines: List<CartLine>,
         customerId: Long,
-        discountAmount: Long = 0L
+        discountAmount: Long = 0L,
+        taxSettings: id.skmnetwork.bukuwarung.domain.tax.TaxSettings? = null
     ): Result<Long> = withContext(Dispatchers.IO) {
         saleRepository.completeSaleRequests(
             cartLineRequests = cartLines.map { it.toRequest() },
             paymentMethod = "CREDIT",
             customerId = customerId,
-            discountAmount = discountAmount
+            discountAmount = discountAmount,
+            taxSettings = taxSettings
         )
     }
 

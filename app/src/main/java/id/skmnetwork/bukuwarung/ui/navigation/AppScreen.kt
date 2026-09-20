@@ -23,5 +23,7 @@ data class CheckoutSuccessData(
     val cashReceivedAmount: Long? = null,
     val changeAmount: Long? = null,
     val saleId: Long? = null,
-    val receiptData: id.skmnetwork.bukuwarung.domain.receipt.ReceiptData? = null
+    val receiptData: id.skmnetwork.bukuwarung.domain.receipt.ReceiptData? = null,
+    val taxAmount: Long? = null,
+    val subtotalAmount: Long? = null
 )

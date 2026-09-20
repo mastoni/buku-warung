@@ -393,6 +393,7 @@ class ProductViewModel(
         cartItems: Map<Long, Double>,
         paymentMethod: String = "CASH",
         discountAmount: Long = 0L,
+        taxSettings: id.skmnetwork.bukuwarung.domain.tax.TaxSettings? = null,
         onSuccess: (Long) -> Unit,
         onError: (String) -> Unit
     ) {
@@ -402,7 +403,12 @@ class ProductViewModel(
         }
 
         viewModelScope.launch(Dispatchers.IO) {
-            val result = repository.processAtomicCheckout(cartItems, paymentMethod, discountAmount)
+            val result = repository.processAtomicCheckout(
+                cartItems = cartItems,
+                paymentMethod = paymentMethod,
+                discountAmount = discountAmount,
+                taxSettings = taxSettings
+            )
             withContext(Dispatchers.Main) {
                 result.fold(
                     onSuccess = { saleId -> onSuccess(saleId) },
@@ -416,6 +422,7 @@ class ProductViewModel(
         cartLines: List<CartLine>,
         paymentMethod: String = "CASH",
         discountAmount: Long = 0L,
+        taxSettings: id.skmnetwork.bukuwarung.domain.tax.TaxSettings? = null,
         onSuccess: (Long) -> Unit,
         onError: (String) -> Unit
     ) {
@@ -428,8 +435,14 @@ class ProductViewModel(
             val result = checkoutOrchestrator?.processCheckout(
                 cartLines = cartLines,
                 paymentMethod = paymentMethod,
-                discountAmount = discountAmount
-            ) ?: repository.processAtomicCheckout(cartLines, paymentMethod, discountAmount)
+                discountAmount = discountAmount,
+                taxSettings = taxSettings
+            ) ?: repository.processAtomicCheckout(
+                cartLines = cartLines,
+                paymentMethod = paymentMethod,
+                discountAmount = discountAmount,
+                taxSettings = taxSettings
+            )
             withContext(Dispatchers.Main) {
                 result.fold(
                     onSuccess = { saleId -> onSuccess(saleId) },
