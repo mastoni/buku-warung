@@ -225,4 +225,44 @@ class ReceiptFormattingUnitTest {
         assertTrue(testText.contains("TEST PRINT"))
         assertTrue(testText.contains("TEST PRINT BERHASIL"))
     }
+
+    @Test
+    fun testPlainTextReceiptFormatterWithTaxBreakdown() {
+        val receipt = ReceiptData(
+            receiptNumber = "TRX-2026-010",
+            transactionUuid = "uuid-tax-001",
+            dateTimeMillis = 1773738000000L,
+            shopProfile = ShopProfile(
+                shopName = "Toko PPN",
+                customerLabel = "Pelanggan"
+            ),
+            cashierName = "Kasir",
+            items = listOf(
+                ReceiptItem(name = "Barang Kena Pajak", quantity = 1.0, unit = "pcs", price = 110000L, subtotal = 110000L)
+            ),
+            paymentInfo = ReceiptPaymentInfo(
+                method = "CASH",
+                totalAmount = 110000L,
+                subtotalAmount = 100000L,
+                taxableBase = 100000L,
+                taxAmount = 10000L,
+                payAmount = 110000L,
+                changeAmount = 0L,
+                customerName = "Pelanggan Uji"
+            )
+        )
+
+        val formatter = PlainTextReceiptFormatter()
+        val text = formatter.format(receipt, ReceiptPaperWidth.WIDTH_58MM)
+
+        assertTrue(text.contains("Toko PPN"))
+        assertTrue(text.contains("TRX-2026-010"))
+        assertTrue(text.contains("Barang Kena Pajak"))
+        assertTrue(text.contains("DPP"))
+        assertTrue(text.contains("Rp 100.000"))
+        assertTrue(text.contains("PPN"))
+        assertTrue(text.contains("Rp 10.000"))
+        assertTrue(text.contains("TOTAL"))
+        assertTrue(text.contains("Rp 110.000"))
+    }
 }

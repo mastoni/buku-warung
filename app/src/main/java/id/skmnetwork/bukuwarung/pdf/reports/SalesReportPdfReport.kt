@@ -20,7 +20,9 @@ data class SalesReportRow(
     val paymentMethod: String,
     val totalAmount: Long,
     val refundAmount: Long = 0L,
-    val status: String
+    val status: String,
+    val taxableBase: Long = 0L,
+    val taxAmount: Long = 0L
 )
 
 /**
@@ -37,6 +39,8 @@ data class SalesReportData(
     val totalRefund: Long,
     val netSales: Long,
     val totalTransactions: Int,
+    val totalTaxableBase: Long = 0L,
+    val totalTaxAmount: Long = 0L,
     val terminology: BusinessTerminology = BusinessTerminology()
 )
 
@@ -75,6 +79,22 @@ object SalesReportPdfBuilder {
                 )
             )
         }
+        if (data.totalTaxableBase > 0L) {
+            summaryPairs.add(
+                KeyValuePair(
+                    label = "Dasar Pengenaan Pajak (DPP)",
+                    value = formatRupiah(data.totalTaxableBase)
+                )
+            )
+        }
+        if (data.totalTaxAmount > 0L) {
+            summaryPairs.add(
+                KeyValuePair(
+                    label = "PPN",
+                    value = formatRupiah(data.totalTaxAmount)
+                )
+            )
+        }
         summaryPairs.add(
             KeyValuePair(
                 label = "Total ${data.terminology.transactionLabel} Bersih (Net)",
@@ -99,12 +119,14 @@ object SalesReportPdfBuilder {
             )
         } else {
             val columns = listOf(
-                TableColumn(header = "No", weight = 0.8f, align = Paint.Align.CENTER),
-                TableColumn(header = "Waktu / No. Trx", weight = 3.4f, align = Paint.Align.LEFT),
-                TableColumn(header = data.terminology.customerLabel, weight = 2.4f, align = Paint.Align.LEFT),
-                TableColumn(header = "Metode", weight = 1.6f, align = Paint.Align.CENTER),
-                TableColumn(header = "Total", weight = 2.2f, align = Paint.Align.RIGHT),
-                TableColumn(header = "Status", weight = 2.0f, align = Paint.Align.RIGHT)
+                TableColumn(header = "No", weight = 0.6f, align = Paint.Align.CENTER),
+                TableColumn(header = "Waktu / No. Trx", weight = 2.8f, align = Paint.Align.LEFT),
+                TableColumn(header = data.terminology.customerLabel, weight = 2.0f, align = Paint.Align.LEFT),
+                TableColumn(header = "Metode", weight = 1.4f, align = Paint.Align.CENTER),
+                TableColumn(header = "DPP", weight = 1.8f, align = Paint.Align.RIGHT),
+                TableColumn(header = "PPN", weight = 1.4f, align = Paint.Align.RIGHT),
+                TableColumn(header = "Total", weight = 2.0f, align = Paint.Align.RIGHT),
+                TableColumn(header = "Status", weight = 1.8f, align = Paint.Align.RIGHT)
             )
 
             val rows = mutableListOf<TableRow>()
@@ -116,6 +138,8 @@ object SalesReportPdfBuilder {
                             "${item.dateFormatted} • ${item.transactionNumber}",
                             item.customerName,
                             item.paymentMethod,
+                            if (item.taxableBase > 0L) formatRupiah(item.taxableBase) else "—",
+                            if (item.taxAmount > 0L) formatRupiah(item.taxAmount) else "—",
                             formatRupiah(item.totalAmount),
                             item.status
                         )
@@ -131,6 +155,8 @@ object SalesReportPdfBuilder {
                         "TOTAL (${data.totalTransactions} TRX)",
                         "",
                         "",
+                        if (data.totalTaxableBase > 0L) formatRupiah(data.totalTaxableBase) else "—",
+                        if (data.totalTaxAmount > 0L) formatRupiah(data.totalTaxAmount) else "—",
                         formatRupiah(data.grossSales),
                         if (data.totalRefund > 0) "Net ${formatRupiah(data.netSales)}" else "Selesai"
                     ),

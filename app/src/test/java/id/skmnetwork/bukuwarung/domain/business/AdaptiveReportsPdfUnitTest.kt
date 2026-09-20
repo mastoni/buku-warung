@@ -9,9 +9,12 @@ import id.skmnetwork.bukuwarung.pdf.reports.ProductReportData
 import id.skmnetwork.bukuwarung.pdf.reports.ProductReportPdfBuilder
 import id.skmnetwork.bukuwarung.pdf.reports.PurchaseReportData
 import id.skmnetwork.bukuwarung.pdf.reports.PurchaseReportPdfBuilder
+import id.skmnetwork.bukuwarung.pdf.reports.PurchaseReportRow
 import id.skmnetwork.bukuwarung.pdf.reports.SalesReportData
 import id.skmnetwork.bukuwarung.pdf.reports.SalesReportPdfBuilder
+import id.skmnetwork.bukuwarung.pdf.reports.SalesReportRow
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -224,5 +227,127 @@ class AdaptiveReportsPdfUnitTest {
         assertEquals(BusinessType.WARUNG_SEMBAKO, unknownProfile.businessType)
         assertEquals("Penjualan", unknownProfile.terminology.transactionLabel)
         assertEquals("Produk", unknownProfile.terminology.productLabel)
+    }
+
+    @Test
+    fun testSalesReportWithTaxSnapshot() {
+        val profile = BusinessTaxonomyRegistry.resolve(BusinessType.WARUNG_SEMBAKO.name)
+
+        val rows = listOf(
+            SalesReportRow(
+                dateFormatted = "20/09/26 10:00",
+                transactionNumber = "TRX-001",
+                customerName = "Pelanggan A",
+                paymentMethod = "Tunai",
+                totalAmount = 110000L,
+                refundAmount = 0L,
+                status = "Lunas",
+                taxableBase = 100000L,
+                taxAmount = 10000L
+            )
+        )
+
+        val salesData = SalesReportData(
+            shopName = "Toko PPN",
+            periodLabel = "Hari Ini",
+            printedAt = "20 Sep 2026",
+            items = rows,
+            grossSales = 110000L,
+            totalRefund = 0L,
+            netSales = 110000L,
+            totalTransactions = 1,
+            totalTaxableBase = 100000L,
+            totalTaxAmount = 10000L,
+            terminology = profile.terminology
+        )
+
+        val doc = SalesReportPdfBuilder.build(salesData)
+        val summarySection = doc.sections[0]
+        assertTrue(summarySection.summaryPairs.any { it.label.contains("Dasar Pengenaan") })
+        assertTrue(summarySection.summaryPairs.any { it.label.contains("PPN") })
+
+        val tableSection = doc.sections[1]
+        assertTrue(tableSection.tableColumns.any { it.header == "DPP" })
+        assertTrue(tableSection.tableColumns.any { it.header == "PPN" })
+        assertTrue(tableSection.tableRows.size >= 2)
+    }
+
+    @Test
+    fun testSalesReportWithoutTaxShowsDash() {
+        val profile = BusinessTaxonomyRegistry.resolve(BusinessType.WARUNG_SEMBAKO.name)
+
+        val rows = listOf(
+            SalesReportRow(
+                dateFormatted = "20/09/26 10:00",
+                transactionNumber = "TRX-002",
+                customerName = "Pelanggan B",
+                paymentMethod = "QRIS",
+                totalAmount = 50000L,
+                refundAmount = 0L,
+                status = "Lunas",
+                taxableBase = 0L,
+                taxAmount = 0L
+            )
+        )
+
+        val salesData = SalesReportData(
+            shopName = "Toko Tanpa PPN",
+            periodLabel = "Hari Ini",
+            printedAt = "20 Sep 2026",
+            items = rows,
+            grossSales = 50000L,
+            totalRefund = 0L,
+            netSales = 50000L,
+            totalTransactions = 1,
+            totalTaxableBase = 0L,
+            totalTaxAmount = 0L,
+            terminology = profile.terminology
+        )
+
+        val doc = SalesReportPdfBuilder.build(salesData)
+        val summarySection = doc.sections[0]
+        assertFalse(summarySection.summaryPairs.any { it.label.contains("Dasar Pengenaan") })
+        assertFalse(summarySection.summaryPairs.any { it.label.contains("PPN") })
+    }
+
+    @Test
+    fun testPurchaseReportWithTaxSnapshot() {
+        val profile = BusinessTaxonomyRegistry.resolve(BusinessType.WARUNG_SEMBAKO.name)
+
+        val rows = listOf(
+            PurchaseReportRow(
+                dateFormatted = "20/09/26 08:00",
+                transactionNumber = "BL-001",
+                supplierName = "Supplier A",
+                paymentMethod = "Tunai",
+                totalAmount = 110000L,
+                status = "Lunas",
+                taxableBase = 100000L,
+                taxAmount = 10000L
+            )
+        )
+
+        val purchaseData = PurchaseReportData(
+            shopName = "Toko PPN",
+            periodLabel = "Hari Ini",
+            printedAt = "20 Sep 2026",
+            items = rows,
+            totalPurchases = 110000L,
+            purchasesTaxableBaseTotal = 100000L,
+            purchasesTaxAmountTotal = 10000L,
+            cashPurchasesTotal = 110000L,
+            creditPurchasesTotal = 0L,
+            totalTransactions = 1,
+            terminology = profile.terminology
+        )
+
+        val doc = PurchaseReportPdfBuilder.build(purchaseData)
+        val summarySection = doc.sections[0]
+        assertTrue(summarySection.summaryPairs.any { it.label.contains("Dasar Pengenaan") })
+        assertTrue(summarySection.summaryPairs.any { it.label.contains("PPN") })
+
+        val tableSection = doc.sections[1]
+        assertTrue(tableSection.tableColumns.any { it.header == "DPP" })
+        assertTrue(tableSection.tableColumns.any { it.header == "PPN" })
     }
 }

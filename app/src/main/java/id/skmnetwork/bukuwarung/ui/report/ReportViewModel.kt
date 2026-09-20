@@ -52,6 +52,14 @@ class ReportViewModel(
         .flatMapLatest { range -> repository.getSalesTotal(range.startDate, range.endDate) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0L)
 
+    val salesTaxableBaseTotal: StateFlow<Long?> = dateRange
+        .flatMapLatest { range -> repository.getSalesTaxableBaseTotal(range.startDate, range.endDate) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0L)
+
+    val salesTaxAmountTotal: StateFlow<Long?> = dateRange
+        .flatMapLatest { range -> repository.getSalesTaxAmountTotal(range.startDate, range.endDate) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0L)
+
     val salesReturnTotal: StateFlow<Long?> = dateRange
         .flatMapLatest { range -> repository.getSalesReturnTotal(range.startDate, range.endDate) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0L)
@@ -250,6 +258,8 @@ class ReportViewModel(
         val returnsBySaleId = allReturns.groupBy { it.saleTransactionId }
 
         val grossSales = repository.getSalesTotal(range.startDate, range.endDate).first() ?: 0L
+        val salesTaxableBaseTotal = repository.getSalesTaxableBaseTotal(range.startDate, range.endDate).first() ?: 0L
+        val salesTaxAmountTotal = repository.getSalesTaxAmountTotal(range.startDate, range.endDate).first() ?: 0L
         val totalRefunds = repository.getSalesReturnTotal(range.startDate, range.endDate).first() ?: 0L
         val netSales = grossSales - totalRefunds
 
@@ -280,7 +290,9 @@ class ReportViewModel(
                 paymentMethod = paymentMethodLabel,
                 totalAmount = sale.totalAmount,
                 refundAmount = totalRefundOnThisSale,
-                status = statusLabel
+                status = statusLabel,
+                taxableBase = sale.taxableBaseSnapshot,
+                taxAmount = sale.taxAmountSnapshot
             )
         }
 
@@ -301,6 +313,8 @@ class ReportViewModel(
             totalRefund = totalRefunds,
             netSales = netSales,
             totalTransactions = salesList.size,
+            totalTaxableBase = salesTaxableBaseTotal,
+            totalTaxAmount = salesTaxAmountTotal,
             terminology = terminology
         )
     }
@@ -390,6 +404,8 @@ class ReportViewModel(
         val purchaseList = repository.getPurchasesWithSupplierByDateRange(range.startDate, range.endDate).first()
 
         val totalPurchases = repository.getPurchaseTotal(range.startDate, range.endDate).first() ?: 0L
+        val purchasesTaxableBaseTotal = repository.getPurchasesTaxableBaseTotal(range.startDate, range.endDate).first() ?: 0L
+        val purchasesTaxAmountTotal = repository.getPurchasesTaxAmountTotal(range.startDate, range.endDate).first() ?: 0L
         val cashPurchases = purchaseList.filter { it.paymentMethod.uppercase() == "CASH" }.sumOf { it.totalAmount }
         val creditPurchases = purchaseList.filter { it.paymentMethod.uppercase() == "CREDIT" }.sumOf { it.totalAmount }
 
@@ -409,7 +425,9 @@ class ReportViewModel(
                 supplierName = supplierName,
                 paymentMethod = paymentMethodLabel,
                 totalAmount = purchase.totalAmount,
-                status = statusLabel
+                status = statusLabel,
+                taxableBase = purchase.taxableBaseSnapshot,
+                taxAmount = purchase.taxAmountSnapshot
             )
         }
 
@@ -427,6 +445,8 @@ class ReportViewModel(
             printedAt = sdfPrinted.format(java.util.Date()),
             items = rows,
             totalPurchases = totalPurchases,
+            purchasesTaxableBaseTotal = purchasesTaxableBaseTotal,
+            purchasesTaxAmountTotal = purchasesTaxAmountTotal,
             cashPurchasesTotal = cashPurchases,
             creditPurchasesTotal = creditPurchases,
             totalTransactions = purchaseList.size,

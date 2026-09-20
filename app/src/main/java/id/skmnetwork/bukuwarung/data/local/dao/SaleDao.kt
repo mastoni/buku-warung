@@ -31,6 +31,8 @@ interface SaleDao {
             s.total_amount AS totalAmount,
             s.payment_method AS paymentMethod,
             s.discount_amount AS discountAmount,
+            s.taxable_base_snapshot AS taxableBaseSnapshot,
+            s.tax_amount_snapshot AS taxAmountSnapshot,
             s.created_at AS createdAt,
             s.customer_id AS customerId,
             c.name AS customerName
@@ -52,6 +54,12 @@ interface SaleDao {
 
     @Query("SELECT SUM(total_amount) FROM sales_transactions WHERE business_id = :businessId AND transaction_date >= :startDate AND transaction_date <= :endDate")
     fun getSalesTotal(businessId: String, startDate: Long, endDate: Long): Flow<Long?>
+
+    @Query("SELECT SUM(taxable_base_snapshot) FROM sales_transactions WHERE business_id = :businessId AND transaction_date >= :startDate AND transaction_date <= :endDate")
+    fun getSalesTaxableBaseTotal(businessId: String, startDate: Long, endDate: Long): Flow<Long?>
+
+    @Query("SELECT SUM(tax_amount_snapshot) FROM sales_transactions WHERE business_id = :businessId AND transaction_date >= :startDate AND transaction_date <= :endDate")
+    fun getSalesTaxAmountTotal(businessId: String, startDate: Long, endDate: Long): Flow<Long?>
 
     @Query("SELECT COUNT(*) FROM sales_transactions WHERE business_id = :businessId AND transaction_date >= :startDate AND transaction_date <= :endDate")
     fun getSalesCount(businessId: String, startDate: Long, endDate: Long): Flow<Int>
@@ -123,6 +131,8 @@ data class SaleWithCustomerItem(
     val totalAmount: Long,
     val paymentMethod: String,
     val discountAmount: Long = 0L,
+    val taxableBaseSnapshot: Long,
+    val taxAmountSnapshot: Long,
     val createdAt: Long,
     val customerId: Long?,
     val customerName: String?

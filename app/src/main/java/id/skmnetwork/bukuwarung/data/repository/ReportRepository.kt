@@ -18,6 +18,8 @@ class ReportRepository(
 
     // Sales Aggregations
     fun getSalesTotal(startDate: Long, endDate: Long): Flow<Long?> = saleDao.getSalesTotal(businessId, startDate, endDate)
+    fun getSalesTaxableBaseTotal(startDate: Long, endDate: Long): Flow<Long?> = saleDao.getSalesTaxableBaseTotal(businessId, startDate, endDate)
+    fun getSalesTaxAmountTotal(startDate: Long, endDate: Long): Flow<Long?> = saleDao.getSalesTaxAmountTotal(businessId, startDate, endDate)
     fun getSalesWithCustomerByDateRange(startDate: Long, endDate: Long): Flow<List<id.skmnetwork.bukuwarung.data.local.dao.SaleWithCustomerItem>> =
         saleDao.getSalesWithCustomerByDateRange(businessId, startDate, endDate)
     fun getSalesReturnTotal(startDate: Long, endDate: Long): Flow<Long?> = saleReturnDao.getSalesReturnTotal(businessId, startDate, endDate)
@@ -66,6 +68,8 @@ class ReportRepository(
 
     // Purchase Aggregations
     fun getPurchaseTotal(startDate: Long, endDate: Long): Flow<Long?> = purchaseDao.getPurchaseTotal(businessId, startDate, endDate)
+    fun getPurchasesTaxableBaseTotal(startDate: Long, endDate: Long): Flow<Long?> = purchaseDao.getPurchasesTaxableBaseTotal(businessId, startDate, endDate)
+    fun getPurchasesTaxAmountTotal(startDate: Long, endDate: Long): Flow<Long?> = purchaseDao.getPurchasesTaxAmountTotal(businessId, startDate, endDate)
     fun getPurchaseCount(startDate: Long, endDate: Long): Flow<Int> = purchaseDao.getPurchaseCount(businessId, startDate, endDate)
     fun getItemsPurchasedTotal(startDate: Long, endDate: Long): Flow<Double?> = purchaseDao.getItemsPurchasedTotal(businessId, startDate, endDate)
     fun getPurchasesWithSupplierByDateRange(startDate: Long, endDate: Long): Flow<List<id.skmnetwork.bukuwarung.data.local.dao.PurchaseWithSupplierItem>> =

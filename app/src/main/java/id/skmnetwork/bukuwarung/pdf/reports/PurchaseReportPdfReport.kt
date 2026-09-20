@@ -19,7 +19,9 @@ data class PurchaseReportRow(
     val supplierName: String,
     val paymentMethod: String,
     val totalAmount: Long,
-    val status: String
+    val status: String,
+    val taxableBase: Long = 0L,
+    val taxAmount: Long = 0L
 )
 
 /**
@@ -33,6 +35,8 @@ data class PurchaseReportData(
     val printedAt: String,
     val items: List<PurchaseReportRow>,
     val totalPurchases: Long,
+    val purchasesTaxableBaseTotal: Long = 0L,
+    val purchasesTaxAmountTotal: Long = 0L,
     val cashPurchasesTotal: Long,
     val creditPurchasesTotal: Long,
     val totalTransactions: Int,
@@ -67,7 +71,25 @@ object PurchaseReportPdfBuilder {
             KeyValuePair(
                 label = "Total ${data.terminology.purchaseLabel} Kredit (${data.terminology.debtLabel})",
                 value = formatRupiah(data.creditPurchasesTotal)
-            ),
+            )
+        )
+        if (data.purchasesTaxableBaseTotal > 0L) {
+            summaryPairs.add(
+                KeyValuePair(
+                    label = "Dasar Pengenaan Pajak (DPP)",
+                    value = formatRupiah(data.purchasesTaxableBaseTotal)
+                )
+            )
+        }
+        if (data.purchasesTaxAmountTotal > 0L) {
+            summaryPairs.add(
+                KeyValuePair(
+                    label = "PPN",
+                    value = formatRupiah(data.purchasesTaxAmountTotal)
+                )
+            )
+        }
+        summaryPairs.add(
             KeyValuePair(
                 label = "Total ${data.terminology.purchaseLabel}",
                 value = formatRupiah(data.totalPurchases),
@@ -91,11 +113,13 @@ object PurchaseReportPdfBuilder {
             )
         } else {
             val columns = listOf(
-                TableColumn(header = "No", weight = 0.8f, align = Paint.Align.CENTER),
-                TableColumn(header = "Waktu / No. Trx", weight = 3.4f, align = Paint.Align.LEFT),
-                TableColumn(header = data.terminology.supplierLabel, weight = 2.4f, align = Paint.Align.LEFT),
-                TableColumn(header = "Metode", weight = 1.6f, align = Paint.Align.CENTER),
-                TableColumn(header = "Total", weight = 2.2f, align = Paint.Align.RIGHT),
+                TableColumn(header = "No", weight = 0.6f, align = Paint.Align.CENTER),
+                TableColumn(header = "Waktu / No. Trx", weight = 2.8f, align = Paint.Align.LEFT),
+                TableColumn(header = data.terminology.supplierLabel, weight = 2.0f, align = Paint.Align.LEFT),
+                TableColumn(header = "Metode", weight = 1.4f, align = Paint.Align.CENTER),
+                TableColumn(header = "DPP", weight = 1.8f, align = Paint.Align.RIGHT),
+                TableColumn(header = "PPN", weight = 1.4f, align = Paint.Align.RIGHT),
+                TableColumn(header = "Total", weight = 2.0f, align = Paint.Align.RIGHT),
                 TableColumn(header = "Status", weight = 2.0f, align = Paint.Align.RIGHT)
             )
 
@@ -108,6 +132,8 @@ object PurchaseReportPdfBuilder {
                             "${item.dateFormatted} • ${item.transactionNumber}",
                             item.supplierName,
                             item.paymentMethod,
+                            if (item.taxableBase > 0L) formatRupiah(item.taxableBase) else "—",
+                            if (item.taxAmount > 0L) formatRupiah(item.taxAmount) else "—",
                             formatRupiah(item.totalAmount),
                             item.status
                         )
@@ -123,6 +149,8 @@ object PurchaseReportPdfBuilder {
                         "TOTAL (${data.totalTransactions} TRX)",
                         "",
                         "",
+                        if (data.purchasesTaxableBaseTotal > 0L) formatRupiah(data.purchasesTaxableBaseTotal) else "—",
+                        if (data.purchasesTaxAmountTotal > 0L) formatRupiah(data.purchasesTaxAmountTotal) else "—",
                         formatRupiah(data.totalPurchases),
                         "Selesai"
                     ),

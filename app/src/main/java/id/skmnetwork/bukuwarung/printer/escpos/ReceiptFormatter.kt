@@ -136,7 +136,15 @@ class PlainTextReceiptFormatter {
             sb.appendLine(ReceiptTextFormatterUtils.twoColumns("Subtotal", ReceiptTextFormatterUtils.formatRupiah(subtotal), width))
             sb.appendLine(ReceiptTextFormatterUtils.twoColumns("Diskon", "-${ReceiptTextFormatterUtils.formatRupiah(receipt.paymentInfo.discountAmount)}", width))
         }
-
+        
+        // Tax breakdown (DPP/PPN)
+        if (receipt.paymentInfo.taxableBase != null && receipt.paymentInfo.taxableBase > 0L) {
+            sb.appendLine(ReceiptTextFormatterUtils.twoColumns("DPP", ReceiptTextFormatterUtils.formatRupiah(receipt.paymentInfo.taxableBase), width))
+        }
+        if (receipt.paymentInfo.taxAmount != null && receipt.paymentInfo.taxAmount > 0L) {
+            sb.appendLine(ReceiptTextFormatterUtils.twoColumns("PPN", ReceiptTextFormatterUtils.formatRupiah(receipt.paymentInfo.taxAmount), width))
+        }
+        
         sb.appendLine(ReceiptTextFormatterUtils.twoColumns("TOTAL", ReceiptTextFormatterUtils.formatRupiah(receipt.paymentInfo.totalAmount), width))
 
         if (receipt.shopProfile.showPaymentMethod) {
@@ -264,6 +272,14 @@ class EscPosReceiptFormatter {
             val subtotal = receipt.paymentInfo.subtotalAmount ?: (receipt.paymentInfo.totalAmount + receipt.paymentInfo.discountAmount)
             builder.textLine(ReceiptTextFormatterUtils.twoColumns("Subtotal", ReceiptTextFormatterUtils.formatRupiah(subtotal), width))
             builder.textLine(ReceiptTextFormatterUtils.twoColumns("Diskon", "-${ReceiptTextFormatterUtils.formatRupiah(receipt.paymentInfo.discountAmount)}", width))
+        }
+
+        // Tax breakdown (DPP/PPN)
+        if (receipt.paymentInfo.taxableBase != null && receipt.paymentInfo.taxableBase > 0L) {
+            builder.textLine(ReceiptTextFormatterUtils.twoColumns("DPP", ReceiptTextFormatterUtils.formatRupiah(receipt.paymentInfo.taxableBase), width))
+        }
+        if (receipt.paymentInfo.taxAmount != null && receipt.paymentInfo.taxAmount > 0L) {
+            builder.textLine(ReceiptTextFormatterUtils.twoColumns("PPN", ReceiptTextFormatterUtils.formatRupiah(receipt.paymentInfo.taxAmount), width))
         }
 
         builder.bold(true)

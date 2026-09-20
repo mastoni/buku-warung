@@ -29,6 +29,12 @@ interface PurchaseDao {
     @Query("SELECT SUM(total_amount) FROM purchase_transactions WHERE business_id = :businessId AND transaction_date >= :startDate AND transaction_date <= :endDate")
     fun getPurchaseTotal(businessId: String, startDate: Long, endDate: Long): Flow<Long?>
 
+    @Query("SELECT SUM(taxable_base_snapshot) FROM purchase_transactions WHERE business_id = :businessId AND transaction_date >= :startDate AND transaction_date <= :endDate")
+    fun getPurchasesTaxableBaseTotal(businessId: String, startDate: Long, endDate: Long): Flow<Long?>
+
+    @Query("SELECT SUM(tax_amount_snapshot) FROM purchase_transactions WHERE business_id = :businessId AND transaction_date >= :startDate AND transaction_date <= :endDate")
+    fun getPurchasesTaxAmountTotal(businessId: String, startDate: Long, endDate: Long): Flow<Long?>
+
     @Query("SELECT COUNT(*) FROM purchase_transactions WHERE business_id = :businessId AND transaction_date >= :startDate AND transaction_date <= :endDate")
     fun getPurchaseCount(businessId: String, startDate: Long, endDate: Long): Flow<Int>
 
@@ -43,6 +49,8 @@ interface PurchaseDao {
             p.transaction_date AS transactionDate,
             p.total_amount AS totalAmount,
             p.payment_method AS paymentMethod,
+            p.taxable_base_snapshot AS taxableBaseSnapshot,
+            p.tax_amount_snapshot AS taxAmountSnapshot,
             p.supplier_id AS supplierId,
             s.name AS supplierName
         FROM purchase_transactions p
@@ -60,6 +68,8 @@ data class PurchaseWithSupplierItem(
     val transactionDate: Long,
     val totalAmount: Long,
     val paymentMethod: String,
+    val taxableBaseSnapshot: Long,
+    val taxAmountSnapshot: Long,
     val supplierId: Long?,
     val supplierName: String?
 )
