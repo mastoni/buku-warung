@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -52,9 +53,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -66,7 +70,10 @@ import id.skmnetwork.bukuwarung.domain.business.ResolvedBusinessProfile
 import id.skmnetwork.bukuwarung.ui.navigation.AppScreen
 import id.skmnetwork.bukuwarung.ui.product.ProductViewModel
 import id.skmnetwork.bukuwarung.ui.theme.AppColors
+import id.skmnetwork.bukuwarung.ui.theme.AppResponsive
 import id.skmnetwork.bukuwarung.ui.theme.AppSpacing
+import id.skmnetwork.bukuwarung.ui.theme.AppWindowSize
+import id.skmnetwork.bukuwarung.ui.theme.rememberAppWindowSize
 import id.skmnetwork.bukuwarung.util.formatRupiah
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -138,6 +145,18 @@ fun HomeScreen(
     val shopInitial = remember(effectiveShopName) {
         effectiveShopName.trim().firstOrNull()?.uppercaseChar()?.toString() ?: "W"
     }
+
+    // Responsive: Manual window size class based on screen width in dp
+    val windowSize = rememberAppWindowSize()
+
+    // Menu column count: Compact=4, Medium=5, Expanded=8
+    val menuColumnCount = windowSize.gridColumns(compact = 4, medium = 5, expanded = 8)
+
+    // Content max width: Compact=fill, Medium=640dp, Expanded=720dp
+    val contentMaxWidth = windowSize.contentMaxWidth
+
+    // Horizontal padding: Compact=16dp, Tablet=24dp
+    val horizontalPadding = windowSize.horizontalPadding
 
     Scaffold(
         topBar = {
@@ -272,13 +291,20 @@ fun HomeScreen(
         },
         containerColor = Color(0xFFF8FAF9)
     ) { padding ->
-        LazyColumn(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
-                .padding(horizontal = AppSpacing.lg),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
+                .padding(padding),
+            contentAlignment = Alignment.TopCenter
         ) {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .widthIn(max = contentMaxWidth)
+                    .fillMaxWidth()
+                    .padding(horizontal = horizontalPadding),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
             // ==========================================
             // 1. GREETING & DATE BANNER (FOCAL POINT)
             // ==========================================
@@ -372,7 +398,8 @@ fun HomeScreen(
             item {
                 MenuGrid(
                     terminology = terminology,
-                    onNavigate = onNavigate
+                    onNavigate = onNavigate,
+                    columnCount = menuColumnCount
                 )
             }
 
@@ -482,6 +509,7 @@ fun HomeScreen(
             item {
                 Spacer(Modifier.height(AppSpacing.lg))
             }
+            }
         }
     }
 }
@@ -490,7 +518,7 @@ fun HomeScreen(
  * 2x2 Summary Grid matching Design Master pastel styling & icons
  */
 @Composable
-private fun SummaryGrid(
+fun SummaryGrid(
     todaySalesStr: String,
     todayExpenseStr: String,
     cashBalanceStr: String,
@@ -553,7 +581,7 @@ private fun SummaryGrid(
 }
 
 @Composable
-private fun SummaryCard(
+fun SummaryCard(
     title: String,
     value: String,
     icon: ImageVector,
@@ -615,7 +643,7 @@ private fun SummaryCard(
     }
 }
 
-private data class MenuItemData(
+data class MenuItemData(
     val label: String,
     val icon: ImageVector,
     val iconBg: Color,
@@ -624,12 +652,13 @@ private data class MenuItemData(
 )
 
 /**
- * 4-column comfortable rounded tiles matching Design Master
+ * Adaptive menu grid: 4 columns (compact), 5 (medium), 8 (expanded)
  */
 @Composable
-private fun MenuGrid(
+fun MenuGrid(
     terminology: BusinessTerminology = BusinessTerminology(),
-    onNavigate: (AppScreen) -> Unit
+    onNavigate: (AppScreen) -> Unit,
+    columnCount: Int = 4
 ) {
     val menus = listOf(
         MenuItemData(
@@ -691,7 +720,7 @@ private fun MenuGrid(
     )
 
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        menus.chunked(4).forEach { rowItems ->
+        menus.chunked(columnCount).forEach { rowItems ->
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -740,9 +769,9 @@ private fun MenuGrid(
                         }
                     }
                 }
-                // Fill remaining spaces in row if less than 4 items
-                if (rowItems.size < 4) {
-                    repeat(4 - rowItems.size) {
+                // Fill remaining spaces in row if less than columnCount items
+                if (rowItems.size < columnCount) {
+                    repeat(columnCount - rowItems.size) {
                         Spacer(modifier = Modifier.weight(1f))
                     }
                 }

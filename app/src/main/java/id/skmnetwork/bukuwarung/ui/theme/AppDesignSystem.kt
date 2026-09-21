@@ -34,3 +34,11 @@ object AppSpacing {
     val lg: Dp = 16.dp
     val xl: Dp = 24.dp
 }
+
+object AppResponsive {
+    val ContentMaxWidth = 640.dp
+    val ExpandedContentMaxWidth = 720.dp
+    val TabletHorizontalPadding = 24.dp
+    val DialogMaxWidth = 560.dp
+    val DialogMaxHeight = 520.dp
+}
