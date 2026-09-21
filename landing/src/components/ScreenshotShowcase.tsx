@@ -88,7 +88,7 @@ export const ScreenshotShowcase: React.FC = () => {
           {/* Active Screenshot Display */}
           <div className="lg:col-span-7">
             <div className="relative rounded-2xl md:rounded-3xl p-2 sm:p-4 bg-gradient-to-b from-slate-200 to-slate-100 shadow-2xl border border-slate-200">
-              <div className="relative rounded-xl md:rounded-2xl overflow-hidden bg-slate-900 aspect-9/16 sm:aspect-2/1 flex items-center justify-center">
+              <div className="relative rounded-xl md:rounded-2xl overflow-hidden bg-slate-900 aspect-[9/16] sm:aspect-[9/16] flex items-center justify-center">
                 <img
                   src={activeScreenshot.imageSrc}
                   alt={activeScreenshot.title}
