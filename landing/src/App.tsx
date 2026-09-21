@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Navbar } from './components/Navbar';
 import { Hero } from './components/Hero';
 import { FeatureGrid } from './components/FeatureGrid';
@@ -12,10 +12,15 @@ import { useScrollReveal } from './hooks/useScrollReveal';
 import { PricingProvider } from './hooks/usePricingPromo';
 import { DocsRouterProvider, useDocsRouter } from './hooks/useDocsRouter';
 import { DocsLayout } from './components/docs/DocsLayout';
+import { trackPageView } from './tracking';
 
 const AppContent: React.FC = () => {
   useScrollReveal();
   const { isDocsPortal } = useDocsRouter();
+
+  useEffect(() => {
+    trackPageView();
+  }, []);
 
   if (isDocsPortal) {
     return <DocsLayout />;

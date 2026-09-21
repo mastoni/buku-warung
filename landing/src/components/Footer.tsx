@@ -3,6 +3,7 @@ import { ShoppingCart, MessageCircle, ShieldCheck } from 'lucide-react';
 import { LANDING_CONFIG } from '../data/landingData';
 import { usePricing } from '../hooks/usePricingPromo';
 import { useDocsRouter } from '../hooks/useDocsRouter';
+import { trackBuyClick, trackWhatsAppClick } from '../tracking';
 
 export const Footer: React.FC = () => {
   const { effectivePriceFormatted } = usePricing();
@@ -77,6 +78,7 @@ export const Footer: React.FC = () => {
             <div className="space-y-2">
               <a
                 href={LANDING_CONFIG.publicOrderUrl}
+                onClick={() => trackBuyClick('footer')}
                 className="inline-flex items-center gap-2 text-xs font-bold text-emerald-400 hover:text-emerald-300 transition-colors"
               >
                 <ShoppingCart className="w-3.5 h-3.5" />
@@ -87,6 +89,7 @@ export const Footer: React.FC = () => {
                   href={LANDING_CONFIG.whatsappConsultationUrl}
                   target="_blank"
                   rel="noopener noreferrer"
+                  onClick={() => trackWhatsAppClick('footer')}
                   className="inline-flex items-center gap-2 text-xs font-semibold text-slate-400 hover:text-emerald-400 transition-colors"
                 >
                   <MessageCircle className="w-3.5 h-3.5 text-emerald-500" />

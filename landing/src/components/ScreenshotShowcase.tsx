@@ -1,12 +1,34 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { SCREENSHOTS, ScreenshotItem } from '../data/landingData';
+import { trackViewProduct } from '../tracking';
 
 export const ScreenshotShowcase: React.FC = () => {
   const [selectedId, setSelectedId] = useState<string>(SCREENSHOTS[0].id);
   const activeScreenshot = SCREENSHOTS.find((s) => s.id === selectedId) || SCREENSHOTS[0];
+  const sectionRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const node = sectionRef.current;
+    if (!node) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            trackViewProduct();
+            observer.disconnect();
+          }
+        });
+      },
+      { threshold: 0.25 }
+    );
+
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
 
   return (
-    <section id="tampilan" className="py-16 md:py-24 bg-slate-50 reveal-on-scroll">
+    <section ref={sectionRef} id="tampilan" className="py-16 md:py-24 bg-slate-50 reveal-on-scroll">
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
         {/* Section Header */}
         <div className="text-center max-w-2xl mx-auto space-y-3 mb-12 sm:mb-16">

@@ -13,6 +13,7 @@ import {
   SlidersHorizontal,
 } from 'lucide-react';
 import { ADAPTIVE_BUSINESS_PROFILES, AdaptiveBusinessProfile, LANDING_CONFIG } from '../data/landingData';
+import { trackBuyClick } from '../tracking';
 
 const iconMap: Record<string, React.ElementType> = {
   Store,
@@ -231,10 +232,11 @@ export const AdaptiveBusinessSwitcher: React.FC = () => {
               Cocok untuk <span className="font-bold text-slate-900">{activeProfile.name}</span> Anda.
               Tanpa setup rumit, langsung siap jualan dalam 2 menit.
             </div>
-            <a
-              href={LANDING_CONFIG.publicOrderUrl}
-              className="inline-flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm px-5 py-2.5 rounded-xl shadow-xs hover:shadow-md transition-all active:scale-95 whitespace-nowrap"
-            >
+             <a
+               href={LANDING_CONFIG.publicOrderUrl}
+               onClick={() => trackBuyClick('adaptive_business')}
+               className="inline-flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm px-5 py-2.5 rounded-xl shadow-xs hover:shadow-md transition-all active:scale-95 whitespace-nowrap"
+             >
               <span>Mulai Pakai Buku Warung</span>
               <ArrowRight className="w-4 h-4" />
             </a>

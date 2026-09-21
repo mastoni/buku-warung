@@ -3,6 +3,7 @@ import { ShoppingCart, MessageCircle, CheckCircle2, ShieldCheck, Zap, Sparkles }
 import { LANDING_CONFIG } from '../data/landingData';
 import { usePricing } from '../hooks/usePricingPromo';
 import { PromoCountdown } from './PromoCountdown';
+import { trackBuyClick, trackWhatsAppClick } from '../tracking';
 
 export const Hero: React.FC = () => {
   const { isPromoActive, effectivePriceFormatted, promoName, showCountdown } = usePricing();
@@ -49,6 +50,7 @@ export const Hero: React.FC = () => {
           <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3.5">
             <a
               href={LANDING_CONFIG.publicOrderUrl}
+              onClick={() => trackBuyClick('hero')}
               className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white font-extrabold text-base px-7 py-4 rounded-2xl shadow-lg shadow-emerald-600/25 hover:shadow-xl hover:shadow-emerald-600/30 transition-all group"
             >
               <ShoppingCart className="w-5 h-5 group-hover:-translate-y-0.5 transition-transform" />
@@ -58,6 +60,7 @@ export const Hero: React.FC = () => {
               href={LANDING_CONFIG.whatsappConsultationUrl}
               target="_blank"
               rel="noopener noreferrer"
+              onClick={() => trackWhatsAppClick('hero')}
               className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300/80 font-bold text-sm px-6 py-4 rounded-2xl shadow-xs transition-colors"
             >
               <MessageCircle className="w-4 h-4 text-emerald-600" />

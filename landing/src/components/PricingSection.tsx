@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { ShoppingCart, Check, MessageCircle, Sparkles } from 'lucide-react';
 import { LANDING_CONFIG, COMPARISON_POINTS } from '../data/landingData';
 import { usePricing } from '../hooks/usePricingPromo';
 import { PromoCountdown } from './PromoCountdown';
+import { trackViewPrice, trackBuyClick, trackWhatsAppClick } from '../tracking';
 
 export const PricingSection: React.FC = () => {
   const {
@@ -14,9 +15,30 @@ export const PricingSection: React.FC = () => {
     normalPrice,
     effectivePrice,
   } = usePricing();
+  const sectionRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const node = sectionRef.current;
+    if (!node) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            trackViewPrice();
+            observer.disconnect();
+          }
+        });
+      },
+      { threshold: 0.25 }
+    );
+
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
 
   return (
-    <section id="harga" className="py-16 md:py-24 bg-white border-t border-slate-200 reveal-on-scroll">
+    <section ref={sectionRef} id="harga" className="py-16 md:py-24 bg-white border-t border-slate-200 reveal-on-scroll">
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
         {/* Section Header */}
         <div className="text-center max-w-2xl mx-auto space-y-3 mb-12 sm:mb-16">
@@ -95,6 +117,7 @@ export const PricingSection: React.FC = () => {
             <div className="mt-8 pt-6 border-t border-emerald-800/80 space-y-3">
               <a
                 href={LANDING_CONFIG.publicOrderPricingUrl}
+                onClick={() => trackBuyClick('pricing')}
                 className="w-full flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold text-base py-4 rounded-xl shadow-lg hover:shadow-emerald-500/25 transition-all active:scale-98"
               >
                 <ShoppingCart className="w-5 h-5" />
@@ -154,6 +177,7 @@ export const PricingSection: React.FC = () => {
                 href={LANDING_CONFIG.whatsappConsultationUrl}
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={() => trackWhatsAppClick('pricing')}
                 className="inline-flex items-center gap-1 font-bold text-emerald-700 hover:text-emerald-800"
               >
                 <MessageCircle className="w-4 h-4" />

@@ -2,6 +2,7 @@ import React from 'react';
 import { ShoppingCart } from 'lucide-react';
 import { LANDING_CONFIG } from '../data/landingData';
 import { usePricing } from '../hooks/usePricingPromo';
+import { trackBuyClick } from '../tracking';
 
 export const StickyMobileCta: React.FC = () => {
   const { isPromoActive, effectivePriceFormatted, normalPriceFormatted, normalPrice, effectivePrice } = usePricing();
@@ -20,6 +21,7 @@ export const StickyMobileCta: React.FC = () => {
 
       <a
         href={LANDING_CONFIG.publicOrderStickyUrl}
+        onClick={() => trackBuyClick('sticky')}
         className="flex-1 max-w-[200px] flex items-center justify-center gap-1.5 bg-emerald-600 active:bg-emerald-700 text-white font-extrabold text-sm py-3 px-4 rounded-xl shadow-md active:scale-98 transition-all"
       >
         <ShoppingCart className="w-4 h-4 shrink-0" />

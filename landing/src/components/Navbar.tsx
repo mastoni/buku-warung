@@ -3,6 +3,7 @@ import { ShoppingCart, Menu, X, ArrowRight } from 'lucide-react';
 import { LANDING_CONFIG } from '../data/landingData';
 import { usePricing } from '../hooks/usePricingPromo';
 import { useDocsRouter } from '../hooks/useDocsRouter';
+import { trackBuyClick, trackWhatsAppClick } from '../tracking';
 
 export const Navbar: React.FC = () => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -77,12 +78,14 @@ export const Navbar: React.FC = () => {
             href={LANDING_CONFIG.whatsappConsultationUrl}
             target="_blank"
             rel="noopener noreferrer"
+            onClick={() => trackWhatsAppClick('navbar')}
             className="text-xs font-semibold text-slate-700 hover:text-emerald-700 px-3 py-2 rounded-lg hover:bg-slate-100 transition-colors"
           >
             Tanya Admin
           </a>
           <a
             href={LANDING_CONFIG.publicOrderUrl}
+            onClick={() => trackBuyClick('navbar')}
             className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm px-4 py-2.5 rounded-xl shadow-xs hover:shadow-md transition-all active:scale-95"
           >
             <ShoppingCart className="w-4 h-4" />
@@ -152,19 +155,21 @@ export const Navbar: React.FC = () => {
             </a>
           </nav>
           <div className="pt-2 border-t border-slate-100 flex flex-col gap-2">
-            <a
-              href={LANDING_CONFIG.publicOrderUrl}
-              className="flex items-center justify-center gap-2 bg-emerald-600 text-white font-bold py-3 rounded-xl shadow-xs text-sm"
-            >
+             <a
+               href={LANDING_CONFIG.publicOrderUrl}
+               onClick={() => trackBuyClick('navbar_mobile')}
+               className="flex items-center justify-center gap-2 bg-emerald-600 text-white font-bold py-3 rounded-xl shadow-xs text-sm"
+             >
               <span>Beli Sekarang — {effectivePriceFormatted}</span>
               <ArrowRight className="w-4 h-4" />
             </a>
-            <a
-              href={LANDING_CONFIG.whatsappConsultationUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-center text-xs font-semibold text-slate-600 py-2"
-            >
+             <a
+               href={LANDING_CONFIG.whatsappConsultationUrl}
+               target="_blank"
+               rel="noopener noreferrer"
+               onClick={() => trackWhatsAppClick('navbar_mobile')}
+               className="text-center text-xs font-semibold text-slate-600 py-2"
+             >
               Tanya Admin via WhatsApp
             </a>
           </div>
