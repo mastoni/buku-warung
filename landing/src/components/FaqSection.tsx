@@ -5,10 +5,16 @@ import { usePricing } from '../hooks/usePricingPromo';
 
 export const FaqSection: React.FC = () => {
   const [openId, setOpenId] = useState<string | null>(FAQS[0].id);
-  const { effectivePriceFormatted } = usePricing();
+  const { effectivePriceFormatted, normalPriceFormatted } = usePricing();
 
   const toggleFaq = (id: string) => {
     setOpenId(openId === id ? null : id);
+  };
+
+  const formatAnswer = (answer: string) => {
+    return answer
+      .replace(/\{price\}/g, effectivePriceFormatted)
+      .replace(/\{priceNormal\}/g, normalPriceFormatted);
   };
 
   return (
@@ -32,7 +38,7 @@ export const FaqSection: React.FC = () => {
           {FAQS.map((faq: FaqItem) => {
             const isOpen = openId === faq.id;
             const question = faq.question.replace(/Rp 50\.000/g, effectivePriceFormatted);
-            const answer = faq.answer.replace(/Rp 50\.000/g, effectivePriceFormatted);
+            const answer = formatAnswer(faq.answer);
 
             return (
               <div

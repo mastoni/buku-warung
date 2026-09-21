@@ -2,14 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { ShoppingCart, Menu, X, ArrowRight } from 'lucide-react';
 import { LANDING_CONFIG } from '../data/landingData';
 import { usePricing } from '../hooks/usePricingPromo';
-import { useDocsRouter } from '../hooks/useDocsRouter';
 import { trackBuyClick, trackWhatsAppClick } from '../tracking';
 
 export const Navbar: React.FC = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { effectivePriceFormatted } = usePricing();
-  const { navigateTo } = useDocsRouter();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -45,32 +43,6 @@ export const Navbar: React.FC = () => {
             <p className="text-[11px] text-slate-500 hidden sm:block">Aplikasi Kasir & Pembukuan UMKM</p>
           </div>
         </a>
-
-        {/* Desktop Nav */}
-        <nav className="hidden md:flex items-center gap-6 text-sm font-semibold text-slate-600">
-          <a href="#fitur" className="hover:text-emerald-600 transition-colors">
-            Fitur Utama
-          </a>
-          <a href="#adaptif" className="hover:text-emerald-600 transition-colors">
-            Tipe Usaha
-          </a>
-          <a href="#tampilan" className="hover:text-emerald-600 transition-colors">
-            Tampilan Layar
-          </a>
-          <a href="#harga" className="hover:text-emerald-600 transition-colors">
-            Harga & Paket
-          </a>
-          <button
-            type="button"
-            onClick={() => navigateTo('/panduan')}
-            className="hover:text-emerald-600 transition-colors font-semibold cursor-pointer"
-          >
-            Panduan
-          </button>
-          <a href="#faq" className="hover:text-emerald-600 transition-colors">
-            Tanya Jawab
-          </a>
-        </nav>
 
         {/* Right CTA */}
         <div className="hidden md:flex items-center gap-3">
@@ -109,49 +81,32 @@ export const Navbar: React.FC = () => {
         <div className="md:hidden bg-white border-b border-slate-200 px-4 pt-3 pb-6 space-y-4 shadow-xl animate-in slide-in-from-top duration-200">
           <nav className="flex flex-col space-y-3 font-semibold text-slate-700">
             <a
-              href="#fitur"
-              onClick={() => setMobileMenuOpen(false)}
-              className="px-3 py-2 rounded-lg hover:bg-slate-50"
-            >
-              Fitur Utama
-            </a>
-            <a
-              href="#adaptif"
-              onClick={() => setMobileMenuOpen(false)}
-              className="px-3 py-2 rounded-lg hover:bg-slate-50"
-            >
-              Tipe Usaha
-            </a>
-            <a
-              href="#tampilan"
-              onClick={() => setMobileMenuOpen(false)}
-              className="px-3 py-2 rounded-lg hover:bg-slate-50"
-            >
-              Tampilan Layar
-            </a>
-            <a
               href="#harga"
               onClick={() => setMobileMenuOpen(false)}
               className="px-3 py-2 rounded-lg hover:bg-slate-50"
             >
-              Harga & Paket
+              Harga
             </a>
-            <button
-              type="button"
-              onClick={() => {
-                setMobileMenuOpen(false);
-                navigateTo('/panduan');
-              }}
-              className="text-left px-3 py-2 rounded-lg hover:bg-slate-50 text-emerald-700 font-bold"
+            <a
+              href="#fitur"
+              onClick={() => setMobileMenuOpen(false)}
+              className="px-3 py-2 rounded-lg hover:bg-slate-50"
             >
-              Buku Panduan v0.2.0
-            </button>
+              Fitur
+            </a>
+            <a
+              href="#cara-beli"
+              onClick={() => setMobileMenuOpen(false)}
+              className="px-3 py-2 rounded-lg hover:bg-slate-50"
+            >
+              Cara Pembelian
+            </a>
             <a
               href="#faq"
               onClick={() => setMobileMenuOpen(false)}
               className="px-3 py-2 rounded-lg hover:bg-slate-50"
             >
-              Tanya Jawab
+              FAQ
             </a>
           </nav>
           <div className="pt-2 border-t border-slate-100 flex flex-col gap-2">
@@ -159,19 +114,19 @@ export const Navbar: React.FC = () => {
                href={LANDING_CONFIG.publicOrderUrl}
                onClick={() => trackBuyClick('navbar_mobile')}
                className="flex items-center justify-center gap-2 bg-emerald-600 text-white font-bold py-3 rounded-xl shadow-xs text-sm"
-             >
-              <span>Beli Sekarang — {effectivePriceFormatted}</span>
-              <ArrowRight className="w-4 h-4" />
-            </a>
+              >
+               <span>Beli Sekarang — {effectivePriceFormatted}</span>
+               <ArrowRight className="w-4 h-4" />
+             </a>
              <a
                href={LANDING_CONFIG.whatsappConsultationUrl}
                target="_blank"
                rel="noopener noreferrer"
                onClick={() => trackWhatsAppClick('navbar_mobile')}
                className="text-center text-xs font-semibold text-slate-600 py-2"
-             >
-              Tanya Admin via WhatsApp
-            </a>
+              >
+               Tanya Admin via WhatsApp
+             </a>
           </div>
         </div>
       )}

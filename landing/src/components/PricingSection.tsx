@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { ShoppingCart, Check, MessageCircle, Sparkles } from 'lucide-react';
-import { LANDING_CONFIG, COMPARISON_POINTS } from '../data/landingData';
+import { LANDING_CONFIG } from '../data/landingData';
 import { usePricing } from '../hooks/usePricingPromo';
 import { PromoCountdown } from './PromoCountdown';
 import { trackViewPrice, trackBuyClick, trackWhatsAppClick } from '../tracking';
@@ -43,20 +43,19 @@ export const PricingSection: React.FC = () => {
         {/* Section Header */}
         <div className="text-center max-w-2xl mx-auto space-y-3 mb-12 sm:mb-16">
           <div className="inline-block px-3 py-1 rounded-lg bg-emerald-100 text-emerald-800 text-xs font-bold uppercase tracking-wider">
-            Investasi Hemat UMKM
+            Harga Lisensi Resmi
           </div>
           <h2 className="text-2xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
-            Sekali Beli Seumur Hidup, Hemat Jutaan Rupiah
+            Harga Lisensi Resmi
           </h2>
           <p className="text-sm sm:text-base text-slate-600">
-            Hindari jebakan iuran kasir bulanan yang terus menguras keuntungan usaha Anda setiap bulan.
+            Pembelian sekali beli, tanpa biaya bulanan, tahunan, atau potongan per transaksi.
           </p>
         </div>
 
-        {/* Pricing Card & Comparison Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
-          {/* Main Lifetime Deal Card */}
-          <div className="lg:col-span-5 bg-gradient-to-b from-emerald-900 via-emerald-900 to-slate-900 rounded-3xl p-6 sm:p-8 text-white shadow-2xl relative flex flex-col justify-between overflow-hidden border border-emerald-700">
+        {/* Pricing Card */}
+        <div className="max-w-2xl mx-auto">
+          <div className="bg-gradient-to-b from-emerald-900 via-emerald-900 to-slate-900 rounded-3xl p-6 sm:p-8 text-white shadow-2xl relative flex flex-col justify-between overflow-hidden border border-emerald-700">
             {/* Background Glow */}
             <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
 
@@ -92,23 +91,23 @@ export const PricingSection: React.FC = () => {
               <ul className="space-y-3 text-sm text-emerald-100/90 font-medium mt-6">
                 <li className="flex items-start gap-2.5">
                   <Check className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
-                  <span>100% Offline-First (Jualan tanpa kuota internet)</span>
-                </li>
-                <li className="flex items-start gap-2.5">
-                  <Check className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
-                  <span>9 Modul Lengkap (Kasir, Stok, Kulakan, Hutang, Kas, Laporan)</span>
-                </li>
-                <li className="flex items-start gap-2.5">
-                  <Check className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
-                  <span>Katalog Produk WhatsApp & Cetak Struk Bluetooth</span>
-                </li>
-                <li className="flex items-start gap-2.5">
-                  <Check className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
-                  <span>Backup data otomatis ke Google Sheets pribadi</span>
+                  <span>Offline-First (Jualan tanpa kuota internet)</span>
                 </li>
                 <li className="flex items-start gap-2.5">
                   <Check className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
                   <span>Tanpa Iuran Bulanan / Tahunan (Rp 0 selamanya)</span>
+                </li>
+                <li className="flex items-start gap-2.5">
+                  <Check className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
+                  <span>Kasir POS, Stok, Hutang Piutang, Laporan & PDF</span>
+                </li>
+                <li className="flex items-start gap-2.5">
+                  <Check className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
+                  <span>Cetak Struk Bluetooth & Katalog WhatsApp</span>
+                </li>
+                <li className="flex items-start gap-2.5">
+                  <Check className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
+                  <span>Backup data ke Google Sheets pribadi</span>
                 </li>
               </ul>
             </div>
@@ -128,63 +127,21 @@ export const PricingSection: React.FC = () => {
               </p>
             </div>
           </div>
+        </div>
 
-          {/* Comparison Table */}
-          <div className="lg:col-span-7 bg-slate-50 rounded-3xl p-6 sm:p-8 border border-slate-200/80 flex flex-col justify-between">
-            <div>
-              <h3 className="text-xl font-extrabold text-slate-900 mb-2">Bandingkan Biaya Nyata</h3>
-              <p className="text-xs sm:text-sm text-slate-600 mb-6">
-                Lihat perbedaan signifikan antara Buku Warung sekali beli vs aplikasi kasir langganan bulanan.
-              </p>
-
-              <div className="space-y-4">
-                {COMPARISON_POINTS.map((item, index) => {
-                  const displayBukuWarung =
-                    item.feature === 'Model Pembayaran'
-                      ? `${effectivePriceFormatted} Sekali Beli Seumur Hidup`
-                      : item.bukuWarung;
-
-                  return (
-                    <div
-                      key={index}
-                      className={`p-4 rounded-xl border transition-all ${
-                        item.highlight
-                          ? 'bg-emerald-50/70 border-emerald-200'
-                          : 'bg-white border-slate-200/70'
-                      }`}
-                    >
-                      <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
-                        {item.feature}
-                      </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
-                        <div className="flex items-start gap-1.5 text-emerald-900 font-bold">
-                          <Check className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                          <span>Buku Warung: {displayBukuWarung}</span>
-                        </div>
-                        <div className="text-slate-500 text-xs sm:text-sm pl-5 sm:pl-0">
-                          Lainnya: {item.others}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div className="mt-6 pt-4 border-t border-slate-200 flex items-center justify-between text-xs text-slate-600">
-              <span>Butuh bantuan pemesanan?</span>
-              <a
-                href={LANDING_CONFIG.whatsappConsultationUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={() => trackWhatsAppClick('pricing')}
-                className="inline-flex items-center gap-1 font-bold text-emerald-700 hover:text-emerald-800"
-              >
-                <MessageCircle className="w-4 h-4" />
-                <span>Hubungi CS WhatsApp</span>
-              </a>
-            </div>
-          </div>
+        {/* Bottom CTA */}
+        <div className="mt-8 text-center">
+          <p className="text-sm text-slate-600 mb-3">Butuh bantuan pemesanan?</p>
+          <a
+            href={LANDING_CONFIG.whatsappConsultationUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={() => trackWhatsAppClick('pricing')}
+            className="inline-flex items-center gap-1.5 font-bold text-emerald-700 hover:text-emerald-800 text-sm"
+          >
+            <MessageCircle className="w-4 h-4" />
+            <span>Hubungi CS WhatsApp</span>
+          </a>
         </div>
       </div>
     </section>

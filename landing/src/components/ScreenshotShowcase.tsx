@@ -28,7 +28,7 @@ export const ScreenshotShowcase: React.FC = () => {
   }, []);
 
   return (
-    <section ref={sectionRef} id="tampilan" className="py-16 md:py-24 bg-slate-50 reveal-on-scroll">
+    <section ref={sectionRef} id="tampilan" className="py-16 md:py-24 bg-white border-t border-slate-200 reveal-on-scroll">
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
         {/* Section Header */}
         <div className="text-center max-w-2xl mx-auto space-y-3 mb-12 sm:mb-16">
@@ -78,30 +78,26 @@ export const ScreenshotShowcase: React.FC = () => {
                         {item.category}
                       </span>
                     </div>
-                    <p className="text-xs text-slate-500 mt-1 line-clamp-2">{item.description}</p>
+                    <p className="text-xs text-slate-500 mt-1 leading-relaxed">{item.description}</p>
                   </div>
                 </button>
               );
             })}
           </div>
 
-          {/* Screenshot Display Frame */}
-          <div className="lg:col-span-7 flex justify-center">
-            <div className="relative max-w-xs sm:max-w-sm w-full bg-slate-900 rounded-[2.5rem] p-3 shadow-2xl border-4 border-slate-800">
-              {/* Phone Camera Notch */}
-              <div className="w-24 h-4 bg-slate-800 rounded-full mx-auto mb-2" />
-              {/* Phone Screen */}
-              <div className="rounded-[2rem] overflow-hidden bg-slate-100 aspect-9/18 flex items-center justify-center border border-slate-700">
+          {/* Active Screenshot Display */}
+          <div className="lg:col-span-7">
+            <div className="relative rounded-2xl md:rounded-3xl p-2 sm:p-4 bg-gradient-to-b from-slate-200 to-slate-100 shadow-2xl border border-slate-200">
+              <div className="relative rounded-xl md:rounded-2xl overflow-hidden bg-slate-900 aspect-9/16 sm:aspect-2/1 flex items-center justify-center">
                 <img
                   src={activeScreenshot.imageSrc}
                   alt={activeScreenshot.title}
-                  className="w-full h-full object-contain bg-slate-50"
+                  className="w-full h-full object-contain object-center"
                   loading="lazy"
                 />
               </div>
-              {/* Caption */}
-              <div className="text-center pt-3 pb-1 text-xs text-slate-400 font-medium">
-                {activeScreenshot.title} — {activeScreenshot.category}
+              <div className="mt-3 text-center">
+                <p className="text-xs font-semibold text-slate-500">{activeScreenshot.title}</p>
               </div>
             </div>
           </div>

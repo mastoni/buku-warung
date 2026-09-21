@@ -1,13 +1,16 @@
 import React, { useEffect } from 'react';
 import { Navbar } from './components/Navbar';
 import { Hero } from './components/Hero';
-import { FeatureGrid } from './components/FeatureGrid';
-import { AdaptiveBusinessSwitcher } from './components/AdaptiveBusinessSwitcher';
+import { ProblemSolution } from './components/ProblemSolution';
 import { ScreenshotShowcase } from './components/ScreenshotShowcase';
+import { WhatYouGet } from './components/WhatYouGet';
 import { PricingSection } from './components/PricingSection';
+import { HowToBuy } from './components/HowToBuy';
+import { TrustSection } from './components/TrustSection';
 import { FaqSection } from './components/FaqSection';
-import { StickyMobileCta } from './components/StickyMobileCta';
+import { FinalCta } from './components/FinalCta';
 import { Footer } from './components/Footer';
+import { StickyMobileCta } from './components/StickyMobileCta';
 import { useScrollReveal } from './hooks/useScrollReveal';
 import { PricingProvider } from './hooks/usePricingPromo';
 import { DocsRouterProvider, useDocsRouter } from './hooks/useDocsRouter';
@@ -31,11 +34,14 @@ const AppContent: React.FC = () => {
       <Navbar />
       <main className="flex-1">
         <Hero />
-        <FeatureGrid />
-        <AdaptiveBusinessSwitcher />
+        <ProblemSolution />
         <ScreenshotShowcase />
+        <WhatYouGet />
         <PricingSection />
+        <HowToBuy />
+        <TrustSection />
         <FaqSection />
+        <FinalCta />
       </main>
       <Footer />
       <StickyMobileCta />

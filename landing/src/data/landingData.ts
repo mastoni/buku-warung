@@ -33,12 +33,40 @@ export interface AdaptiveBusinessProfile {
   keyHighlights: string[];
 }
 
+export interface ProblemItem {
+  id: string;
+  icon: string;
+  title: string;
+  description: string;
+  solution: string;
+}
+
+export interface BenefitItem {
+  id: string;
+  icon: string;
+  title: string;
+  description: string;
+}
+
+export interface HowToBuyStep {
+  id: string;
+  title: string;
+  description: string;
+}
+
+export interface TrustItem {
+  id: string;
+  icon: string;
+  title: string;
+  description: string;
+}
+
 export const LANDING_CONFIG = {
   appName: 'Buku Warung',
   tagline: 'Aplikasi Kasir POS & Pembukuan UMKM',
-  headline: 'Kelola Kasir, Stok, & Pembukuan Warung Lebih Mudah Tanpa Biaya Langganan',
+  headline: 'Aplikasi Kasir & Pembukuan Warung Sekali Beli Rp50.000',
   subheadline:
-    'Aplikasi kasir POS offline-first yang dirancang khusus untuk Warung Sembako, Toko Obat, Toko Bangunan, Bengkel, dan UMKM. Cukup sekali beli seumur hidup, tanpa iuran bulanan.',
+    'POS, stok barang, hutang piutang, laporan keuangan — semua dalam satu aplikasi Android. Tanpa biaya bulanan.',
   priceNormal: 100000,
   pricePromo: 50000,
   priceFormatted: 'Rp 50.000',
@@ -53,6 +81,143 @@ export const LANDING_CONFIG = {
   whatsappConsultationUrl:
     'https://wa.me/6285157056604?text=Halo%20Admin%20SKMNetwork,%20saya%20ingin%20tanya%20tentang%20aplikasi%20Buku%20Warung%20Android',
 };
+
+export const PROBLEMS: ProblemItem[] = [
+  {
+    id: 'manual',
+    icon: 'FileText',
+    title: 'Pencatatan penjualan masih manual',
+    description: 'Mencatat transaksi dengan buku, kalkulator, atau catatan HP yang berceceran.',
+    solution: 'Buku Warung mencatat transaksi kasir secara digital dalam hitungan detik.',
+  },
+  {
+    id: 'stok',
+    icon: 'Package',
+    title: 'Stok barang sering hilang atau tidak terhitung',
+    description: 'Barang habis tanpa sadar, atau stok fisik tidak cocok dengan catatan.',
+    solution: 'Stok otomatis terpotong saat penjualan dan bertambah saat kulakan.',
+  },
+  {
+    id: 'kas',
+    icon: 'Wallet',
+    title: 'Uang kas tercampur dengan keuangan pribadi',
+    description: 'Modal, omset, dan keuangan pribadi tidak terpisah dengan jelas.',
+    solution: 'Buku kas terpisah dengan laporan arus kas yang transparan setiap hari.',
+  },
+  {
+    id: 'laporan',
+    icon: 'BarChart3',
+    title: 'Laporan keuangan sulit dibuat',
+    description: 'Menghitung omzet, laba, dan piutang butuh waktu lama di akhir bulan.',
+    solution: 'Laporan omzet dan laba tersedia dalam satu klik, siap ekspor PDF.',
+  },
+];
+
+export const BENEFITS: BenefitItem[] = [
+  {
+    id: 'pos',
+    icon: 'ShoppingCart',
+    title: 'Kasir POS lengkap dengan barcode scanner',
+    description: 'Proses penjualan cepat dengan scanner barcode dan multi-metode bayar.',
+  },
+  {
+    id: 'stok',
+    icon: 'Package',
+    title: 'Manajemen stok barang real-time',
+    description: 'Stok otomatis terpotong saat penjualan, bertambah saat kulakan.',
+  },
+  {
+    id: 'piutang',
+    icon: 'BookOpen',
+    title: 'Pencatatan hutang & piutang pelanggan',
+    description: 'Catat piutang pelanggan dan hutang supplier dengan cicilan bertahap.',
+  },
+  {
+    id: 'kas',
+    icon: 'Wallet',
+    title: 'Buku kas masuk & keluar terpisah',
+    description: 'Pisahkan uang usaha dan uang pribadi dengan arus kas transparan.',
+  },
+  {
+    id: 'laporan',
+    icon: 'BarChart3',
+    title: 'Laporan keuangan & ekspor PDF',
+    description: 'Laporan omzet, estimasi laba, dan ekspor PDF siap cetak.',
+  },
+  {
+    id: 'printer',
+    icon: 'Printer',
+    title: 'Cetak struk printer thermal Bluetooth',
+    description: 'Cetak nota struk dengan printer thermal 58mm/80mm.',
+  },
+  {
+    id: 'katalog',
+    icon: 'Share2',
+    title: 'Katalog produk untuk WhatsApp',
+    description: 'Bagikan daftar produk & harga ke WhatsApp pelanggan sekali klik.',
+  },
+];
+
+export const HOW_TO_BUY_STEPS: HowToBuyStep[] = [
+  {
+    id: '1',
+    title: 'Pilih Produk',
+    description: 'Klik "Beli Sekarang" di halaman ini untuk ke halaman pemesanan.',
+  },
+  {
+    id: '2',
+    title: 'Isi Pemesanan',
+    description: 'Masukkan nama, WhatsApp, dan email di halaman pemesanan.',
+  },
+  {
+    id: '3',
+    title: 'Bayar Lisensi',
+    description: 'Scan QRIS atau transfer ke rekening KIOS KIARA sesuai total.',
+  },
+  {
+    id: '4',
+    title: 'Terima APK & Kode Lisensi',
+    description: 'Admin mengirimkan file APK dan kode lisensi via WhatsApp setelah pembayaran diverifikasi.',
+  },
+  {
+    id: '5',
+    title: 'Aktivasi',
+    description: 'Masukkan email dan kode lisensi di aplikasi untuk aktivasi pertama.',
+  },
+];
+
+export const TRUST_ITEMS: TrustItem[] = [
+  {
+    id: 'brand',
+    icon: 'ShieldCheck',
+    title: 'Lisensi Resmi SKMNetwork',
+    description: 'Produk resmi yang dikembangkan dan didukung oleh SKMNetwork.',
+  },
+  {
+    id: 'data',
+    icon: 'Smartphone',
+    title: 'Data usaha tersimpan di HP Anda',
+    description: 'Seluruh data pembukuan disimpan di perangkat Anda, bukan server pihak ketiga.',
+  },
+  {
+    id: 'backup',
+    icon: 'Cloud',
+    title: 'Backup ke Google Sheets',
+    description: 'Fitur pencadangan otomatis ke Google Sheets pribadi milik Anda.',
+  },
+  {
+    id: 'support',
+    icon: 'MessageCircle',
+    title: 'Dukungan teknis via WhatsApp',
+    description: 'Tim support siap membantu melalui WhatsApp admin.',
+  },
+  {
+    id: 'payment',
+    icon: 'CheckCircle2',
+    title: 'Pembelian melalui QRIS aman',
+    description: 'Pembayaran melalui QRIS (KIOS KIARA) yang terpercaya.',
+  },
+];
 
 export const CORE_FEATURES: FeatureItem[] = [
   {
@@ -169,13 +334,6 @@ export const SCREENSHOTS: ScreenshotItem[] = [
     description: 'Pantau siapa saja pelanggan yang belum lunas beserta batas tempo dan tombol pembayaran cicilan.',
   },
   {
-    id: '08_supplier_hutang',
-    title: 'Buku Hutang Supplier',
-    category: 'Hutang Usaha',
-    imageSrc: '/img/screenshots/08_supplier_hutang.png',
-    description: 'Kelola tagihan supplier kulakan dan catat pengeluaran pelunasan langsung ke kas operasional.',
-  },
-  {
     id: '09_uang_kas',
     title: 'Buku Kas Masuk & Keluar',
     category: 'Buku Kas',
@@ -188,85 +346,6 @@ export const SCREENSHOTS: ScreenshotItem[] = [
     category: 'Laporan',
     imageSrc: '/img/screenshots/10_laporan.png',
     description: 'Grafik omzet, ringkasan profit, produk terlaris, dan tombol ekspor dokumen PDF laporan.',
-  },
-  {
-    id: '11_pengaturan',
-    title: 'Profil Toko & Printer',
-    category: 'Pengaturan',
-    imageSrc: '/img/screenshots/11_pengaturan.png',
-    description: 'Kustomisasi identitas toko, setting printer Bluetooth, konfigurasi PIN kasir, dan lisensi resmi.',
-  },
-];
-
-export const COMPARISON_POINTS = [
-  {
-    feature: 'Model Pembayaran',
-    bukuWarung: 'Rp 50.000 Sekali Beli Seumur Hidup',
-    others: 'Rp 50.000 – Rp 150.000 / BULAN (Berlangganan)',
-    highlight: true,
-  },
-  {
-    feature: 'Koneksi Internet',
-    bukuWarung: '100% Offline-First (Tanpa Kuota Harian)',
-    others: 'Wajib Online (Tidak bisa jualan saat internet mati)',
-    highlight: true,
-  },
-  {
-    feature: 'Keamanan Data Transaksi',
-    bukuWarung: 'Tersimpan di HP Anda Sendiri + Backup Google Sheets',
-    others: 'Tersimpan di Cloud Server Pihak Ketiga',
-    highlight: false,
-  },
-  {
-    feature: 'Cetak Struk Bluetooth',
-    bukuWarung: 'Gratis Semua Ukuran (58mm & 80mm)',
-    others: 'Seringkali Dibatasi / Harus Akun Pro',
-    highlight: false,
-  },
-  {
-    feature: 'Katalog Produk WhatsApp',
-    bukuWarung: 'Sudah Termasuk (Sekali Klik)',
-    others: 'Add-on Berbayar Terpisah',
-    highlight: false,
-  },
-  {
-    feature: 'Batas Jumlah Transaksi / Produk',
-    bukuWarung: 'Tanpa Batas (Unlimited)',
-    others: 'Dibatasi Tier Paket',
-    highlight: false,
-  },
-];
-
-export const FAQS: FaqItem[] = [
-  {
-    id: 'faq-1',
-    question: 'Apakah aplikasi Buku Warung harus selalu terkoneksi internet?',
-    answer:
-      'Tidak. Buku Warung dirancang dengan arsitektur 100% Offline-First. Seluruh pencatatan kasir, stok, transaksi, kas, dan hutang piutang berjalan lancar tanpa memerlukan kuota internet. Koneksi internet hanya dibutuhkan satu kali saat aktivasi lisensi awal.',
-  },
-  {
-    id: 'faq-2',
-    question: 'Apakah aplikasi ini mendukung printer thermal Bluetooth?',
-    answer:
-      'Ya. Buku Warung mendukung standar printer thermal Bluetooth ESC/POS ukuran 58mm maupun 80mm. Anda dapat langsung mencetak struk transaksi kasir, detail diskon, dan catatan toko secara instan.',
-  },
-  {
-    id: 'faq-3',
-    question: 'Bagaimana sistem lisensi Rp 50.000 ini bekerja?',
-    answer:
-      'Lisensi Buku Warung berlaku 1 Lisensi = 1 Email Pemilik = 1 Perangkat Android Aktif. Pembayaran bersifat sekali beli untuk seumur hidup (One-Time Purchase), tanpa biaya langganan bulanan, tanpa biaya tahunan, dan tanpa potongan per transaksi.',
-  },
-  {
-    id: 'faq-4',
-    question: 'Bagaimana jika saya mengganti HP atau HP di-reset pabrik?',
-    answer:
-      'Jika Anda menginstal ulang pada HP yang sama, aplikasi akan langsung mengenali lisensi Anda secara otomatis. Jika Anda berganti HP baru atau melakukan reset pabrik, Anda cukup mengajukan pemindahan lisensi resmi melalui menu pemulihan (Recovery) yang akan diproses oleh Administrator.',
-  },
-  {
-    id: 'faq-5',
-    question: 'Bagaimana cara backup dan mengamankan data pembukuan saya?',
-    answer:
-      'Data pembukuan tersimpan aman di penyimpanan internal HP Anda. Buku Warung juga dilengkapi fitur pencadangan otomatis (Backup & Restore) ke Google Sheets pribadi milik Anda sendiri, sehingga data Anda tidak pernah hilang dan tidak bisa diintip pihak lain.',
   },
 ];
 
@@ -350,5 +429,107 @@ export const ADAPTIVE_BUSINESS_PROFILES: AdaptiveBusinessProfile[] = [
       'Struk kasir mencantumkan jasa montir & onderdil',
       'Katalog WhatsApp: *KATALOG SPAREPART & OLI*',
     ],
+  },
+];
+
+export const COMPARISON_POINTS = [
+  {
+    feature: 'Model Pembayaran',
+    bukuWarung: 'Rp 50.000 Sekali Beli Seumur Hidup',
+    others: 'Rp 50.000 – Rp 150.000 / BULAN (Berlangganan)',
+    highlight: true,
+  },
+  {
+    feature: 'Koneksi Internet',
+    bukuWarung: 'Offline-First (Tidak perlu kuota untuk jualan)',
+    others: 'Wajib Online (Tidak bisa jualan saat internet mati)',
+    highlight: true,
+  },
+  {
+    feature: 'Keamanan Data Transaksi',
+    bukuWarung: 'Tersimpan di HP Anda Sendiri + Backup Google Sheets',
+    others: 'Tersimpan di Cloud Server Pihak Ketiga',
+    highlight: false,
+  },
+  {
+    feature: 'Cetak Struk Bluetooth',
+    bukuWarung: 'Gratis Semua Ukuran (58mm & 80mm)',
+    others: 'Seringkali Dibatasi / Harus Akun Pro',
+    highlight: false,
+  },
+  {
+    feature: 'Katalog Produk WhatsApp',
+    bukuWarung: 'Sudah Termasuk (Sekali Klik)',
+    others: 'Add-on Berbayar Terpisah',
+    highlight: false,
+  },
+  {
+    feature: 'Batas Jumlah Transaksi / Produk',
+    bukuWarung: 'Tanpa Batas (Unlimited)',
+    others: 'Dibatasi Tier Paket',
+    highlight: false,
+  },
+];
+
+export const FAQS: FaqItem[] = [
+  {
+    id: 'faq-1',
+    question: 'Apakah Buku Warung memerlukan internet terus-menerus?',
+    answer:
+      'Tidak. Buku Warung menggunakan arsitektur Offline-First. Seluruh pencatatan kasir, stok, transaksi, kas, dan hutang piutang berjalan tanpa memerlukan kuota internet. Koneksi internet hanya dibutuhkan satu kali saat aktivasi lisensi awal.',
+  },
+  {
+    id: 'faq-2',
+    question: 'Apakah saya bisa menggunakan Buku Warung tanpa kuota internet?',
+    answer:
+      'Ya. Setelah aktivasi pertama, aplikasi berjalan sepenuhnya offline. Internet hanya dibutuhkan saat aktivasi awal dan proses backup ke Google Sheets jika Anda mengaktifkannya.',
+  },
+  {
+    id: 'faq-3',
+    question: 'Berapa harga lisensi Buku Warung?',
+    answer:
+      'Lisensi Buku Warung berharga {price} (promo aktif) atau {priceNormal} (harga normal). Pembayaran bersifat sekali beli untuk seumur hidup tanpa biaya langganan bulanan, tahunan, maupun potongan per transaksi.',
+  },
+  {
+    id: 'faq-4',
+    question: 'Apakah ada biaya langganan bulanan?',
+    answer:
+      'Tidak ada. Setelah membeli lisensi, aplikasi dapat digunakan tanpa batas waktu tanpa iuran bulanan atau tahunan.',
+  },
+  {
+    id: 'faq-5',
+    question: 'Bagaimana cara membayar lisensi?',
+    answer:
+      'Pembayaran dilakukan melalui QRIS (KIOS KIARA) atau transfer bank. Setelah pembayaran, konfirmasi dilakukan melalui WhatsApp admin.',
+  },
+  {
+    id: 'faq-6',
+    question: 'Bagaimana saya menerima APK dan kode lisensi?',
+    answer:
+      'Setelah pembayaran diverifikasi oleh admin, file APK resmi dan kode lisensi 16-digit akan dikirimkan melalui WhatsApp. Waktu pengiriman tergantung pada proses verifikasi admin.',
+  },
+  {
+    id: 'faq-7',
+    question: 'Apakah saya bisa menggunakan Buku Warung di HP baru?',
+    answer:
+      'Lisensi terikat pada email pemilik. Jika Anda mengganti HP, Anda dapat mengajukan pemindahan lisensi melalui menu pemulihan (Recovery) yang diproses oleh Administrator SKMNetwork.',
+  },
+  {
+    id: 'faq-8',
+    question: 'Bagaimana cara backup data saya?',
+    answer:
+      'Data pembukuan tersimpan di penyimpanan internal HP Anda. Buku Warung juga menyediakan fitur pencadangan otomatis ke Google Sheets pribadi milik Anda sendiri.',
+  },
+  {
+    id: 'faq-9',
+    question: 'Printer apa saja yang didukung?',
+    answer:
+      'Buku Warung mendukung printer thermal Bluetooth standar ESC/POS ukuran 58mm maupun 80mm.',
+  },
+  {
+    id: 'faq-10',
+    question: 'Apakah ada garansi atau dukungan teknis?',
+    answer:
+      'Dukungan teknis tersedia melalui WhatsApp admin. Silakan hubungi admin jika Anda mengalami kendala teknis.',
   },
 ];

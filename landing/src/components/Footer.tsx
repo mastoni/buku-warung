@@ -2,12 +2,10 @@ import React from 'react';
 import { ShoppingCart, MessageCircle, ShieldCheck } from 'lucide-react';
 import { LANDING_CONFIG } from '../data/landingData';
 import { usePricing } from '../hooks/usePricingPromo';
-import { useDocsRouter } from '../hooks/useDocsRouter';
 import { trackBuyClick, trackWhatsAppClick } from '../tracking';
 
 export const Footer: React.FC = () => {
   const { effectivePriceFormatted } = usePricing();
-  const { navigateTo } = useDocsRouter();
 
   return (
     <footer className="bg-slate-900 text-slate-300 py-12 md:py-16 border-t border-slate-800">
@@ -34,42 +32,6 @@ export const Footer: React.FC = () => {
               <ShieldCheck className="w-4 h-4" />
               <span>Lisensi Resmi & Layanan Resmi by SKMNetwork</span>
             </div>
-          </div>
-
-          {/* Quick Links */}
-          <div className="md:col-span-3 space-y-3">
-            <h4 className="font-bold text-sm text-white uppercase tracking-wider">Navigasi</h4>
-            <ul className="space-y-2 text-xs sm:text-sm text-slate-400">
-              <li>
-                <a href="#fitur" className="hover:text-emerald-400 transition-colors">
-                  Fitur Utama
-                </a>
-              </li>
-              <li>
-                <a href="#tampilan" className="hover:text-emerald-400 transition-colors">
-                  Tampilan Layar
-                </a>
-              </li>
-              <li>
-                <a href="#harga" className="hover:text-emerald-400 transition-colors">
-                  Harga & Paket
-                </a>
-              </li>
-              <li>
-                <button
-                  type="button"
-                  onClick={() => navigateTo('/panduan')}
-                  className="hover:text-emerald-400 transition-colors text-left font-medium cursor-pointer"
-                >
-                  Pusat Panduan Pengguna
-                </button>
-              </li>
-              <li>
-                <a href="#faq" className="hover:text-emerald-400 transition-colors">
-                  Tanya Jawab
-                </a>
-              </li>
-            </ul>
           </div>
 
           {/* Direct Actions */}
