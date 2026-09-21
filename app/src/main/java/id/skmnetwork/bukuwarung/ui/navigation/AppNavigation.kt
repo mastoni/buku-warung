@@ -2,8 +2,10 @@ package id.skmnetwork.bukuwarung.ui.navigation
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.Row
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Assessment
 import androidx.compose.material.icons.filled.Inventory2
@@ -16,6 +18,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.material3.NavigationRail
+import androidx.compose.material3.NavigationRailItem
+import androidx.compose.material3.NavigationRailItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -69,6 +74,8 @@ import id.skmnetwork.bukuwarung.ui.supplier.SupplierViewModel
 import id.skmnetwork.bukuwarung.ui.supplier.SupplierViewModelFactory
 import id.skmnetwork.bukuwarung.ui.supplier.SuppliersScreen
 import id.skmnetwork.bukuwarung.ui.theme.AppColors
+import id.skmnetwork.bukuwarung.ui.theme.AppWindowSize
+import id.skmnetwork.bukuwarung.ui.theme.rememberAppWindowSize
 import id.skmnetwork.bukuwarung.ui.welcome.FirstSetupScreen
 import id.skmnetwork.bukuwarung.ui.welcome.WelcomeScreen
 import kotlinx.coroutines.launch
@@ -286,24 +293,15 @@ fun BukuWarungApp() {
         screen = AppScreen.ADD_PRODUCT
     }
 
-    Scaffold(
-        bottomBar = {
-            BottomNav(
-                current = screen,
-                previousScreen = previousScreen,
-                onSelect = {
-                    selectedProductId = null
-                    screen = it
-                }
-            )
-        },
-        containerColor = Color.White
-    ) { padding ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-        ) {
+    val windowSize = rememberAppWindowSize()
+
+    val onNavSelect: (AppScreen) -> Unit = {
+        selectedProductId = null
+        screen = it
+    }
+
+    val content: @Composable (Modifier) -> Unit = { modifier ->
+        Box(modifier = modifier) {
             when (screen) {
                 AppScreen.HOME -> HomeScreen(
                     viewModel = productViewModel,
@@ -405,6 +403,35 @@ fun BukuWarungApp() {
             }
         }
     }
+
+    if (windowSize.isCompact) {
+        Scaffold(
+            bottomBar = {
+                BottomNav(
+                    current = screen,
+                    previousScreen = previousScreen,
+                    onSelect = onNavSelect
+                )
+            },
+            containerColor = Color.White
+        ) { padding ->
+            content(Modifier.fillMaxSize().padding(padding))
+        }
+    } else {
+        Row(modifier = Modifier.fillMaxSize()) {
+            NavigationRail(
+                containerColor = Color.White,
+                modifier = Modifier.fillMaxHeight()
+            ) {
+                RailNav(
+                    current = screen,
+                    previousScreen = previousScreen,
+                    onSelect = onNavSelect
+                )
+            }
+            content(Modifier.fillMaxSize())
+        }
+    }
 }
 
 @Composable
@@ -454,5 +481,50 @@ private fun BottomNav(
                 )
             )
         }
+    }
+}
+
+@Composable
+private fun RailNav(
+    current: AppScreen,
+    previousScreen: AppScreen,
+    onSelect: (AppScreen) -> Unit
+) {
+    val items = listOf(
+        Triple(AppScreen.HOME, Icons.Default.Storefront, "Beranda"),
+        Triple(AppScreen.POS, Icons.Default.PointOfSale, "Jualan"),
+        Triple(AppScreen.PRODUCTS, Icons.Default.Inventory2, "Produk"),
+        Triple(AppScreen.REPORTS, Icons.Default.Assessment, "Laporan"),
+        Triple(AppScreen.SETTINGS, Icons.Default.Settings, "Pengaturan")
+    )
+
+    items.forEach { (screen, icon, navLabel) ->
+        val isSelected = if (current == AppScreen.ADD_PRODUCT || current == AppScreen.CATALOG || current == AppScreen.NOTIFICATIONS) {
+            screen == previousScreen
+        } else {
+            current == screen
+        }
+
+        NavigationRailItem(
+            selected = isSelected,
+            onClick = { onSelect(screen) },
+            icon = { Icon(icon, null) },
+            label = {
+                Text(
+                    text = navLabel,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                    maxLines = 1,
+                    softWrap = false
+                )
+            },
+            colors = NavigationRailItemDefaults.colors(
+                selectedIconColor = AppColors.GreenDark,
+                selectedTextColor = AppColors.GreenDark,
+                unselectedIconColor = AppColors.TextSecondary,
+                unselectedTextColor = AppColors.TextSecondary,
+                indicatorColor = AppColors.GreenLight
+            )
+        )
     }
 }
