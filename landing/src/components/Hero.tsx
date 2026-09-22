@@ -28,8 +28,8 @@ export const Hero: React.FC = () => {
           {/* Promo/Pricing Message */}
           <p className="text-sm sm:text-base text-slate-600 max-w-2xl mx-auto">
             {isPromoActive
-              ? 'Tanpa langganan bulanan. Selama promo peluncuran, cukup Rp50.000 sekali beli.'
-              : 'Tanpa langganan bulanan. Harga Rp100.000, sekali beli.'}
+              ? `Tanpa langganan bulanan. Selama promo peluncuran, cukup ${effectivePriceFormatted} sekali beli.`
+              : `Tanpa langganan bulanan. Harga ${normalPriceFormatted}, sekali beli.`}
           </p>
 
           {/* Price Display */}
