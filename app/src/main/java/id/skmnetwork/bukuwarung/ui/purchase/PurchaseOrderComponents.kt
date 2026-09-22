@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -91,6 +92,7 @@ import id.skmnetwork.bukuwarung.domain.receipt.ReceiptPaperWidth
 import id.skmnetwork.bukuwarung.printer.PrinterService
 import id.skmnetwork.bukuwarung.purchase.PurchaseOrderReceiptFormatter
 import id.skmnetwork.bukuwarung.ui.theme.AppColors
+import id.skmnetwork.bukuwarung.ui.theme.AppResponsive
 import id.skmnetwork.bukuwarung.util.formatRupiah
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -449,6 +451,7 @@ fun PurchaseOrderDetailDialog(
             color = Color.White,
             modifier = Modifier
                 .fillMaxWidth(0.94f)
+                .widthIn(max = AppResponsive.DialogMaxWidth)
                 .heightIn(max = 680.dp)
         ) {
             Column(
@@ -987,6 +990,7 @@ fun CreateEditPurchaseOrderDialog(
             color = Color.White,
             modifier = Modifier
                 .fillMaxWidth(0.95f)
+                .widthIn(max = AppResponsive.DialogMaxWidth)
                 .heightIn(max = 720.dp)
         ) {
             Column(

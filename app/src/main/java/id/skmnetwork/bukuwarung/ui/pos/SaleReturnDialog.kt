@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -66,6 +67,7 @@ import id.skmnetwork.bukuwarung.data.local.entity.SaleTransactionEntity
 import id.skmnetwork.bukuwarung.ui.components.AppCard
 import id.skmnetwork.bukuwarung.ui.product.ProductViewModel
 import id.skmnetwork.bukuwarung.ui.theme.AppColors
+import id.skmnetwork.bukuwarung.ui.theme.AppResponsive
 import id.skmnetwork.bukuwarung.ui.theme.AppShapes
 import id.skmnetwork.bukuwarung.ui.theme.AppSpacing
 import id.skmnetwork.bukuwarung.util.formatRupiah
@@ -346,6 +348,7 @@ fun SaleReturnDialog(
         Card(
             modifier = Modifier
                 .fillMaxWidth(0.95f)
+                .widthIn(max = AppResponsive.DialogMaxWidth)
                 .padding(vertical = AppSpacing.lg),
             shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.cardColors(containerColor = Color.White),
