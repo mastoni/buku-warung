@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -57,6 +58,7 @@ import id.skmnetwork.bukuwarung.data.preferences.UserSettings
 import id.skmnetwork.bukuwarung.ui.components.AppTextField
 import id.skmnetwork.bukuwarung.ui.product.ProductViewModel
 import id.skmnetwork.bukuwarung.ui.theme.AppColors
+import id.skmnetwork.bukuwarung.ui.theme.rememberAppWindowSize
 import id.skmnetwork.bukuwarung.util.formatRupiah
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -68,6 +70,7 @@ fun CashScreen(
     viewModel: ProductViewModel,
     userSettings: UserSettings? = null
 ) {
+    val windowSize = rememberAppWindowSize()
     val cashBalance by viewModel.cashBalance.collectAsStateWithLifecycle()
     val cashTransactions by viewModel.cashTransactions.collectAsStateWithLifecycle()
 
@@ -209,10 +212,16 @@ fun CashScreen(
         },
         containerColor = Color(0xFFFBFDFB)
     ) { padding ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding),
+            contentAlignment = Alignment.TopCenter
+        ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
+                .widthIn(max = windowSize.contentMaxWidth)
         ) {
             // ==========================================
             // FILTER CHIPS ROW
@@ -427,6 +436,7 @@ fun CashScreen(
                 }
             }
         }
+    }
     }
 }
 
