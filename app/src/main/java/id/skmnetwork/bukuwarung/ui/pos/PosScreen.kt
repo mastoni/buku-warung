@@ -146,6 +146,7 @@ fun PosScreen(
     var isCartExpanded by remember { mutableStateOf(false) }
 
     val windowSize = rememberAppWindowSize()
+    val productGridColumns = windowSize.gridColumns(compact = 2, medium = 3, expanded = 4)
 
     fun isProvider(product: ProductEntity): Boolean {
         return product.itemType == ItemType.DIGITAL.name &&
@@ -1217,7 +1218,7 @@ fun PosScreen(
                             .weight(1f)
                             .padding(horizontal = AppSpacing.lg)
                     ) {
-                        items(filteredProducts.chunked(2)) { rowProducts ->
+                        items(filteredProducts.chunked(productGridColumns)) { rowProducts ->
                             Row(
                                 horizontalArrangement = Arrangement.spacedBy(AppSpacing.sm),
                                 modifier = Modifier.fillMaxWidth()
@@ -1378,8 +1379,10 @@ fun PosScreen(
                                         }
                                     }
                                 }
-                                if (rowProducts.size == 1) {
-                                    Spacer(Modifier.weight(1f))
+                                if (rowProducts.size < productGridColumns) {
+                                    repeat(productGridColumns - rowProducts.size) {
+                                        Spacer(Modifier.weight(1f))
+                                    }
                                 }
                             }
                         }
