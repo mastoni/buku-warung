@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -62,6 +63,7 @@ import id.skmnetwork.bukuwarung.data.preferences.UserSettings
 import id.skmnetwork.bukuwarung.domain.business.BusinessTaxonomyRegistry
 import id.skmnetwork.bukuwarung.ui.components.AppTextField
 import id.skmnetwork.bukuwarung.ui.theme.AppColors
+import id.skmnetwork.bukuwarung.ui.theme.rememberAppWindowSize
 import id.skmnetwork.bukuwarung.util.formatRupiah
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -100,6 +102,8 @@ fun CustomersScreen(
     var paymentAmountInput by remember { mutableStateOf("") }
     var paymentNoteInput by remember { mutableStateOf("") }
     var paymentError by remember { mutableStateOf<String?>(null) }
+
+    val windowSize = rememberAppWindowSize()
 
     val context = LocalContext.current
 
@@ -695,10 +699,16 @@ fun CustomersScreen(
         },
         containerColor = Color.White
     ) { padding ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding),
+            contentAlignment = Alignment.TopCenter
+        ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
+                .widthIn(max = windowSize.contentMaxWidth)
         ) {
             // Search & Action Header
             Column(
@@ -839,6 +849,7 @@ fun CustomersScreen(
                         }
                     }
                 }
+            }
             }
         }
     }
