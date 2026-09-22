@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
@@ -119,6 +120,7 @@ import id.skmnetwork.bukuwarung.ui.components.SecondaryButton
 import id.skmnetwork.bukuwarung.ui.theme.AppColors
 import id.skmnetwork.bukuwarung.ui.theme.AppShapes
 import id.skmnetwork.bukuwarung.ui.theme.AppSpacing
+import id.skmnetwork.bukuwarung.ui.theme.rememberAppWindowSize
 import kotlinx.coroutines.launch
 import java.io.File
 import java.text.SimpleDateFormat
@@ -135,6 +137,7 @@ fun SettingsScreen(
     backupViewModel: BackupViewModel? = null
 ) {
     val context = LocalContext.current
+    val windowSize = rememberAppWindowSize()
     val scope = rememberCoroutineScope()
     val prefsRepo = remember { userPreferencesRepository ?: UserPreferencesRepository(context) }
     val licManager = remember { licenseManager ?: LicenseManager(prefsRepo) }
@@ -402,14 +405,20 @@ fun SettingsScreen(
         },
         containerColor = Color.White
     ) { padding ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp, vertical = 10.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
+                .padding(padding),
+            contentAlignment = Alignment.TopCenter
         ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .widthIn(max = windowSize.contentMaxWidth)
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 16.dp, vertical = 10.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
             // ==========================================
             // 0. TIPE USAHA & MODEL OPERASIONAL
             // ==========================================
@@ -1848,6 +1857,7 @@ fun SettingsScreen(
 
             Spacer(Modifier.height(16.dp))
         }
+    }
 
         // Set / Change PIN Dialog
         if (showSetPinDialog) {
