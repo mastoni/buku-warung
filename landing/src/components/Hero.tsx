@@ -6,7 +6,7 @@ import { PromoCountdown } from './PromoCountdown';
 import { trackBuyClick, trackWhatsAppClick } from '../tracking';
 
 export const Hero: React.FC = () => {
-  const { isPromoActive, effectivePriceFormatted, showCountdown } = usePricing();
+  const { isPromoActive, effectivePriceFormatted, normalPriceFormatted, showCountdown } = usePricing();
 
   return (
     <section id="beranda" className="pt-28 pb-16 md:pt-36 md:pb-24 relative overflow-hidden">
@@ -15,23 +15,30 @@ export const Hero: React.FC = () => {
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
         <div className="text-center max-w-3xl mx-auto space-y-6">
-          {/* Tagline Badge */}
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-100/90 text-emerald-900 border border-emerald-200/80 text-xs sm:text-sm font-bold shadow-xs">
-            <span>{effectivePriceFormatted} Sekali Beli Seumur Hidup</span>
-          </div>
-
           {/* Headline */}
           <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-slate-900 leading-[1.15]">
-            Aplikasi Kasir & Pembukuan Warung{' '}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-teal-600">
-              Sekali Beli Rp50.000
-            </span>
+            Aplikasi Kasir & Pembukuan Warung
           </h1>
 
-          {/* Subheadline */}
+          {/* Description */}
           <p className="text-base sm:text-lg text-slate-600 leading-relaxed max-w-2xl mx-auto font-normal">
-            POS, stok barang, hutang piutang, laporan keuangan — semua dalam satu aplikasi Android. Tanpa biaya bulanan.
+            Kelola penjualan, stok, kas, hutang/piutang, pembelian, dan laporan usaha dalam satu aplikasi Android.
           </p>
+
+          {/* Promo/Pricing Message */}
+          <p className="text-sm sm:text-base text-slate-600 max-w-2xl mx-auto">
+            {isPromoActive
+              ? 'Tanpa langganan bulanan. Selama promo peluncuran, cukup Rp50.000 sekali beli.'
+              : 'Tanpa langganan bulanan. Harga Rp100.000, sekali beli.'}
+          </p>
+
+          {/* Price Display */}
+          <div className="flex items-baseline justify-center gap-2">
+            <span className="text-2xl sm:text-3xl font-extrabold text-slate-900">{effectivePriceFormatted}</span>
+            {isPromoActive && normalPriceFormatted && (
+              <span className="text-base sm:text-lg text-slate-400 line-through font-semibold">{normalPriceFormatted}</span>
+            )}
+          </div>
 
           {/* Hero Countdown if active */}
           {isPromoActive && showCountdown && (
@@ -66,7 +73,7 @@ export const Hero: React.FC = () => {
           <div className="pt-6 flex flex-wrap items-center justify-center gap-y-2 gap-x-6 text-xs sm:text-sm font-semibold text-slate-600">
             <div className="flex items-center gap-1.5">
               <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-              <span>Sekali Beli Seumur Hidup</span>
+              <span>Pembelian Sekali</span>
             </div>
             <div className="flex items-center gap-1.5">
               <Zap className="w-4 h-4 text-emerald-600 shrink-0" />

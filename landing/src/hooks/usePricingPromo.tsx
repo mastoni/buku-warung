@@ -99,7 +99,7 @@ const DEFAULT_PRICING_STATE: PricingPromoState = {
   promoPriceFormatted: 'Rp 50.000',
   savingsFormatted: 'Rp 50.000',
   savingsPercent: 50,
-  discountBadge: 'Hemat 50% — Sekali Beli Seumur Hidup',
+  discountBadge: 'Hemat 50% — Pembelian Sekali',
   countdown: {
     days: 0,
     hours: 0,
@@ -233,8 +233,8 @@ export const PricingProvider: React.FC<PricingProviderProps> = ({
   const savings = Math.max(0, normalPrice - effectivePrice);
   const savingsPercent = normalPrice > 0 && savings > 0 ? Math.round((savings / normalPrice) * 100) : 0;
   const discountBadge = isPromoActive && savingsPercent > 0
-    ? `Hemat ${savingsPercent}% — Sekali Beli Seumur Hidup`
-    : 'Sekali Beli Seumur Hidup';
+    ? `Hemat ${savingsPercent}% — Pembelian Sekali`
+    : 'Pembelian Sekali';
 
   const stateValue: PricingPromoState = {
     isLoading,
