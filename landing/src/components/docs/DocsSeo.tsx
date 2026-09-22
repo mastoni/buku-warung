@@ -122,7 +122,7 @@ export const DocsSeo: React.FC<DocsSeoProps> = ({ article }) => {
 
     return () => {
       // Revert title on unmount
-      document.title = 'Buku Warung — Aplikasi Kasir & Pembukuan UMKM Sekali Beli Rp 50.000';
+      document.title = 'Buku Warung — Aplikasi Kasir & Pembukuan UMKM';
     };
   }, [article]);
 
