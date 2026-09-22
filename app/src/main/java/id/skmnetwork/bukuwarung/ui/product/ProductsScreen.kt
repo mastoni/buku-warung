@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -61,6 +62,7 @@ import id.skmnetwork.bukuwarung.data.preferences.UserSettings
 import id.skmnetwork.bukuwarung.domain.business.BusinessTaxonomyRegistry
 import id.skmnetwork.bukuwarung.ui.components.ProductImageThumbnail
 import id.skmnetwork.bukuwarung.ui.theme.AppColors
+import id.skmnetwork.bukuwarung.ui.theme.rememberAppWindowSize
 import id.skmnetwork.bukuwarung.util.formatRupiah
 
 @Composable
@@ -82,6 +84,7 @@ fun ProductsScreen(
     val dbProducts by viewModel.products.collectAsStateWithLifecycle()
     val dbCategories by viewModel.categories.collectAsStateWithLifecycle()
 
+    val windowSize = rememberAppWindowSize()
     var query by remember { mutableStateOf("") }
     var selectedCategoryName by remember { mutableStateOf("Semua") }
 
@@ -140,10 +143,16 @@ fun ProductsScreen(
         },
         containerColor = Color(0xFFFBFDFB)
     ) { padding ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding),
+            contentAlignment = Alignment.TopCenter
+        ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
+                .widthIn(max = windowSize.contentMaxWidth)
         ) {
             // ==========================================
             // SEARCH & CATEGORY FILTER AREA
@@ -275,6 +284,7 @@ fun ProductsScreen(
             }
         }
     }
+}
 }
 
 /**
