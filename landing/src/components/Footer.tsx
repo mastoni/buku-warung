@@ -1,11 +1,13 @@
 import React from 'react';
-import { ShoppingCart, MessageCircle, ShieldCheck } from 'lucide-react';
+import { ShoppingCart, MessageCircle, ShieldCheck, BookOpen } from 'lucide-react';
 import { LANDING_CONFIG } from '../data/landingData';
 import { usePricing } from '../hooks/usePricingPromo';
+import { useDocsRouter } from '../hooks/useDocsRouter';
 import { trackBuyClick, trackWhatsAppClick } from '../tracking';
 
 export const Footer: React.FC = () => {
   const { effectivePriceFormatted } = usePricing();
+  const { navigateTo } = useDocsRouter();
 
   return (
     <footer className="bg-slate-900 text-slate-300 py-12 md:py-16 border-t border-slate-800">
@@ -31,6 +33,21 @@ export const Footer: React.FC = () => {
             <div className="flex items-center gap-2 text-xs text-emerald-400 font-semibold">
               <ShieldCheck className="w-4 h-4" />
               <span>Lisensi Resmi & Layanan Resmi by SKMNetwork</span>
+            </div>
+          </div>
+
+          {/* Help */}
+          <div className="md:col-span-3 space-y-3">
+            <h4 className="font-bold text-sm text-white uppercase tracking-wider">Panduan</h4>
+            <div className="space-y-2">
+              <button
+                type="button"
+                onClick={() => navigateTo('/panduan')}
+                className="inline-flex items-center gap-2 text-xs font-semibold text-slate-400 hover:text-emerald-400 transition-colors"
+              >
+                <BookOpen className="w-3.5 h-3.5 text-emerald-500" />
+                <span>Pusat Panduan Pengguna</span>
+              </button>
             </div>
           </div>
 
