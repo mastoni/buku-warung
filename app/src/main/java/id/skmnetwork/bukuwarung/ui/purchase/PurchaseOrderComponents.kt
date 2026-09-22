@@ -1418,7 +1418,7 @@ fun ProductPickerForPoDialog(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(340.dp),
+                    .heightIn(max = 340.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 OutlinedTextField(
