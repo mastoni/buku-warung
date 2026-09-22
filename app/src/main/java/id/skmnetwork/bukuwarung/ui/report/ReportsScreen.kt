@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -76,6 +77,7 @@ import id.skmnetwork.bukuwarung.pdf.reports.PurchaseReportPdfBuilder
 import id.skmnetwork.bukuwarung.pdf.reports.SalesReportPdfBuilder
 import id.skmnetwork.bukuwarung.ui.theme.AppColors
 import id.skmnetwork.bukuwarung.ui.theme.AppSpacing
+import id.skmnetwork.bukuwarung.ui.theme.rememberAppWindowSize
 import id.skmnetwork.bukuwarung.util.formatRupiah
 import id.skmnetwork.bukuwarung.domain.business.BusinessTaxonomyRegistry
 import kotlinx.coroutines.flow.first
@@ -115,6 +117,8 @@ fun ReportsScreen(
     var showReportTypeDialog by remember { mutableStateOf(false) }
     var currentPdfTitle by remember { mutableStateOf("Ringkasan Usaha") }
     var pdfErrorMessage by remember { mutableStateOf<String?>(null) }
+
+    val windowSize = rememberAppWindowSize()
 
     fun generateBusinessSummaryPdf() {
         if (isGeneratingPdf) return
@@ -301,13 +305,19 @@ fun ReportsScreen(
         },
         containerColor = Color.White
     ) { padding ->
-        LazyColumn(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
+                .padding(padding),
+            contentAlignment = Alignment.TopCenter
         ) {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .widthIn(max = windowSize.contentMaxWidth)
+                    .padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
             // ==========================================
             // PERIOD FILTER CHIPS
             // ==========================================
@@ -1071,6 +1081,7 @@ fun ReportsScreen(
             item {
                 Spacer(Modifier.height(16.dp))
             }
+        }
         }
     }
 
