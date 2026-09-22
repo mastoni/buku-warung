@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -79,6 +80,7 @@ import id.skmnetwork.bukuwarung.ui.components.ProductImageThumbnail
 import id.skmnetwork.bukuwarung.ui.product.ProductViewModel
 import id.skmnetwork.bukuwarung.ui.supplier.SupplierViewModel
 import id.skmnetwork.bukuwarung.ui.theme.AppColors
+import id.skmnetwork.bukuwarung.ui.theme.rememberAppWindowSize
 import id.skmnetwork.bukuwarung.util.formatRupiah
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -134,6 +136,8 @@ fun PurchaseScreen(
         val prod = dbProducts.find { it.id == prodId }
         (prod?.purchasePrice ?: 0L) * qty.toLong()
     }
+
+    val windowSize = rememberAppWindowSize()
 
     // ==========================================
     // SUPPLIER PICKER DIALOG
@@ -445,14 +449,17 @@ fun PurchaseScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
+                .padding(padding),
+            contentAlignment = Alignment.TopCenter
         ) {
             if (selectedTab == 0) {
                 // ==========================================
                 // TAB 0: BELANJA BARU (RESTOCK / PURCHASE)
                 // ==========================================
                 Column(
-                    modifier = Modifier.fillMaxSize()
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .widthIn(max = windowSize.contentMaxWidth)
                 ) {
                     // Month / Period Header Card
                     Surface(
@@ -776,20 +783,29 @@ fun PurchaseScreen(
                 // TAB 1: PESANAN SUPPLIER (PURCHASE ORDERS)
                 // ==========================================
                 if (poViewModel != null) {
-                    PurchaseOrderTabContent(
-                        poViewModel = poViewModel,
-                        dbProducts = dbProducts,
-                        suppliers = suppliers,
-                        shopName = userSettings?.shopName ?: "Usaha Kami",
-                        printerService = printerService,
-                        supplierLabel = supplierLabel,
-                        purchaseLabel = purchaseLabel,
-                        onOpenCreatePo = { showCreatePoDialog = true }
-                    )
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .widthIn(max = windowSize.contentMaxWidth),
+                        contentAlignment = Alignment.TopCenter
+                    ) {
+                        PurchaseOrderTabContent(
+                            poViewModel = poViewModel,
+                            dbProducts = dbProducts,
+                            suppliers = suppliers,
+                            shopName = userSettings?.shopName ?: "Usaha Kami",
+                            printerService = printerService,
+                            supplierLabel = supplierLabel,
+                            purchaseLabel = purchaseLabel,
+                            onOpenCreatePo = { showCreatePoDialog = true }
+                        )
+                    }
                 } else {
                     Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .widthIn(max = windowSize.contentMaxWidth),
+                        contentAlignment = Alignment.TopCenter
                     ) {
                         Text(
                             text = "Purchase Order tidak tersedia",
@@ -803,10 +819,17 @@ fun PurchaseScreen(
                 // TAB 2: RIWAYAT BELANJA (PURCHASE HISTORY)
                 // ==========================================
                 if (purchases.isEmpty()) {
-                    PurchaseEmptyHistoryState(
-                        purchaseLabel = purchaseLabel,
-                        onNewPurchase = { selectedTab = 0 }
-                    )
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .widthIn(max = windowSize.contentMaxWidth),
+                        contentAlignment = Alignment.TopCenter
+                    ) {
+                        PurchaseEmptyHistoryState(
+                            purchaseLabel = purchaseLabel,
+                            onNewPurchase = { selectedTab = 0 }
+                        )
+                    }
                 } else {
                     LazyColumn(
                         verticalArrangement = Arrangement.spacedBy(10.dp),
@@ -816,7 +839,9 @@ fun PurchaseScreen(
                             top = 10.dp,
                             bottom = 88.dp
                         ),
-                        modifier = Modifier.fillMaxSize()
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .widthIn(max = windowSize.contentMaxWidth)
                     ) {
                         items(purchases, key = { it.id }) { purchase ->
                             val supName = suppliers.find { it.id == purchase.supplierId }?.name ?: "Tunai Umum"
