@@ -64,14 +64,14 @@ export interface TrustItem {
 export const LANDING_CONFIG = {
   appName: 'Buku Warung',
   tagline: 'Aplikasi Kasir POS & Pembukuan UMKM',
-  headline: 'Aplikasi Kasir & Pembukuan Warung Sekali Beli Rp50.000',
+  headline: 'Aplikasi Kasir & Pembukuan Warung',
   subheadline:
     'POS, stok barang, hutang piutang, laporan keuangan — semua dalam satu aplikasi Android. Tanpa biaya bulanan.',
   priceNormal: 100000,
   pricePromo: 50000,
   priceFormatted: 'Rp 50.000',
   priceNormalFormatted: 'Rp 100.000',
-  discountBadge: 'Hemat 50% — Sekali Beli Seumur Hidup',
+  discountBadge: 'Hemat 50% — Pembelian Sekali',
   publicOrderUrl:
     'https://license.skmnetwork.com/beli/buku-warung?utm_source=bukuwarung_landing&utm_medium=hero_cta&utm_campaign=launch_v020',
   publicOrderStickyUrl:
@@ -435,7 +435,7 @@ export const ADAPTIVE_BUSINESS_PROFILES: AdaptiveBusinessProfile[] = [
 export const COMPARISON_POINTS = [
   {
     feature: 'Model Pembayaran',
-    bukuWarung: 'Rp 50.000 Sekali Beli Seumur Hidup',
+    bukuWarung: 'Pembelian sekali, tanpa langganan bulanan',
     others: 'Rp 50.000 – Rp 150.000 / BULAN (Berlangganan)',
     highlight: true,
   },

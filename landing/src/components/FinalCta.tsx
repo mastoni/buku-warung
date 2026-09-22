@@ -1,9 +1,12 @@
 import React from 'react';
 import { ShoppingCart, MessageCircle } from 'lucide-react';
 import { LANDING_CONFIG } from '../data/landingData';
+import { usePricing } from '../hooks/usePricingPromo';
 import { trackBuyClick, trackWhatsAppClick } from '../tracking';
 
 export const FinalCta: React.FC = () => {
+  const { isPromoActive, effectivePriceFormatted } = usePricing();
+
   return (
     <section id="cta" className="py-16 md:py-24 bg-slate-900 border-t border-slate-800 reveal-on-scroll">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center space-y-6">
@@ -11,7 +14,9 @@ export const FinalCta: React.FC = () => {
           Mulai Warung Anda Lebih Rapi
         </h2>
         <p className="text-base sm:text-lg text-slate-300 max-w-2xl mx-auto">
-          Dapatkan aplikasi kasir & pembukuan Buku Warung seharga Rp50.000 sekali beli. Tanpa langganan.
+          {isPromoActive
+            ? `Tanpa langganan bulanan. Selama promo peluncuran, cukup ${effectivePriceFormatted} sekali beli.`
+            : `Tanpa langganan bulanan. Harga ${effectivePriceFormatted}, sekali beli.`}
         </p>
 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3.5 pt-2">
@@ -21,7 +26,7 @@ export const FinalCta: React.FC = () => {
             className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white font-extrabold text-base px-7 py-4 rounded-2xl shadow-lg shadow-emerald-600/25 hover:shadow-xl hover:shadow-emerald-600/30 transition-all"
           >
             <ShoppingCart className="w-5 h-5" />
-            <span>Beli Sekarang — Rp50.000</span>
+            <span>Beli Sekarang — {effectivePriceFormatted}</span>
           </a>
           <a
             href={LANDING_CONFIG.whatsappConsultationUrl}

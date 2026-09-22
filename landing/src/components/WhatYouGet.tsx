@@ -21,7 +21,7 @@ export const WhatYouGet: React.FC = () => {
             Apa yang Anda Dapatkan
           </div>
           <h2 className="text-2xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
-            Dengan Rp50.000, Anda Mendapatkan:
+            Yang Anda Dapatkan dengan Buku Warung
           </h2>
           <p className="text-sm sm:text-base text-slate-600">
             Semua modul yang dibutuhkan untuk pencatatan warung dan UMKM dalam satu aplikasi.

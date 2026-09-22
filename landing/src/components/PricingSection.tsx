@@ -74,14 +74,14 @@ export const PricingSection: React.FC = () => {
               </div>
 
               {/* Title & Price */}
-              <h3 className="text-2xl font-extrabold text-white">Lisensi Komersial Lifetime</h3>
-              <p className="text-xs text-emerald-200/80 mt-1">Akses penuh semua fitur kasir & pembukuan</p>
+              <h3 className="text-2xl font-extrabold text-white">Pembelian Sekali</h3>
+              <p className="text-xs text-emerald-200/80 mt-1">Tanpa langganan bulanan</p>
 
               <div className="mt-6 mb-4 flex items-baseline gap-2">
                 <span className="text-4xl sm:text-5xl font-extrabold text-white tracking-tight">
                   {effectivePriceFormatted}
                 </span>
-                <span className="text-xs sm:text-sm font-semibold text-emerald-300">/ sekali beli seumur hidup</span>
+                <span className="text-xs sm:text-sm font-semibold text-emerald-300">/ sekali beli</span>
               </div>
 
               {/* Dynamic Countdown Display */}
