@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -81,6 +82,7 @@ import id.skmnetwork.bukuwarung.ui.components.PrimaryButton
 import id.skmnetwork.bukuwarung.ui.components.ProductImageThumbnail
 import id.skmnetwork.bukuwarung.ui.components.SecondaryButton
 import id.skmnetwork.bukuwarung.ui.theme.AppColors
+import id.skmnetwork.bukuwarung.ui.theme.rememberAppWindowSize
 import id.skmnetwork.bukuwarung.ui.theme.AppShapes
 import id.skmnetwork.bukuwarung.ui.theme.AppSpacing
 import java.io.File
@@ -138,6 +140,8 @@ fun AddProductScreen(
     var newCategoryInput by remember { mutableStateOf("") }
     var categoryCreateError by remember { mutableStateOf<String?>(null) }
     var isCreatingCategory by remember { mutableStateOf(false) }
+
+    val windowSize = rememberAppWindowSize()
 
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -508,10 +512,16 @@ fun AddProductScreen(
         containerColor = Color.White,
         modifier = modifier,
     ) { padding ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding),
+            contentAlignment = Alignment.TopCenter
+        ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
+                .widthIn(max = windowSize.contentMaxWidth)
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = AppSpacing.lg, vertical = AppSpacing.sm),
             verticalArrangement = Arrangement.spacedBy(AppSpacing.md),
@@ -967,4 +977,5 @@ fun AddProductScreen(
             Spacer(modifier = Modifier.height(AppSpacing.lg))
         }
     }
+}
 }
