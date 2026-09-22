@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -101,6 +102,7 @@ import id.skmnetwork.bukuwarung.ui.product.ProductViewModel
 import id.skmnetwork.bukuwarung.ui.theme.AppColors
 import id.skmnetwork.bukuwarung.ui.theme.AppShapes
 import id.skmnetwork.bukuwarung.ui.theme.AppSpacing
+import id.skmnetwork.bukuwarung.ui.theme.rememberAppWindowSize
 import id.skmnetwork.bukuwarung.util.formatRupiah
 import id.skmnetwork.bukuwarung.domain.tax.TaxSettings
 import id.skmnetwork.bukuwarung.domain.tax.TaxPriceMode
@@ -142,6 +144,8 @@ fun PosScreen(
     val scope = rememberCoroutineScope()
     val cart = remember { mutableStateListOf<CartLine>() }
     var isCartExpanded by remember { mutableStateOf(false) }
+
+    val windowSize = rememberAppWindowSize()
 
     fun isProvider(product: ProductEntity): Boolean {
         return product.itemType == ItemType.DIGITAL.name &&
@@ -1019,11 +1023,17 @@ fun PosScreen(
         },
         containerColor = Color.White
     ) { padding ->
-        Column(
+        Box(
             Modifier
                 .fillMaxSize()
-                .padding(padding)
+                .padding(padding),
+            contentAlignment = Alignment.TopCenter
         ) {
+            Column(
+                Modifier
+                    .fillMaxSize()
+                    .widthIn(max = windowSize.contentMaxWidth)
+            ) {
             // Segmented Capsule Navigation (Kasir vs Riwayat Penjualan)
             Surface(
                 shape = RoundedCornerShape(14.dp),
@@ -1745,6 +1755,7 @@ fun PosScreen(
                 }
             }
         }
+    }
     }
 }
 
