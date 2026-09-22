@@ -395,7 +395,9 @@ fun SuppliersScreen(
             text = {
                 Column(
                     verticalArrangement = Arrangement.spacedBy(10.dp),
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState())
                 ) {
                     // Contact Info
                     if (!supplier.phone.isNullOrEmpty()) {
@@ -574,7 +576,9 @@ fun SuppliersScreen(
                 text = {
                     Column(
                         verticalArrangement = Arrangement.spacedBy(10.dp),
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .verticalScroll(rememberScrollState())
                     ) {
                         Surface(
                             shape = RoundedCornerShape(10.dp),
