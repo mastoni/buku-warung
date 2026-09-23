@@ -1,30 +1,32 @@
 import React from 'react';
-import { ShoppingCart, FileText, CreditCard, Smartphone, CheckCircle2 } from 'lucide-react';
-import { HOW_TO_BUY_STEPS } from '../data/landingData';
-import { LANDING_CONFIG } from '../data/landingData';
-import { trackBuyClick } from '../tracking';
+import { ShoppingCart, FileText, CreditCard, Smartphone, CheckCircle2, Key } from 'lucide-react';
+import { HOW_TO_BUY_STEPS, LANDING_CONFIG } from '../data/landingData';
+import { usePricing } from '../hooks/usePricingPromo';
+import { trackBuyClick, getOrderUrl } from '../tracking';
 
 const iconMap: Record<string, React.ElementType> = {
   1: FileText,
   2: CreditCard,
   3: Smartphone,
-  4: CheckCircle2,
-  5: ShoppingCart,
+  4: Key,
+  5: CheckCircle2,
 };
 
 export const HowToBuy: React.FC = () => {
+  const { effectivePriceFormatted } = usePricing();
+
   return (
     <section id="cara-beli" className="py-16 md:py-24 bg-white border-t border-slate-200 reveal-on-scroll">
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
         <div className="text-center max-w-2xl mx-auto space-y-3 mb-12 sm:mb-16">
           <div className="inline-block px-3 py-1 rounded-lg bg-emerald-100 text-emerald-800 text-xs font-bold uppercase tracking-wider">
-            Cara Pembelian
+            Alur Pemesanan Mudah
           </div>
           <h2 className="text-2xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
-            Cara Pembelian
+            5 Langkah Mudah Memiliki Lisensi Resmi
           </h2>
           <p className="text-sm sm:text-base text-slate-600">
-            Dapatkan Buku Warung dalam 5 langkah mudah.
+            Proses pemesanan cepat, bayar via QRIS atau transfer, dan lisensi langsung aktif.
           </p>
         </div>
 
@@ -55,12 +57,12 @@ export const HowToBuy: React.FC = () => {
 
         <div className="mt-10 flex justify-center">
           <a
-            href={LANDING_CONFIG.publicOrderUrl}
+            href={getOrderUrl(LANDING_CONFIG.publicOrderUrl)}
             onClick={() => trackBuyClick('howtobuy')}
             className="inline-flex items-center justify-center gap-2.5 bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white font-extrabold text-base px-7 py-4 rounded-2xl shadow-lg shadow-emerald-600/25 hover:shadow-xl hover:shadow-emerald-600/30 transition-all"
           >
             <ShoppingCart className="w-5 h-5" />
-            <span>Beli Sekarang — Rp50.000</span>
+            <span>Beli Lisensi Sekarang — {effectivePriceFormatted}</span>
           </a>
         </div>
       </div>

@@ -1,9 +1,9 @@
 import React from 'react';
-import { ShoppingCart, MessageCircle, CheckCircle2, ShieldCheck, Zap } from 'lucide-react';
+import { Download, MessageCircle, CheckCircle2, ShieldCheck, Zap } from 'lucide-react';
 import { LANDING_CONFIG } from '../data/landingData';
 import { usePricing } from '../hooks/usePricingPromo';
 import { PromoCountdown } from './PromoCountdown';
-import { trackBuyClick, trackWhatsAppClick } from '../tracking';
+import { trackDownloadClick, trackWhatsAppClick } from '../tracking';
 
 export const Hero: React.FC = () => {
   const { isPromoActive, effectivePriceFormatted, normalPriceFormatted, showCountdown } = usePricing();
@@ -17,19 +17,19 @@ export const Hero: React.FC = () => {
         <div className="text-center max-w-3xl mx-auto space-y-6">
           {/* Headline */}
           <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-slate-900 leading-[1.15]">
-            Aplikasi Kasir & Pembukuan Warung
+            Kelola Jualan dan Keuangan Warung Lebih Mudah
           </h1>
 
           {/* Description */}
           <p className="text-base sm:text-lg text-slate-600 leading-relaxed max-w-2xl mx-auto font-normal">
-            Kelola penjualan, stok, kas, hutang/piutang, pembelian, dan laporan usaha dalam satu aplikasi Android.
+            Buku Warung membantu mencatat penjualan kasir, stok barang, kas masuk/keluar, pelanggan, hutang/piutang, dan laporan usaha dalam satu aplikasi Android.
           </p>
 
           {/* Promo/Pricing Message */}
           <p className="text-sm sm:text-base text-slate-600 max-w-2xl mx-auto">
             {isPromoActive
-              ? `Tanpa langganan bulanan. Selama promo peluncuran, cukup ${effectivePriceFormatted} sekali beli.`
-              : `Tanpa langganan bulanan. Harga ${normalPriceFormatted}, sekali beli.`}
+              ? `Tanpa langganan bulanan. Selama promo peluncuran, cukup ${effectivePriceFormatted} sekali beli seumur hidup.`
+              : `Tanpa langganan bulanan. Harga ${normalPriceFormatted}, sekali beli seumur hidup.`}
           </p>
 
           {/* Price Display */}
@@ -38,6 +38,7 @@ export const Hero: React.FC = () => {
             {isPromoActive && normalPriceFormatted && (
               <span className="text-base sm:text-lg text-slate-400 line-through font-semibold">{normalPriceFormatted}</span>
             )}
+            <span className="text-xs sm:text-sm font-semibold text-slate-500">/ sekali beli</span>
           </div>
 
           {/* Hero Countdown if active */}
@@ -50,12 +51,12 @@ export const Hero: React.FC = () => {
           {/* Action Buttons */}
           <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3.5">
             <a
-              href={LANDING_CONFIG.publicOrderUrl}
-              onClick={() => trackBuyClick('hero')}
+              href={LANDING_CONFIG.downloadApkUrl}
+              onClick={() => trackDownloadClick('hero')}
               className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white font-extrabold text-base px-7 py-4 rounded-2xl shadow-lg shadow-emerald-600/25 hover:shadow-xl hover:shadow-emerald-600/30 transition-all group"
             >
-              <ShoppingCart className="w-5 h-5 group-hover:-translate-y-0.5 transition-transform" />
-              <span>Beli Sekarang — {effectivePriceFormatted}</span>
+              <Download className="w-5 h-5 group-hover:-translate-y-0.5 transition-transform" />
+              <span>Download Buku Warung (APK)</span>
             </a>
             <a
               href={LANDING_CONFIG.whatsappConsultationUrl}
@@ -65,7 +66,7 @@ export const Hero: React.FC = () => {
               className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300/80 font-bold text-sm px-6 py-4 rounded-2xl shadow-xs transition-colors"
             >
               <MessageCircle className="w-4 h-4 text-emerald-600" />
-              <span>Tanya Admin via WhatsApp</span>
+              <span>Tanya Paket via WhatsApp</span>
             </a>
           </div>
 
@@ -73,15 +74,15 @@ export const Hero: React.FC = () => {
           <div className="pt-6 flex flex-wrap items-center justify-center gap-y-2 gap-x-6 text-xs sm:text-sm font-semibold text-slate-600">
             <div className="flex items-center gap-1.5">
               <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-              <span>Pembelian Sekali</span>
+              <span>Sekali Beli Seumur Hidup</span>
             </div>
             <div className="flex items-center gap-1.5">
               <Zap className="w-4 h-4 text-emerald-600 shrink-0" />
-              <span>Tanpa Biaya Bulanan</span>
+              <span>100% Offline Tanpa Kuota</span>
             </div>
             <div className="flex items-center gap-1.5">
               <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
-              <span>Data Usaha di HP Sendiri</span>
+              <span>Data Usaha di HP Anda Sendiri</span>
             </div>
           </div>
         </div>

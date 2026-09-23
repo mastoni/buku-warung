@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { ShoppingCart, Menu, X, ArrowRight } from 'lucide-react';
+import { ShoppingCart, Menu, X, ArrowRight, Download } from 'lucide-react';
 import { LANDING_CONFIG } from '../data/landingData';
 import { usePricing } from '../hooks/usePricingPromo';
 import { useDocsRouter } from '../hooks/useDocsRouter';
-import { trackBuyClick, trackWhatsAppClick } from '../tracking';
+import { trackBuyClick, trackWhatsAppClick, trackDownloadClick } from '../tracking';
 
 export const Navbar: React.FC = () => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -65,12 +65,20 @@ export const Navbar: React.FC = () => {
             Tanya Admin
           </a>
           <a
+            href={LANDING_CONFIG.downloadApkUrl}
+            onClick={() => trackDownloadClick('navbar')}
+            className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-3.5 py-2 rounded-xl transition-colors"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span>Download APK</span>
+          </a>
+          <a
             href={LANDING_CONFIG.publicOrderUrl}
             onClick={() => trackBuyClick('navbar')}
-            className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm px-4 py-2.5 rounded-xl shadow-xs hover:shadow-md transition-all active:scale-95"
+            className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm px-4 py-2 rounded-xl shadow-xs hover:shadow-md transition-all active:scale-95"
           >
             <ShoppingCart className="w-4 h-4" />
-            <span>Beli Sekarang — {effectivePriceFormatted}</span>
+            <span>Beli Lisensi — {effectivePriceFormatted}</span>
           </a>
         </div>
 
@@ -130,21 +138,38 @@ export const Navbar: React.FC = () => {
           </nav>
           <div className="pt-2 border-t border-slate-100 flex flex-col gap-2">
              <a
+               href={LANDING_CONFIG.downloadApkUrl}
+               onClick={() => {
+                 trackDownloadClick('navbar_mobile');
+                 setMobileMenuOpen(false);
+               }}
+               className="flex items-center justify-center gap-2 bg-emerald-100 text-emerald-900 font-bold py-2.5 rounded-xl text-sm"
+              >
+               <Download className="w-4 h-4" />
+               <span>Download APK Buku Warung</span>
+             </a>
+             <a
                href={LANDING_CONFIG.publicOrderUrl}
-               onClick={() => trackBuyClick('navbar_mobile')}
+               onClick={() => {
+                 trackBuyClick('navbar_mobile');
+                 setMobileMenuOpen(false);
+               }}
                className="flex items-center justify-center gap-2 bg-emerald-600 text-white font-bold py-3 rounded-xl shadow-xs text-sm"
               >
-               <span>Beli Sekarang — {effectivePriceFormatted}</span>
+               <span>Beli Lisensi — {effectivePriceFormatted}</span>
                <ArrowRight className="w-4 h-4" />
              </a>
              <a
                href={LANDING_CONFIG.whatsappConsultationUrl}
                target="_blank"
                rel="noopener noreferrer"
-               onClick={() => trackWhatsAppClick('navbar_mobile')}
+               onClick={() => {
+                 trackWhatsAppClick('navbar_mobile');
+                 setMobileMenuOpen(false);
+               }}
                className="text-center text-xs font-semibold text-slate-600 py-2"
               >
-               Tanya Admin via WhatsApp
+               Tanya Paket via WhatsApp
              </a>
           </div>
         </div>

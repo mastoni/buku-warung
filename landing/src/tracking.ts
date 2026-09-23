@@ -119,3 +119,25 @@ export function trackBuyClick(ctaLocation: string): void {
   sessionStorage.setItem(throttleKey, now.toString());
   sendTrackEvent('CLICK_BUY');
 }
+
+export function trackDownloadClick(ctaLocation: string): void {
+  const throttleKey = CTA_THROTTLE_PREFIX + 'DOWNLOAD_' + ctaLocation;
+  const now = Date.now();
+  const last = sessionStorage.getItem(throttleKey);
+  if (last && now - parseInt(last, 10) < 1000) return;
+  sessionStorage.setItem(throttleKey, now.toString());
+  sendTrackEvent('APK_DOWNLOADED');
+}
+
+export function getOrderUrl(baseUrl: string): string {
+  try {
+    const token = sessionStorage.getItem(LEAD_TOKEN_KEY);
+    if (!token) return baseUrl;
+    const separator = baseUrl.includes('?') ? '&' : '?';
+    return `${baseUrl}${separator}leadToken=${encodeURIComponent(token)}`;
+  } catch {
+    return baseUrl;
+  }
+}
+
+

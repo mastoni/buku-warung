@@ -1,9 +1,9 @@
 import React, { useEffect, useRef } from 'react';
-import { ShoppingCart, Check, MessageCircle, Sparkles } from 'lucide-react';
+import { ShoppingCart, Check, MessageCircle, Sparkles, Download } from 'lucide-react';
 import { LANDING_CONFIG } from '../data/landingData';
 import { usePricing } from '../hooks/usePricingPromo';
 import { PromoCountdown } from './PromoCountdown';
-import { trackViewPrice, trackBuyClick, trackWhatsAppClick } from '../tracking';
+import { trackViewPrice, trackBuyClick, trackWhatsAppClick, trackDownloadClick, getOrderUrl } from '../tracking';
 
 export const PricingSection: React.FC = () => {
   const {
@@ -43,10 +43,10 @@ export const PricingSection: React.FC = () => {
         {/* Section Header */}
         <div className="text-center max-w-2xl mx-auto space-y-3 mb-12 sm:mb-16">
           <div className="inline-block px-3 py-1 rounded-lg bg-emerald-100 text-emerald-800 text-xs font-bold uppercase tracking-wider">
-            Harga Lisensi Resmi
+            Paket Lisensi Resmi
           </div>
           <h2 className="text-2xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
-            Harga Lisensi Resmi
+            Harga Lisensi Resmi Buku Warung
           </h2>
           <p className="text-sm sm:text-base text-slate-600">
             Pembelian sekali beli, tanpa biaya bulanan, tahunan, atau potongan per transaksi.
@@ -74,8 +74,8 @@ export const PricingSection: React.FC = () => {
               </div>
 
               {/* Title & Price */}
-              <h3 className="text-2xl font-extrabold text-white">Pembelian Sekali</h3>
-              <p className="text-xs text-emerald-200/80 mt-1">Tanpa langganan bulanan</p>
+              <h3 className="text-2xl font-extrabold text-white">Lisensi Seumur Hidup (1 Perangkat)</h3>
+              <p className="text-xs text-emerald-200/80 mt-1">1 Lisensi = 1 Email Pemilik = 1 HP Android</p>
 
               <div className="mt-6 mb-4 flex items-baseline gap-2">
                 <span className="text-4xl sm:text-5xl font-extrabold text-white tracking-tight">
@@ -91,7 +91,7 @@ export const PricingSection: React.FC = () => {
               <ul className="space-y-3 text-sm text-emerald-100/90 font-medium mt-6">
                 <li className="flex items-start gap-2.5">
                   <Check className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
-                  <span>Offline-First (Jualan tanpa kuota internet)</span>
+                  <span>Offline-First (Jualan kasir tanpa perlu paket data internet)</span>
                 </li>
                 <li className="flex items-start gap-2.5">
                   <Check className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
@@ -99,15 +99,19 @@ export const PricingSection: React.FC = () => {
                 </li>
                 <li className="flex items-start gap-2.5">
                   <Check className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
-                  <span>Kasir POS, Stok, Hutang Piutang, Laporan & PDF</span>
+                  <span>Kasir POS, Stok Barang, Hutang Piutang, Laporan &amp; Ekspor PDF</span>
                 </li>
                 <li className="flex items-start gap-2.5">
                   <Check className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
-                  <span>Cetak Struk Bluetooth & Katalog WhatsApp</span>
+                  <span>Cetak Struk Thermal Bluetooth 58mm/80mm &amp; Katalog WhatsApp</span>
                 </li>
                 <li className="flex items-start gap-2.5">
                   <Check className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
-                  <span>Backup data ke Google Sheets pribadi</span>
+                  <span>Pencadangan data otomatis ke Google Sheets pribadi</span>
+                </li>
+                <li className="flex items-start gap-2.5">
+                  <Check className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
+                  <span>Pembaruan aplikasi resmi &amp; bantuan teknis admin SKMNetwork</span>
                 </li>
               </ul>
             </div>
@@ -115,32 +119,39 @@ export const PricingSection: React.FC = () => {
             {/* Card CTA */}
             <div className="mt-8 pt-6 border-t border-emerald-800/80 space-y-3">
               <a
-                href={LANDING_CONFIG.publicOrderPricingUrl}
+                href={getOrderUrl(LANDING_CONFIG.publicOrderPricingUrl)}
                 onClick={() => trackBuyClick('pricing')}
                 className="w-full flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold text-base py-4 rounded-xl shadow-lg hover:shadow-emerald-500/25 transition-all active:scale-98"
               >
                 <ShoppingCart className="w-5 h-5" />
-                <span>Beli Sekarang — {effectivePriceFormatted}</span>
+                <span>Beli Lisensi Resmi — {effectivePriceFormatted}</span>
               </a>
               <p className="text-[11px] text-center text-emerald-300/70 font-medium">
-                Aktivasi instan via kode lisensi resmi SKMNetwork
+                Aktivasi instan via kode lisensi resmi SKMNetwork setelah pembayaran
               </p>
             </div>
           </div>
         </div>
 
-        {/* Bottom CTA */}
-        <div className="mt-8 text-center">
-          <p className="text-sm text-slate-600 mb-3">Butuh bantuan pemesanan?</p>
+        {/* Alternative CTAs */}
+        <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4 text-center">
+          <a
+            href={LANDING_CONFIG.downloadApkUrl}
+            onClick={() => trackDownloadClick('pricing_download')}
+            className="inline-flex items-center gap-1.5 font-bold text-slate-700 hover:text-emerald-700 text-sm bg-slate-100 hover:bg-slate-200 px-4 py-2.5 rounded-xl transition-colors"
+          >
+            <Download className="w-4 h-4 text-emerald-600" />
+            <span>Download APK Buku Warung</span>
+          </a>
           <a
             href={LANDING_CONFIG.whatsappConsultationUrl}
             target="_blank"
             rel="noopener noreferrer"
             onClick={() => trackWhatsAppClick('pricing')}
-            className="inline-flex items-center gap-1.5 font-bold text-emerald-700 hover:text-emerald-800 text-sm"
+            className="inline-flex items-center gap-1.5 font-bold text-emerald-700 hover:text-emerald-800 text-sm px-4 py-2.5"
           >
-            <MessageCircle className="w-4 h-4" />
-            <span>Hubungi CS WhatsApp</span>
+            <MessageCircle className="w-4 h-4 text-emerald-600" />
+            <span>Tanya Paket via WhatsApp</span>
           </a>
         </div>
       </div>
