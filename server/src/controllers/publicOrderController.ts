@@ -962,6 +962,17 @@ function renderPublicOrderPage(nonce: string, pricing?: PricingResult): string {
     var waUrl = 'https://wa.me/' + ADMIN_WA + '?text=' + encodeURIComponent(waMessage);
     btnConfirmWhatsApp.href = waUrl;
 
+    // Track WhatsApp CTA click (fire-and-forget, non-blocking)
+    btnConfirmWhatsApp.removeEventListener('click', _waTrackHandler);
+    var _waTrackHandler = function() {
+      fetch('/v1/landing/track', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ eventType: 'CLICK_WHATSAPP' })
+      }).catch(function() { /* tracking failure must not block WhatsApp */ });
+    };
+    btnConfirmWhatsApp.addEventListener('click', _waTrackHandler);
+
     // Start status polling if unpaid
     if (paymentStatus !== 'PAID') {
       startPolling();

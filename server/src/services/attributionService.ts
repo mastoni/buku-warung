@@ -250,8 +250,7 @@ export class AttributionService {
       'CLICK_WHATSAPP',
       'LEAD_CREATED',
       'QUALIFIED',
-      'INTERESTED',
-      'APK_DOWNLOADED'
+      'INTERESTED'
     ];
 
     // Commercial lifecycle events are counted from actual database state
@@ -327,6 +326,12 @@ export class AttributionService {
       )
       .get(start, end) as { count: number };
     funnel.push({ name: 'LICENSE_ACTIVATED', count: licenseActivatedCount.count });
+
+    // APK_DOWNLOADED: product-led acquisition metric (separate from sales funnel)
+    // Counted from funnel_events but positioned after the sales funnel
+    // to visually separate PATH B (product-led) from PATH A (sales-assisted).
+    const apkDownloadedCount = eventCount('APK_DOWNLOADED');
+    funnel.push({ name: 'APK_DOWNLOADED', count: apkDownloadedCount });
 
     // North Star Metric: Activated Paid Customers
     // Uses actual license/device state as the source of truth.

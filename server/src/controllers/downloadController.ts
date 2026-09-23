@@ -78,28 +78,26 @@ export async function registerDownloadRoutes(fastify: FastifyInstance) {
     async (request: FastifyRequest, reply: FastifyReply) => {
       const apkPath = path.join(releasesDir, PRODUCT.apkFilename);
 
+      // Fire-and-forget APK_DOWNLOADED tracking (non-blocking)
+      try {
+        const query = request.query as { leadToken?: string };
+        const leadToken = query.leadToken || undefined;
+        const ipAddress = request.ip || (request.headers['x-forwarded-for'] as string | undefined)?.split(',')[0]?.trim();
+        const userAgent = request.headers['user-agent'] as string | undefined;
+        attributionService.processLandingTrack(
+          { eventType: 'APK_DOWNLOADED', leadToken },
+          ipAddress,
+          userAgent
+        );
+      } catch {
+        // Tracking failure must NOT block APK download
+      }
+
       if (!fs.existsSync(apkPath)) {
         return reply.status(404).send({
           success: false,
           error: { code: 'NOT_FOUND', message: 'APK file not available.' }
         });
-      }
-
-      // Fire-and-forget APK_DOWNLOADED tracking (non-blocking)
-      try {
-        const query = request.query as { leadToken?: string };
-        const leadToken = query.leadToken || undefined;
-        if (leadToken || true) {
-          const ipAddress = request.ip || (request.headers['x-forwarded-for'] as string | undefined)?.split(',')[0]?.trim();
-          const userAgent = request.headers['user-agent'] as string | undefined;
-          attributionService.processLandingTrack(
-            { eventType: 'APK_DOWNLOADED', leadToken },
-            ipAddress,
-            userAgent
-          );
-        }
-      } catch {
-        // Tracking failure must NOT block APK download
       }
 
       const stat = fs.statSync(apkPath);
