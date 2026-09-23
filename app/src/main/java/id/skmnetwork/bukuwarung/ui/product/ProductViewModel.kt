@@ -26,35 +26,35 @@ class ProductViewModel(
     val products: StateFlow<List<ProductEntity>> = repository.allProducts
         .stateIn(
             scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
+            started = SharingStarted.Lazily,
             initialValue = emptyList()
         )
 
     val categories: StateFlow<List<CategoryEntity>> = repository.allCategories
         .stateIn(
             scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
+            started = SharingStarted.Lazily,
             initialValue = emptyList()
         )
 
     val cashBalance: StateFlow<Long?> = repository.totalCashBalance
         .stateIn(
             scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
+            started = SharingStarted.Lazily,
             initialValue = 0L
         )
 
     val todaySalesTotal: StateFlow<Long?> = repository.getTodaySalesTotalFlow()
         .stateIn(
             scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
+            started = SharingStarted.Lazily,
             initialValue = 0L
         )
 
     val todayExpenseTotal: StateFlow<Long?> = repository.getTodayExpenseTotalFlow()
         .stateIn(
             scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
+            started = SharingStarted.Lazily,
             initialValue = 0L
         )
 
