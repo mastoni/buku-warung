@@ -1,7 +1,8 @@
 package id.skmnetwork.bukuwarung.ui.welcome
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,6 +16,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -22,9 +24,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.CloudDone
-import androidx.compose.material.icons.filled.PointOfSale
-import androidx.compose.material.icons.filled.Receipt
-import androidx.compose.material.icons.filled.Storefront
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -36,302 +35,418 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import id.skmnetwork.bukuwarung.ui.theme.AppColors
+import id.skmnetwork.bukuwarung.R
 import id.skmnetwork.bukuwarung.ui.theme.AppShapes
-import id.skmnetwork.bukuwarung.ui.theme.AppSpacing
+import id.skmnetwork.bukuwarung.ui.theme.rememberAppWindowSize
 
 /**
- * Clean & Friendly Welcome / Splash Landing Screen (Design Master Alignment)
+ * Clean & Friendly Welcome / Onboarding Landing Screen
+ * Supporting Light & Dark MaterialTheme natively.
  *
- * Hierarchy:
- * 1. Logo / Brand Mark: Storefront badge + "Buku Warung" + short subtitle
- * 2. Headline:
- *    "Catat Jualan"
- *    "Kelola Keuangan"
- *    "Usaha Makin Maju!"
- * 3. Friendly Warung Storefront Visual Card (Clean & Airy, White + Green)
- * 4. Primary CTA: "Mulai Sekarang ->"
- * 5. Subtle Google Sheets Trust Caption
+ * Adaptive:
+ * - Compact: Single-column vertical scroll layout for phones
+ * - Medium / Expanded: Centered two-column card composition for tablets
  */
 @Composable
 fun WelcomeScreen(
     onStartSetup: () -> Unit
 ) {
+    val windowSize = rememberAppWindowSize()
+
     Surface(
         modifier = Modifier
             .fillMaxSize()
             .statusBarsPadding()
             .navigationBarsPadding(),
-        color = Color.White
+        color = MaterialTheme.colorScheme.background
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 24.dp, vertical = 20.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.SpaceBetween
-        ) {
+        if (windowSize.isCompact) {
             // ==========================================
-            // 1. BRANDING / LOGO SECTION
+            // COMPACT PHONE LAYOUT
             // ==========================================
             Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 24.dp, vertical = 20.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.padding(top = 8.dp)
+                verticalArrangement = Arrangement.SpaceBetween
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(52.dp)
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(AppColors.GreenPrimary)
-                        .shadow(3.dp, RoundedCornerShape(14.dp)),
-                    contentAlignment = Alignment.Center
+                // 1. BRANDING / LOGO SECTION
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.padding(top = 8.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Storefront,
+                    Image(
+                        painter = painterResource(id = R.drawable.logo_bukuwarung),
                         contentDescription = "Buku Warung Logo",
-                        tint = Color.White,
-                        modifier = Modifier.size(30.dp)
+                        modifier = Modifier
+                            .size(56.dp)
+                            .clip(RoundedCornerShape(14.dp))
+                            .shadow(3.dp, RoundedCornerShape(14.dp)),
+                        contentScale = ContentScale.Fit
+                    )
+
+                    Spacer(Modifier.height(10.dp))
+
+                    Text(
+                        text = "Buku Warung",
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onBackground,
+                        letterSpacing = 0.3.sp
+                    )
+
+                    Spacer(Modifier.height(2.dp))
+
+                    Text(
+                        text = "Aplikasi Pembukuan & Kasir Warung",
+                        fontSize = 12.5.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
 
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(12.dp))
 
-                Text(
-                    text = "Buku Warung",
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = AppColors.GreenDark,
-                    letterSpacing = 0.3.sp
-                )
+                // 2. HEADLINE VALUE PROPOSITION
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.padding(vertical = 4.dp)
+                ) {
+                    Text(
+                        text = "Kelola Warung Lebih Mudah",
+                        fontSize = 19.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        text = "Setiap Hari",
+                        fontSize = 21.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
 
-                Spacer(Modifier.height(2.dp))
+                Spacer(Modifier.height(12.dp))
 
-                Text(
-                    text = "Aplikasi Pembukuan & Kasir Warung",
-                    fontSize = 12.5.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = AppColors.TextSecondary
-                )
-            }
-
-            Spacer(Modifier.height(16.dp))
-
-            // ==========================================
-            // 2. HEADLINE VALUE PROPOSITION
-            // ==========================================
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.padding(vertical = 4.dp)
-            ) {
-                Text(
-                    text = "Catat Jualan",
-                    fontSize = 19.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = AppColors.TextPrimary
-                )
-                Text(
-                    text = "Kelola Keuangan",
-                    fontSize = 19.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = AppColors.TextPrimary
-                )
-                Spacer(Modifier.height(2.dp))
-                Text(
-                    text = "Usaha Makin Maju!",
-                    fontSize = 21.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = AppColors.GreenPrimary
-                )
-            }
-
-            Spacer(Modifier.height(16.dp))
-
-            // ==========================================
-            // 3. FRIENDLY WARUNG STOREFRONT ARTWORK
-            // ==========================================
-            WarungStorefrontArtwork()
-
-            Spacer(Modifier.height(20.dp))
-
-            // ==========================================
-            // 4. CALL TO ACTION & SUBTLE TRUST CAPTION
-            // ==========================================
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 8.dp)
-            ) {
-                // Primary CTA Button
-                Button(
-                    onClick = onStartSetup,
-                    shape = AppShapes.PillShape,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = AppColors.GreenPrimary,
-                        contentColor = Color.White
-                    ),
+                // 3. FRIENDLY WARUNG HERO ILLUSTRATION
+                WarungHeroIllustration(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(50.dp)
-                        .shadow(3.dp, AppShapes.PillShape)
+                        .height(210.dp)
+                )
+
+                Spacer(Modifier.height(16.dp))
+
+                // 4. CALL TO ACTION & SUBTLE TRUST CAPTION
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 8.dp)
                 ) {
+                    Button(
+                        onClick = onStartSetup,
+                        shape = AppShapes.PillShape,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary
+                        ),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(50.dp)
+                            .shadow(3.dp, AppShapes.PillShape)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Text(
+                                text = "Mulai Sekarang",
+                                fontSize = 15.5.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
+
+                    Spacer(Modifier.height(14.dp))
+
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
+                        horizontalArrangement = Arrangement.Center,
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text(
-                            text = "Mulai Sekarang",
-                            fontSize = 15.5.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Spacer(Modifier.width(8.dp))
                         Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                            imageVector = Icons.Default.CloudDone,
                             contentDescription = null,
-                            modifier = Modifier.size(18.dp)
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            text = "Data tersimpan di Google Sheets Anda sendiri",
+                            fontSize = 11.5.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center
                         )
                     }
                 }
-
-                Spacer(Modifier.height(14.dp))
-
-                // Subtle Google Sheets Trust Caption
+            }
+        } else {
+            // ==========================================
+            // TABLET MEDIUM / EXPANDED TWO-COLUMN LAYOUT
+            // ==========================================
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 32.dp, vertical = 24.dp),
+                contentAlignment = Alignment.Center
+            ) {
                 Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .widthIn(max = if (windowSize.isExpanded) 960.dp else 820.dp)
+                        .fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(36.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.CloudDone,
-                        contentDescription = null,
-                        tint = AppColors.GreenPrimary,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Spacer(Modifier.width(6.dp))
-                    Text(
-                        text = "Data tersimpan di Google Sheets Anda sendiri",
-                        fontSize = 11.5.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = AppColors.TextSecondary,
-                        textAlign = TextAlign.Center
-                    )
+                    // Left Column: Brand Mark, Value Proposition, and Hero Visual
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(14.dp)
+                    ) {
+                        // Branding / Logo
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Image(
+                                painter = painterResource(id = R.drawable.logo_bukuwarung),
+                                contentDescription = "Buku Warung Logo",
+                                modifier = Modifier
+                                    .size(64.dp)
+                                    .clip(RoundedCornerShape(16.dp))
+                                    .shadow(3.dp, RoundedCornerShape(16.dp)),
+                                contentScale = ContentScale.Fit
+                            )
+
+                            Spacer(Modifier.height(10.dp))
+
+                            Text(
+                                text = "Buku Warung",
+                                fontSize = 26.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onBackground,
+                                letterSpacing = 0.3.sp
+                            )
+
+                            Spacer(Modifier.height(2.dp))
+
+                            Text(
+                                text = "Aplikasi Pembukuan & Kasir Warung",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+
+                        // Headline Value Proposition
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                text = "Kelola Warung Lebih Mudah",
+                                fontSize = 20.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onBackground
+                            )
+                            Spacer(Modifier.height(2.dp))
+                            Text(
+                                text = "Setiap Hari",
+                                fontSize = 24.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+
+                        // Hero Visual Illustration
+                        WarungHeroIllustration(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(230.dp)
+                        )
+                    }
+
+                    // Right Column: Getting Started Steps & Call to Action
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(18.dp)
+                    ) {
+                        // Onboarding Steps Card
+                        Surface(
+                            shape = RoundedCornerShape(16.dp),
+                            color = MaterialTheme.colorScheme.surface,
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)),
+                            shadowElevation = 1.dp,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(20.dp),
+                                verticalArrangement = Arrangement.spacedBy(16.dp)
+                            ) {
+                                Text(
+                                    text = "Mulai dalam 3 langkah mudah:",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 15.sp,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+
+                                WelcomeStepItem(
+                                    stepNumber = "1",
+                                    title = "Atur Profil Usaha",
+                                    subtitle = "Pilih jenis usaha & nama tokomu"
+                                )
+                                WelcomeStepItem(
+                                    stepNumber = "2",
+                                    title = "Tambah Produk & Stok",
+                                    subtitle = "Daftarkan produk jualan pertamamu"
+                                )
+                                WelcomeStepItem(
+                                    stepNumber = "3",
+                                    title = "Mulai Kasir & Catat",
+                                    subtitle = "Transaksi langsung tercatat rapi"
+                                )
+                            }
+                        }
+
+                        // Primary CTA Button
+                        Button(
+                            onClick = onStartSetup,
+                            shape = AppShapes.PillShape,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primary,
+                                contentColor = MaterialTheme.colorScheme.onPrimary
+                            ),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(52.dp)
+                                .shadow(3.dp, AppShapes.PillShape)
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center
+                            ) {
+                                Text(
+                                    text = "Mulai Sekarang",
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Spacer(Modifier.width(8.dp))
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
+
+                        // Subtle Google Sheets Trust Caption
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.CloudDone,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(Modifier.width(6.dp))
+                            Text(
+                                text = "Data tersimpan di Google Sheets Anda sendiri",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    }
                 }
             }
         }
     }
 }
 
-/**
- * Clean & Friendly Warung Storefront Visual composition
- */
 @Composable
-private fun WarungStorefrontArtwork() {
-    Surface(
-        shape = RoundedCornerShape(18.dp),
-        color = Color(0xFFF4FAF6),
-        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFDDF0E4)),
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(150.dp)
+private fun WelcomeStepItem(
+    stepNumber: String,
+    title: String,
+    subtitle: String
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        modifier = Modifier.fillMaxWidth()
     ) {
-        Column(
-            modifier = Modifier.fillMaxSize(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.SpaceBetween
+        Box(
+            modifier = Modifier
+                .size(30.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.primaryContainer),
+            contentAlignment = Alignment.Center
         ) {
-            // Awning (Kanopi Garis Hijau & Putih Halus)
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(16.dp)
-            ) {
-                repeat(8) { i ->
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(16.dp)
-                            .background(
-                                color = if (i % 2 == 0) AppColors.GreenPrimary else Color(0xFFE4F6EB),
-                                shape = RoundedCornerShape(bottomStart = 6.dp, bottomEnd = 6.dp)
-                            )
-                    )
-                }
-            }
-
-            // Central Friendly Storefront & Feature Badges
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 6.dp),
-                horizontalArrangement = Arrangement.SpaceEvenly,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Feature 1: POS / Kasir
-                Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = Color.White,
-                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE2EBE4)),
-                    modifier = Modifier.size(46.dp)
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            imageVector = Icons.Default.PointOfSale,
-                            contentDescription = "Kasir Cepat",
-                            tint = AppColors.GreenPrimary,
-                            modifier = Modifier.size(24.dp)
-                        )
-                    }
-                }
-
-                // Central Storefront Circle
-                Box(
-                    modifier = Modifier
-                        .size(68.dp)
-                        .clip(CircleShape)
-                        .background(Color.White)
-                        .border(2.5.dp, AppColors.GreenPrimary, CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Storefront,
-                        contentDescription = "Warung",
-                        tint = AppColors.GreenPrimary,
-                        modifier = Modifier.size(36.dp)
-                    )
-                }
-
-                // Feature 2: Laporan & Nota
-                Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = Color.White,
-                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE2EBE4)),
-                    modifier = Modifier.size(46.dp)
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            imageVector = Icons.Default.Receipt,
-                            contentDescription = "Struk & Nota",
-                            tint = AppColors.GreenPrimary,
-                            modifier = Modifier.size(24.dp)
-                        )
-                    }
-                }
-            }
-
-            // Bottom Green Accent Line
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(6.dp)
-                    .background(AppColors.GreenPrimary.copy(alpha = 0.35f))
+            Text(
+                text = stepNumber,
+                fontWeight = FontWeight.Bold,
+                fontSize = 13.sp,
+                color = MaterialTheme.colorScheme.onPrimaryContainer
+            )
+        }
+        Column {
+            Text(
+                text = title,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 13.5.sp,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = subtitle,
+                fontWeight = FontWeight.Normal,
+                fontSize = 11.5.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }
+}
+
+/**
+ * Clean & Friendly Warung Hero Visual composition using official illustration asset
+ */
+@Composable
+private fun WarungHeroIllustration(
+    modifier: Modifier = Modifier
+) {
+    Image(
+        painter = painterResource(id = R.drawable.welcome_illustration),
+        contentDescription = "Ilustrasi Pemilik Warung Buku Warung",
+        modifier = modifier,
+        contentScale = ContentScale.Fit
+    )
 }

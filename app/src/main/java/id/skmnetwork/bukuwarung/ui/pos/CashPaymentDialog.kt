@@ -30,11 +30,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.width
 import id.skmnetwork.bukuwarung.ui.components.AppCard
 import id.skmnetwork.bukuwarung.ui.components.AppTextField
 import id.skmnetwork.bukuwarung.ui.theme.AppColors
 import id.skmnetwork.bukuwarung.ui.theme.AppShapes
 import id.skmnetwork.bukuwarung.ui.theme.AppSpacing
+import id.skmnetwork.bukuwarung.ui.theme.rememberAppWindowSize
 import id.skmnetwork.bukuwarung.util.formatRupiah
 
 @Composable
@@ -45,6 +47,8 @@ fun CashPaymentDialog(
     onDismiss: () -> Unit,
     onConfirmCashPayment: (cashReceived: Long, changeAmount: Long) -> Unit
 ) {
+    val windowSize = rememberAppWindowSize()
+
     var cashReceivedInput by remember {
         mutableStateOf(if (!cashReceivedEnabled) totalPrice.toString() else "")
     }
@@ -63,6 +67,11 @@ fun CashPaymentDialog(
 
     AlertDialog(
         onDismissRequest = { if (!isCheckingOut) onDismiss() },
+        modifier = if (windowSize.isCompact) {
+            Modifier.fillMaxWidth()
+        } else {
+            Modifier.width(if (windowSize.isExpanded) 520.dp else 480.dp)
+        },
         title = {
             Text("PEMBAYARAN TUNAI", fontWeight = FontWeight.Bold)
         },

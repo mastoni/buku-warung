@@ -518,8 +518,22 @@ fun PosScreen(
     if (showPaymentSelectorDialog) {
         AlertDialog(
             onDismissRequest = { if (!isCheckingOut) showPaymentSelectorDialog = false },
+            modifier = if (windowSize.isCompact) {
+                Modifier.fillMaxWidth()
+            } else {
+                Modifier.width(if (windowSize.isExpanded) 580.dp else 520.dp)
+            },
             title = {
-                Text("RINGKASAN & PEMBAYARAN", fontWeight = FontWeight.Bold)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.Receipt,
+                        contentDescription = null,
+                        tint = AppColors.GreenPrimary,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text("RINGKASAN & PEMBAYARAN", fontWeight = FontWeight.Bold)
+                }
             },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(AppSpacing.sm)) {
@@ -535,7 +549,7 @@ fun PosScreen(
                             verticalArrangement = Arrangement.spacedBy(AppSpacing.xs),
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(110.dp)
+                                .height(if (windowSize.isCompact) 110.dp else 140.dp)
                                 .padding(AppSpacing.sm)
                         ) {
                             items(cart) { cartLine ->
@@ -839,6 +853,11 @@ fun PosScreen(
     if (showCheckoutSuccessDialog) {
         AlertDialog(
             onDismissRequest = { showCheckoutSuccessDialog = false },
+            modifier = if (windowSize.isCompact) {
+                Modifier.fillMaxWidth()
+            } else {
+                Modifier.width(if (windowSize.isExpanded) 540.dp else 480.dp)
+            },
             title = {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.CheckCircle, null, tint = AppColors.GreenPrimary)

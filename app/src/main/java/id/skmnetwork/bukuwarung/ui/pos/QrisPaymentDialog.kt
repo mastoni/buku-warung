@@ -37,11 +37,13 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.width
 import androidx.compose.ui.unit.sp
 import id.skmnetwork.bukuwarung.ui.components.AppCard
 import id.skmnetwork.bukuwarung.ui.theme.AppColors
 import id.skmnetwork.bukuwarung.ui.theme.AppShapes
 import id.skmnetwork.bukuwarung.ui.theme.AppSpacing
+import id.skmnetwork.bukuwarung.ui.theme.rememberAppWindowSize
 import id.skmnetwork.bukuwarung.util.formatRupiah
 import java.io.File
 
@@ -54,6 +56,8 @@ fun QrisPaymentDialog(
     onDismiss: () -> Unit,
     onConfirmQrisPayment: () -> Unit
 ) {
+    val windowSize = rememberAppWindowSize()
+
     val qrisBitmap = remember(qrisImagePath) {
         if (!qrisImagePath.isNullOrBlank()) {
             try {
@@ -72,6 +76,11 @@ fun QrisPaymentDialog(
     if (isQrisConfigured) {
         AlertDialog(
             onDismissRequest = { if (!isCheckingOut) onDismiss() },
+            modifier = if (windowSize.isCompact) {
+                Modifier.fillMaxWidth()
+            } else {
+                Modifier.width(if (windowSize.isExpanded) 520.dp else 480.dp)
+            },
             title = {
                 Text("PEMBAYARAN QRIS", fontWeight = FontWeight.Bold)
             },
@@ -146,6 +155,11 @@ fun QrisPaymentDialog(
         // QRIS Belum Diatur State
         AlertDialog(
             onDismissRequest = { if (!isCheckingOut) onDismiss() },
+            modifier = if (windowSize.isCompact) {
+                Modifier.fillMaxWidth()
+            } else {
+                Modifier.width(if (windowSize.isExpanded) 520.dp else 480.dp)
+            },
             title = {
                 Text("QRIS Warung Belum Diatur", fontWeight = FontWeight.Bold)
             },

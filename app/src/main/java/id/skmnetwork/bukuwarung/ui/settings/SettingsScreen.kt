@@ -1812,7 +1812,91 @@ fun SettingsScreen(
             }
 
             // ==========================================
-            // 11. TENTANG APLIKASI
+            // 11. TAMPILAN & TEMA (THEME)
+            // ==========================================
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(
+                    text = "TAMPILAN & TEMA",
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.primary,
+                        letterSpacing = 0.5.sp
+                    )
+                )
+                Surface(
+                    shape = RoundedCornerShape(14.dp),
+                    color = MaterialTheme.colorScheme.surface,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)),
+                    shadowElevation = 0.5.dp,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(14.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Text(
+                            text = "Tema Tampilan Aplikasi",
+                            style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.5.sp),
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "Pilih tema warna yang nyaman untuk operasional kasir & pembukuan.",
+                            style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.5.sp),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+
+                        val currentTheme = settingsState.themeMode
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            listOf(
+                                Triple("LIGHT", "☀ Terang", "Terang"),
+                                Triple("DARK", "🌙 Gelap", "Gelap"),
+                                Triple("SYSTEM", "⚙ Sistem", "Sistem")
+                            ).forEach { (mode, label, _) ->
+                                val selected = currentTheme == mode
+                                Surface(
+                                    shape = RoundedCornerShape(10.dp),
+                                    color = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
+                                    border = BorderStroke(
+                                        1.dp,
+                                        if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+                                    ),
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clickable {
+                                            scope.launch {
+                                                prefsRepo.updateAppearanceSettings(
+                                                    themeMode = mode,
+                                                    productViewMode = settingsState.productViewMode
+                                                )
+                                            }
+                                        }
+                                ) {
+                                    Column(
+                                        modifier = Modifier.padding(vertical = 10.dp, horizontal = 4.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                                    ) {
+                                        Text(
+                                            text = label,
+                                            fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                                            fontSize = 12.5.sp,
+                                            color = if (selected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // ==========================================
+            // 12. TENTANG APLIKASI
             // ==========================================
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(

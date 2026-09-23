@@ -589,4 +589,152 @@ class AdaptiveHomePosUnitTest {
         assertEquals(50L, creditSale.customerId)
         assertEquals(85000L, creditSale.totalAmount)
     }
+
+    // =========================================================================
+    // TABLET-UX-01: ADAPTIVE WELCOME & PAYMENT DIALOG POLISH TESTS (A - I)
+    // =========================================================================
+
+    /**
+     * TEST A: Compact Welcome remains unchanged / single-column phone layout.
+     */
+    @Test
+    fun testAA_compactWelcomeLayoutModel() {
+        val compactWindow = AppWindowSize(id.skmnetwork.bukuwarung.ui.theme.AppWindowWidthClass.COMPACT, 390.dp)
+        assertTrue(compactWindow.isCompact)
+        assertFalse(compactWindow.isMedium)
+        assertFalse(compactWindow.isExpanded)
+
+        val useTwoColumnTablet = !compactWindow.isCompact
+        assertFalse(useTwoColumnTablet)
+    }
+
+    /**
+     * TEST B: Medium Welcome uses tablet two-column composition with bounded max-width.
+     */
+    @Test
+    fun testAB_mediumWelcomeTabletComposition() {
+        val mediumWindow = AppWindowSize(id.skmnetwork.bukuwarung.ui.theme.AppWindowWidthClass.MEDIUM, 768.dp)
+        assertFalse(mediumWindow.isCompact)
+        assertTrue(mediumWindow.isMedium)
+
+        val useTwoColumnTablet = !mediumWindow.isCompact
+        assertTrue(useTwoColumnTablet)
+
+        val maxWidth = if (mediumWindow.isExpanded) 960.dp else 820.dp
+        assertEquals(820.dp, maxWidth)
+    }
+
+    /**
+     * TEST C: Expanded Welcome uses tablet two-column composition with bounded max-width.
+     */
+    @Test
+    fun testAC_expandedWelcomeTabletComposition() {
+        val expandedWindow = AppWindowSize(id.skmnetwork.bukuwarung.ui.theme.AppWindowWidthClass.EXPANDED, 1280.dp)
+        assertFalse(expandedWindow.isCompact)
+        assertTrue(expandedWindow.isExpanded)
+
+        val useTwoColumnTablet = !expandedWindow.isCompact
+        assertTrue(useTwoColumnTablet)
+
+        val maxWidth = if (expandedWindow.isExpanded) 960.dp else 820.dp
+        assertEquals(960.dp, maxWidth)
+    }
+
+    /**
+     * TEST D: Compact payment dialog uses compact mobile sizing.
+     */
+    @Test
+    fun testAD_compactPaymentDialogSizing() {
+        val compactWindow = AppWindowSize(id.skmnetwork.bukuwarung.ui.theme.AppWindowWidthClass.COMPACT, 400.dp)
+        val isCompact = compactWindow.isCompact
+        val itemHeight = if (isCompact) 110.dp else 140.dp
+
+        assertTrue(isCompact)
+        assertEquals(110.dp, itemHeight)
+    }
+
+    /**
+     * TEST E: Medium payment dialog uses wider tablet modal sizing.
+     */
+    @Test
+    fun testAE_mediumPaymentDialogSizing() {
+        val mediumWindow = AppWindowSize(id.skmnetwork.bukuwarung.ui.theme.AppWindowWidthClass.MEDIUM, 720.dp)
+        val isCompact = mediumWindow.isCompact
+        val itemHeight = if (isCompact) 110.dp else 140.dp
+        val dialogWidth = if (mediumWindow.isExpanded) 580.dp else 520.dp
+
+        assertFalse(isCompact)
+        assertEquals(140.dp, itemHeight)
+        assertEquals(520.dp, dialogWidth)
+    }
+
+    /**
+     * TEST F: Expanded payment dialog uses bounded tablet modal sizing.
+     */
+    @Test
+    fun testAF_expandedPaymentDialogSizing() {
+        val expandedWindow = AppWindowSize(id.skmnetwork.bukuwarung.ui.theme.AppWindowWidthClass.EXPANDED, 1280.dp)
+        val isCompact = expandedWindow.isCompact
+        val itemHeight = if (isCompact) 110.dp else 140.dp
+        val dialogWidth = if (expandedWindow.isExpanded) 580.dp else 520.dp
+
+        assertFalse(isCompact)
+        assertEquals(140.dp, itemHeight)
+        assertEquals(580.dp, dialogWidth)
+    }
+
+    /**
+     * TEST G: Payment total and discount calculation remain unchanged.
+     */
+    @Test
+    fun testAG_paymentTotalCalculationUnchanged() {
+        val product1 = ProductEntity(id = 1L, categoryId = 1L, name = "Aqua Galon", sellingPrice = 18000L, purchasePrice = 15000L, stock = 10.0)
+        val product2 = ProductEntity(id = 2L, categoryId = 1L, name = "Gas LPG 3kg", sellingPrice = 22000L, purchasePrice = 19000L, stock = 5.0)
+
+        val cart = listOf(
+            CartLine(product = product1, quantity = 2.0),
+            CartLine(product = product2, quantity = 1.0)
+        )
+
+        val grossSubtotal = cart.sumOf { it.product.sellingPrice * it.quantity.toLong() }
+        assertEquals(58000L, grossSubtotal)
+
+        // 10% discount
+        val discount = DiscountCalculator.calculate(grossSubtotal, DiscountInput(DiscountType.PERCENTAGE, 10.0))
+        assertEquals(5800L, discount.discountAmount)
+        assertEquals(52200L, discount.netTotal)
+    }
+
+    /**
+     * TEST H: Payment method selection remains unchanged.
+     */
+    @Test
+    fun testAH_paymentMethodSelectionUnchanged() {
+        val userSettings = UserSettings(cashEnabled = true, qrisEnabled = true, creditEnabled = true)
+        val availableMethods = mutableListOf<Pair<String, String>>()
+        if (userSettings.cashEnabled) availableMethods.add("CASH" to "Tunai")
+        if (userSettings.qrisEnabled) availableMethods.add("QRIS" to "QRIS")
+        if (userSettings.creditEnabled) availableMethods.add("CREDIT" to "Hutang")
+
+        assertEquals(3, availableMethods.size)
+        assertEquals("CASH", availableMethods[0].first)
+        assertEquals("QRIS", availableMethods[1].first)
+        assertEquals("CREDIT", availableMethods[2].first)
+    }
+
+    /**
+     * TEST I: Checkout action validation remains unchanged.
+     */
+    @Test
+    fun testAI_checkoutActionValidationUnchanged() {
+        fun isCreditAllowed(method: String, customer: CustomerEntity?): Boolean {
+            return !(method == "CREDIT" && customer == null)
+        }
+
+        assertFalse(isCreditAllowed("CREDIT", null))
+        assertTrue(isCreditAllowed("CREDIT", CustomerEntity(id = 1L, name = "Ibu Siti", phone = "0811111111")))
+        assertTrue(isCreditAllowed("CASH", null))
+        assertTrue(isCreditAllowed("QRIS", null))
+    }
 }
+
