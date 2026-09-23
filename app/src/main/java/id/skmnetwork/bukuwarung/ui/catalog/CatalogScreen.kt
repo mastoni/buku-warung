@@ -190,7 +190,7 @@ fun CatalogScreen(
                 }
             }
         },
-        containerColor = Color.White
+        containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
         Column(
             Modifier
@@ -457,7 +457,7 @@ fun CatalogPreviewDialog(
                         Text(
                             text = catalogText,
                             style = MaterialTheme.typography.bodySmall,
-                            color = Color.Black,
+                            color = MaterialTheme.colorScheme.onSurface,
                             modifier = Modifier.testTag("txt_catalog_preview_content")
                         )
                     }
@@ -481,7 +481,7 @@ fun CatalogPreviewDialog(
                 Text("Tutup", color = AppColors.TextSecondary)
             }
         },
-        containerColor = Color.White,
+        containerColor = MaterialTheme.colorScheme.surface,
         shape = RoundedCornerShape(16.dp)
     )
 }

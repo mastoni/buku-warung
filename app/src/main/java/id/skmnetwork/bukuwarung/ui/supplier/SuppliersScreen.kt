@@ -119,7 +119,7 @@ fun SuppliersScreen(
         AlertDialog(
             onDismissRequest = { if (!isSaving) showSupplierDialog = false },
             shape = RoundedCornerShape(16.dp),
-            containerColor = Color.White,
+            containerColor = MaterialTheme.colorScheme.surface,
             title = {
                 Text(
                     text = if (supplierToEdit == null) "Tambah $supplierLabel" else "Edit $supplierLabel",
@@ -273,7 +273,7 @@ fun SuppliersScreen(
         AlertDialog(
             onDismissRequest = { showDeleteConfirmDialog = false },
             shape = RoundedCornerShape(16.dp),
-            containerColor = Color.White,
+            containerColor = MaterialTheme.colorScheme.surface,
             title = {
                 Text("Hapus $supplierLabel", fontWeight = FontWeight.Bold, fontSize = 17.sp, color = AppColors.TextPrimary)
             },
@@ -329,7 +329,7 @@ fun SuppliersScreen(
         AlertDialog(
             onDismissRequest = { selectedSupplierForDetail = null },
             shape = RoundedCornerShape(16.dp),
-            containerColor = Color.White,
+            containerColor = MaterialTheme.colorScheme.surface,
             title = {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -562,7 +562,7 @@ fun SuppliersScreen(
             AlertDialog(
                 onDismissRequest = { if (!isSaving) showPaySupplierDialog = false },
                 shape = RoundedCornerShape(16.dp),
-                containerColor = Color.White,
+                containerColor = MaterialTheme.colorScheme.surface,
                 title = {
                     Text(
                         text = "Bayar $debtLabel $supplierLabel",
@@ -582,7 +582,7 @@ fun SuppliersScreen(
                     ) {
                         Surface(
                             shape = RoundedCornerShape(10.dp),
-                            color = Color(0xFFF9FBF9),
+                            color = MaterialTheme.colorScheme.surfaceVariant,
                             border = BorderStroke(1.dp, Color(0xFFEFF3F0)),
                             modifier = Modifier.fillMaxWidth()
                         ) {
@@ -709,7 +709,7 @@ fun SuppliersScreen(
                 debtLabel = debtLabel
             )
         },
-        containerColor = Color.White
+        containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
         Box(
             modifier = Modifier
@@ -762,9 +762,11 @@ fun SuppliersScreen(
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = AppColors.GreenPrimary,
-                        unfocusedBorderColor = Color(0xFFE0E0E0),
-                        focusedContainerColor = Color.White,
-                        unfocusedContainerColor = Color.White
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
+                        focusedContainerColor = MaterialTheme.colorScheme.surface,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface
                     ),
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -878,9 +880,9 @@ private fun SuppliersTopHeader(
     debtLabel: String = "Hutang"
 ) {
     Surface(
-        color = Color.White,
+        color = MaterialTheme.colorScheme.surface,
         shadowElevation = 0.5.dp,
-        border = BorderStroke(1.dp, Color(0xFFEFF3F0)),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         modifier = Modifier.fillMaxWidth()
     ) {
         Row(
@@ -929,7 +931,7 @@ private fun SuppliersTopHeader(
 
             Surface(
                 shape = RoundedCornerShape(20.dp),
-                color = Color(0xFFE8F5E9)
+                color = AppColors.GreenPrimary.copy(alpha = 0.15f)
             ) {
                 Text(
                     text = if (supplierCount > 0) "$supplierCount $supplierLabel" else "Buku $debtLabel",
@@ -959,8 +961,8 @@ private fun SupplierListItemCard(
 
     Surface(
         shape = RoundedCornerShape(14.dp),
-        color = Color.White,
-        border = BorderStroke(1.dp, Color(0xFFEFF3F0)),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         shadowElevation = 0.5.dp,
         modifier = Modifier
             .fillMaxWidth()
@@ -977,7 +979,7 @@ private fun SupplierListItemCard(
                 modifier = Modifier
                     .size(44.dp)
                     .clip(CircleShape)
-                    .background(Color(0xFFE8F5E9)),
+                    .background(AppColors.GreenPrimary.copy(alpha = 0.15f)),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
@@ -1054,7 +1056,7 @@ private fun SupplierListItemCard(
                     Spacer(Modifier.height(2.dp))
                     Surface(
                         shape = RoundedCornerShape(10.dp),
-                        color = Color(0xFFFFEBEE)
+                        color = Color(0xFFD32F2F).copy(alpha = 0.15f)
                     ) {
                         Text(
                             text = "Belum Lunas",
@@ -1067,7 +1069,7 @@ private fun SupplierListItemCard(
                 } else {
                     Surface(
                         shape = RoundedCornerShape(10.dp),
-                        color = Color(0xFFE8F5E9)
+                        color = AppColors.GreenPrimary.copy(alpha = 0.15f)
                     ) {
                         Text(
                             text = "Lunas",
@@ -1100,8 +1102,8 @@ private fun SupplierPayableItemCard(payable: SupplierPayableEntity) {
 
     Surface(
         shape = RoundedCornerShape(10.dp),
-        color = Color(0xFFF9FBF9),
-        border = BorderStroke(1.dp, Color(0xFFEFF3F0)),
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         modifier = Modifier.fillMaxWidth()
     ) {
         Row(
@@ -1137,7 +1139,7 @@ private fun SupplierPayableItemCard(payable: SupplierPayableEntity) {
                 )
                 Surface(
                     shape = RoundedCornerShape(6.dp),
-                    color = if (isPaid) Color(0xFFE8F5E9) else Color(0xFFFFEBEE)
+                    color = if (isPaid) AppColors.GreenPrimary.copy(alpha = 0.15f) else Color(0xFFD32F2F).copy(alpha = 0.15f)
                 ) {
                     Text(
                         text = if (isPaid) "Lunas" else "Belum Lunas",
@@ -1175,7 +1177,7 @@ private fun SuppliersEmptyState(
                 modifier = Modifier
                     .size(68.dp)
                     .clip(CircleShape)
-                    .background(Color(0xFFE8F5E9)),
+                    .background(AppColors.GreenPrimary.copy(alpha = 0.15f)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(

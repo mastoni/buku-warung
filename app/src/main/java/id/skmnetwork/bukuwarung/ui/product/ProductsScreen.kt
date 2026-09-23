@@ -141,7 +141,7 @@ fun ProductsScreen(
                 }
             }
         },
-        containerColor = Color(0xFFFBFDFB)
+        containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
         Box(
             modifier = Modifier
@@ -160,7 +160,7 @@ fun ProductsScreen(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(Color.White)
+                    .background(MaterialTheme.colorScheme.surface)
                     .padding(bottom = 12.dp)
             ) {
                 // Search Input
@@ -197,10 +197,10 @@ fun ProductsScreen(
                     singleLine = true,
                     shape = RoundedCornerShape(14.dp),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = Color(0xFFF9FAF9),
-                        unfocusedContainerColor = Color(0xFFF9FAF9),
+                        focusedContainerColor = MaterialTheme.colorScheme.surface,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surface,
                         focusedBorderColor = AppColors.GreenPrimary,
-                        unfocusedBorderColor = Color(0xFFE2E8F0)
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant
                     ),
                     modifier = Modifier
                         .fillMaxWidth()
@@ -220,8 +220,8 @@ fun ProductsScreen(
                             val isSelected = catName == selectedCategoryName
                             Surface(
                                 shape = RoundedCornerShape(20.dp),
-                                color = if (isSelected) AppColors.GreenPrimary else Color.White,
-                                border = if (isSelected) null else BorderStroke(1.dp, Color(0xFFE2E8F0)),
+                                color = if (isSelected) AppColors.GreenPrimary else MaterialTheme.colorScheme.surface,
+                                border = if (isSelected) null else BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                                 shadowElevation = if (isSelected) 1.dp else 0.dp,
                                 onClick = { selectedCategoryName = catName }
                             ) {
@@ -298,7 +298,7 @@ private fun ProductsHeader(
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        color = Color.White,
+        color = MaterialTheme.colorScheme.surface,
         shadowElevation = 0.5.dp
     ) {
         Row(
@@ -405,8 +405,8 @@ private fun ProductItemCard(
     Surface(
         onClick = onEdit,
         shape = RoundedCornerShape(14.dp),
-        color = Color.White,
-        border = BorderStroke(1.dp, Color(0xFFEFF3F0)),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         shadowElevation = 0.5.dp,
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -421,7 +421,7 @@ private fun ProductItemCard(
                 modifier = Modifier
                     .size(54.dp)
                     .clip(RoundedCornerShape(10.dp))
-                    .background(Color(0xFFF4F7F4)),
+                    .background(MaterialTheme.colorScheme.surfaceVariant),
                 contentAlignment = Alignment.Center
             ) {
                 ProductImageThumbnail(
@@ -753,8 +753,8 @@ fun ProductRowWithMoreOptions(
     Surface(
         onClick = onEdit,
         shape = RoundedCornerShape(14.dp),
-        color = Color.White,
-        border = BorderStroke(1.dp, Color(0xFFEFF3F0)),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         modifier = Modifier.fillMaxWidth()
     ) {
         Row(
@@ -767,7 +767,7 @@ fun ProductRowWithMoreOptions(
                 Modifier
                     .size(50.dp)
                     .clip(RoundedCornerShape(10.dp))
-                    .background(Color(0xFFF4F7F4)),
+                    .background(MaterialTheme.colorScheme.surfaceVariant),
                 contentAlignment = Alignment.Center
             ) {
                 ProductImageThumbnail(
@@ -799,8 +799,8 @@ fun ProductRow(
 ) {
     Surface(
         shape = RoundedCornerShape(14.dp),
-        color = Color.White,
-        border = BorderStroke(1.dp, Color(0xFFEFF3F0)),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         modifier = Modifier.fillMaxWidth()
     ) {
         Row(
@@ -813,7 +813,7 @@ fun ProductRow(
                 Modifier
                     .size(50.dp)
                     .clip(RoundedCornerShape(10.dp))
-                    .background(Color(0xFFF4F7F4)),
+                    .background(MaterialTheme.colorScheme.surfaceVariant),
                 contentAlignment = Alignment.Center
             ) {
                 ProductImageThumbnail(

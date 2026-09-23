@@ -108,7 +108,7 @@ fun FirstSetupScreen(
             .statusBarsPadding()
             .navigationBarsPadding()
             .imePadding(),
-        color = Color(0xFFF9FBF9)
+        color = MaterialTheme.colorScheme.background
     ) {
         Column(
             modifier = Modifier
@@ -321,7 +321,7 @@ private fun Step1Identity(
 
             Surface(
                 shape = RoundedCornerShape(16.dp),
-                color = Color.White,
+                color = MaterialTheme.colorScheme.surface,
                 border = BorderStroke(1.dp, Color(0xFFE5EBE5)),
                 shadowElevation = 1.dp,
                 modifier = Modifier.fillMaxWidth()
@@ -458,10 +458,10 @@ private fun Step2BusinessType(
                     val isSelected = selectedType == type
                     Surface(
                         shape = RoundedCornerShape(14.dp),
-                        color = if (isSelected) Color(0xFFF1F9F4) else Color.White,
+                        color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
                         border = BorderStroke(
                             width = if (isSelected) 2.dp else 1.dp,
-                            color = if (isSelected) AppColors.GreenPrimary else Color(0xFFE5EBE5)
+                            color = if (isSelected) AppColors.GreenPrimary else MaterialTheme.colorScheme.outlineVariant
                         ),
                         modifier = Modifier
                             .fillMaxWidth()
@@ -562,8 +562,8 @@ private fun Step3Activities(
             // Information Card
             Surface(
                 shape = RoundedCornerShape(12.dp),
-                color = Color(0xFFEBF5FF),
-                border = BorderStroke(1.dp, Color(0xFFBCE0FD)),
+                color = MaterialTheme.colorScheme.surfaceVariant,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Row(
@@ -573,14 +573,14 @@ private fun Step3Activities(
                     Icon(
                         imageVector = Icons.Default.Info,
                         contentDescription = null,
-                        tint = Color(0xFF0066CC),
+                        tint = AppColors.GreenPrimary,
                         modifier = Modifier.size(20.dp)
                     )
                     Spacer(Modifier.width(8.dp))
                     Text(
                         text = "Aktivitas standar untuk ${selectedBusinessType.displayName} telah dipilih otomatis. Anda bebas menambah atau mengurangi sesuai kebutuhan toko.",
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color(0xFF003D7A),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         lineHeight = 16.sp
                     )
                 }
@@ -603,10 +603,10 @@ private fun Step3Activities(
 
                 Surface(
                     shape = RoundedCornerShape(14.dp),
-                    color = if (isChecked) Color.White else Color(0xFFF9F9F9),
+                    color = if (isChecked) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.surfaceVariant,
                     border = BorderStroke(
                         width = if (isChecked) 1.5.dp else 1.dp,
-                        color = if (isChecked) AppColors.GreenPrimary else Color(0xFFE0E0E0)
+                        color = if (isChecked) AppColors.GreenPrimary else MaterialTheme.colorScheme.outlineVariant
                     ),
                     modifier = Modifier
                         .fillMaxWidth()
@@ -738,8 +738,8 @@ private fun Step4Summary(
             // Card 1: Profil Usaha
             Surface(
                 shape = RoundedCornerShape(16.dp),
-                color = Color.White,
-                border = BorderStroke(1.dp, Color(0xFFE5EBE5)),
+                color = MaterialTheme.colorScheme.surface,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                 shadowElevation = 1.dp,
                 modifier = Modifier.fillMaxWidth()
             ) {
@@ -761,7 +761,7 @@ private fun Step4Summary(
                     }
 
                     Spacer(Modifier.height(10.dp))
-                    HorizontalDivider(color = Color(0xFFF0F0F0))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                     Spacer(Modifier.height(10.dp))
 
                     SummaryRow(label = "Nama Usaha", value = shopName)
@@ -774,8 +774,8 @@ private fun Step4Summary(
             // Card 2: Jenis & Model Usaha
             Surface(
                 shape = RoundedCornerShape(16.dp),
-                color = Color.White,
-                border = BorderStroke(1.dp, Color(0xFFE5EBE5)),
+                color = MaterialTheme.colorScheme.surface,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                 shadowElevation = 1.dp,
                 modifier = Modifier.fillMaxWidth()
             ) {
@@ -797,7 +797,7 @@ private fun Step4Summary(
                     }
 
                     Spacer(Modifier.height(10.dp))
-                    HorizontalDivider(color = Color(0xFFF0F0F0))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                     Spacer(Modifier.height(10.dp))
 
                     SummaryRow(label = "Jenis Utama", value = selectedType.displayName)
@@ -808,8 +808,8 @@ private fun Step4Summary(
             // Card 3: Aktivitas Operasional
             Surface(
                 shape = RoundedCornerShape(16.dp),
-                color = Color.White,
-                border = BorderStroke(1.dp, Color(0xFFE5EBE5)),
+                color = MaterialTheme.colorScheme.surface,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                 shadowElevation = 1.dp,
                 modifier = Modifier.fillMaxWidth()
             ) {
@@ -831,7 +831,7 @@ private fun Step4Summary(
                     }
 
                     Spacer(Modifier.height(10.dp))
-                    HorizontalDivider(color = Color(0xFFF0F0F0))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                     Spacer(Modifier.height(10.dp))
 
                     selectedActivities.forEach { activity ->
@@ -861,8 +861,8 @@ private fun Step4Summary(
             // Card 4: Penyesuaian Antarmuka & Istilah (Adaptive Terminology Preview)
             Surface(
                 shape = RoundedCornerShape(16.dp),
-                color = Color(0xFFF4FAF6),
-                border = BorderStroke(1.dp, Color(0xFFCCE8D7)),
+                color = MaterialTheme.colorScheme.surface,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
@@ -883,7 +883,7 @@ private fun Step4Summary(
                     }
 
                     Spacer(Modifier.height(10.dp))
-                    HorizontalDivider(color = Color(0xFFD8EDE1))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                     Spacer(Modifier.height(10.dp))
 
                     SummaryRow(label = "Istilah Produk", value = resolvedProfile.terminology.productLabel)

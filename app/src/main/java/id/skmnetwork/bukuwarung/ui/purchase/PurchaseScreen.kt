@@ -444,7 +444,7 @@ fun PurchaseScreen(
                 onTabSelected = { selectedTab = it }
             )
         },
-        containerColor = Color(0xFFFBFDFB)
+        containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
         Box(
             modifier = Modifier
@@ -464,7 +464,7 @@ fun PurchaseScreen(
                     // Month / Period Header Card
                     Surface(
                         shape = RoundedCornerShape(12.dp),
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.surface,
                         border = BorderStroke(1.dp, Color(0xFFEFF3F0)),
                         modifier = Modifier
                             .fillMaxWidth()
@@ -556,7 +556,7 @@ fun PurchaseScreen(
                 if (purchaseCart.isNotEmpty()) {
                     Surface(
                         shape = RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp),
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.surface,
                         shadowElevation = 8.dp,
                         border = BorderStroke(1.dp, Color(0xFFE8EFEA)),
                         modifier = Modifier
@@ -902,7 +902,7 @@ private fun PurchaseHeader(
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        color = Color.White,
+        color = MaterialTheme.colorScheme.surface,
         shadowElevation = 0.5.dp
     ) {
         Column(
@@ -990,7 +990,7 @@ private fun PurchaseHeader(
             // Segmented Capsule Tab Bar (3 Tabs)
             Surface(
                 shape = RoundedCornerShape(24.dp),
-                color = Color(0xFFF1F4F2),
+                color = MaterialTheme.colorScheme.surfaceVariant,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(42.dp)
@@ -1116,7 +1116,7 @@ private fun PurchaseItemCard(
 
     Surface(
         shape = RoundedCornerShape(14.dp),
-        color = Color.White,
+        color = MaterialTheme.colorScheme.surface,
         border = BorderStroke(1.dp, if (isSelected) AppColors.GreenPrimary.copy(alpha = 0.4f) else Color(0xFFEFF3F0)),
         shadowElevation = if (isSelected) 1.dp else 0.5.dp,
         modifier = Modifier.fillMaxWidth()
@@ -1264,8 +1264,8 @@ private fun PurchaseHistoryCard(
     Surface(
         onClick = onClick,
         shape = RoundedCornerShape(14.dp),
-        color = Color.White,
-        border = BorderStroke(1.dp, Color(0xFFEFF3F0)),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         shadowElevation = 0.5.dp,
         modifier = Modifier.fillMaxWidth()
     ) {

@@ -1038,11 +1038,11 @@ fun PosScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.White
+                    containerColor = MaterialTheme.colorScheme.surface
                 )
             )
         },
-        containerColor = Color.White
+        containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
         Box(
             Modifier
@@ -1064,7 +1064,7 @@ fun PosScreen(
             // Segmented Capsule Navigation (Kasir vs Riwayat Penjualan)
             Surface(
                 shape = RoundedCornerShape(14.dp),
-                color = Color(0xFFF1F4F2),
+                color = MaterialTheme.colorScheme.surfaceVariant,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = AppSpacing.lg, vertical = 4.dp)
@@ -1191,10 +1191,10 @@ fun PosScreen(
                                     val isSelected = selectedCategoryId == null
                                     Surface(
                                         shape = RoundedCornerShape(20.dp),
-                                        color = if (isSelected) AppColors.GreenPrimary else Color.White,
+                                        color = if (isSelected) AppColors.GreenPrimary else MaterialTheme.colorScheme.surface,
                                         border = BorderStroke(
                                             1.dp,
-                                            if (isSelected) AppColors.GreenPrimary else Color(0xFFE0E5E2)
+                                            if (isSelected) AppColors.GreenPrimary else MaterialTheme.colorScheme.outlineVariant
                                         ),
                                         modifier = Modifier.clickable { selectedCategoryId = null }
                                     ) {
@@ -1211,10 +1211,10 @@ fun PosScreen(
                                     val isSelected = selectedCategoryId == category.id
                                     Surface(
                                         shape = RoundedCornerShape(20.dp),
-                                        color = if (isSelected) AppColors.GreenPrimary else Color.White,
+                                        color = if (isSelected) AppColors.GreenPrimary else MaterialTheme.colorScheme.surface,
                                         border = BorderStroke(
                                             1.dp,
-                                            if (isSelected) AppColors.GreenPrimary else Color(0xFFE0E5E2)
+                                            if (isSelected) AppColors.GreenPrimary else MaterialTheme.colorScheme.outlineVariant
                                         ),
                                         modifier = Modifier.clickable { selectedCategoryId = category.id }
                                     ) {
@@ -1275,8 +1275,8 @@ fun PosScreen(
                         if (cart.isNotEmpty()) {
                             Surface(
                                 shape = RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp),
-                                color = Color.White,
-                                border = BorderStroke(1.dp, Color(0xFFCCE8D7)),
+                                color = MaterialTheme.colorScheme.surface,
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                                 shadowElevation = 8.dp,
                                 modifier = Modifier.fillMaxWidth()
                             ) {
@@ -1485,10 +1485,10 @@ fun PosScreen(
                                         val isSelected = selectedCategoryId == null
                                         Surface(
                                             shape = RoundedCornerShape(20.dp),
-                                            color = if (isSelected) AppColors.GreenPrimary else Color.White,
+                                            color = if (isSelected) AppColors.GreenPrimary else MaterialTheme.colorScheme.surface,
                                             border = BorderStroke(
                                                 1.dp,
-                                                if (isSelected) AppColors.GreenPrimary else Color(0xFFE0E5E2)
+                                                if (isSelected) AppColors.GreenPrimary else MaterialTheme.colorScheme.outlineVariant
                                             ),
                                             modifier = Modifier.clickable { selectedCategoryId = null }
                                         ) {
@@ -1505,10 +1505,10 @@ fun PosScreen(
                                         val isSelected = selectedCategoryId == category.id
                                         Surface(
                                             shape = RoundedCornerShape(20.dp),
-                                            color = if (isSelected) AppColors.GreenPrimary else Color.White,
+                                            color = if (isSelected) AppColors.GreenPrimary else MaterialTheme.colorScheme.surface,
                                             border = BorderStroke(
                                                 1.dp,
-                                                if (isSelected) AppColors.GreenPrimary else Color(0xFFE0E5E2)
+                                                if (isSelected) AppColors.GreenPrimary else MaterialTheme.colorScheme.outlineVariant
                                             ),
                                             modifier = Modifier.clickable { selectedCategoryId = category.id }
                                         ) {
@@ -1571,8 +1571,8 @@ fun PosScreen(
                         // RIGHT PANE: PERSISTENT CART
                         Surface(
                             shape = RoundedCornerShape(16.dp),
-                            color = Color.White,
-                            border = BorderStroke(1.dp, Color(0xFFDDE6E0)),
+                            color = MaterialTheme.colorScheme.surface,
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                             shadowElevation = 2.dp,
                             modifier = Modifier
                                 .width(if (windowSize.isExpanded) 380.dp else 320.dp)
@@ -1638,7 +1638,7 @@ fun PosScreen(
                                 }
 
                                 Spacer(Modifier.height(AppSpacing.sm))
-                                HorizontalDivider(color = Color(0xFFE8ECE9), thickness = 1.dp)
+                                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 1.dp)
                                 Spacer(Modifier.height(AppSpacing.xs))
 
                                 // Cart Items List / Empty State
@@ -1714,7 +1714,7 @@ fun PosScreen(
                                 }
 
                                 Spacer(Modifier.height(AppSpacing.xs))
-                                HorizontalDivider(color = Color(0xFFE8ECE9), thickness = 1.dp)
+                                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 1.dp)
                                 Spacer(Modifier.height(AppSpacing.xs))
 
                                 // Price Summary
@@ -1847,8 +1847,8 @@ fun PosScreen(
                             Surface(
                                 onClick = { selectedSaleForDetail = sale },
                                 shape = RoundedCornerShape(14.dp),
-                                color = Color.White,
-                                border = BorderStroke(1.dp, Color(0xFFE8ECE9)),
+                                color = MaterialTheme.colorScheme.surface,
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 Row(
@@ -1949,14 +1949,15 @@ private fun PosProductCard(
     val isServiceOrDigital = product.itemType == ItemType.SERVICE.name || product.itemType == ItemType.DIGITAL.name
     val isOutofStock = if (isServiceOrDigital) false else product.stock <= 0.0
     val isInCart = currentCartQty > 0.0
+    val isDark = MaterialTheme.colorScheme.background == Color(0xFF111827)
 
     Surface(
         onClick = { onAddToCart(product) },
         shape = RoundedCornerShape(14.dp),
-        color = if (isInCart) AppColors.GreenLight else Color.White,
+        color = if (isInCart) (if (isDark) MaterialTheme.colorScheme.surfaceVariant else AppColors.GreenLight) else MaterialTheme.colorScheme.surface,
         border = BorderStroke(
             if (isInCart) 1.5.dp else 1.dp,
-            if (isInCart) AppColors.GreenPrimary else Color(0xFFE8ECE9)
+            if (isInCart) AppColors.GreenPrimary else MaterialTheme.colorScheme.outlineVariant
         ),
         modifier = modifier
     ) {
@@ -1972,9 +1973,9 @@ private fun PosProductCard(
                         .height(80.dp)
                         .clip(RoundedCornerShape(10.dp))
                         .background(
-                            if (isOutofStock) Color(0xFFFFEBEE)
-                            else if (isInCart) Color.White
-                            else Color(0xFFF4F8F5)
+                            if (isOutofStock) Color(0xFFEF5350).copy(alpha = 0.15f)
+                            else if (isInCart) AppColors.GreenLight
+                            else MaterialTheme.colorScheme.surfaceVariant
                         ),
                     contentAlignment = Alignment.Center
                 ) {

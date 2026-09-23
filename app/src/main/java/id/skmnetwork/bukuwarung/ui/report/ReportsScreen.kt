@@ -294,7 +294,7 @@ fun ReportsScreen(
     Scaffold(
         topBar = {
             Surface(
-                color = Color.White,
+                color = MaterialTheme.colorScheme.surface,
                 shadowElevation = 0.5.dp
             ) {
                 ReportsTopHeader(
@@ -303,7 +303,7 @@ fun ReportsScreen(
                 )
             }
         },
-        containerColor = Color.White
+        containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
         Box(
             modifier = Modifier
@@ -331,10 +331,10 @@ fun ReportsScreen(
                         val isSelected = period == selectedPeriod
                         Surface(
                             shape = RoundedCornerShape(20.dp),
-                            color = if (isSelected) AppColors.GreenPrimary else Color(0xFFF4F6F4),
+                            color = if (isSelected) AppColors.GreenPrimary else MaterialTheme.colorScheme.surface,
                             border = BorderStroke(
                                 1.dp,
-                                if (isSelected) AppColors.GreenPrimary else Color(0xFFE0E5E0)
+                                if (isSelected) AppColors.GreenPrimary else MaterialTheme.colorScheme.outlineVariant
                             ),
                             modifier = Modifier.clickable { reportViewModel.selectPeriod(period) }
                         ) {
@@ -355,8 +355,8 @@ fun ReportsScreen(
                 item {
                     Surface(
                         shape = RoundedCornerShape(14.dp),
-                        color = Color(0xFFF9FBF9),
-                        border = BorderStroke(1.dp, Color(0xFFEFF3F0)),
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Row(
@@ -367,7 +367,7 @@ fun ReportsScreen(
                                 modifier = Modifier
                                     .size(34.dp)
                                     .clip(CircleShape)
-                                    .background(Color(0xFFE8F5E9)),
+                                    .background(AppColors.GreenPrimary.copy(alpha = 0.15f)),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
@@ -406,8 +406,8 @@ fun ReportsScreen(
             item {
                 Surface(
                     shape = RoundedCornerShape(14.dp),
-                    color = Color(0xFFE8F5E9),
-                    border = BorderStroke(1.dp, Color(0xFFC8E6C9)),
+                    color = MaterialTheme.colorScheme.surface,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                     shadowElevation = 0.5.dp,
                     modifier = Modifier.fillMaxWidth()
                 ) {
@@ -532,7 +532,7 @@ fun ReportsScreen(
                             )
                         }
 
-                        HorizontalDivider(Modifier.padding(vertical = 6.dp), color = Color(0xFFC8E6C9))
+                        HorizontalDivider(Modifier.padding(vertical = 6.dp), color = MaterialTheme.colorScheme.outlineVariant)
 
                         // 5. Laba Bersih
                         Row(
@@ -603,8 +603,8 @@ fun ReportsScreen(
                             ) {
                                 Surface(
                                     shape = RoundedCornerShape(12.dp),
-                                    color = Color.White,
-                                    border = BorderStroke(1.dp, Color(0xFFC8E6C9)),
+                                    color = MaterialTheme.colorScheme.surfaceVariant,
+                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                                     modifier = Modifier.fillMaxWidth()
                                 ) {
                                     Column(
@@ -643,7 +643,7 @@ fun ReportsScreen(
                                             )
                                         }
 
-                                        HorizontalDivider(Modifier.padding(vertical = 2.dp), color = Color(0xFFEFF3F0))
+                                        HorizontalDivider(Modifier.padding(vertical = 2.dp), color = MaterialTheme.colorScheme.outlineVariant)
 
                                         // Penjualan Bersih
                                         Row(Modifier.fillMaxWidth()) {
@@ -665,7 +665,7 @@ fun ReportsScreen(
                                             )
                                         }
 
-                                        HorizontalDivider(Modifier.padding(vertical = 2.dp), color = Color(0xFFEFF3F0))
+                                        HorizontalDivider(Modifier.padding(vertical = 2.dp), color = MaterialTheme.colorScheme.outlineVariant)
 
                                         // Laba Kotor
                                         Row(Modifier.fillMaxWidth()) {
@@ -696,7 +696,7 @@ fun ReportsScreen(
                                             )
                                         }
 
-                                        HorizontalDivider(Modifier.padding(vertical = 2.dp), color = Color(0xFFEFF3F0))
+                                        HorizontalDivider(Modifier.padding(vertical = 2.dp), color = MaterialTheme.colorScheme.outlineVariant)
 
                                         // Laba Bersih
                                         Row(Modifier.fillMaxWidth()) {
@@ -747,8 +747,8 @@ fun ReportsScreen(
                     // Saldo Kas
                     Surface(
                         shape = RoundedCornerShape(12.dp),
-                        color = Color(0xFFF0F4F8),
-                        border = BorderStroke(1.dp, Color(0xFFDCE4EC)),
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                         modifier = Modifier.weight(1f)
                     ) {
                         Column(Modifier.padding(10.dp)) {
@@ -768,8 +768,8 @@ fun ReportsScreen(
                     // Nilai Stok Modal
                     Surface(
                         shape = RoundedCornerShape(12.dp),
-                        color = Color(0xFFF0F4F8),
-                        border = BorderStroke(1.dp, Color(0xFFDCE4EC)),
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                         modifier = Modifier.weight(1f)
                     ) {
                         Column(Modifier.padding(10.dp)) {
@@ -796,8 +796,8 @@ fun ReportsScreen(
                     // Piutang Pelanggan
                     Surface(
                         shape = RoundedCornerShape(12.dp),
-                        color = Color(0xFFF0F4F8),
-                        border = BorderStroke(1.dp, Color(0xFFDCE4EC)),
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                         modifier = Modifier.weight(1f)
                     ) {
                         Column(Modifier.padding(10.dp)) {
@@ -817,8 +817,8 @@ fun ReportsScreen(
                     // Hutang Supplier
                     Surface(
                         shape = RoundedCornerShape(12.dp),
-                        color = Color(0xFFF0F4F8),
-                        border = BorderStroke(1.dp, Color(0xFFDCE4EC)),
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                         modifier = Modifier.weight(1f)
                     ) {
                         Column(Modifier.padding(10.dp)) {
@@ -870,8 +870,8 @@ fun ReportsScreen(
                 // Detail Penjualan Card
                 Surface(
                     shape = RoundedCornerShape(14.dp),
-                    color = Color(0xFFF9FBF9),
-                    border = BorderStroke(1.dp, Color(0xFFEFF3F0)),
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                     shadowElevation = 0.5.dp,
                     modifier = Modifier.fillMaxWidth()
                 ) {
@@ -881,7 +881,7 @@ fun ReportsScreen(
                                 modifier = Modifier
                                     .size(32.dp)
                                     .clip(CircleShape)
-                                    .background(Color(0xFFE8F5E9)),
+                                    .background(AppColors.GreenPrimary.copy(alpha = 0.15f)),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(Icons.Default.Receipt, null, tint = AppColors.GreenPrimary, modifier = Modifier.size(16.dp))
@@ -933,8 +933,8 @@ fun ReportsScreen(
             item {
                 Surface(
                     shape = RoundedCornerShape(14.dp),
-                    color = Color(0xFFFFF9F9),
-                    border = BorderStroke(1.dp, Color(0xFFFFEBEE)),
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                     shadowElevation = 0.5.dp,
                     modifier = Modifier.fillMaxWidth()
                 ) {
@@ -944,7 +944,7 @@ fun ReportsScreen(
                                 modifier = Modifier
                                     .size(32.dp)
                                     .clip(CircleShape)
-                                    .background(Color(0xFFFFEBEE)),
+                                    .background(AppColors.RedExpense.copy(alpha = 0.15f)),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(Icons.Default.ShoppingCart, null, tint = AppColors.RedExpense, modifier = Modifier.size(16.dp))
@@ -965,8 +965,8 @@ fun ReportsScreen(
                         OutlinedButton(
                             onClick = { generatePurchaseReportPdf() },
                             shape = RoundedCornerShape(10.dp),
-                            border = BorderStroke(1.dp, Color(0xFFE53935)),
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFE53935)),
+                            border = BorderStroke(1.dp, AppColors.RedExpense),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = AppColors.RedExpense),
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(40.dp)
@@ -983,8 +983,8 @@ fun ReportsScreen(
             item {
                 Surface(
                     shape = RoundedCornerShape(14.dp),
-                    color = Color(0xFFF0F7FF),
-                    border = BorderStroke(1.dp, Color(0xFFD9ECFF)),
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                     shadowElevation = 0.5.dp,
                     modifier = Modifier.fillMaxWidth()
                 ) {
@@ -1028,8 +1028,8 @@ fun ReportsScreen(
 
                 Surface(
                     shape = RoundedCornerShape(14.dp),
-                    color = Color(0xFFF9FBF9),
-                    border = BorderStroke(1.dp, Color(0xFFEFF3F0)),
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                     shadowElevation = 0.5.dp,
                     modifier = Modifier.fillMaxWidth()
                 ) {
@@ -1055,7 +1055,7 @@ fun ReportsScreen(
                                 if (index < topSellingProducts.size - 1) {
                                     HorizontalDivider(
                                         modifier = Modifier.padding(vertical = 6.dp),
-                                        color = Color(0xFFEFF3F0)
+                                        color = MaterialTheme.colorScheme.outlineVariant
                                     )
                                 }
                             }
@@ -1092,7 +1092,7 @@ fun ReportsScreen(
         AlertDialog(
             onDismissRequest = { showReportTypeDialog = false },
             shape = RoundedCornerShape(16.dp),
-            containerColor = Color.White,
+            containerColor = MaterialTheme.colorScheme.surface,
             title = {
                 Text(
                     text = "Pilih Jenis Laporan PDF",
@@ -1193,7 +1193,7 @@ fun ReportsScreen(
         AlertDialog(
             onDismissRequest = { showPdfSuccessDialog = false },
             shape = RoundedCornerShape(16.dp),
-            containerColor = Color.White,
+            containerColor = MaterialTheme.colorScheme.surface,
             icon = {
                 Surface(
                     shape = CircleShape,
@@ -1273,7 +1273,7 @@ fun ReportsScreen(
         AlertDialog(
             onDismissRequest = { pdfErrorMessage = null },
             shape = RoundedCornerShape(16.dp),
-            containerColor = Color.White,
+            containerColor = MaterialTheme.colorScheme.surface,
             title = { Text("Gagal Membuat PDF", fontWeight = FontWeight.Bold, fontSize = 17.sp, color = AppColors.TextPrimary) },
             text = { Text(pdfErrorMessage ?: "", style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp, color = AppColors.TextSecondary)) },
             confirmButton = {
@@ -1342,48 +1342,48 @@ private fun ReportsTopHeader(
 
         Spacer(Modifier.width(8.dp))
 
-            Surface(
-                shape = RoundedCornerShape(10.dp),
-                color = Color(0xFFE8F5E9),
-                border = BorderStroke(1.dp, Color(0xFFC8E6C9)),
-                modifier = Modifier.clickable(enabled = !isGeneratingPdf, onClick = onExportPdf)
+        Surface(
+            shape = RoundedCornerShape(10.dp),
+            color = AppColors.GreenPrimary.copy(alpha = 0.15f),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+            modifier = Modifier.clickable(enabled = !isGeneratingPdf, onClick = onExportPdf)
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    if (isGeneratingPdf) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(14.dp),
-                            color = AppColors.GreenPrimary,
-                            strokeWidth = 2.dp
-                        )
-                        Spacer(Modifier.width(6.dp))
-                        Text(
-                            text = "Membuat...",
-                            color = AppColors.GreenPrimary,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 11.5.sp
-                        )
-                    } else {
-                        Icon(
-                            imageVector = Icons.Default.Description,
-                            contentDescription = null,
-                            tint = AppColors.GreenPrimary,
-                            modifier = Modifier.size(15.dp)
-                        )
-                        Spacer(Modifier.width(4.dp))
-                        Text(
-                            text = "Cetak PDF",
-                            color = AppColors.GreenPrimary,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 11.5.sp
-                        )
-                    }
+                if (isGeneratingPdf) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(14.dp),
+                        color = AppColors.GreenPrimary,
+                        strokeWidth = 2.dp
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        text = "Membuat...",
+                        color = AppColors.GreenPrimary,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 11.5.sp
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.Default.Description,
+                        contentDescription = null,
+                        tint = AppColors.GreenPrimary,
+                        modifier = Modifier.size(15.dp)
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    Text(
+                        text = "Cetak PDF",
+                        color = AppColors.GreenPrimary,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 11.5.sp
+                    )
                 }
             }
         }
     }
+}
 
 /**
  * Clean item inside PDF chooser dialog.
@@ -1397,8 +1397,8 @@ private fun ReportChooserItem(
 ) {
     Surface(
         shape = RoundedCornerShape(10.dp),
-        color = Color(0xFFF9FBF9),
-        border = BorderStroke(1.dp, Color(0xFFEFF3F0)),
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
@@ -1411,7 +1411,7 @@ private fun ReportChooserItem(
                 modifier = Modifier
                     .size(34.dp)
                     .clip(CircleShape)
-                    .background(Color(0xFFE8F5E9)),
+                    .background(AppColors.GreenPrimary.copy(alpha = 0.15f)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(

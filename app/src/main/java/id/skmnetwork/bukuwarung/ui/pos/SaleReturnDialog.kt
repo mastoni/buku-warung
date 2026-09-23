@@ -353,7 +353,7 @@ fun SaleReturnDialog(
                 .heightIn(max = 680.dp)
                 .padding(vertical = AppSpacing.md),
             shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
             elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
         ) {
             Column(

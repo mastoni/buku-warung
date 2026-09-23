@@ -285,11 +285,11 @@ fun HomeScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.White
+                    containerColor = MaterialTheme.colorScheme.surface
                 )
             )
         },
-        containerColor = Color(0xFFF8FAF9)
+        containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
         Box(
             modifier = Modifier
@@ -330,8 +330,8 @@ fun HomeScreen(
                     Spacer(Modifier.height(8.dp))
                     Surface(
                         shape = RoundedCornerShape(10.dp),
-                        color = Color.White,
-                        border = BorderStroke(1.dp, Color(0xFFE5E7EB))
+                        color = MaterialTheme.colorScheme.surface,
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
                     ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
@@ -463,10 +463,11 @@ fun HomeScreen(
             // 5. MOTIVATIONAL VALUE BANNER (DESIGN MASTER ALIGNED)
             // ==========================================
             item {
+                val isDark = MaterialTheme.colorScheme.background == Color(0xFF111827)
                 Card(
                     shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFFE8F7EF)),
-                    border = BorderStroke(1.dp, Color(0xFFCEECD9)),
+                    colors = CardDefaults.cardColors(containerColor = if (isDark) MaterialTheme.colorScheme.surfaceVariant else Color(0xFFE8F7EF)),
+                    border = BorderStroke(1.dp, if (isDark) MaterialTheme.colorScheme.outlineVariant else Color(0xFFCEECD9)),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Row(
@@ -477,7 +478,7 @@ fun HomeScreen(
                             modifier = Modifier
                                 .size(36.dp)
                                 .clip(CircleShape)
-                                .background(Color(0xFFD3F2E0)),
+                                .background(if (isDark) MaterialTheme.colorScheme.surface else Color(0xFFD3F2E0)),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
@@ -591,10 +592,15 @@ fun SummaryCard(
     borderColor: Color,
     modifier: Modifier = Modifier
 ) {
+    val isDark = MaterialTheme.colorScheme.background == Color(0xFF111827)
+    val effectiveCardBg = if (isDark) MaterialTheme.colorScheme.surface else cardBg
+    val effectiveBorderColor = if (isDark) MaterialTheme.colorScheme.outline else borderColor
+    val effectiveIconBg = if (isDark) MaterialTheme.colorScheme.surfaceVariant else iconBg
+
     Card(
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = cardBg),
-        border = BorderStroke(1.dp, borderColor),
+        colors = CardDefaults.cardColors(containerColor = effectiveCardBg),
+        border = BorderStroke(1.dp, effectiveBorderColor),
         modifier = modifier
     ) {
         Row(
@@ -607,7 +613,7 @@ fun SummaryCard(
                 modifier = Modifier
                     .size(36.dp)
                     .clip(RoundedCornerShape(10.dp))
-                    .background(iconBg),
+                    .background(effectiveIconBg),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
@@ -660,6 +666,7 @@ fun MenuGrid(
     onNavigate: (AppScreen) -> Unit,
     columnCount: Int = 4
 ) {
+    val isDark = MaterialTheme.colorScheme.background == Color(0xFF111827)
     val menus = listOf(
         MenuItemData(
             label = "${terminology.transactionLabel}\n(Kasir)",
@@ -728,8 +735,8 @@ fun MenuGrid(
                 rowItems.forEach { item ->
                     Card(
                         shape = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color.White),
-                        border = BorderStroke(1.dp, Color(0xFFEDEDED)),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                         onClick = { onNavigate(item.destination) },
                         modifier = Modifier
                             .weight(1f)
@@ -746,7 +753,7 @@ fun MenuGrid(
                                 modifier = Modifier
                                     .size(42.dp)
                                     .clip(RoundedCornerShape(12.dp))
-                                    .background(item.iconBg),
+                                    .background(if (isDark) MaterialTheme.colorScheme.surfaceVariant else item.iconBg),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(

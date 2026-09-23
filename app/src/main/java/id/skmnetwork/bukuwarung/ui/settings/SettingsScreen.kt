@@ -355,7 +355,7 @@ fun SettingsScreen(
     Scaffold(
         topBar = {
             Surface(
-                color = Color.White,
+                color = MaterialTheme.colorScheme.surface,
                 shadowElevation = 0.5.dp
             ) {
                 Row(
@@ -403,7 +403,7 @@ fun SettingsScreen(
                 }
             }
         },
-        containerColor = Color.White
+        containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
         Box(
             modifier = Modifier
@@ -434,7 +434,7 @@ fun SettingsScreen(
                 )
                 Surface(
                     shape = RoundedCornerShape(14.dp),
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.surface,
                     border = BorderStroke(1.dp, Color(0xFFEFF3F0)),
                     shadowElevation = 0.5.dp,
                     modifier = Modifier.fillMaxWidth()
@@ -521,7 +521,7 @@ fun SettingsScreen(
                         if (settingsState.isSetupCompleted && settingsState.businessTypeLocked) {
                             Surface(
                                 shape = RoundedCornerShape(10.dp),
-                                color = Color(0xFFF5F5F5),
+                                color = MaterialTheme.colorScheme.surfaceVariant,
                                 border = BorderStroke(1.dp, Color(0xFFE0E0E0)),
                                 modifier = Modifier.fillMaxWidth()
                             ) {
@@ -587,7 +587,7 @@ fun SettingsScreen(
                 )
                 Surface(
                     shape = RoundedCornerShape(14.dp),
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.surface,
                     border = BorderStroke(1.dp, Color(0xFFEFF3F0)),
                     shadowElevation = 0.5.dp,
                     modifier = Modifier.fillMaxWidth()
@@ -651,7 +651,7 @@ fun SettingsScreen(
                 )
                 Surface(
                     shape = RoundedCornerShape(14.dp),
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.surface,
                     border = BorderStroke(1.dp, Color(0xFFEFF3F0)),
                     shadowElevation = 0.5.dp,
                     modifier = Modifier.fillMaxWidth()
@@ -667,14 +667,14 @@ fun SettingsScreen(
                             }
                         }
                         if (taxEnabled) {
-                            HorizontalDivider(color = Color(0xFFF0F4F0))
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                             AppTextField(
                                 value = taxRateInput,
                                 onValueChange = { taxRateInput = it },
                                 label = "Tarif PPN (%)",
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                             )
-                            HorizontalDivider(color = Color(0xFFF0F4F0))
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                             Text(
                                 text = "Mode Harga: ${if (taxPriceMode == id.skmnetwork.bukuwarung.domain.tax.TaxPriceMode.EXCLUSIVE.name) "Exclusive (PPN ditambah)" else "Inclusive (PPN sudah termasuk)"}",
                                 style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp)
@@ -734,7 +734,7 @@ fun SettingsScreen(
                 )
                 Surface(
                     shape = RoundedCornerShape(14.dp),
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.surface,
                     border = BorderStroke(1.dp, Color(0xFFEFF3F0)),
                     shadowElevation = 0.5.dp,
                     modifier = Modifier.fillMaxWidth()
@@ -749,21 +749,21 @@ fun SettingsScreen(
                                 prefsRepo.updatePosSettings(showProductImage, showStock, showBarcode, confirmCheckout)
                             }
                         }
-                        HorizontalDivider(color = Color(0xFFF0F4F0))
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                         SettingSwitchRow("Tampilkan Jumlah $stockLabel di Kasir", showStock) {
                             showStock = it
                             scope.launch {
                                 prefsRepo.updatePosSettings(showProductImage, showStock, showBarcode, confirmCheckout)
                             }
                         }
-                        HorizontalDivider(color = Color(0xFFF0F4F0))
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                         SettingSwitchRow("Tampilkan Tombol Scan Barcode", showBarcode) {
                             showBarcode = it
                             scope.launch {
                                 prefsRepo.updatePosSettings(showProductImage, showStock, showBarcode, confirmCheckout)
                             }
                         }
-                        HorizontalDivider(color = Color(0xFFF0F4F0))
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                         SettingSwitchRow("Konfirmasi Sebelum Selesai Transaksi", confirmCheckout) {
                             confirmCheckout = it
                             scope.launch {
@@ -789,7 +789,7 @@ fun SettingsScreen(
                 )
                 Surface(
                     shape = RoundedCornerShape(14.dp),
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.surface,
                     border = BorderStroke(1.dp, Color(0xFFEFF3F0)),
                     shadowElevation = 0.5.dp,
                     modifier = Modifier.fillMaxWidth()
@@ -810,7 +810,7 @@ fun SettingsScreen(
                                 )
                             }
                         }
-                        HorizontalDivider(color = Color(0xFFF0F4F0))
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                         SettingSwitchRow("Terima Pembayaran QRIS", qrisEnabled) {
                             qrisEnabled = it
                             scope.launch {
@@ -823,7 +823,7 @@ fun SettingsScreen(
                                 )
                             }
                         }
-                        HorizontalDivider(color = Color(0xFFF0F4F0))
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                         SettingSwitchRow("Terima Pembayaran $debtLabel", creditEnabled) {
                             creditEnabled = it
                             scope.launch {
@@ -836,7 +836,7 @@ fun SettingsScreen(
                                 )
                             }
                         }
-                        HorizontalDivider(color = Color(0xFFF0F4F0))
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                         SettingSwitchRow("Hitung Uang Diterima & Kembalian (Cash)", cashReceivedEnabled) {
                             cashReceivedEnabled = it
                             scope.launch {
@@ -849,7 +849,7 @@ fun SettingsScreen(
                                 )
                             }
                         }
-                        HorizontalDivider(color = Color(0xFFF0F4F0))
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                         SettingSwitchRow("Wajib Konfirmasi Sukses QRIS", qrisConfirmationRequired) {
                             qrisConfirmationRequired = it
                             scope.launch {
@@ -881,7 +881,7 @@ fun SettingsScreen(
                 )
                 Surface(
                     shape = RoundedCornerShape(14.dp),
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.surface,
                     border = BorderStroke(1.dp, Color(0xFFEFF3F0)),
                     shadowElevation = 0.5.dp,
                     modifier = Modifier.fillMaxWidth()
@@ -1028,7 +1028,7 @@ fun SettingsScreen(
                 )
                 Surface(
                     shape = RoundedCornerShape(14.dp),
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.surface,
                     border = BorderStroke(1.dp, Color(0xFFEFF3F0)),
                     shadowElevation = 0.5.dp,
                     modifier = Modifier.fillMaxWidth()
@@ -1082,7 +1082,7 @@ fun SettingsScreen(
                 )
                 Surface(
                     shape = RoundedCornerShape(14.dp),
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.surface,
                     border = BorderStroke(1.dp, Color(0xFFEFF3F0)),
                     shadowElevation = 0.5.dp,
                     modifier = Modifier.fillMaxWidth()
@@ -1094,7 +1094,7 @@ fun SettingsScreen(
                         // Card status & tombol konfigurasi printer thermal
                         Surface(
                             shape = RoundedCornerShape(12.dp),
-                            color = Color(0xFFF9FBF9),
+                            color = MaterialTheme.colorScheme.surfaceVariant,
                             border = BorderStroke(1.dp, Color(0xFFEFF3F0)),
                             modifier = Modifier.fillMaxWidth()
                         ) {
@@ -1142,7 +1142,7 @@ fun SettingsScreen(
                             }
                         }
 
-                        HorizontalDivider(color = Color(0xFFF0F4F0))
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
                         SettingSwitchRow("Tampilkan Nama $shopLabel di $receiptLabel", showShopNameOnReceipt) {
                             showShopNameOnReceipt = it
@@ -1157,7 +1157,7 @@ fun SettingsScreen(
                                 )
                             }
                         }
-                        HorizontalDivider(color = Color(0xFFF0F4F0))
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                         SettingSwitchRow("Tampilkan Alamat di $receiptLabel", showAddressOnReceipt) {
                             showAddressOnReceipt = it
                             scope.launch {
@@ -1171,7 +1171,7 @@ fun SettingsScreen(
                                 )
                             }
                         }
-                        HorizontalDivider(color = Color(0xFFF0F4F0))
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                         SettingSwitchRow("Tampilkan Nomor HP di $receiptLabel", showPhoneOnReceipt) {
                             showPhoneOnReceipt = it
                             scope.launch {
@@ -1221,7 +1221,7 @@ fun SettingsScreen(
                 )
                 Surface(
                     shape = RoundedCornerShape(14.dp),
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.surface,
                     border = BorderStroke(1.dp, Color(0xFFEFF3F0)),
                     shadowElevation = 0.5.dp,
                     modifier = Modifier.fillMaxWidth()
@@ -1239,7 +1239,7 @@ fun SettingsScreen(
                                 )
                             }
                         }
-                        HorizontalDivider(color = Color(0xFFF0F4F0))
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                         SettingSwitchRow("Pengingat Jatuh Tempo $debtLabel", debtReminderEnabled) {
                             debtReminderEnabled = it
                             scope.launch {
@@ -1268,7 +1268,7 @@ fun SettingsScreen(
                 )
                 Surface(
                     shape = RoundedCornerShape(14.dp),
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.surface,
                     border = BorderStroke(1.dp, Color(0xFFEFF3F0)),
                     shadowElevation = 0.5.dp,
                     modifier = Modifier.fillMaxWidth()
@@ -1342,7 +1342,7 @@ fun SettingsScreen(
                 )
                 Surface(
                     shape = RoundedCornerShape(14.dp),
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.surface,
                     border = BorderStroke(1.dp, Color(0xFFEFF3F0)),
                     shadowElevation = 0.5.dp,
                     modifier = Modifier.fillMaxWidth()
@@ -1366,7 +1366,7 @@ fun SettingsScreen(
                         // 1. Akun Google Box
                         Surface(
                             shape = RoundedCornerShape(12.dp),
-                            color = Color(0xFFF9FBF9),
+                            color = MaterialTheme.colorScheme.surfaceVariant,
                             border = BorderStroke(1.dp, Color(0xFFEFF3F0)),
                             modifier = Modifier.fillMaxWidth()
                         ) {
@@ -1517,7 +1517,7 @@ fun SettingsScreen(
                         if (settingsState.googleAccountEmail.isNotBlank()) {
                             Surface(
                                 shape = RoundedCornerShape(12.dp),
-                                color = Color(0xFFF9FBF9),
+                                color = MaterialTheme.colorScheme.surfaceVariant,
                                 border = BorderStroke(1.dp, Color(0xFFEFF3F0)),
                                 modifier = Modifier.fillMaxWidth()
                             ) {
@@ -1910,7 +1910,7 @@ fun SettingsScreen(
                 )
                 Surface(
                     shape = RoundedCornerShape(14.dp),
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.surface,
                     border = BorderStroke(1.dp, Color(0xFFEFF3F0)),
                     shadowElevation = 0.5.dp,
                     modifier = Modifier.fillMaxWidth()
@@ -2301,7 +2301,7 @@ private fun ChangeBusinessProfileDialog(
     ) {
         Surface(
             shape = RoundedCornerShape(16.dp),
-            color = Color.White,
+            color = MaterialTheme.colorScheme.surface,
             modifier = Modifier
                 .fillMaxWidth(0.95f)
                 .heightIn(max = 680.dp)
@@ -2447,7 +2447,7 @@ private fun ChangeBusinessProfileDialog(
                         }
                     }
 
-                    HorizontalDivider(color = Color(0xFFEFF3F0))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
                     // Secondary Activities Customization
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {

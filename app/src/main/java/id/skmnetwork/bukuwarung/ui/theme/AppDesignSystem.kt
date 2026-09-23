@@ -1,22 +1,35 @@
 package id.skmnetwork.bukuwarung.ui.theme
 
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 object AppColors {
-    val GreenPrimary = Color(0xFF0B9F57)
-    val GreenDark = Color(0xFF087A43)
-    val GreenLight = Color(0xFFE8F7EF)
-    val BackgroundLight = Color(0xFFF7FCF9)
-    val SurfaceGray = Color(0xFFF0F0F0)
-    val TextPrimary = Color(0xFF1C1B1F)
-    val TextSecondary = Color(0xFF666666)
+    val GreenPrimary: Color
+        @Composable @ReadOnlyComposable get() = MaterialTheme.colorScheme.primary
+    val GreenDark: Color
+        @Composable @ReadOnlyComposable get() = if (MaterialTheme.colorScheme.background == Color(0xFF111827)) Color(0xFF22C55E) else Color(0xFF087A43)
+    val GreenLight: Color
+        @Composable @ReadOnlyComposable get() = MaterialTheme.colorScheme.primaryContainer
+    val BackgroundLight: Color
+        @Composable @ReadOnlyComposable get() = MaterialTheme.colorScheme.background
+    val SurfaceGray: Color
+        @Composable @ReadOnlyComposable get() = MaterialTheme.colorScheme.surfaceVariant
+    val TextPrimary: Color
+        @Composable @ReadOnlyComposable get() = MaterialTheme.colorScheme.onSurface
+    val TextSecondary: Color
+        @Composable @ReadOnlyComposable get() = MaterialTheme.colorScheme.onSurfaceVariant
     val RedExpense = Color(0xFFE53935)
-    val BlueCash = Color(0xFFE8F3FF)
-    val OrangeWarning = Color(0xFFFFF1DD)
-    val CardBorder = Color(0xFFE0E0E0)
+    val BlueCash: Color
+        @Composable @ReadOnlyComposable get() = if (MaterialTheme.colorScheme.background == Color(0xFF111827)) Color(0xFF1E293B) else Color(0xFFE8F3FF)
+    val OrangeWarning: Color
+        @Composable @ReadOnlyComposable get() = if (MaterialTheme.colorScheme.background == Color(0xFF111827)) Color(0xFF332200) else Color(0xFFFFF1DD)
+    val CardBorder: Color
+        @Composable @ReadOnlyComposable get() = MaterialTheme.colorScheme.outline
 }
 
 object AppShapes {

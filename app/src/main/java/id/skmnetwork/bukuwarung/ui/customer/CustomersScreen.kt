@@ -114,7 +114,7 @@ fun CustomersScreen(
         AlertDialog(
             onDismissRequest = { if (!isSaving) showCustomerDialog = false },
             shape = RoundedCornerShape(16.dp),
-            containerColor = Color.White,
+            containerColor = MaterialTheme.colorScheme.surface,
             title = {
                 Text(
                     text = if (customerToEdit == null) "Tambah $customerLabel" else "Edit $customerLabel",
@@ -266,7 +266,7 @@ fun CustomersScreen(
         AlertDialog(
             onDismissRequest = { showDeleteConfirmDialog = false },
             shape = RoundedCornerShape(16.dp),
-            containerColor = Color.White,
+            containerColor = MaterialTheme.colorScheme.surface,
             title = {
                 Text("Hapus $customerLabel", fontWeight = FontWeight.Bold, fontSize = 17.sp, color = AppColors.TextPrimary)
             },
@@ -322,7 +322,7 @@ fun CustomersScreen(
         AlertDialog(
             onDismissRequest = { selectedCustomerForDetail = null },
             shape = RoundedCornerShape(16.dp),
-            containerColor = Color.White,
+            containerColor = MaterialTheme.colorScheme.surface,
             title = {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -553,7 +553,7 @@ fun CustomersScreen(
             AlertDialog(
                 onDismissRequest = { if (!isSaving) showPayDebtDialog = false },
                 shape = RoundedCornerShape(16.dp),
-                containerColor = Color.White,
+                containerColor = MaterialTheme.colorScheme.surface,
                 title = {
                     Text(
                         text = "Bayar Hutang $customerLabel",
@@ -571,7 +571,7 @@ fun CustomersScreen(
                     ) {
                         Surface(
                             shape = RoundedCornerShape(10.dp),
-                            color = Color(0xFFF9FBF9),
+                            color = MaterialTheme.colorScheme.surfaceVariant,
                             border = BorderStroke(1.dp, Color(0xFFEFF3F0)),
                             modifier = Modifier.fillMaxWidth()
                         ) {
@@ -697,7 +697,7 @@ fun CustomersScreen(
                 customerLabel = customerLabel
             )
         },
-        containerColor = Color.White
+        containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
         Box(
             modifier = Modifier
@@ -750,9 +750,11 @@ fun CustomersScreen(
                     shape = RoundedCornerShape(12.dp),
                     colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = AppColors.GreenPrimary,
-                        unfocusedBorderColor = Color(0xFFE0E0E0),
-                        focusedContainerColor = Color.White,
-                        unfocusedContainerColor = Color.White
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
+                        focusedContainerColor = MaterialTheme.colorScheme.surface,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface
                     ),
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -864,9 +866,9 @@ private fun CustomersTopHeader(
     customerLabel: String = "Pelanggan"
 ) {
     Surface(
-        color = Color.White,
+        color = MaterialTheme.colorScheme.surface,
         shadowElevation = 0.5.dp,
-        border = BorderStroke(1.dp, Color(0xFFEFF3F0)),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         modifier = Modifier.fillMaxWidth()
     ) {
         Row(
@@ -915,7 +917,7 @@ private fun CustomersTopHeader(
 
             Surface(
                 shape = RoundedCornerShape(20.dp),
-                color = Color(0xFFE8F5E9)
+                color = AppColors.GreenPrimary.copy(alpha = 0.15f)
             ) {
                 Text(
                     text = if (customerCount > 0) "$customerCount $customerLabel" else "Buku Piutang",
@@ -945,8 +947,8 @@ private fun CustomerListItemCard(
 
     Surface(
         shape = RoundedCornerShape(14.dp),
-        color = Color.White,
-        border = BorderStroke(1.dp, Color(0xFFEFF3F0)),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         shadowElevation = 0.5.dp,
         modifier = Modifier
             .fillMaxWidth()
@@ -963,7 +965,7 @@ private fun CustomerListItemCard(
                 modifier = Modifier
                     .size(44.dp)
                     .clip(CircleShape)
-                    .background(Color(0xFFE8F5E9)),
+                    .background(AppColors.GreenPrimary.copy(alpha = 0.15f)),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
@@ -1040,7 +1042,7 @@ private fun CustomerListItemCard(
                     Spacer(Modifier.height(2.dp))
                     Surface(
                         shape = RoundedCornerShape(10.dp),
-                        color = Color(0xFFFFEBEE)
+                        color = Color(0xFFD32F2F).copy(alpha = 0.15f)
                     ) {
                         Text(
                             text = "Belum Lunas",
@@ -1053,7 +1055,7 @@ private fun CustomerListItemCard(
                 } else {
                     Surface(
                         shape = RoundedCornerShape(10.dp),
-                        color = Color(0xFFE8F5E9)
+                        color = AppColors.GreenPrimary.copy(alpha = 0.15f)
                     ) {
                         Text(
                             text = "Lunas",
@@ -1086,8 +1088,8 @@ private fun CustomerDebtItemCard(debt: DebtEntity) {
 
     Surface(
         shape = RoundedCornerShape(10.dp),
-        color = Color(0xFFF9FBF9),
-        border = BorderStroke(1.dp, Color(0xFFEFF3F0)),
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         modifier = Modifier.fillMaxWidth()
     ) {
         Row(
@@ -1123,7 +1125,7 @@ private fun CustomerDebtItemCard(debt: DebtEntity) {
                 )
                 Surface(
                     shape = RoundedCornerShape(6.dp),
-                    color = if (isPaid) Color(0xFFE8F5E9) else Color(0xFFFFEBEE)
+                    color = if (isPaid) AppColors.GreenPrimary.copy(alpha = 0.15f) else Color(0xFFD32F2F).copy(alpha = 0.15f)
                 ) {
                     Text(
                         text = if (isPaid) "Lunas" else "Belum Lunas",
@@ -1160,7 +1162,7 @@ private fun CustomersEmptyState(
                 modifier = Modifier
                     .size(68.dp)
                     .clip(CircleShape)
-                    .background(Color(0xFFE8F5E9)),
+                    .background(AppColors.GreenPrimary.copy(alpha = 0.15f)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(

@@ -171,7 +171,7 @@ fun QrisPaymentDialog(
                 ) {
                     Surface(
                         shape = RoundedCornerShape(8.dp),
-                        color = Color(0xFFFFF7E6),
+                        color = Color(0xFFF59E0B).copy(alpha = 0.15f),
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Row(
@@ -181,14 +181,14 @@ fun QrisPaymentDialog(
                             Icon(
                                 imageVector = Icons.Default.Info,
                                 contentDescription = null,
-                                tint = Color(0xFFD46B08),
+                                tint = Color(0xFFD97706),
                                 modifier = Modifier.size(24.dp)
                             )
                             Spacer(Modifier.width(AppSpacing.sm))
                             Text(
                                 text = "Atur QRIS warung Anda di Pengaturan agar pelanggan dapat memindai QRIS dari aplikasi.",
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = Color(0xFF873800)
+                                color = MaterialTheme.colorScheme.onSurface
                             )
                         }
                     }

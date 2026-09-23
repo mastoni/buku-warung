@@ -31,7 +31,7 @@ import id.skmnetwork.bukuwarung.ui.theme.AppSpacing
 @Composable
 fun AppCard(
     modifier: Modifier = Modifier,
-    backgroundColor: Color = Color.White,
+    backgroundColor: Color = MaterialTheme.colorScheme.surface,
     onClick: (() -> Unit)? = null,
     content: @Composable () -> Unit
 ) {

@@ -426,14 +426,14 @@ fun BukuWarungApp() {
                     onSelect = onNavSelect
                 )
             },
-            containerColor = Color.White
+            containerColor = MaterialTheme.colorScheme.background
         ) { padding ->
             content(Modifier.fillMaxSize().padding(padding))
         }
     } else {
         Row(modifier = Modifier.fillMaxSize()) {
             NavigationRail(
-                containerColor = Color.White,
+                containerColor = MaterialTheme.colorScheme.surface,
                 modifier = Modifier.fillMaxHeight()
             ) {
                 RailNav(
@@ -455,7 +455,7 @@ private fun BottomNav(
 ) {
     NavigationBar(
         modifier = Modifier.navigationBarsPadding(),
-        containerColor = Color.White
+        containerColor = MaterialTheme.colorScheme.surface
     ) {
         val items = listOf(
             Triple(AppScreen.HOME, Icons.Default.Storefront, "Beranda"),

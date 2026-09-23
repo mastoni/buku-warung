@@ -93,7 +93,7 @@ fun LicenseGateScreen(
             .fillMaxSize()
             .statusBarsPadding()
             .navigationBarsPadding(),
-        color = AppColors.BackgroundLight
+        color = MaterialTheme.colorScheme.background
     ) {
         Column(
             modifier = Modifier
@@ -124,6 +124,7 @@ fun LicenseGateScreen(
                 text = "Aktivasi Buku Warung",
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onBackground,
                 textAlign = TextAlign.Center
             )
 
@@ -140,7 +141,7 @@ fun LicenseGateScreen(
 
             if (activationResult is ActivationResult.Active) {
                 val activeResult = activationResult as ActivationResult.Active
-                AppCard(backgroundColor = Color(0xFFE8F5E9)) {
+                AppCard(backgroundColor = MaterialTheme.colorScheme.surfaceVariant) {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -178,7 +179,7 @@ fun LicenseGateScreen(
                     }
                 }
             } else {
-                AppCard(backgroundColor = Color.White) {
+                AppCard(backgroundColor = MaterialTheme.colorScheme.surface) {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()

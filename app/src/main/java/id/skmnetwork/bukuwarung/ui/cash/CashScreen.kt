@@ -210,7 +210,7 @@ fun CashScreen(
         topBar = {
             CashHeader(transactionCount = cashTransactions.size)
         },
-        containerColor = Color(0xFFFBFDFB)
+        containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
         Box(
             modifier = Modifier
@@ -231,14 +231,14 @@ fun CashScreen(
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(Color.White)
+                    .background(MaterialTheme.colorScheme.surface)
             ) {
                 items(listOf("Semua", "Pemasukan", "Pengeluaran")) { filterName ->
                     val isSelected = filterName == selectedFilter
                     Surface(
                         shape = RoundedCornerShape(20.dp),
-                        color = if (isSelected) AppColors.GreenPrimary else Color.White,
-                        border = if (isSelected) null else BorderStroke(1.dp, Color(0xFFE2E8F0)),
+                        color = if (isSelected) AppColors.GreenPrimary else MaterialTheme.colorScheme.surface,
+                        border = if (isSelected) null else BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                         shadowElevation = if (isSelected) 1.dp else 0.dp,
                         modifier = Modifier.clickable { selectedFilter = filterName }
                     ) {
@@ -265,8 +265,8 @@ fun CashScreen(
                 // ==========================================
                 Surface(
                     shape = RoundedCornerShape(16.dp),
-                    color = Color(0xFFE8F5E9),
-                    border = BorderStroke(1.dp, Color(0xFFC8E6C9)),
+                    color = MaterialTheme.colorScheme.surface,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                     shadowElevation = 0.5.dp,
                     modifier = Modifier.fillMaxWidth()
                 ) {
@@ -447,7 +447,7 @@ fun CashScreen(
 private fun CashHeader(transactionCount: Int) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        color = Color.White,
+        color = MaterialTheme.colorScheme.surface,
         shadowElevation = 0.5.dp
     ) {
         Row(
@@ -497,7 +497,7 @@ private fun CashHeader(transactionCount: Int) {
 
             Surface(
                 shape = RoundedCornerShape(20.dp),
-                color = Color(0xFFE8F5E9)
+                color = AppColors.GreenPrimary.copy(alpha = 0.15f)
             ) {
                 Text(
                     text = if (transactionCount > 0) "$transactionCount Mutasi" else "Buku Kas",
@@ -529,8 +529,8 @@ private fun CashTransactionCard(tx: CashTransactionEntity) {
 
     Surface(
         shape = RoundedCornerShape(14.dp),
-        color = Color.White,
-        border = BorderStroke(1.dp, Color(0xFFEFF3F0)),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         shadowElevation = 0.5.dp,
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -545,7 +545,7 @@ private fun CashTransactionCard(tx: CashTransactionEntity) {
                 modifier = Modifier
                     .size(42.dp)
                     .clip(CircleShape)
-                    .background(if (isIncome) Color(0xFFE8F5E9) else Color(0xFFFFEBEE)),
+                    .background(if (isIncome) AppColors.GreenPrimary.copy(alpha = 0.15f) else Color(0xFFD32F2F).copy(alpha = 0.15f)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
@@ -615,7 +615,7 @@ private fun CashEmptyState(selectedFilter: String) {
                 modifier = Modifier
                     .size(68.dp)
                     .clip(CircleShape)
-                    .background(Color(0xFFE8F5E9)),
+                    .background(AppColors.GreenPrimary.copy(alpha = 0.15f)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(

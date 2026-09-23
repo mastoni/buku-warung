@@ -94,7 +94,7 @@ fun NotificationCenterScreen(
                                 Box(contentAlignment = Alignment.Center) {
                                     Text(
                                         text = unreadCount.toString(),
-                                        color = Color.White,
+                                        color = MaterialTheme.colorScheme.surface,
                                         fontSize = 11.sp,
                                         fontWeight = FontWeight.Bold
                                     )
@@ -134,7 +134,7 @@ fun NotificationCenterScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.White
+                    containerColor = MaterialTheme.colorScheme.background
                 )
             )
         },

@@ -288,7 +288,7 @@ fun AddProductScreen(
                         }
                     }
 
-                    HorizontalDivider(color = Color(0xFFEFEFEF))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
                     if (dbCategories.isEmpty()) {
                         Box(
@@ -509,7 +509,7 @@ fun AddProductScreen(
                 },
             )
         },
-        containerColor = Color.White,
+        containerColor = MaterialTheme.colorScheme.background,
         modifier = modifier,
     ) { padding ->
         Box(

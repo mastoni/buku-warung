@@ -172,7 +172,7 @@ fun PurchaseOrderTabContent(
             ) {
                 Icon(Icons.Default.Add, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
                 Spacer(Modifier.width(4.dp))
-                Text("Buat Pesanan", fontSize = 12.5.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                Text("Buat Pesanan", fontSize = 12.5.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.surface)
             }
         }
 
@@ -306,7 +306,7 @@ fun PurchaseOrderCard(
 
     Surface(
         shape = RoundedCornerShape(14.dp),
-        color = Color.White,
+        color = MaterialTheme.colorScheme.surface,
         border = BorderStroke(1.dp, Color(0xFFE8EDE9)),
         shadowElevation = 0.5.dp,
         modifier = Modifier
@@ -350,7 +350,7 @@ fun PurchaseOrderCard(
                 }
             }
 
-            HorizontalDivider(color = Color(0xFFF1F5F2))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -423,7 +423,7 @@ fun PurchaseOrderDetailDialog(
 
     if (isLoading || orderData == null) {
         Dialog(onDismissRequest = onDismiss) {
-            Surface(shape = RoundedCornerShape(16.dp), color = Color.White, modifier = Modifier.padding(24.dp)) {
+            Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surface, modifier = Modifier.padding(24.dp)) {
                 Box(modifier = Modifier.size(120.dp), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator(color = AppColors.GreenPrimary)
                 }
@@ -448,7 +448,7 @@ fun PurchaseOrderDetailDialog(
     ) {
         Surface(
             shape = RoundedCornerShape(20.dp),
-            color = Color.White,
+            color = MaterialTheme.colorScheme.surface,
             modifier = Modifier
                 .fillMaxWidth(0.94f)
                 .widthIn(max = AppResponsive.DialogMaxWidth)
@@ -493,7 +493,7 @@ fun PurchaseOrderDetailDialog(
                     }
                 }
 
-                HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = Color(0xFFEFF3F0))
+                HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = MaterialTheme.colorScheme.outlineVariant)
 
                 // Scrollable Content
                 LazyColumn(
@@ -506,7 +506,7 @@ fun PurchaseOrderDetailDialog(
                     item {
                         Surface(
                             shape = RoundedCornerShape(12.dp),
-                            color = Color(0xFFF8FAF8),
+                            color = MaterialTheme.colorScheme.surfaceVariant,
                             border = BorderStroke(1.dp, Color(0xFFE8EDE9)),
                             modifier = Modifier.fillMaxWidth()
                         ) {
@@ -533,7 +533,7 @@ fun PurchaseOrderDetailDialog(
                     items(items) { item ->
                         Surface(
                             shape = RoundedCornerShape(10.dp),
-                            color = Color(0xFFFAFCFA),
+                            color = MaterialTheme.colorScheme.surfaceVariant,
                             border = BorderStroke(1.dp, Color(0xFFEFF3F0)),
                             modifier = Modifier.fillMaxWidth()
                         ) {
@@ -601,7 +601,7 @@ fun PurchaseOrderDetailDialog(
                     }
                 }
 
-                HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = Color(0xFFEFF3F0))
+                HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = MaterialTheme.colorScheme.outlineVariant)
 
                 // Action Buttons Matrix
                 Column(
@@ -693,7 +693,7 @@ fun PurchaseOrderDetailDialog(
                             ) {
                                 Icon(Icons.Default.Send, contentDescription = null, modifier = Modifier.size(16.dp), tint = Color.White)
                                 Spacer(Modifier.width(4.dp))
-                                Text("Sudah Dipesan", fontSize = 12.5.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                                Text("Sudah Dipesan", fontSize = 12.5.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.surface)
                             }
                         }
 
@@ -712,7 +712,7 @@ fun PurchaseOrderDetailDialog(
                         ) {
                             Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(16.dp), tint = Color.White)
                             Spacer(Modifier.width(6.dp))
-                            Text("Terima Barang", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                            Text("Terima Barang", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.surface)
                         }
 
                         TextButton(
@@ -825,7 +825,7 @@ fun PurchaseOrderDetailDialog(
 
                     Surface(
                         shape = RoundedCornerShape(10.dp),
-                        color = Color(0xFFF8FAF8),
+                        color = MaterialTheme.colorScheme.surfaceVariant,
                         border = BorderStroke(1.dp, Color(0xFFE8EDE9)),
                         modifier = Modifier.fillMaxWidth()
                     ) {
@@ -911,7 +911,7 @@ fun PurchaseOrderDetailDialog(
                     colors = ButtonDefaults.buttonColors(containerColor = AppColors.GreenPrimary)
                 ) {
                     if (isReceiving) {
-                        CircularProgressIndicator(modifier = Modifier.size(16.dp), color = Color.White, strokeWidth = 2.dp)
+                        CircularProgressIndicator(modifier = Modifier.size(16.dp), color = MaterialTheme.colorScheme.surface, strokeWidth = 2.dp)
                     } else {
                         Text("Konfirmasi Terima", fontWeight = FontWeight.Bold)
                     }
@@ -987,7 +987,7 @@ fun CreateEditPurchaseOrderDialog(
     ) {
         Surface(
             shape = RoundedCornerShape(20.dp),
-            color = Color.White,
+            color = MaterialTheme.colorScheme.surface,
             modifier = Modifier
                 .fillMaxWidth(0.95f)
                 .widthIn(max = AppResponsive.DialogMaxWidth)
@@ -1015,7 +1015,7 @@ fun CreateEditPurchaseOrderDialog(
                     }
                 }
 
-                HorizontalDivider(modifier = Modifier.padding(vertical = 10.dp), color = Color(0xFFEFF3F0))
+                HorizontalDivider(modifier = Modifier.padding(vertical = 10.dp), color = MaterialTheme.colorScheme.outlineVariant)
 
                 LazyColumn(
                     modifier = Modifier
@@ -1105,7 +1105,7 @@ fun CreateEditPurchaseOrderDialog(
                             ) {
                                 Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(14.dp), tint = Color.White)
                                 Spacer(Modifier.width(4.dp))
-                                Text("Tambah Produk", fontSize = 11.5.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                                Text("Tambah Produk", fontSize = 11.5.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.surface)
                             }
                         }
                     }
@@ -1114,7 +1114,7 @@ fun CreateEditPurchaseOrderDialog(
                         item {
                             Surface(
                                 shape = RoundedCornerShape(10.dp),
-                                color = Color(0xFFFAFCFA),
+                                color = MaterialTheme.colorScheme.surfaceVariant,
                                 border = BorderStroke(1.dp, Color(0xFFEFF3F0)),
                                 modifier = Modifier.fillMaxWidth()
                             ) {
@@ -1147,7 +1147,7 @@ fun CreateEditPurchaseOrderDialog(
 
                             Surface(
                                 shape = RoundedCornerShape(12.dp),
-                                color = Color(0xFFFAFCFA),
+                                color = MaterialTheme.colorScheme.surfaceVariant,
                                 border = BorderStroke(1.dp, Color(0xFFE8EDE9)),
                                 modifier = Modifier.fillMaxWidth()
                             ) {
@@ -1279,7 +1279,7 @@ fun CreateEditPurchaseOrderDialog(
                     }
                 }
 
-                HorizontalDivider(modifier = Modifier.padding(vertical = 10.dp), color = Color(0xFFEFF3F0))
+                HorizontalDivider(modifier = Modifier.padding(vertical = 10.dp), color = MaterialTheme.colorScheme.outlineVariant)
 
                 // Bottom Buttons
                 Row(
@@ -1322,7 +1322,7 @@ fun CreateEditPurchaseOrderDialog(
                         colors = ButtonDefaults.buttonColors(containerColor = AppColors.GreenPrimary),
                         shape = RoundedCornerShape(12.dp)
                     ) {
-                        Text("Simpan Draft", fontWeight = FontWeight.Bold, color = Color.White)
+                        Text("Simpan Draft", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.surface)
                     }
                 }
             }
@@ -1342,7 +1342,7 @@ fun CreateEditPurchaseOrderDialog(
                         items(suppliers) { sup ->
                             Surface(
                                 shape = RoundedCornerShape(10.dp),
-                                color = Color(0xFFF8FAF8),
+                                color = MaterialTheme.colorScheme.surfaceVariant,
                                 border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
                                 modifier = Modifier
                                     .fillMaxWidth()
