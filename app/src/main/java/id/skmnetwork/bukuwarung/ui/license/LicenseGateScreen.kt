@@ -1,5 +1,7 @@
 package id.skmnetwork.bukuwarung.ui.license
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -32,6 +34,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -42,6 +45,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -64,6 +68,7 @@ fun LicenseGateScreen(
     licenseStatus: LicenseStatus,
     onBypassForDemo: () -> Unit
 ) {
+    val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
     var ownerEmailInput by remember { mutableStateOf("") }
@@ -316,6 +321,53 @@ fun LicenseGateScreen(
                                     }
                                 }
                             )
+
+                            Spacer(Modifier.height(AppSpacing.xs))
+
+                            // Purchase CTA Section for users without license
+                            Column(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(AppSpacing.xs)
+                            ) {
+                                Text(
+                                    text = "Belum memiliki kode lisensi?",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = AppColors.TextSecondary,
+                                    textAlign = TextAlign.Center
+                                )
+
+                                SecondaryButton(
+                                    text = "Beli Lisensi Resmi (Rp 50.000)",
+                                    onClick = {
+                                        try {
+                                            val intent = Intent(
+                                                Intent.ACTION_VIEW,
+                                                Uri.parse("https://license.skmnetwork.com/beli/buku-warung?utm_source=app_license_gate&utm_medium=in_app&utm_campaign=buku_warung_v020")
+                                            )
+                                            context.startActivity(intent)
+                                        } catch (_: Exception) {}
+                                    },
+                                    contentColor = AppColors.GreenDark
+                                )
+
+                                TextButton(
+                                    onClick = {
+                                        try {
+                                            val waUrl = "https://wa.me/6285157056604?text=" + Uri.encode("Halo Admin SKMNetwork, saya sudah pasang aplikasi Buku Warung dan ingin beli kode lisensi")
+                                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(waUrl))
+                                            context.startActivity(intent)
+                                        } catch (_: Exception) {}
+                                    }
+                                ) {
+                                    Text(
+                                        text = "Tanya Admin via WhatsApp",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = AppColors.GreenPrimary,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                }
+                            }
                         }
                     }
                 }
