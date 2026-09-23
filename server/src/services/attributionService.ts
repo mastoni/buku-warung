@@ -243,14 +243,13 @@ export class AttributionService {
 
     // Marketing/client events are counted from funnel_events (these are legitimately
     // client-instrumented via the public /v1/landing/track endpoint).
+    // Phantom stages (QUALIFIED, INTERESTED) removed per MARKETING-01 governance.
     const MARKETING_EVENTS = [
       'PAGE_VIEW',
       'VIEW_PRODUCT',
       'VIEW_PRICE',
       'CLICK_WHATSAPP',
-      'LEAD_CREATED',
-      'QUALIFIED',
-      'INTERESTED'
+      'LEAD_CREATED'
     ];
 
     // Commercial lifecycle events are counted from actual database state
@@ -327,11 +326,20 @@ export class AttributionService {
       .get(start, end) as { count: number };
     funnel.push({ name: 'LICENSE_ACTIVATED', count: licenseActivatedCount.count });
 
-    // APK_DOWNLOADED: product-led acquisition metric (separate from sales funnel)
-    // Counted from funnel_events but positioned after the sales funnel
-    // to visually separate PATH B (product-led) from PATH A (sales-assisted).
-    const apkDownloadedCount = eventCount('APK_DOWNLOADED');
-    funnel.push({ name: 'APK_DOWNLOADED', count: apkDownloadedCount });
+    // PATH B: Product-Led Acquisition & Mobile Conversion Stages (MARKETING-04 & MARKETING-05)
+    const productLedEvents = [
+      'APK_DOWNLOADED',
+      'APP_FIRST_OPEN',
+      'LICENSE_GATE_VIEWED',
+      'LICENSE_PURCHASE_CLICKED',
+      'LICENSE_WHATSAPP_CLICKED'
+    ];
+
+    const productLedCounts: Record<string, number> = {};
+    for (const et of productLedEvents) {
+      productLedCounts[et] = eventCount(et);
+      funnel.push({ name: et, count: productLedCounts[et] });
+    }
 
     // North Star Metric: Activated Paid Customers
     // Uses actual license/device state as the source of truth.
@@ -360,6 +368,7 @@ export class AttributionService {
     // Conversion rates: marketing events from funnel_events, commercial events
     // from actual table state. This ensures conversions reflect real data.
     const conversions = [
+      // PATH A: Sales-Assisted Conversions
       {
         from: 'PAGE_VIEW', to: 'CLICK_WHATSAPP',
         numerator: marketingCounts['CLICK_WHATSAPP'],
@@ -389,6 +398,27 @@ export class AttributionService {
         from: 'LICENSE_CREATED', to: 'LICENSE_ACTIVATED',
         numerator: licenseActivatedCount.count,
         denominator: licenseCreatedCount.count
+      },
+      // PATH B: Product-Led Conversions
+      {
+        from: 'APK_DOWNLOADED', to: 'APP_FIRST_OPEN',
+        numerator: productLedCounts['APP_FIRST_OPEN'],
+        denominator: productLedCounts['APK_DOWNLOADED']
+      },
+      {
+        from: 'APP_FIRST_OPEN', to: 'LICENSE_GATE_VIEWED',
+        numerator: productLedCounts['LICENSE_GATE_VIEWED'],
+        denominator: productLedCounts['APP_FIRST_OPEN']
+      },
+      {
+        from: 'LICENSE_GATE_VIEWED', to: 'LICENSE_PURCHASE_CLICKED',
+        numerator: productLedCounts['LICENSE_PURCHASE_CLICKED'],
+        denominator: productLedCounts['LICENSE_GATE_VIEWED']
+      },
+      {
+        from: 'LICENSE_PURCHASE_CLICKED', to: 'ORDER_CREATED',
+        numerator: orderCreatedCount.count,
+        denominator: productLedCounts['LICENSE_PURCHASE_CLICKED']
       }
     ].map(c => ({
       from: c.from,

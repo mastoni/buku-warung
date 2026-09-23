@@ -1335,4 +1335,115 @@ describe('M.1.4 Marketing Attribution Foundation', () => {
       expect(body.success).toBe(true);
     });
   });
+
+  describe('MARKETING-05 Funnel Dashboard Reconciliation', () => {
+    it('TEST A & B: Whitelist accepts valid events and rejects unknown events', async () => {
+      const validEvents = [
+        'APP_FIRST_OPEN',
+        'LICENSE_GATE_VIEWED',
+        'LICENSE_PURCHASE_CLICKED',
+        'LICENSE_WHATSAPP_CLICKED'
+      ];
+
+      for (const ev of validEvents) {
+        const res = await app.inject({
+          method: 'POST',
+          url: '/v1/landing/track',
+          payload: { eventType: ev, utm_source: 'app_license_gate' }
+        });
+        expect(res.statusCode).toBe(200);
+        expect(JSON.parse(res.body).success).toBe(true);
+      }
+
+      const invalidRes = await app.inject({
+        method: 'POST',
+        url: '/v1/landing/track',
+        payload: { eventType: 'UNKNOWN_RANDOM_EVENT_XYZ' }
+      });
+      expect(invalidRes.statusCode).toBe(400);
+      expect(JSON.parse(invalidRes.body).success).toBe(false);
+    });
+
+    it('TEST C, D, E, F: Post-download events are persisted in database and queryable', async () => {
+      const attributionService = new AttributionService(db);
+      const analytics = attributionService.getFunnelAnalytics();
+
+      const appFirstOpenStage = analytics.funnel.find(f => f.name === 'APP_FIRST_OPEN');
+      const licenseGateViewedStage = analytics.funnel.find(f => f.name === 'LICENSE_GATE_VIEWED');
+      const licensePurchaseClickedStage = analytics.funnel.find(f => f.name === 'LICENSE_PURCHASE_CLICKED');
+      const licenseWhatsappClickedStage = analytics.funnel.find(f => f.name === 'LICENSE_WHATSAPP_CLICKED');
+
+      expect(appFirstOpenStage).toBeDefined();
+      expect(licenseGateViewedStage).toBeDefined();
+      expect(licensePurchaseClickedStage).toBeDefined();
+      expect(licenseWhatsappClickedStage).toBeDefined();
+
+      expect(appFirstOpenStage!.count).toBeGreaterThan(0);
+      expect(licenseGateViewedStage!.count).toBeGreaterThan(0);
+      expect(licensePurchaseClickedStage!.count).toBeGreaterThan(0);
+      expect(licenseWhatsappClickedStage!.count).toBeGreaterThan(0);
+    });
+
+    it('TEST G, H, I: Product-Led funnel transitions exist and Sales funnel remains distinct', async () => {
+      const attributionService = new AttributionService(db);
+      const analytics = attributionService.getFunnelAnalytics();
+
+      // Sales-Assisted transitions
+      const pageViewToWa = analytics.conversions.find(c => c.from === 'PAGE_VIEW' && c.to === 'CLICK_WHATSAPP');
+      const waToLead = analytics.conversions.find(c => c.from === 'CLICK_WHATSAPP' && c.to === 'LEAD_CREATED');
+      const leadToOrder = analytics.conversions.find(c => c.from === 'LEAD_CREATED' && c.to === 'ORDER_CREATED');
+
+      expect(pageViewToWa).toBeDefined();
+      expect(waToLead).toBeDefined();
+      expect(leadToOrder).toBeDefined();
+
+      // Product-Led transitions
+      const apkToFirstOpen = analytics.conversions.find(c => c.from === 'APK_DOWNLOADED' && c.to === 'APP_FIRST_OPEN');
+      const firstOpenToGate = analytics.conversions.find(c => c.from === 'APP_FIRST_OPEN' && c.to === 'LICENSE_GATE_VIEWED');
+      const gateToPurchaseClick = analytics.conversions.find(c => c.from === 'LICENSE_GATE_VIEWED' && c.to === 'LICENSE_PURCHASE_CLICKED');
+      const purchaseClickToOrder = analytics.conversions.find(c => c.from === 'LICENSE_PURCHASE_CLICKED' && c.to === 'ORDER_CREATED');
+
+      expect(apkToFirstOpen).toBeDefined();
+      expect(firstOpenToGate).toBeDefined();
+      expect(gateToPurchaseClick).toBeDefined();
+      expect(purchaseClickToOrder).toBeDefined();
+    });
+
+    it('TEST J: Phantom stages QUALIFIED and INTERESTED are absent from active marketing stages', async () => {
+      const attributionService = new AttributionService(db);
+      const analytics = attributionService.getFunnelAnalytics();
+
+      const qualifiedStage = analytics.funnel.find(f => f.name === 'QUALIFIED');
+      const interestedStage = analytics.funnel.find(f => f.name === 'INTERESTED');
+
+      expect(qualifiedStage).toBeUndefined();
+      expect(interestedStage).toBeUndefined();
+    });
+
+    it('TEST L: Conversion calculations handle zero denominators safely without NaN or Infinity', async () => {
+      const attributionService = new AttributionService(db);
+      const analytics = attributionService.getFunnelAnalytics(Date.now() + 100000, Date.now() + 200000);
+
+      for (const conv of analytics.conversions) {
+        expect(Number.isFinite(conv.rate)).toBe(true);
+        expect(Number.isNaN(conv.rate)).toBe(false);
+        expect(conv.rate).toBe(0);
+      }
+    });
+
+    it('TEST M: UTM attribution remains intact on landing metrics endpoint', async () => {
+      const res = await app.inject({
+        method: 'GET',
+        url: '/v1/landing/metrics?range=all',
+        headers: { authorization: `Bearer ${adminApiKey}` }
+      });
+
+      expect(res.statusCode).toBe(200);
+      const body = JSON.parse(res.body);
+      expect(body.success).toBe(true);
+      expect(body.data.funnel.funnel).toBeDefined();
+      expect(body.data.funnel.conversions).toBeDefined();
+      expect(body.data.funnel.attribution).toBeDefined();
+    });
+  });
 });
