@@ -104,7 +104,10 @@ data class UserSettings(
     val googleAccountEmail: String = "",
 
     // 11. Static QRIS Warung
-    val qrisImagePath: String = ""
+    val qrisImagePath: String = "",
+
+    // 12. Post-Download Telemetry State (MARKETING-04)
+    val isFirstLaunchRecorded: Boolean = false
 )
 
 class UserPreferencesRepository(
@@ -203,6 +206,9 @@ class UserPreferencesRepository(
         val TAX_APPLICABILITY = stringPreferencesKey("tax_applicability")
         val TAX_ROUNDING_MODE = stringPreferencesKey("tax_rounding_mode")
         val TAX_EFFECTIVE_DATE = longPreferencesKey("tax_effective_date")
+
+        // 18. POST-DOWNLOAD TELEMETRY (MARKETING-04)
+        val FIRST_LAUNCH_RECORDED = booleanPreferencesKey("first_launch_recorded")
     }
 
     val userSettings: Flow<UserSettings> = dataStore.data.map { prefs ->
@@ -289,8 +295,15 @@ class UserPreferencesRepository(
             backupSpreadsheetId = prefs[Keys.BACKUP_SPREADSHEET_ID] ?: "",
             backupSpreadsheetName = prefs[Keys.BACKUP_SPREADSHEET_NAME] ?: "",
             googleAccountEmail = prefs[Keys.GOOGLE_ACCOUNT_EMAIL] ?: "",
-            qrisImagePath = prefs[Keys.QRIS_IMAGE_PATH] ?: ""
+            qrisImagePath = prefs[Keys.QRIS_IMAGE_PATH] ?: "",
+            isFirstLaunchRecorded = prefs[Keys.FIRST_LAUNCH_RECORDED] ?: false
         )
+    }
+
+    suspend fun markFirstLaunchRecorded() = withContext(Dispatchers.IO) {
+        dataStore.edit { prefs ->
+            prefs[Keys.FIRST_LAUNCH_RECORDED] = true
+        }
     }
 
     suspend fun updatePrinterConfig(

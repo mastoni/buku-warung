@@ -1264,4 +1264,75 @@ describe('M.1.4 Marketing Attribution Foundation', () => {
       expect(forgedTokenHasLicense.license_id).toBeNull();
     });
   });
+
+  describe('Post-Download Mobile Conversion Events (MARKETING-04)', () => {
+    it('accepts APP_FIRST_OPEN event with UTM parameters', async () => {
+      const res = await app.inject({
+        method: 'POST',
+        url: '/v1/landing/track',
+        payload: {
+          eventType: 'APP_FIRST_OPEN',
+          utm_source: 'app_license_gate',
+          utm_medium: 'in_app',
+          utm_campaign: 'buku_warung_v020'
+        }
+      });
+
+      expect(res.statusCode).toBe(200);
+      const body = JSON.parse(res.body);
+      expect(body.success).toBe(true);
+      expect(body.data.leadToken).toBeDefined();
+    });
+
+    it('accepts LICENSE_GATE_VIEWED event with UTM parameters', async () => {
+      const res = await app.inject({
+        method: 'POST',
+        url: '/v1/landing/track',
+        payload: {
+          eventType: 'LICENSE_GATE_VIEWED',
+          utm_source: 'app_license_gate',
+          utm_medium: 'in_app',
+          utm_campaign: 'buku_warung_v020'
+        }
+      });
+
+      expect(res.statusCode).toBe(200);
+      const body = JSON.parse(res.body);
+      expect(body.success).toBe(true);
+    });
+
+    it('accepts LICENSE_PURCHASE_CLICKED event with UTM parameters', async () => {
+      const res = await app.inject({
+        method: 'POST',
+        url: '/v1/landing/track',
+        payload: {
+          eventType: 'LICENSE_PURCHASE_CLICKED',
+          utm_source: 'app_license_gate',
+          utm_medium: 'in_app',
+          utm_campaign: 'buku_warung_v020'
+        }
+      });
+
+      expect(res.statusCode).toBe(200);
+      const body = JSON.parse(res.body);
+      expect(body.success).toBe(true);
+    });
+
+    it('accepts LICENSE_WHATSAPP_CLICKED event with UTM parameters', async () => {
+      const res = await app.inject({
+        method: 'POST',
+        url: '/v1/landing/track',
+        payload: {
+          eventType: 'LICENSE_WHATSAPP_CLICKED',
+          utm_source: 'app_license_gate',
+          utm_medium: 'in_app',
+          utm_campaign: 'buku_warung_v020'
+        }
+      });
+
+      expect(res.statusCode).toBe(200);
+      const body = JSON.parse(res.body);
+      expect(body.success).toBe(true);
+    });
+  });
 });

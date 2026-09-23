@@ -222,4 +222,39 @@ class LicenseApiClient(
             ValidationResult.ServerError("Terjadi kesalahan pada sistem")
         }
     }
+
+    /**
+     * Reports a non-blocking marketing/conversion event to the server.
+     * Respects offline-first constraints and strictly transmits zero business data.
+     */
+    suspend fun trackFunnelEvent(
+        eventType: String,
+        utmSource: String? = null,
+        utmMedium: String? = null,
+        utmCampaign: String? = null,
+        utmContent: String? = null,
+        leadToken: String? = null
+    ): Boolean = withContext(Dispatchers.IO) {
+        val endpoint = "$baseUrl/v1/landing/track"
+        try {
+            val payload = JSONObject().apply {
+                put("eventType", eventType)
+                if (!utmSource.isNullOrBlank()) put("utm_source", utmSource)
+                if (!utmMedium.isNullOrBlank()) put("utm_medium", utmMedium)
+                if (!utmCampaign.isNullOrBlank()) put("utm_campaign", utmCampaign)
+                if (!utmContent.isNullOrBlank()) put("utm_content", utmContent)
+                if (!leadToken.isNullOrBlank()) put("leadToken", leadToken)
+            }
+
+            val response = transport.post(
+                url = endpoint,
+                jsonPayload = payload.toString(),
+                connectTimeoutMs = connectTimeoutMs,
+                readTimeoutMs = readTimeoutMs
+            )
+            response.statusCode in 200..299
+        } catch (_: Exception) {
+            false
+        }
+    }
 }

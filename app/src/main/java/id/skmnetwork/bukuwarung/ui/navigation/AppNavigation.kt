@@ -121,6 +121,19 @@ fun BukuWarungApp() {
         isCheckingExistingUser = false
     }
 
+    // Post-Download Telemetry: Record APP_FIRST_OPEN exactly once per installation lifecycle (MARKETING-04)
+    LaunchedEffect(userSettings.isFirstLaunchRecorded) {
+        if (!userSettings.isFirstLaunchRecorded) {
+            userPreferencesRepository.markFirstLaunchRecorded()
+            licenseManager.trackMarketingEvent(
+                eventType = "APP_FIRST_OPEN",
+                utmSource = "app_license_gate",
+                utmMedium = "in_app",
+                utmCampaign = "buku_warung_v020"
+            )
+        }
+    }
+
     val printerService = remember { id.skmnetwork.bukuwarung.printer.PrinterService() }
 
     // Restore printer configuration from DataStore on startup / settings change (Idempotent)

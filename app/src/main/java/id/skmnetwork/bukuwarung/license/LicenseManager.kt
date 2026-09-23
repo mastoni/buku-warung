@@ -85,7 +85,7 @@ open class LicenseManager(
     private val apiClient: LicenseApiClient = LicenseApiClient(),
     private val secureStorage: SecureLicenseStorage = SecureLicenseStorage(),
     private val context: Context? = null,
-    scope: CoroutineScope = CoroutineScope(Dispatchers.Default)
+    private val scope: CoroutineScope = CoroutineScope(Dispatchers.Default)
 ) {
     // Production default is CHECKING / UNLICENSED - NEVER HARDCODED ACTIVE
     private val _licenseStatus = MutableStateFlow(LicenseStatus.CHECKING)
@@ -225,5 +225,32 @@ open class LicenseManager(
 
     fun isProFeatureEnabled(featureName: String): Boolean {
         return _licenseStatus.value == LicenseStatus.ACTIVE && _licenseTier.value == LicenseTier.WARUNG_PRO
+    }
+
+    /**
+     * Non-blocking, offline-safe reporting of marketing/conversion funnel events.
+     */
+    fun trackMarketingEvent(
+        eventType: String,
+        utmSource: String? = "app_license_gate",
+        utmMedium: String? = "in_app",
+        utmCampaign: String? = "buku_warung_v020",
+        utmContent: String? = null,
+        leadToken: String? = null
+    ) {
+        scope.launch(Dispatchers.IO) {
+            try {
+                apiClient.trackFunnelEvent(
+                    eventType = eventType,
+                    utmSource = utmSource,
+                    utmMedium = utmMedium,
+                    utmCampaign = utmCampaign,
+                    utmContent = utmContent,
+                    leadToken = leadToken
+                )
+            } catch (_: Exception) {
+                // Non-blocking offline-first: fail silently without error
+            }
+        }
     }
 }

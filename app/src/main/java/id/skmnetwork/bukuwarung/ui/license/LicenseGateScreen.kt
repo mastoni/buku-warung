@@ -36,6 +36,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -70,6 +71,15 @@ fun LicenseGateScreen(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+
+    LaunchedEffect(Unit) {
+        licenseManager.trackMarketingEvent(
+            eventType = "LICENSE_GATE_VIEWED",
+            utmSource = "app_license_gate",
+            utmMedium = "in_app",
+            utmCampaign = "buku_warung_v020"
+        )
+    }
 
     var ownerEmailInput by remember { mutableStateOf("") }
     var licenseCodeInput by remember { mutableStateOf("") }
@@ -340,6 +350,12 @@ fun LicenseGateScreen(
                                 SecondaryButton(
                                     text = "Beli Lisensi Resmi (Rp 50.000)",
                                     onClick = {
+                                        licenseManager.trackMarketingEvent(
+                                            eventType = "LICENSE_PURCHASE_CLICKED",
+                                            utmSource = "app_license_gate",
+                                            utmMedium = "in_app",
+                                            utmCampaign = "buku_warung_v020"
+                                        )
                                         try {
                                             val intent = Intent(
                                                 Intent.ACTION_VIEW,
@@ -353,6 +369,12 @@ fun LicenseGateScreen(
 
                                 TextButton(
                                     onClick = {
+                                        licenseManager.trackMarketingEvent(
+                                            eventType = "LICENSE_WHATSAPP_CLICKED",
+                                            utmSource = "app_license_gate",
+                                            utmMedium = "in_app",
+                                            utmCampaign = "buku_warung_v020"
+                                        )
                                         try {
                                             val waUrl = "https://wa.me/6285157056604?text=" + Uri.encode("Halo Admin SKMNetwork, saya sudah pasang aplikasi Buku Warung dan ingin beli kode lisensi")
                                             val intent = Intent(Intent.ACTION_VIEW, Uri.parse(waUrl))
