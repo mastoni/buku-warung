@@ -776,7 +776,7 @@ function renderPublicOrderPage(nonce: string, pricing?: PricingResult): string {
 
       <div class="trust-list">
         <div class="trust-item"><span class="trust-icon">✓</span> Sekali bayar untuk selamanya tanpa biaya langganan</div>
-        <div class="trust-item"><span class="trust-icon">✓</span> 100% Berjalan offline tanpa perlu paket internet kasir</div>
+        <div class="trust-item"><span class="trust-icon">✓</span> Offline-first untuk transaksi harian, tanpa perlu paket internet untuk penggunaan inti kasir</div>
         <div class="trust-item"><span class="trust-icon">✓</span> Cetak struk printer thermal bluetooth 58mm / 80mm</div>
       </div>
     </div>
