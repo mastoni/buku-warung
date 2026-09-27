@@ -82,6 +82,7 @@ export const LANDING_CONFIG = {
     'https://license.skmnetwork.com/beli/buku-warung?utm_source=bukuwarung_landing&utm_medium=pricing_cta&utm_campaign=launch_v020',
   whatsappConsultationUrl:
     'https://wa.me/6285157056604?text=Halo%20Admin%20SKMNetwork,%20saya%20ingin%20tanya%20tentang%20paket%20aplikasi%20Buku%20Warung%20Android',
+  privacyPolicyUrl: 'https://bukuwarung.skmnetwork.com/privacy-policy',
 };
 
 export const PROBLEMS: ProblemItem[] = [
@@ -206,13 +207,15 @@ export const TRUST_ITEMS: TrustItem[] = [
     id: 'data',
     icon: 'Smartphone',
     title: 'Data usaha tersimpan di HP Anda',
-    description: 'Seluruh data pembukuan disimpan di perangkat Anda, bukan server pihak ketiga.',
+    description:
+      'Data operasional usaha terutama disimpan secara lokal di perangkat Anda. Data tertentu untuk lisensi, pembelian, dan dukungan dapat diproses oleh SKMNetwork.',
   },
   {
     id: 'backup',
     icon: 'Cloud',
-    title: 'Backup ke Google Sheets',
-    description: 'Fitur pencadangan otomatis ke Google Sheets pribadi milik Anda.',
+    title: 'Backup manual ke Google Sheets',
+    description:
+      'Opsional. Anda sendiri yang memulai backup manual ke Google Sheets pribadi milik Anda.',
   },
   {
     id: 'support',
@@ -485,7 +488,7 @@ export const FAQS: FaqItem[] = [
     id: 'faq-1',
     question: 'Apakah Buku Warung memerlukan kuota internet setiap hari?',
     answer:
-      'Tidak. Buku Warung dirancang dengan sistem Offline-First. Seluruh pencatatan kasir, produk, stok, kas, piutang, dan laporan berjalan normal tanpa perlu paket internet. Internet hanya digunakan satu kali saat aktivasi lisensi awal dan saat melakukan backup ke Google Sheets.',
+      'Untuk transaksi harian, tidak. Fitur transaksi utama dirancang offline-first dan data operasional utama disimpan secara lokal di perangkat. Penjualan, pemindaian barcode, cetak struk, buku kas, dan laporan berjalan normal tanpa paket internet. Aktivasi lisensi, verifikasi lisensi manual, fitur online tertentu, dan backup yang tersedia membutuhkan koneksi internet. Lihat Kebijakan Privasi untuk rinciannya.',
   },
   {
     id: 'faq-2',
@@ -521,7 +524,7 @@ export const FAQS: FaqItem[] = [
     id: 'faq-7',
     question: 'Apakah data pembukuan usaha saya aman?',
     answer:
-      'Sangat aman. Seluruh data transaksi usaha Anda tersimpan di memori internal HP Anda sendiri, bukan di server pihak ketiga. Anda juga dapat menghubungkan Google Sheets pribadi untuk pencadangan otomatis.',
+      'Data operasional usaha Anda terutama disimpan secara lokal di perangkat, di dalam penyimpanan internal aplikasi Android. Namun aplikasi ini tidak sepenuhnya tanpa server: data tertentu yang diperlukan untuk lisensi, pembelian, dukungan, dan operasional layanan dapat diproses oleh SKMNetwork. Anda juga dapat memakai backup manual ke Google Sheets pribadi bila fitur tersebut sudah tersedia. Rincian lengkap ada di Kebijakan Privasi.',
   },
   {
     id: 'faq-8',

@@ -107,7 +107,7 @@ export const PricingSection: React.FC = () => {
                 </li>
                 <li className="flex items-start gap-2.5">
                   <Check className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
-                  <span>Pencadangan data otomatis ke Google Sheets pribadi</span>
+                  <span>Backup manual opsional ke Google Sheets pribadi</span>
                 </li>
                 <li className="flex items-start gap-2.5">
                   <Check className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />

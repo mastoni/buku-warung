@@ -292,8 +292,9 @@ export const DOC_ARTICLES: DocArticle[] = [
       {
         title: '1. Filosofi Arsitektur Offline-First',
         paragraphs: [
-          'Buku Warung dirancang dengan arsitektur Offline-First. Seluruh data transaksi kasir, stok barang, buku hutang piutang, dan pencatatan kas disimpan langsung di penyimpanan internal HP Anda.',
+          'Fitur transaksi utama Buku Warung dirancang dengan arsitektur Offline-First. Data transaksi kasir, stok barang, buku hutang piutang, dan pencatatan kas disimpan langsung di penyimpanan internal HP Anda.',
           'Anda tidak perlu khawatir jika sinyal internet mati atau kuota habis di toko. Semua fungsi utama kasir dan cetak struk tetap beroperasi tanpa hambatan.',
+          'Perlu diperhatikan: aktivasi lisensi, verifikasi lisensi manual, fitur online tertentu, dan backup yang tersedia membutuhkan koneksi internet. Rinciannya dapat dibaca pada Kebijakan Privasi.',
         ],
       },
       {
@@ -1283,10 +1284,10 @@ export const DOC_ARTICLES: DocArticle[] = [
     updatedAt: DOC_LAST_UPDATED,
     readTime: '4 menit baca',
     summary:
-      'Amankan data pembukuan Anda ke akun Google Drive pribadi. Data disimpan dalam 18 tab tabel spreadsheet kanonikal yang dapat dipulihkan kapan saja.',
+      'Amankan data pembukuan Anda ke akun Google Drive pribadi. Data disimpan dalam 23 tab tabel spreadsheet kanonikal yang dapat dipulihkan kapan saja.',
     targetAudience: 'Pemilik toko yang ingin mengamankan data dari risiko HP hilang, rusak, atau ganti baru.',
     features: [
-      'Pencadangan 100% data: Produk, Kategori, Pelanggan, Supplier, Penjualan, Pembelian, Hutang, Kas, dan Mutasi Stok',
+      'Backup manual ke Google Sheets: Produk, Kategori, Pelanggan, Supplier, Penjualan, Pembelian, Hutang, Kas, dan Mutasi Stok',
       'Tersimpan di Google Drive milik akun Google Anda sendiri',
       'Pemulihan (Restore) aman dengan validasi integritas data dan checksum otomatis',
     ],
@@ -1294,13 +1295,14 @@ export const DOC_ARTICLES: DocArticle[] = [
       {
         title: '1. Keamanan Data Milik Anda Sendiri',
         paragraphs: [
-          'Cadangan data tersimpan langsung di Google Drive akun Google Anda sendiri, bukan di server pihak ketiga. Anda memiliki kendali penuh atas file spreadsheet cadangan.',
+          'Cadangan data, bila fitur ini sudah aktif, tersimpan langsung di Google Drive akun Google Anda sendiri. Anda memiliki kendali penuh atas file spreadsheet cadangan.',
+          'Catatan status implementasi: pada versi rilis saat ini (v0.2.1) konfigurasi otorisasi Google yang diperlukan untuk menjalankan proses pencadangan belum diaktifkan, sehingga proses backup ke Google Sheets belum dapat diselesaikan. Fitur ini sedang diselesaikan sebelum diaktifkan. Lihat Kebijakan Privasi untuk rinciannya.',
         ],
       },
       {
-        title: '2. 18 Lembar Tabel Cadangan Kanonikal',
+        title: '2. 23 Tab Tabel Cadangan Kanonikal',
         paragraphs: [
-          'Proses pencadangan mengekspor 18 tabel Room database lokal ke lembar kerja Google Spreadsheet yang terstruktur rapi dan dapat dibuka di komputer.',
+          'Proses pencadangan mengekspor 23 tab (2 tab informasi: README dan Metadata, serta 21 tab data) dari database Room lokal ke lembar kerja Google Spreadsheet yang terstruktur rapi dan dapat dibuka di komputer.',
         ],
       },
     ],
@@ -1319,8 +1321,9 @@ export const DOC_ARTICLES: DocArticle[] = [
       },
     ],
     limitations: [
-      'Pencadangan dilakukan secara manual atau terjadwal (bukan sinkronisasi cloud otomatis realtime multi-perangkat).',
-      'Memerlukan koneksi internet saat proses unggah cadangan ke Google Drive.',
+      'Backup bersifat manual dan hanya berjalan saat Anda menekan tombol "Cadangkan Sekarang". Bukan pencadangan otomatis dan bukan sinkronisasi cloud secara realtime multi-perangkat.',
+      'Memerlukan koneksi internet dan akun Google yang terhubung saat proses unggah cadangan ke Google Drive.',
+      'Data ditulis sebagai sel spreadsheet biasa tanpa enkripsi tambahan dari aplikasi. Siapa pun yang memiliki akses ke akun Google tersebut dapat membacanya.',
     ],
     relatedSlugs: ['pin', 'lisensi', 'mulai'],
     keywords: ['backup', 'restore', 'google sheets', 'google drive', 'cadangkan data', 'pulihkan data', 'backup google sheets'],
@@ -1345,7 +1348,7 @@ export const DOC_ARTICLES: DocArticle[] = [
     targetAudience: 'Pemilik toko yang mempekerjakan karyawan kasir.',
     features: [
       'Kunci PIN 4 digit angka sederhana dan mudah diingat',
-      'Enkripsi aman Salted SHA-256 pada penyimpanan internal HP',
+      'Hash PIN dengan salt (SHA-256) pada penyimpanan internal HP',
       'Mencegah karyawan membuka laporan laba bersih toko sembarangan',
     ],
     sections: [
@@ -1372,10 +1375,11 @@ export const DOC_ARTICLES: DocArticle[] = [
       },
     ],
     limitations: [
-      'Pastikan Anda mengingat PIN pemilik. Jika lupa PIN, pemulihan memerlukan bantuan verifikasi email pemilik resmi.',
+      'Pastikan Anda mengingat PIN pemilik. Buku Warung tidak menyediakan pemulihan PIN di dalam aplikasi.',
+      'PIN disimpan sebagai hash dengan salt, bukan sebagai angka PIN itu sendiri, dan hanya berlaku pada satu perangkat.',
     ],
     relatedSlugs: ['mulai', 'lisensi', 'backup-restore'],
-    keywords: ['pin', 'keamanan', 'kunci aplikasi', 'password kasir', 'salted sha256', 'proteksi toko'],
+    keywords: ['pin', 'keamanan', 'kunci aplikasi', 'password kasir', 'hash pin', 'proteksi toko'],
   },
 
   // =========================================================================

@@ -128,6 +128,8 @@ import java.util.Date
 import java.util.Locale
 import id.skmnetwork.bukuwarung.BuildConfig
 
+private const val PRIVACY_POLICY_URL = "https://bukuwarung.skmnetwork.com/privacy-policy"
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
@@ -1289,7 +1291,7 @@ fun SettingsScreen(
 
                         if (settingsState.hasPinSet) {
                             Text(
-                                text = "Status: PIN Terpasang Aman (Enkripsi Salted SHA-256)",
+                                text = "Status: PIN Terpasang (disimpan sebagai hash dengan salt)",
                                 style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.5.sp),
                                 color = AppColors.GreenPrimary,
                                 fontWeight = FontWeight.SemiBold
@@ -1358,7 +1360,7 @@ fun SettingsScreen(
                             color = AppColors.TextPrimary
                         )
                         Text(
-                            text = "Data transaksi, $productLabel, $customerLabel, dan kas dapat dicadangkan dan dipulihkan secara aman.",
+                            text = "Backup bersifat opsional dan MANUAL. Pencadangan hanya berjalan saat Anda menekan \"Cadangkan Sekarang\", bukan otomatis. Data yang ikut disalin mencakup $productLabel, $customerLabel, supplier, transaksi penjualan dan pembelian, kas, hutang piutang, hutang supplier, serta catatan bebas pada kolom keterangan. Spreadsheet dibuat di Google Drive akun Google Anda sendiri. PIN dan kode lisensi tidak pernah disertakan.",
                             style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.5.sp),
                             color = AppColors.TextSecondary
                         )
@@ -1931,10 +1933,52 @@ fun SettingsScreen(
                             color = AppColors.TextSecondary
                         )
                         Text(
-                            text = "Data usaha tersimpan secara lokal di perangkat dan dapat dicadangkan melalui Google Sheets.",
+                            text = "Data operasional usaha terutama disimpan secara lokal di perangkat. Data tertentu untuk lisensi, pembelian, dan dukungan dapat diproses oleh SKMNetwork.",
                             style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.5.sp),
                             color = AppColors.TextSecondary
                         )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .padding(top = 6.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .clickable {
+                                    val privacyUri = Uri.parse(PRIVACY_POLICY_URL)
+                                    runCatching {
+                                        context.startActivity(
+                                            Intent(Intent.ACTION_VIEW, privacyUri)
+                                        )
+                                    }.onFailure {
+                                        Toast.makeText(
+                                            context,
+                                            "Tidak dapat membuka browser. Alamat: $PRIVACY_POLICY_URL",
+                                            Toast.LENGTH_LONG
+                                        ).show()
+                                    }
+                                }
+                                .padding(vertical = 6.dp, horizontal = 4.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.VerifiedUser,
+                                contentDescription = null,
+                                tint = AppColors.GreenPrimary,
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Column {
+                                Text(
+                                    text = "Kebijakan Privasi",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 12.sp,
+                                    color = AppColors.GreenPrimary
+                                )
+                                Text(
+                                    text = PRIVACY_POLICY_URL,
+                                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 10.sp),
+                                    color = AppColors.TextSecondary
+                                )
+                            }
+                        }
                     }
                 }
             }

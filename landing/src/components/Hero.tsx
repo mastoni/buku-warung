@@ -78,11 +78,11 @@ export const Hero: React.FC = () => {
             </div>
             <div className="flex items-center gap-1.5">
               <Zap className="w-4 h-4 text-emerald-600 shrink-0" />
-              <span>100% Offline Tanpa Kuota</span>
+              <span>Offline-First, Tanpa Kuota Jualan</span>
             </div>
             <div className="flex items-center gap-1.5">
               <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
-              <span>Data Usaha di HP Anda Sendiri</span>
+              <span>Data Usaha Utama di HP Anda</span>
             </div>
           </div>
         </div>
