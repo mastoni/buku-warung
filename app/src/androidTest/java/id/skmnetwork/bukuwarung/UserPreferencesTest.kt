@@ -10,6 +10,7 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import id.skmnetwork.bukuwarung.data.local.database.AppDatabase
 import id.skmnetwork.bukuwarung.data.local.entity.CategoryEntity
+import id.skmnetwork.bukuwarung.BuildConfig
 import id.skmnetwork.bukuwarung.data.preferences.UserPreferencesRepository
 import id.skmnetwork.bukuwarung.license.DebugLicenseProvider
 import id.skmnetwork.bukuwarung.license.LicenseManager
@@ -251,8 +252,15 @@ class UserPreferencesTest {
         assertFalse("Pro features must be disabled when UNLICENSED", prodManager.isProFeatureEnabled("MULTI_DEVICE"))
     }
 
+    /**
+     * Gate H.3: `android.testBuildType = "release"` means this instrumentation suite now runs
+     * against the production configuration, where `ENABLE_OWNER_TEST` is false. The owner-test
+     * bypass must therefore be *inert* in the build that is actually shipped - that is now the
+     * security-critical half of this test, and the half worth asserting. The bypass-enabled half
+     * is still covered whenever this suite is pointed at debug/ownerTest/smokeTest.
+     */
     @Test
-    fun testLicenseManagerOwnerTestActivationAndPersistence() = runBlocking {
+    fun testLicenseManagerOwnerTestActivationHonoursBuildVariant() = runBlocking {
         // 1. Clean state: Owner test must NOT be activated by default
         assertFalse("Owner test activation must be false by default", prefsRepo.isOwnerTestActivated())
 
@@ -262,14 +270,31 @@ class UserPreferencesTest {
 
         // 2. Perform Owner Test Activation
         val activationResult = manager.activateOwnerTest()
-        assertTrue("activateOwnerTest() must return true", activationResult)
-        assertTrue("prefsRepo.isOwnerTestActivated() must be true after activation", prefsRepo.isOwnerTestActivated())
-        assertEquals("LicenseManager status must transition to ACTIVE", LicenseStatus.ACTIVE, manager.licenseStatus.value)
 
-        // 3. Verify persistence across new LicenseManager instance (simulating app restart)
-        val newRestartedManager = LicenseManager(userPreferencesRepository = prefsRepo)
-        newRestartedManager.refreshLicense()
-        assertEquals("restartedManager licenseStatus flow must be ACTIVE", LicenseStatus.ACTIVE, newRestartedManager.licenseStatus.value)
+        if (BuildConfig.ENABLE_OWNER_TEST) {
+            assertTrue("activateOwnerTest() must return true on a bypass-enabled build", activationResult)
+            assertTrue("prefsRepo.isOwnerTestActivated() must be true after activation", prefsRepo.isOwnerTestActivated())
+            assertEquals("LicenseManager status must transition to ACTIVE", LicenseStatus.ACTIVE, manager.licenseStatus.value)
+
+            // 3. Verify persistence across new LicenseManager instance (simulating app restart)
+            val newRestartedManager = LicenseManager(userPreferencesRepository = prefsRepo)
+            newRestartedManager.refreshLicense()
+            assertEquals("restartedManager licenseStatus flow must be ACTIVE", LicenseStatus.ACTIVE, newRestartedManager.licenseStatus.value)
+        } else {
+            assertFalse(
+                "activateOwnerTest() must be inert in a build without ENABLE_OWNER_TEST",
+                activationResult
+            )
+            assertFalse(
+                "Owner-test activation must NOT be persisted in a build without ENABLE_OWNER_TEST",
+                prefsRepo.isOwnerTestActivated()
+            )
+            assertEquals(
+                "LicenseManager must remain UNLICENSED when the owner-test bypass is disabled",
+                LicenseStatus.UNLICENSED,
+                manager.licenseStatus.value
+            )
+        }
     }
 
     @Test

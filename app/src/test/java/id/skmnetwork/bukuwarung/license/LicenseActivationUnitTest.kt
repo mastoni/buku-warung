@@ -127,8 +127,13 @@ class LicenseActivationUnitTest {
             }
         }
 
+        // Gate H.3: the base URL is never dialled - `mockTransport` answers every request - but
+        // LicenseApiClient refuses a plain-HTTP URL whenever BuildConfig.DEBUG is false. The unit
+        // suite now runs against the release configuration (android.testBuildType = "release"),
+        // where DEBUG is false, so the fixture must use HTTPS to be build-variant agnostic.
+        // The production HTTPS guard itself is unchanged.
         apiClient = LicenseApiClient(
-            baseUrl = "http://localhost:3000",
+            baseUrl = "https://localhost:3000",
             transport = mockTransport
         )
     }

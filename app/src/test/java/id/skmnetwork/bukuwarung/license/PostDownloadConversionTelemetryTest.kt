@@ -47,8 +47,12 @@ class PostDownloadConversionTelemetryTest {
             }
         }
 
+        // Gate H.3: `mockTransport` answers every request, so the base URL is never dialled, but
+        // LicenseApiClient refuses plain HTTP whenever BuildConfig.DEBUG is false. The suite now
+        // runs against the release configuration, so the fixture must be HTTPS to stay
+        // build-variant agnostic. The production HTTPS guard itself is unchanged.
         apiClient = LicenseApiClient(
-            baseUrl = "http://localhost:3000",
+            baseUrl = "https://localhost:3000",
             transport = mockTransport
         )
     }

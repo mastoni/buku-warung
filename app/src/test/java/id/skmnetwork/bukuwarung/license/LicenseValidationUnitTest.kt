@@ -480,7 +480,12 @@ class LicenseValidationUnitTest {
             }
             "ownerTest" -> {
                 assertTrue("ENABLE_OWNER_TEST must be true in ownerTest", enableOwnerTest)
-                assertFalse("DEBUG must be false in ownerTest", debug)
+                // Gate H.3: ownerTest is no longer built on `release`. It inherits the debug
+                // configuration, so it is debuggable and debug-signed, and it carries the
+                // applicationIdSuffix ".ownertest" so it can never share the production
+                // applicationId. It can therefore no longer reach the emulator loopback licence
+                // server through the release-only HTTPS guard.
+                assertTrue("ownerTest must be debuggable and must NOT be release-configured", debug)
             }
             else -> throw AssertionError("Unknown build type: $actualBuildType")
         }
