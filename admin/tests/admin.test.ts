@@ -619,6 +619,51 @@ describe('Buku Warung License Admin Dashboard MVP (C.3)', () => {
     expect(html).toContain('id="pricingNormalPriceInput"');
     expect(html).toContain('id="pricingPromoPriceInput"');
   });
+
+  // TASK 5 — rebind authorization hardening at the BFF session layer.
+  // Mutation-proof for a rejected rebind is asserted server-side in
+  // tests/rebindHardening.test.ts, where the licence service is exercised directly.
+  it('TEST C3-REBIND-01: rebind without an admin session cookie is rejected with 401 at the BFF', async () => {
+    const res = await adminApp.inject({
+      method: 'POST',
+      url: '/api/license/rebind',
+      payload: {
+        licenseId: testLicenseId,
+        newDeviceBinding: 'device-unauth-bff',
+        reason: 'should be rejected'
+      }
+    });
+
+    expect(res.statusCode).toBe(401);
+    const body = JSON.parse(res.body);
+    expect(body.success).toBe(false);
+    expect(body.error.code).toBe('UNAUTHORIZED');
+  });
+
+  it('TEST C3-REBIND-02: rebind with a forged/expired session cookie is rejected with 401', async () => {
+    const res = await adminApp.inject({
+      method: 'POST',
+      url: '/api/license/rebind',
+      headers: { cookie: 'bw_admin_session=forged.invalid.token' },
+      payload: {
+        licenseId: testLicenseId,
+        newDeviceBinding: 'device-forged-bff',
+        reason: 'should be rejected'
+      }
+    });
+
+    expect(res.statusCode).toBe(401);
+    expect(JSON.parse(res.body).error.code).toBe('UNAUTHORIZED');
+  });
+
+  it('TEST C3-REBIND-03: rebind route is covered by the BFF session-auth guard', () => {
+    const src = fs.readFileSync(
+      path.resolve(__dirname, '../src/controllers/licenseProxyController.ts'),
+      'utf8'
+    );
+    // The guard list must include the rebind path, otherwise it would be reachable unauthenticated.
+    expect(src).toContain("request.url.startsWith('/api/license/rebind')");
+  });
 });
 
 
