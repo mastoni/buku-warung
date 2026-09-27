@@ -72,13 +72,13 @@ describe('M.3.2-G2 Customer-Facing Public Order UI Tests', () => {
       expect(res.body).toContain('<meta name="viewport" content="width=device-width, initial-scale=1.0">');
     });
 
-    it('displays product name Buku Warung v0.1.0 and price Rp 50.000', async () => {
+    it('displays product name Buku Warung v0.2.1 and price Rp 50.000', async () => {
       const res = await app.inject({
         method: 'GET',
         url: '/beli/buku-warung'
       });
 
-      expect(res.body).toContain('Buku Warung v0.1.0');
+      expect(res.body).toContain('Buku Warung v0.2.1');
       expect(res.body).toContain('Rp 50.000');
       expect(res.body).toContain('Sekali Beli');
     });
@@ -172,7 +172,7 @@ describe('M.3.2-G2 Customer-Facing Public Order UI Tests', () => {
       const json = JSON.parse(res.body);
       expect(json.success).toBe(true);
       expect(json.data.amount).toBe(50000);
-      expect(json.data.product).toBe('Buku Warung v0.1.0');
+      expect(json.data.product).toBe('Buku Warung v0.2.1');
       expect(json.data.status).toBe('PENDING_PAYMENT');
       expect(json.data.paymentStatus).toBe('UNPAID');
       expect(json.data.publicToken).toBeDefined();

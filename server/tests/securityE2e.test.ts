@@ -246,7 +246,7 @@ describe('M.3.2-G3 Security + End-to-End Validation', () => {
       expect(res.statusCode).toBe(201);
       const data = JSON.parse(res.body).data;
       expect(data.amount).toBe(50000);
-      expect(data.product).toBe('Buku Warung v0.1.0');
+      expect(data.product).toBe('Buku Warung v0.2.1');
       expect(data.status).toBe('PENDING_PAYMENT');
       expect(data.paymentStatus).toBe('UNPAID');
 

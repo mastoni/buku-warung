@@ -137,7 +137,7 @@ describe('M.3.2-G1 Public Order API & Security Foundation', () => {
       expect(data.status).toBe('PENDING_PAYMENT');
       expect(data.paymentStatus).toBe('UNPAID');
       expect(data.amount).toBe(50000);
-      expect(data.product).toBe('Buku Warung v0.1.0');
+      expect(data.product).toBe('Buku Warung v0.2.1');
       expect(data.paymentMethod).toBe('QRIS — KIOS KIARA');
       expect(data.publicToken).toMatch(/^pot_/);
       expect(data.qrisImageUrl).toBe('https://license.skmnetwork.com/img/qris-kios-kiara.png');
@@ -176,7 +176,7 @@ describe('M.3.2-G1 Public Order API & Security Foundation', () => {
       expect(res.statusCode).toBe(201);
       const body = JSON.parse(res.body);
       expect(body.data.amount).toBe(50000); // Forced to 50000
-      expect(body.data.product).toBe('Buku Warung v0.1.0');
+      expect(body.data.product).toBe('Buku Warung v0.2.1');
 
       const row = db.prepare('SELECT * FROM orders WHERE order_number = ?').get(body.data.orderNumber) as any;
       expect(row.amount).toBe(50000);

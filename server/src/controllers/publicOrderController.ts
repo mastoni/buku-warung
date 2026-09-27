@@ -198,7 +198,7 @@ export async function registerPublicOrderRoutes(fastify: FastifyInstance) {
             orderNumber: existingPending.order_number,
             status: existingPending.status,
             paymentStatus: existingPending.payment_status,
-            product: 'Buku Warung v0.1.0',
+            product: 'Buku Warung v0.2.1',
             amount: existingPending.amount,
             paymentMethod: existingPending.payment_method || 'QRIS — KIOS KIARA',
             publicToken,
@@ -258,7 +258,7 @@ export async function registerPublicOrderRoutes(fastify: FastifyInstance) {
           orderNumber: order.order_number,
           status: order.status,
           paymentStatus: order.payment_status,
-          product: 'Buku Warung v0.1.0',
+          product: 'Buku Warung v0.2.1',
           amount: AUTHORITATIVE_AMOUNT,
           paymentMethod: DEFAULT_PAYMENT_METHOD,
           publicToken,
@@ -318,7 +318,7 @@ export async function registerPublicOrderRoutes(fastify: FastifyInstance) {
           orderNumber: order.order_number,
           status: order.status,
           paymentStatus: order.payment_status,
-          product: 'Buku Warung v0.1.0',
+          product: 'Buku Warung v0.2.1',
           amount: order.amount,
           paymentMethod: order.payment_method || 'QRIS — KIOS KIARA',
           customerNameMasked: maskCustomerName(order.customer_name),
@@ -371,7 +371,7 @@ function renderPublicOrderPage(nonce: string, pricing?: PricingResult): string {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Buku Warung v0.1.0 — Pesan Aplikasi Kasir Warung</title>
+<title>Buku Warung v0.2.1 — Pesan Aplikasi Kasir Warung</title>
 <meta name="description" content="Pesan aplikasi kasir Buku Warung ${effectivePriceFormatted} sekali beli tanpa langganan. Offline-first untuk transaksi harian, cetak struk thermal, catat hutang piutang. Aktivasi lisensi dan fitur online tertentu memerlukan koneksi internet.">
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -719,7 +719,7 @@ function renderPublicOrderPage(nonce: string, pricing?: PricingResult): string {
 <div class="container">
   <div class="header">
     <div class="logo-badge">BW</div>
-    <h1>Buku Warung v0.1.0</h1>
+    <h1>Buku Warung v0.2.1</h1>
     <div class="subtitle">Aplikasi Kasir &amp; Pembukuan Warung Offline-First</div>
   </div>
 
