@@ -36,10 +36,14 @@ object BackupValidator {
         }
 
         // 3. Cryptographic SHA-256 Checksum Validation
-        if (!CanonicalSerializer.verifyChecksum(metadata.checksum, snapshot.tabs)) {
-            val calculated = CanonicalSerializer.calculateChecksum(snapshot.tabs)
+        // Gate H.4.1: the algorithm is versioned, so an archive written before H.4.1 still
+        // validates against the historical RAW_V1 payload while new backups are checked against
+        // the coercion-proof canonical payload.
+        val algorithm = CanonicalSerializer.ChecksumAlgorithm.fromWireName(metadata.checksumAlgorithm)
+        if (!CanonicalSerializer.verifyChecksum(metadata.checksum, snapshot.tabs, algorithm)) {
+            val calculated = CanonicalSerializer.calculateChecksum(snapshot.tabs, algorithm)
             throw ChecksumMismatchException(
-                "Checksum mismatch: expected '${metadata.checksum}', calculated '$calculated'"
+                "Checksum mismatch (${algorithm.wireName}): expected '${metadata.checksum}', calculated '$calculated'"
             )
         }
 

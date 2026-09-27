@@ -20,7 +20,14 @@ data class BackupMetadata(
     val taxPriceMode: String = "EXCLUSIVE",
     val taxApplicability: String = "GLOBAL",
     val taxRoundingMode: String = "HALF_UP",
-    val taxEffectiveDate: Long = 0L
+    val taxEffectiveDate: Long = 0L,
+    /**
+     * Gate H.4.1 - which checksum algorithm produced [checksum].
+     *
+     * Blank/absent means the legacy RAW_V1 algorithm, so archives written before H.4.1 keep
+     * validating. New backups declare the value explicitly.
+     */
+    val checksumAlgorithm: String = CanonicalSerializer.CURRENT_CHECKSUM_ALGORITHM.wireName
 )
 
 data class SheetTab(

@@ -47,6 +47,25 @@ class GoogleSheetsApiTransport(
         // 2. Formulate Batch Data Payload
         val valueRangesJson = JSONArray()
 
+        // Gate H.4.1 - clear every application-owned tab before writing anything.
+        //
+        // `values:batchUpdate` with an open-ended range such as `04_Products!A1` only writes the
+        // cells it is given. Rows below them from a previous, larger backup survived, so the sheet
+        // no longer matched its own checksum and every later restore of the user's own untouched
+        // backup failed with ChecksumMismatchException. Tabs a capability switch removes from the
+        // snapshot entirely (19/20/21) had the same problem.
+        //
+        // `values:clear` on the whole tab name erases cell VALUES only. The tab itself, its frozen
+        // header row, its styling, its column widths and its protected range live on the sheet
+        // structure and are preserved, so the formatting and protection applied by
+        // applyFormattingAndProtection survive the next backup.
+        //
+        // Requests inside a batchUpdate are applied in order, so every clear below is guaranteed to
+        // run before the corresponding write in this same request.
+        CanonicalSerializer.ALL_TAB_NAMES.forEach { tabName ->
+            valueRangesJson.put(JSONObject().apply { put("range", tabName) })
+        }
+
         // Tab 00_README
         val readmeTab = snapshot.getTab(CanonicalSerializer.README_TAB_NAME)
         if (readmeTab != null) {
@@ -93,6 +112,7 @@ class GoogleSheetsApiTransport(
                 put(JSONArray().apply { put("tax_applicability"); put(snapshot.metadata.taxApplicability) })
                 put(JSONArray().apply { put("tax_rounding_mode"); put(snapshot.metadata.taxRoundingMode) })
                 put(JSONArray().apply { put("tax_effective_date"); put(snapshot.metadata.taxEffectiveDate.toString()) })
+                put(JSONArray().apply { put("checksum_algorithm"); put(snapshot.metadata.checksumAlgorithm) })
             }
             put("values", rowsArray)
         }
@@ -234,7 +254,9 @@ class GoogleSheetsApiTransport(
                         taxPriceMode = metadataMap["tax_price_mode"] ?: "EXCLUSIVE",
                         taxApplicability = metadataMap["tax_applicability"] ?: "GLOBAL",
                         taxRoundingMode = metadataMap["tax_rounding_mode"] ?: "HALF_UP",
-                        taxEffectiveDate = metadataMap["tax_effective_date"]?.toLongOrNull() ?: 0L
+                        taxEffectiveDate = metadataMap["tax_effective_date"]?.toLongOrNull() ?: 0L,
+                        // Gate H.4.1: absent in archives written before H.4.1, which means RAW_V1.
+                        checksumAlgorithm = metadataMap["checksum_algorithm"] ?: CanonicalSerializer.ChecksumAlgorithm.RAW_V1.wireName
                     )
                 } else if (CanonicalSerializer.DATA_TAB_NAMES.contains(tabName)) {
                     val headers = mutableListOf<String>()

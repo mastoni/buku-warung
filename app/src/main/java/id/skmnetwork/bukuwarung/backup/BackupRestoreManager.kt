@@ -36,6 +36,16 @@ class BackupRestoreManager(
 
     /**
      * Captures DataStore + Room snapshot and returns a deterministic BackupSnapshot.
+     *
+     * Gate H.4.1 - the nineteen Room reads now run inside a single Room transaction. They were
+     * issued one after another with no enclosing transaction, so a POS sale landing midway could
+     * produce a torn image: the `products` query would see the new stock while the
+     * `stock_movements` query would not see the movement that produced it, and
+     * `BackupValidator`'s stock-ledger invariant would then reject the app's own fresh backup.
+     *
+     * The transaction covers the READS ONLY. The resulting `BackupSnapshot` is immutable and fully
+     * materialised in memory before the transaction closes, so no Google network call is ever made
+     * while a database transaction is open.
      */
     suspend fun exportSnapshot(): BackupSnapshot = withContext(Dispatchers.IO) {
         val userSettings = userPreferencesRepository.userSettings.first()
@@ -49,6 +59,9 @@ class BackupRestoreManager(
         val hasDigitalItems = resolvedProfile.hasCapability(BusinessCapability.CAP_DIGITAL_ITEMS)
         val hasWholesalePurchase = resolvedProfile.hasActivity(BusinessActivity.ACTIVITY_WHOLESALE_PURCHASE)
 
+        // Gate H.4.1: consistent read snapshot of the whole tenant. Nothing below performs
+        // network I/O; the immutable snapshot is returned once the transaction has committed.
+        database.withTransaction {
         val db = database.openHelper.readableDatabase
 
         // 1. Tab 01_Business
@@ -208,7 +221,7 @@ class BackupRestoreManager(
 
         // 3. Tab 04_Products
         val productRows = mutableListOf<List<String>>()
-        db.query("SELECT id, uuid, business_id, category_id, name, purchase_price, selling_price, stock, minimum_stock, unit, item_type, is_deleted, deleted_at, created_at, updated_at, barcode, image_uri, taxable, tax_rate_override FROM products WHERE business_id = ?", arrayOf(businessId)).use { cursor ->
+        db.query("SELECT id, uuid, business_id, category_id, name, purchase_price, selling_price, stock, minimum_stock, unit, item_type, is_deleted, deleted_at, created_at, updated_at, barcode, image_uri, taxable, tax_rate_override, fulfillment_mode, digital_provider_id, digital_product_code FROM products WHERE business_id = ?", arrayOf(businessId)).use { cursor ->
             while (cursor.moveToNext()) {
                 val uuid = cursor.getString(1)
                 val bId = cursor.getString(2)
@@ -229,6 +242,11 @@ class BackupRestoreManager(
                 val imageUri = cursor.getString(16)
                 val taxable = cursor.getInt(17) == 1
                 val taxRateOverride = if (cursor.isNull(18)) null else cursor.getDouble(18)
+                // Gate H.4: these three columns were never exported, so every restore silently
+                // reset digital products to MANUAL with no provider or product code.
+                val fulfillmentMode = if (cursor.columnCount > 19 && !cursor.isNull(19)) cursor.getString(19) else "MANUAL"
+                val digitalProviderId = if (cursor.columnCount > 20 && !cursor.isNull(20)) cursor.getString(20) else null
+                val digitalProductCode = if (cursor.columnCount > 21 && !cursor.isNull(21)) cursor.getString(21) else null
 
                 productRows.add(
                     listOf(
@@ -249,14 +267,17 @@ class BackupRestoreManager(
                         CanonicalSerializer.sanitize(barcode),
                         CanonicalSerializer.sanitize(imageUri),
                         taxable.toString(),
-                        CanonicalSerializer.formatDouble(taxRateOverride)
+                        CanonicalSerializer.formatDouble(taxRateOverride),
+                        CanonicalSerializer.sanitize(fulfillmentMode),
+                        CanonicalSerializer.sanitize(digitalProviderId),
+                        CanonicalSerializer.sanitize(digitalProductCode)
                     )
                 )
             }
         }
         val tab04 = SheetTab(
             name = "04_Products",
-            headers = listOf("uuid", "business_id", "category_uuid", "name", "purchase_price", "selling_price", "stock", "minimum_stock", "unit", "item_type", "is_deleted", "deleted_at", "created_at", "updated_at", "barcode", "image_uri", "taxable", "tax_rate_override"),
+            headers = listOf("uuid", "business_id", "category_uuid", "name", "purchase_price", "selling_price", "stock", "minimum_stock", "unit", "item_type", "is_deleted", "deleted_at", "created_at", "updated_at", "barcode", "image_uri", "taxable", "tax_rate_override", "fulfillment_mode", "digital_provider_id", "digital_product_code"),
             rows = CanonicalSerializer.sortTabRows("04_Products", productRows)
         )
 
@@ -349,6 +370,8 @@ class BackupRestoreManager(
 
         // 6. Tab 08_Purchases
         val purchaseRows = mutableListOf<List<String>>()
+        // Gate H.4: needed so a purchase order can transport final_purchase_id as a UUID.
+        val purchaseIdToUuid = mutableMapOf<Long, String>()
         db.query("SELECT id, uuid, business_id, device_id, transaction_number, transaction_date, total_amount, payment_method, created_at, supplier_id, subtotal_amount, taxable_base_snapshot, tax_rate_snapshot, tax_amount_snapshot FROM purchase_transactions WHERE business_id = ?", arrayOf(businessId)).use { cursor ->
             while (cursor.moveToNext()) {
                 val uuid = cursor.getString(1)
@@ -359,6 +382,7 @@ class BackupRestoreManager(
                 val totalAmount = cursor.getLong(6)
                 val paymentMethod = cursor.getString(7)
                 val createdAt = cursor.getLong(8)
+                purchaseIdToUuid[cursor.getLong(0)] = uuid
                 val supplierId = if (cursor.isNull(9)) null else cursor.getLong(9)
                 val supplierUuid = if (supplierId != null) supplierIdToUuid[supplierId] ?: "NULL" else "NULL"
                 val subtotalAmount = if (cursor.columnCount > 10 && !cursor.isNull(10)) cursor.getLong(10) else 0L
@@ -697,7 +721,7 @@ class BackupRestoreManager(
                 val price = cursor.getLong(8)
                 val purchasePrice = cursor.getLong(9)
                 val subtotal = cursor.getLong(10)
-                val taxable = if (cursor.isNull(11)) "true" else cursor.getInt(11).toString()
+                val taxable = CanonicalSerializer.formatBoolean(cursor.getInt(11) == 1)
                 val taxRateSnapshot = if (cursor.isNull(12)) null else cursor.getDouble(12)
                 val taxAmountSnapshot = if (cursor.isNull(13)) null else cursor.getLong(13)
                 val createdAt = cursor.getLong(14)
@@ -795,6 +819,10 @@ class BackupRestoreManager(
                     val sentAt = if (cursor.isNull(13)) null else cursor.getLong(13)
                     val receivedAt = if (cursor.isNull(14)) null else cursor.getLong(14)
                     val finalPurchaseId = if (cursor.isNull(15)) null else cursor.getLong(15)
+                    // Gate H.4: every other foreign key travels as a UUID. This one used to travel
+                    // as the raw autoincrement id, which becomes meaningless after a restore
+                    // reallocates ids, so the restored order pointed at an unrelated purchase.
+                    val finalPurchaseUuid = if (finalPurchaseId != null) purchaseIdToUuid[finalPurchaseId] ?: "NULL" else "NULL"
 
                     poRows.add(
                         listOf(
@@ -812,14 +840,14 @@ class BackupRestoreManager(
                             updatedAt.toString(),
                             CanonicalSerializer.formatLong(sentAt),
                             CanonicalSerializer.formatLong(receivedAt),
-                            CanonicalSerializer.formatLong(finalPurchaseId)
+                            finalPurchaseUuid
                         )
                     )
                 }
             }
             SheetTab(
                 name = "20_PurchaseOrders",
-                headers = listOf("uuid", "business_id", "device_id", "order_number", "supplier_uuid", "supplier_name_snapshot", "supplier_phone_snapshot", "status", "total_estimated_amount", "notes", "created_at", "updated_at", "sent_at", "received_at", "final_purchase_id"),
+                headers = listOf("uuid", "business_id", "device_id", "order_number", "supplier_uuid", "supplier_name_snapshot", "supplier_phone_snapshot", "status", "total_estimated_amount", "notes", "created_at", "updated_at", "sent_at", "received_at", "final_purchase_uuid"),
                 rows = CanonicalSerializer.sortTabRows("20_PurchaseOrders", poRows)
             )
         } else null
@@ -889,7 +917,8 @@ class BackupRestoreManager(
         tab21?.let { dataTabs["21_PurchaseOrderItems"] = it }
 
         val totalRecords = dataTabs.values.sumOf { it.rows.size }
-        val checksum = CanonicalSerializer.calculateChecksum(dataTabs)
+        // Gate H.4.1: new backups declare the coercion-proof canonical checksum algorithm.
+        val checksum = CanonicalSerializer.calculateChecksum(dataTabs, CanonicalSerializer.CURRENT_CHECKSUM_ALGORITHM)
         val exportedAt = System.currentTimeMillis()
 
         val metadata = BackupMetadata(
@@ -907,7 +936,8 @@ class BackupRestoreManager(
             taxPriceMode = userSettings.taxPriceMode.name,
             taxApplicability = userSettings.taxApplicability.name,
             taxRoundingMode = userSettings.taxRoundingMode,
-            taxEffectiveDate = userSettings.taxEffectiveDate
+            taxEffectiveDate = userSettings.taxEffectiveDate,
+            checksumAlgorithm = CanonicalSerializer.CURRENT_CHECKSUM_ALGORITHM.wireName
         )
 
         val metadataRows = listOf(
@@ -920,6 +950,7 @@ class BackupRestoreManager(
             listOf("capabilities", metadata.capabilities.sorted().joinToString(",")),
             listOf("total_records", metadata.totalRecords.toString()),
             listOf("checksum", metadata.checksum),
+            listOf("checksum_algorithm", metadata.checksumAlgorithm),
             listOf("tax_enabled", metadata.taxEnabled.toString()),
             listOf("tax_rate", metadata.taxRate.toString()),
             listOf("tax_price_mode", metadata.taxPriceMode),
@@ -947,6 +978,7 @@ class BackupRestoreManager(
         allTabs.putAll(dataTabs)
 
         BackupSnapshot(metadata = metadata, tabs = allTabs)
+        } // end Gate H.4.1 read transaction - snapshot is fully materialised before it closes
     }
 
     /**
@@ -957,33 +989,34 @@ class BackupRestoreManager(
             // Phase 1: Pre-validation (Zero Room DB Mutation on failure)
             BackupValidator.validate(snapshot, expectedBusinessId)
 
+            // Gate H.4.1 - resolve the single tenant this restore may touch, then prove the whole
+            // archive belongs to it BEFORE any row is deleted or written. A snapshot carrying a
+            // single foreign business id is refused outright rather than being normalised, because
+            // silently rewriting a merchant's rows is worse than refusing the restore.
+            val targetBusinessId = BackupRestoreContract.resolveTargetBusinessId(
+                expected = expectedBusinessId,
+                metadataBusinessId = snapshot.metadata.businessId
+            ) ?: return@withContext Result.failure(
+                CrossTenantBackupException(
+                    "Refusing to restore: neither an expected business id nor a backup business id " +
+                        "could be resolved, so the restore cannot be tenant-scoped"
+                )
+            )
+            BackupRestoreContract.assertSingleTenant(snapshot, targetBusinessId)
+
             // Phase 2: Room Atomic Transaction (Authoritative persistence boundary)
             database.withTransaction {
                 val db = database.openHelper.writableDatabase
 
-                // 1. Clear all domain tables in reverse dependency order
-                db.execSQL("DELETE FROM sale_return_items")
-                db.execSQL("DELETE FROM sale_return_transactions")
-                db.execSQL("DELETE FROM stock_movements")
-                db.execSQL("DELETE FROM cash_transactions")
-                db.execSQL("DELETE FROM supplier_payments")
-                db.execSQL("DELETE FROM supplier_payables")
-                db.execSQL("DELETE FROM debt_payments")
-                db.execSQL("DELETE FROM debts")
-                db.execSQL("DELETE FROM purchase_items")
-                db.execSQL("DELETE FROM purchase_transactions")
-                db.execSQL("DELETE FROM purchase_order_items")
-                db.execSQL("DELETE FROM purchase_orders")
-                db.execSQL("DELETE FROM digital_transactions")
-                db.execSQL("DELETE FROM sale_items")
-                db.execSQL("DELETE FROM sales_transactions")
-                db.execSQL("DELETE FROM products")
-                db.execSQL("DELETE FROM categories")
-                db.execSQL("DELETE FROM customers")
-                db.execSQL("DELETE FROM suppliers")
-
-                // 2. Truncate local sync_queue to avoid replaying obsolete actions
-                db.execSQL("DELETE FROM sync_queue")
+                // 1. Clear this tenant's rows in reverse dependency order.
+                // Gate H.4.1: these used to be bare `DELETE FROM <table>`, which destroyed any row
+                // belonging to a different business id living in the same database. Every one of
+                // these tables carries business_id, so the delete is now scoped to the restore
+                // target. The order is unchanged: children before parents, so no foreign key is
+                // left dangling mid-transaction.
+                BackupRestoreContract.deleteStatements(targetBusinessId).forEach { statement ->
+                    db.execSQL(statement, arrayOf(targetBusinessId))
+                }
 
                 // 3. Restore Categories
                 val categoryUuidToId = mutableMapOf<String, Long>()
@@ -1086,6 +1119,13 @@ class BackupRestoreManager(
                     val imageUri = if (row[15] == "NULL") null else row[15]
                     val taxable = if (row.size > 16) row[16].toBoolean() else true
                     val taxRateOverride = if (row.size > 17 && row[17] != "NULL") row[17].toDoubleOrNull() else null
+                    // Gate H.4: digital fulfilment columns. Backups written before this gate have
+                    // only 18 columns, so they fall back to the entity defaults exactly as before.
+                    val fulfillmentMode = row.getOrNull(18)
+                        ?.takeIf { it != "NULL" && it.isNotBlank() }
+                        ?: "MANUAL"
+                    val digitalProviderId = row.getOrNull(19)?.takeIf { it != "NULL" }
+                    val digitalProductCode = row.getOrNull(20)?.takeIf { it != "NULL" }
 
                     val cv = ContentValues().apply {
                         put("uuid", uuid)
@@ -1106,6 +1146,9 @@ class BackupRestoreManager(
                         if (imageUri != null) put("image_uri", imageUri) else putNull("image_uri")
                         put("taxable", if (taxable) 1 else 0)
                         if (taxRateOverride != null) put("tax_rate_override", taxRateOverride) else putNull("tax_rate_override")
+                        put("fulfillment_mode", fulfillmentMode)
+                        if (digitalProviderId != null) put("digital_provider_id", digitalProviderId) else putNull("digital_provider_id")
+                        if (digitalProductCode != null) put("digital_product_code", digitalProductCode) else putNull("digital_product_code")
                     }
                     val newId = db.insert("products", 0, cv)
                     productUuidToId[uuid] = newId
@@ -1500,7 +1543,9 @@ class BackupRestoreManager(
                     val price = row[7].toLongOrNull() ?: 0L
                     val purchasePrice = if (row.size > 10) row[8].toLongOrNull() ?: 0L else 0L
                     val subtotal = if (row.size > 10) row[9].toLongOrNull() ?: 0L else (row.getOrNull(8)?.toLongOrNull() ?: 0L)
-                    val taxable = if (row.size > 11) row[10].toBooleanStrictOrNull() ?: true else true
+                    // Gate H.4: accept both wire forms. Legacy backups stored the raw int
+                    // ("1"/"0"); current backups store "true"/"false".
+                    val taxable = CanonicalSerializer.parseBoolean(row.getOrNull(10), default = true)
                     val taxRateSnapshot = if (row.size > 12 && row[11] != "NULL") row[11].toDoubleOrNull() else null
                     val taxAmountSnapshot = if (row.size > 13 && row[12] != "NULL") row[12].toLongOrNull() else null
                     val createdAt = if (row.size > 13) row[13].toLongOrNull() ?: System.currentTimeMillis() else if (row.size > 10) row[10].toLongOrNull() ?: System.currentTimeMillis() else (row.getOrNull(9)?.toLongOrNull() ?: System.currentTimeMillis())
@@ -1590,7 +1635,11 @@ class BackupRestoreManager(
                     val updatedAt = row[11].toLongOrNull() ?: System.currentTimeMillis()
                     val sentAt = if (row[12] == "NULL") null else row[12].toLongOrNull()
                     val receivedAt = if (row[13] == "NULL") null else row[13].toLongOrNull()
-                    val finalPurchaseId = if (row[14] == "NULL") null else row[14].toLongOrNull()
+                    // Gate H.4: remap the referenced purchase through the uuid map so the link
+                    // survives id reallocation. A legacy numeric id cannot be mapped safely, so it
+                    // is dropped rather than left dangling at an unrelated purchase.
+                    val finalPurchaseUuid = row.getOrNull(14)?.takeIf { it != "NULL" && it.isNotBlank() }
+                    val finalPurchaseId = finalPurchaseUuid?.let { purchaseUuidToId[it] }
 
                     val supplierId = supplierUuidToId[supplierUuid]
                         ?: throw CorruptedBackupException("Unknown supplier_uuid '$supplierUuid' for purchase order '$uuid'")
@@ -1663,6 +1712,12 @@ class BackupRestoreManager(
             // Room COMMIT succeeded! Room state is now authoritative.
 
             // Phase 3: Update DataStore (Separate persistence boundary)
+            // Gate H.4.1: the old code caught every exception here, logged nothing, and still
+            // returned Result.success - the UI told the merchant the restore was complete while
+            // the shop profile, business type and tax settings had not been applied. The failure is
+            // now surfaced as a distinct, non-rollback exception so the caller can present a
+            // partial-success / reconciliation-required state instead of a clean success.
+            var dataStoreFailure: Throwable? = null
             try {
                 val businessTab = snapshot.getTab("01_Business")
                 if (businessTab != null && businessTab.rows.isNotEmpty()) {
@@ -1717,8 +1772,13 @@ class BackupRestoreManager(
                     roundingMode = metadata.taxRoundingMode
                 )
             } catch (e: Exception) {
-                // IMPORTANT: Do NOT attempt to rollback Room. Room is already committed and authoritative.
-                // Log exception and allow deterministic startup reconciliation to resolve DataStore later.
+                // Room is already committed and authoritative, so this is NOT a rollback signal.
+                // Record it and report it explicitly; see the note above.
+                dataStoreFailure = e
+            }
+
+            dataStoreFailure?.let { failure ->
+                return@withContext Result.failure(DataStoreReconciliationRequiredException(failure))
             }
 
             Result.success(Unit)

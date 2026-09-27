@@ -16,6 +16,35 @@ object CanonicalSerializer {
     const val README_TAB_NAME = "00_README"
     const val METADATA_TAB_NAME = "00_Metadata"
 
+    /** Gate H.4.1 - the literal written into a cell to represent SQL NULL. */
+    const val NULL_SENTINEL = "NULL"
+
+    /**
+     * Gate H.4.1 - checksum algorithms.
+     *
+     * [RAW_V1] is the historical behaviour: the checksum was taken over the exact strings written
+     * into the sheet. It is retained byte-for-byte so every archive written before H.4.1 still
+     * validates.
+     *
+     * [CANONICAL_V2] is used for new backups. It hashes a *typed* token per cell instead of the
+     * raw string, so the checksum no longer depends on how Google Sheets chooses to type or echo a
+     * cell. A value written as "10.0" and read back as 10, or "1" and read back as true, now
+     * produce the same token - previously that difference was enough to fail a restore of the
+     * user's own, untouched backup with ChecksumMismatchException.
+     */
+    enum class ChecksumAlgorithm(val wireName: String) {
+        RAW_V1("RAW_V1"),
+        CANONICAL_V2("CANONICAL_V2");
+
+        companion object {
+            fun fromWireName(value: String?): ChecksumAlgorithm =
+                entries.firstOrNull { it.wireName == value } ?: RAW_V1
+        }
+    }
+
+    /** The algorithm new backups declare. */
+    val CURRENT_CHECKSUM_ALGORITHM: ChecksumAlgorithm = ChecksumAlgorithm.CANONICAL_V2
+
     val DATA_TAB_NAMES = listOf(
         "01_Business",
         "02_Device",
@@ -121,6 +150,26 @@ object CanonicalSerializer {
      */
     fun formatBoolean(value: Boolean?): String {
         return value?.toString() ?: "NULL"
+    }
+
+    /**
+     * Gate H.4 - tolerant boolean parsing for a spreadsheet cell.
+     *
+     * Booleans have been written into `18_SaleReturnItems.taxable` as the raw ints "1"/"0"
+     * while every other tab writes "true"/"false". Restoring that cell with
+     * `String.toBooleanStrictOrNull()` returned null for both "1" and "0", so every restored
+     * return line silently fell back to the default and was marked taxable.
+     *
+     * Accepts both wire forms (and is case-insensitive) so backups written by either version
+     * restore correctly. Returns [default] for null, the SQL NULL sentinel, or anything
+     * unrecognised rather than guessing.
+     */
+    fun parseBoolean(value: String?, default: Boolean = false): Boolean {
+        return when (value?.trim()?.lowercase()) {
+            "true", "1" -> true
+            "false", "0" -> false
+            else -> default
+        }
     }
 
     /**
@@ -232,10 +281,87 @@ object CanonicalSerializer {
     }
 
     /**
+     * Gate H.4.1 - canonicalises one cell to a typed token.
+     *
+     * The point is to make the checksum independent of Google Sheets' cell typing:
+     *   - a numeric string becomes a Long or a normalised BigDecimal token, so "10.0", "10" and
+     *     10 all collapse to the same value;
+     *   - "true"/"false" become an explicit boolean token, so "1"/"0" and true/false are
+     *     distinguishable but stable;
+     *   - the NULL sentinel becomes its own token, so a literal "NULL" string written by a
+     *     merchant is not silently equal to SQL NULL;
+     *   - everything else - uuid, ISO or epoch timestamp, product name, address - is an escaped
+     *     string token.
+     *
+     * Escape the token separator and the escape character itself so a crafted cell value can
+     * never forge the boundary between two cells or two rows.
+     */
+    fun canonicalToken(value: String): String {
+        val trimmed = value.trim().removePrefix("+")
+        // One numeric token for every number, whatever its scale.
+        //
+        // It is tempting to emit "L10" for integers and "D10.0" for decimals, but that is exactly
+        // what breaks under Google Sheets: the exporter writes "10.0" and the API may hand back
+        // 10, and the two must canonicalise identically or a restore of the user's own untouched
+        // backup fails. stripTrailingZeros + toPlainString makes 10, 10.0, 1E1 and 0.10E+2 all
+        // collapse to the same token.
+        //
+        // BigDecimal throws on anything non-numeric, so the parse must stay guarded by a
+        // successful runCatching - a product name such as "Beras" falls through to the string token.
+        runCatching { java.math.BigDecimal(trimmed).stripTrailingZeros().toPlainString() }
+            .getOrNull()
+            ?.let { return "N$it" }
+        return when (value.trim().lowercase()) {
+            "true" -> "Btrue"
+            "false" -> "Bfalse"
+            else -> "S" + escapeToken(value)
+        }
+    }
+
+    private fun escapeToken(value: String): String {
+        val sb = StringBuilder(value.length + 8)
+        for (ch in value) {
+            when (ch) {
+                '\\' -> sb.append("\\\\")
+                '\t' -> sb.append("\\t")
+                '\n' -> sb.append("\\n")
+                '\r' -> sb.append("\\r")
+                else -> sb.append(ch)
+            }
+        }
+        return sb.toString()
+    }
+
+    /**
+     * Builds the [ChecksumAlgorithm.CANONICAL_V2] payload: typed tokens, tab and row boundaries
+     * made explicit so no cell content can imitate a structural delimiter.
+     */
+    fun buildCanonicalPayloadV2(tabs: Map<String, SheetTab>): String {
+        val sb = StringBuilder()
+        for (tabName in DATA_TAB_NAMES) {
+            sb.append("[TAB:").append(tabName).append("]\n")
+            val tab = tabs[tabName] ?: continue
+            for (row in sortTabRows(tabName, tab.rows)) {
+                for (cell in row) {
+                    sb.append(canonicalToken(cell)).append('\u001F')
+                }
+                sb.append('\u001E')
+            }
+        }
+        return sb.toString()
+    }
+
+    /**
      * Computes SHA-256 checksum in hexadecimal lowercase.
      */
-    fun calculateChecksum(tabs: Map<String, SheetTab>): String {
-        val payload = buildCanonicalPayload(tabs)
+    fun calculateChecksum(
+        tabs: Map<String, SheetTab>,
+        algorithm: ChecksumAlgorithm = CURRENT_CHECKSUM_ALGORITHM
+    ): String {
+        val payload = when (algorithm) {
+            ChecksumAlgorithm.RAW_V1 -> buildCanonicalPayload(tabs)
+            ChecksumAlgorithm.CANONICAL_V2 -> buildCanonicalPayloadV2(tabs)
+        }
         val md = MessageDigest.getInstance("SHA-256")
         val digest = md.digest(payload.toByteArray(Charsets.UTF_8))
         return digest.joinToString("") { "%02x".format(it) }
@@ -244,8 +370,12 @@ object CanonicalSerializer {
     /**
      * Verifies checksum using constant-time comparison.
      */
-    fun verifyChecksum(expectedChecksum: String, tabs: Map<String, SheetTab>): Boolean {
-        val calculated = calculateChecksum(tabs)
+    fun verifyChecksum(
+        expectedChecksum: String,
+        tabs: Map<String, SheetTab>,
+        algorithm: ChecksumAlgorithm = CURRENT_CHECKSUM_ALGORITHM
+    ): Boolean {
+        val calculated = calculateChecksum(tabs, algorithm)
         return MessageDigest.isEqual(
             expectedChecksum.trim().lowercase().toByteArray(Charsets.UTF_8),
             calculated.trim().lowercase().toByteArray(Charsets.UTF_8)
