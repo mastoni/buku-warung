@@ -1069,6 +1069,23 @@ input[readonly] {
   color: #0ea5e0;
 }
 
+.funnel-stage-unit {
+  font-weight: 400;
+  font-size: 11px;
+  color: #64748b;
+  text-transform: none;
+}
+
+.analytics-help {
+  margin: 0 0 12px;
+  padding: 8px 12px;
+  border-left: 3px solid #0ea5e0;
+  background: #f0f9ff;
+  color: #475569;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
 .conversion-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));

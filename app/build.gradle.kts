@@ -94,6 +94,18 @@ android {
                 signingConfig = releaseSigning
             }
         }
+        // NON-DISTRIBUTABLE. Local funnel smoke test only. Inherits the debug signing config
+        // (Android Debug keystore), never the release key, and carries an applicationIdSuffix
+        // so it can never replace or be mistaken for a production install. Its manifest overlay
+        // grants cleartext to 10.0.2.2 only, so no other destination is affected and no
+        // release/debug configuration is modified.
+        create("smokeTest") {
+            initWith(getByName("debug"))
+            matchingFallbacks += listOf("debug")
+            applicationIdSuffix = ".smoketest"
+            buildConfigField("boolean", "ENABLE_OWNER_TEST", "true")
+            buildConfigField("String", "LICENSE_SERVER_URL", "\"http://10.0.2.2:3000\"")
+        }
     }
 
     compileOptions {

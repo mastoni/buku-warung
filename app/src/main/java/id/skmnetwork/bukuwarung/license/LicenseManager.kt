@@ -229,6 +229,11 @@ open class LicenseManager(
 
     /**
      * Non-blocking, offline-safe reporting of marketing/conversion funnel events.
+     *
+     * Every app-originated event now carries [installationId], a random app-scoped identifier
+     * persisted in DataStore. This is what allows the server to count unique installations
+     * instead of raw event rows. The previous behaviour minted a fresh lead token per request,
+     * which made event count and unique user count indistinguishable.
      */
     fun trackMarketingEvent(
         eventType: String,
@@ -240,17 +245,33 @@ open class LicenseManager(
     ) {
         scope.launch(Dispatchers.IO) {
             try {
+                val installationId = userPreferencesRepository?.getOrCreateInstallationId()
                 apiClient.trackFunnelEvent(
                     eventType = eventType,
                     utmSource = utmSource,
                     utmMedium = utmMedium,
                     utmCampaign = utmCampaign,
                     utmContent = utmContent,
-                    leadToken = leadToken
+                    leadToken = leadToken,
+                    installationId = installationId
                 )
             } catch (_: Exception) {
                 // Non-blocking offline-first: fail silently without error
             }
         }
     }
+
+    /**
+     * Claims the one-and-only LICENSE_GATE_VIEWED entitlement for this installation.
+     * Returns true only for the caller that won the claim; every later call returns false.
+     */
+    suspend fun claimLicenseGateView(): Boolean =
+        userPreferencesRepository?.claimLicenseGateViewRecorded() ?: false
+
+    /**
+     * Claims the one-and-only APP_FIRST_OPEN entitlement for this installation.
+     * Returns true only for the caller that won the claim.
+     */
+    suspend fun claimAppFirstOpen(): Boolean =
+        userPreferencesRepository?.claimAppFirstOpenRecorded() ?: false
 }

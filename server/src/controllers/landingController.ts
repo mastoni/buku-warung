@@ -7,13 +7,19 @@ import { adminAuthMiddleware } from '../middleware/auth.js';
 export async function registerLandingRoutes(fastify: FastifyInstance) {
   const attributionService = new AttributionService();
 
-  const ALLOWED_FIELDS = new Set(['eventType', 'leadToken', ...ALLOWED_UTM_PARAMS]);
+  const ALLOWED_FIELDS = new Set(['eventType', 'leadToken', 'installationId', ...ALLOWED_UTM_PARAMS]);
 
   const LANDING_TRACK_SCHEMA = {
     type: 'object',
     properties: {
       eventType: { type: 'string', minLength: 1, maxLength: 50 },
       leadToken: { type: 'string', pattern: '^LW-[2-9A-HJ-NP-Z]{6}$' },
+      // App-scoped analytics identifier. UUID shape only; no PII, no hardware identifier.
+      installationId: {
+        type: 'string',
+        maxLength: 36,
+        pattern: '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
+      },
       utm_source: { type: 'string', maxLength: 100 },
       utm_medium: { type: 'string', maxLength: 100 },
       utm_campaign: { type: 'string', maxLength: 100 },
@@ -77,6 +83,7 @@ export async function registerLandingRoutes(fastify: FastifyInstance) {
           {
             eventType,
             leadToken: body.leadToken as string | undefined,
+            installationId: body.installationId as string | undefined,
             utm_source: body.utm_source as string | undefined,
             utm_medium: body.utm_medium as string | undefined,
             utm_campaign: body.utm_campaign as string | undefined,

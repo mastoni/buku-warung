@@ -73,12 +73,19 @@ fun LicenseGateScreen(
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
-        licenseManager.trackMarketingEvent(
-            eventType = "LICENSE_GATE_VIEWED",
-            utmSource = "app_license_gate",
-            utmMedium = "in_app",
-            utmCampaign = "buku_warung_v020"
-        )
+        // LICENSE_GATE_VIEWED is defined as "license gate meaningfully exposed to this
+        // installation", not "gate composable entered". A plain LaunchedEffect(Unit) re-fires
+        // on every re-entry into composition (Activity recreation, re-navigation), which
+        // previously produced one row per entry. The claim is committed in DataStore before
+        // the event is sent, so exactly one row is recorded per installation.
+        if (licenseManager.claimLicenseGateView()) {
+            licenseManager.trackMarketingEvent(
+                eventType = "LICENSE_GATE_VIEWED",
+                utmSource = "app_license_gate",
+                utmMedium = "in_app",
+                utmCampaign = "buku_warung_v020"
+            )
+        }
     }
 
     var ownerEmailInput by remember { mutableStateOf("") }

@@ -431,9 +431,17 @@ function renderFunnelAnalytics(data) {
       else if (isSales) badgeClass = 'badge-info';
       else if (isFulfillment) badgeClass = 'badge-success';
       else if (isConversion) badgeClass = 'badge-primary';
+      // Every stage states what it counts. A count of 22 raw events and a count of 22
+      // installations are different facts and must not read identically.
+      const unit = stage.unit ? ` <span class="funnel-stage-unit">(${stage.unit})</span>` : '';
+      const title = stage.metric === 'unique_installations'
+        ? 'title="Jumlah instalasi unik, bukan jumlah event."'
+        : stage.metric && stage.metric !== 'event_count'
+          ? `title="Dihitung dari data bisnis, bukan dari event tracking."`
+          : 'title="Jumlah event tercatat, bukan jumlah pengguna unik."';
       return `
-        <div class="funnel-stage">
-          <span class="funnel-stage-label">${label}</span>
+        <div class="funnel-stage"${title}>
+          <span class="funnel-stage-label">${label}${unit}</span>
           <span class="funnel-stage-count">${stage.count}</span>
         </div>
       `;
@@ -447,11 +455,22 @@ function renderFunnelAnalytics(data) {
     convContainer.innerHTML = conversions.map((c) => {
       const from = c.from.replace(/_/g, ' ').toLowerCase();
       const to = c.to.replace(/_/g, ' ').toLowerCase();
+      // A rate is only shown when both sides measure the same population. When they do not,
+      // the card says so instead of rendering a confident but meaningless percentage. The raw
+      // ratio is still visible, explicitly labelled as a ratio.
+      const isLinked = c.cohortLinked !== false;
+      const value = isLinked ? formatPercent(c.rate) : '—';
+      const desc = isLinked
+        ? `${c.numerator} / ${c.denominator}`
+        : `${c.numerator} / ${c.denominator} · rasio event (bukan konversi)`;
+      const title = isLinked
+        ? 'title="Konversi: kedua sisi diukur pada populasi yang sama."'
+        : 'title="Tidak dapat dikonversi: kedua sisi menghitung hal berbeda dan tidak punya identitas bersama."';
       return `
-        <div class="metric-card">
+        <div class="metric-card"${title}>
           <span class="metric-label">${from} → ${to}</span>
-          <span class="metric-value">${formatPercent(c.rate)}</span>
-          <span class="metric-desc">${c.numerator} / ${c.denominator}</span>
+          <span class="metric-value">${value}</span>
+          <span class="metric-desc">${desc}</span>
         </div>
       `;
     }).join('');
@@ -484,7 +503,11 @@ function renderFunnelAnalytics(data) {
 function formatPercent(value) {
   if (value === null || value === undefined || isNaN(value)) return '-';
   if (value === 0) return '0%';
-  if (value >= 100) return '100%';
+  // No clamp at 100%. The previous `if (value >= 100) return '100%'` silently converted
+  // ratios such as 1700% and 129% into a confident "100%", hiding the fact that those two
+  // stages were measured on incompatible populations. Population compatibility is now
+  // decided server-side via `cohortLinked`; anything that reaches this function is a real
+  // conversion and is rendered truthfully, including values above 100%.
   const v = Math.round(value * 10) / 10;
   if (v === Math.floor(v)) return `${v}%`;
   return `${v.toFixed(1)}%`;

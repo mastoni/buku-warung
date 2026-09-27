@@ -16,6 +16,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.security.MessageDigest
 import java.security.SecureRandom
@@ -209,7 +211,20 @@ class UserPreferencesRepository(
 
         // 18. POST-DOWNLOAD TELEMETRY (MARKETING-04)
         val FIRST_LAUNCH_RECORDED = booleanPreferencesKey("first_launch_recorded")
+
+        // 19. FUNNEL IDENTITY & LIFECYCLE CLAIMS (FUNNEL-FIX)
+        // Random, app-scoped analytics identifier. Deliberately separate from DEVICE_ID,
+        // which is license device-binding state and must not leak into analytics.
+        val INSTALLATION_ID = stringPreferencesKey("installation_id")
+        val LICENSE_GATE_VIEW_RECORDED = booleanPreferencesKey("license_gate_view_recorded")
     }
+
+    /**
+     * Serialises telemetry read-modify-write sequences. Without this, two coroutines
+     * racing inside the same process (e.g. recomposition + Activity recreation) can both
+     * observe "not yet recorded" and both win the claim, producing duplicate events.
+     */
+    private val telemetryMutex = Mutex()
 
     val userSettings: Flow<UserSettings> = dataStore.data.map { prefs ->
         val salt = prefs[Keys.PIN_SALT]
@@ -304,6 +319,49 @@ class UserPreferencesRepository(
         dataStore.edit { prefs ->
             prefs[Keys.FIRST_LAUNCH_RECORDED] = true
         }
+    }
+
+    /**
+     * Atomically claims the single APP_FIRST_OPEN entitlement for this installation.
+     *
+     * Returns true exactly once per installation (per DataStore lifecycle). The flag write is
+     * committed before returning, so a subsequent call — from recomposition, Activity
+     * recreation, or a later process start — always returns false.
+     *
+     * Reads DataStore directly rather than a cached state snapshot so a stale snapshot can
+     * never authorise a second event.
+     */
+    suspend fun claimAppFirstOpenRecorded(): Boolean = telemetryMutex.withLock {
+        if (dataStore.data.first()[Keys.FIRST_LAUNCH_RECORDED] == true) return@withLock false
+        dataStore.edit { prefs -> prefs[Keys.FIRST_LAUNCH_RECORDED] = true }
+        true
+    }
+
+    /**
+     * Atomically claims the single LICENSE_GATE_VIEWED entitlement for this installation.
+     *
+     * Event definition: "the license gate was meaningfully exposed to this installation".
+     * It is intentionally NOT "number of times the gate composable was entered", which is
+     * what produced inflated counts previously (recomposition and Activity recreation each
+     * re-ran a LaunchedEffect(Unit) and emitted a row).
+     */
+    suspend fun claimLicenseGateViewRecorded(): Boolean = telemetryMutex.withLock {
+        if (dataStore.data.first()[Keys.LICENSE_GATE_VIEW_RECORDED] == true) return@withLock false
+        dataStore.edit { prefs -> prefs[Keys.LICENSE_GATE_VIEW_RECORDED] = true }
+        true
+    }
+
+    /**
+     * Returns the stable, privacy-safe, app-scoped installation identifier, creating it on
+     * first use. Random UUID only — no hardware identifier, IMEI, Android ID, IP, or PII.
+     * Survives app restarts; regenerated only when app data is cleared or reinstalled.
+     */
+    suspend fun getOrCreateInstallationId(): String = telemetryMutex.withLock {
+        val existing = dataStore.data.first()[Keys.INSTALLATION_ID]
+        if (!existing.isNullOrBlank()) return@withLock existing
+        val generated = java.util.UUID.randomUUID().toString()
+        dataStore.edit { prefs -> prefs[Keys.INSTALLATION_ID] = generated }
+        generated
     }
 
     suspend fun updatePrinterConfig(

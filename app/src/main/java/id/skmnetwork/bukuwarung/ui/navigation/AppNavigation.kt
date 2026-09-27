@@ -121,10 +121,13 @@ fun BukuWarungApp() {
         isCheckingExistingUser = false
     }
 
-    // Post-Download Telemetry: Record APP_FIRST_OPEN exactly once per installation lifecycle (MARKETING-04)
-    LaunchedEffect(userSettings.isFirstLaunchRecorded) {
-        if (!userSettings.isFirstLaunchRecorded) {
-            userPreferencesRepository.markFirstLaunchRecorded()
+    // Post-Download Telemetry: Record APP_FIRST_OPEN exactly once per installation.
+    // The previous implementation read the flag from a state snapshot and fired the event
+    // unconditionally whenever that snapshot said false, so repeated launches and
+    // Activity recreation could each emit a row. claimAppFirstOpen() now reads DataStore
+    // directly, serialises the read-modify-write, and commits the flag before the event.
+    LaunchedEffect(Unit) {
+        if (licenseManager.claimAppFirstOpen()) {
             licenseManager.trackMarketingEvent(
                 eventType = "APP_FIRST_OPEN",
                 utmSource = "app_license_gate",

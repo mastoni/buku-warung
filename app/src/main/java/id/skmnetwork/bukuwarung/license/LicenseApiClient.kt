@@ -233,7 +233,8 @@ class LicenseApiClient(
         utmMedium: String? = null,
         utmCampaign: String? = null,
         utmContent: String? = null,
-        leadToken: String? = null
+        leadToken: String? = null,
+        installationId: String? = null
     ): Boolean = withContext(Dispatchers.IO) {
         val endpoint = "$baseUrl/v1/landing/track"
         try {
@@ -244,6 +245,7 @@ class LicenseApiClient(
                 if (!utmCampaign.isNullOrBlank()) put("utm_campaign", utmCampaign)
                 if (!utmContent.isNullOrBlank()) put("utm_content", utmContent)
                 if (!leadToken.isNullOrBlank()) put("leadToken", leadToken)
+                if (!installationId.isNullOrBlank()) put("installationId", installationId)
             }
 
             val response = transport.post(

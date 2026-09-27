@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!--
+      Overlay for the non-distributable smokeTest build type.
+      Applies a network security policy that allows cleartext to the local
+      smoke collector only. This file is part of the smokeTest source set and
+      is therefore never merged into debug, ownerTest, or release.
+    -->
+    <application
+        android:networkSecurityConfig="@xml/network_security_config" />
+
+</manifest>

@@ -136,7 +136,8 @@ function initSchema(db: Database.Database): void {
       event_data TEXT,
       ip_hash TEXT,
       user_agent TEXT,
-      created_at INTEGER NOT NULL
+      created_at INTEGER NOT NULL,
+      installation_id TEXT
     );
 
     CREATE INDEX IF NOT EXISTS idx_funnel_events_token ON funnel_events(lead_token);
@@ -186,6 +187,26 @@ function initSchema(db: Database.Database): void {
 
     CREATE UNIQUE INDEX IF NOT EXISTS idx_promotions_product ON promotions(product);
   `);
+
+  // FUNNEL-FIX: additive, idempotent, non-destructive migration.
+  // Adds installation_id so app-originated events can be counted per installation.
+  // Historical rows keep installation_id = NULL and are never backfilled or rewritten.
+  // No UNIQUE constraint is added on (event_type, installation_id) on purpose:
+  // LICENSE_PURCHASE_CLICKED and LICENSE_WHATSAPP_CLICKED are genuine repeatable click
+  // events and must stay countable per occurrence. Deduplication is enforced by the client
+  // according to each event's own semantics, not by a storage constraint.
+  try {
+    const funnelCols = db.pragma('table_info(funnel_events)') as Array<{ name: string }>;
+    const funnelColNames = new Set(funnelCols.map((c) => c.name));
+    if (!funnelColNames.has('installation_id')) {
+      db.exec('ALTER TABLE funnel_events ADD COLUMN installation_id TEXT');
+    }
+    db.exec(
+      'CREATE INDEX IF NOT EXISTS idx_funnel_events_installation ON funnel_events(installation_id) WHERE installation_id IS NOT NULL'
+    );
+  } catch {
+    // Ignore migration error if table was just created with the column already present
+  }
 
   // Seed default BUKU_WARUNG promotion if not exists
   try {

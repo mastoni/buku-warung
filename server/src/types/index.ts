@@ -155,6 +155,7 @@ export interface CreateOrderRequest {
 export interface LandingTrackRequest {
   eventType: string;
   leadToken?: string;
+  installationId?: string;
   utm_source?: string;
   utm_medium?: string;
   utm_campaign?: string;
@@ -177,6 +178,7 @@ export interface FunnelEventRecord {
   ip_hash: string | null;
   user_agent: string | null;
   created_at: number;
+  installation_id: string | null;
 }
 
 export interface VerifyPaymentRequest {
@@ -202,17 +204,46 @@ export interface OrderSummaryMetrics {
   unattributedOrders: number;
 }
 
+/**
+ * Semantic classification of a funnel stage, so the dashboard can label what it is counting
+ * instead of presenting every number as if it were the same kind of quantity.
+ */
+export type FunnelMetricKind =
+  | 'event_count' // raw recorded events (traffic volume, clicks)
+  | 'unique_installations' // distinct app installations
+  | 'orders'
+  | 'payments'
+  | 'licenses'
+  | 'deliveries'
+  | 'activations';
+
 export interface FunnelStage {
   name: string;
   count: number;
+  /** What `count` actually measures. Absent on legacy responses. */
+  metric?: FunnelMetricKind;
+  /** Human-readable unit label for the count (e.g. "klik", "instalasi", "pesanan"). */
+  unit?: string;
 }
 
 export interface FunnelConversion {
   from: string;
   to: string;
+  /**
+   * Numerator/denominator expressed as a percentage. Always a finite number for API
+   * compatibility, and always safe against division by zero.
+   *
+   * IMPORTANT: this is a conversion rate ONLY when `cohortLinked` is true. When it is false the
+   * value is merely an event ratio between two incompatible populations, and consumers must
+   * present it as such (or withhold it) rather than as a conversion.
+   */
   rate: number;
   numerator: number;
   denominator: number;
+  /** True when both sides are measured on the same population and the rate is meaningful. */
+  cohortLinked: boolean;
+  /** Raw event ratio, always populated. Not a conversion rate. */
+  eventRatio: number;
 }
 
 export interface AttributionEntry {
