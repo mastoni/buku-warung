@@ -21,7 +21,7 @@ Dokumen ini berisi seluruh materi teks, metadata, dan panduan upload aset untuk 
 ## 2. Deskripsi Lengkap (Full Description)
 
 ```text
-Buku Warung adalah aplikasi kasir (POS) dan pembukuan praktis yang dirancang khusus untuk pemilik warung kelontong, toko sembako, dan UMKM. Berjalan offline-first untuk transaksi harian tanpa biaya langganan bulanan—data Anda aman tersimpan di HP Anda sendiri.
+Buku Warung adalah aplikasi kasir (POS) dan pembukuan praktis yang dirancang khusus untuk pemilik warung kelontong, toko sembako, dan UMKM. Berjalan offline-first untuk transaksi harian tanpa biaya langganan bulanan—data operasional usaha terutama tersimpan di HP Anda sendiri; data tertentu untuk lisensi, pembelian, dan dukungan dapat diproses oleh SKMNetwork.
 
 Kelola operasional warung jadi lebih rapi, cepat, dan mudah dipantau dalam satu genggaman!
 
