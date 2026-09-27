@@ -33,6 +33,26 @@ val releaseLicenseServerUrl: String = localProperties.getProperty("RELEASE_LICEN
     ?: System.getenv("RELEASE_LICENSE_SERVER_URL")
     ?: "https://license.skmnetwork.com"
 
+// Production release signing identity.
+//
+// Resolved once, from local.properties (git-ignored) or environment variables. No keystore
+// path, alias, or password is ever stored in tracked source.
+//
+// NOTE: the RELEASE_KEYSTORE_PATH default below is a convenience for the primary developer
+// workstation only. It is NOT a production identity: it points at bukuwarung-release-v2.jks,
+// the key that signed v0.2.1 (SHA-256 4aeec712...). Any other machine or CI must set
+// RELEASE_KEYSTORE_PATH to that same keystore explicitly, otherwise the release build fails
+// rather than silently signing with a different key.
+//
+// Configuration (never commit the password):
+//   local.properties  (git-ignored, preferred locally)
+//     RELEASE_KEYSTORE_PATH=C\:\\path\\to\\bukuwarung-release-v2.jks
+//     RELEASE_KEYSTORE_PASSWORD=<password>
+//   or environment variables of the same names for CI.
+//
+// See docs/RELEASE_SIGNING.md for the full procedure.
+val releaseKeystoreFile: File = File(releaseKeystorePath)
+
 if (!releaseLicenseServerUrl.startsWith("https://")) {
     throw GradleException("Release build requires a valid HTTPS RELEASE_LICENSE_SERVER_URL (was '$releaseLicenseServerUrl')")
 }
@@ -56,13 +76,10 @@ android {
 
     signingConfigs {
         create("release") {
-            val keystoreFile = File(releaseKeystorePath)
-            if (keystoreFile.exists() && !releaseKeystorePassword.isNullOrBlank()) {
-                storeFile = keystoreFile
-                storePassword = releaseKeystorePassword
-                keyAlias = releaseKeyAlias
-                keyPassword = releaseKeyPassword
-            }
+            storeFile = releaseKeystoreFile
+            storePassword = releaseKeystorePassword
+            keyAlias = releaseKeyAlias
+            keyPassword = releaseKeyPassword
         }
     }
 
@@ -75,10 +92,8 @@ android {
             isMinifyEnabled = false
             buildConfigField("boolean", "ENABLE_OWNER_TEST", "false")
             buildConfigField("String", "LICENSE_SERVER_URL", "\"$releaseLicenseServerUrl\"")
-            val releaseSigning = signingConfigs.getByName("release")
-            if (releaseSigning.storeFile != null) {
-                signingConfig = releaseSigning
-            }
+            // Applied unconditionally: a release variant must never be produced unsigned.
+            signingConfig = signingConfigs.getByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -89,10 +104,7 @@ android {
             matchingFallbacks += listOf("release")
             buildConfigField("boolean", "ENABLE_OWNER_TEST", "true")
             buildConfigField("String", "LICENSE_SERVER_URL", "\"http://10.0.2.2:3000\"")
-            val releaseSigning = signingConfigs.getByName("release")
-            if (releaseSigning.storeFile != null) {
-                signingConfig = releaseSigning
-            }
+            signingConfig = signingConfigs.getByName("release")
         }
         // NON-DISTRIBUTABLE. Local funnel smoke test only. Inherits the debug signing config
         // (Android Debug keystore), never the release key, and carries an applicationIdSuffix
