@@ -21,7 +21,13 @@ import java.util.UUID
 
 class CustomerRepository(
     private val appDatabase: AppDatabase,
-    private val businessId: String
+    private val businessId: String,
+    /**
+     * Optional transaction seam used by JVM unit tests, which cannot host a real
+     * Room transaction. When null (every production call site) the payment runs
+     * inside a real `appDatabase.withTransaction`, exactly as before.
+     */
+    private val transactionRunner: (suspend (suspend () -> Any?) -> Any?)? = null
 ) {
     private val customerDao = appDatabase.customerDao()
     private val debtDao = appDatabase.debtDao()
@@ -194,13 +200,22 @@ class CustomerRepository(
         userSettings: id.skmnetwork.bukuwarung.data.preferences.UserSettings? = null
     ): id.skmnetwork.bukuwarung.domain.receipt.ReceiptData? = saleRepository.getReceiptData(saleId, userSettings)
 
+    private suspend fun <T> runInTransaction(block: suspend () -> T): T {
+        return if (transactionRunner != null) {
+            @Suppress("UNCHECKED_CAST")
+            transactionRunner.invoke { block() } as T
+        } else {
+            appDatabase.withTransaction { block() }
+        }
+    }
+
     suspend fun processAtomicDebtPayment(
         debtId: Long,
         amount: Long,
         note: String?
     ): Result<Unit> = withContext(Dispatchers.IO) {
         runCatching {
-            appDatabase.withTransaction {
+            runInTransaction {
                 val debt = debtDao.getDebtById(debtId, businessId)
                     ?: throw Exception("Data hutang tidak ditemukan")
 
@@ -222,6 +237,7 @@ class CustomerRepository(
                 // 1. Insert Debt Payment
                 val payment = DebtPaymentEntity(
                     uuid = paymentUuid,
+                    businessId = businessId,
                     debtId = debt.id,
                     debtUuid = debt.uuid,
                     amount = amount,
@@ -247,6 +263,7 @@ class CustomerRepository(
                 val customerName = customer?.name ?: "Pelanggan"
 
                 val cashIncome = CashTransactionEntity(
+                    businessId = businessId,
                     type = "INCOME",
                     amount = amount,
                     description = "Pembayaran Hutang $customerName",
