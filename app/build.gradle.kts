@@ -94,7 +94,7 @@ android {
         applicationId = "id.skmnetwork.bukuwarung"
         minSdk = 24
         targetSdk = 37
-        versionCode = 4
+        versionCode = 5
         versionName = "0.2.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
