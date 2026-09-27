@@ -224,6 +224,67 @@ class LicenseApiClient(
     }
 
     /**
+     * Requests a device recovery for an existing licence.
+     *
+     * This is a customer-initiated, PUBLIC endpoint. It records a PENDING recovery request on
+     * the server and changes NOTHING else: it does not revoke the current device, does not
+     * activate the new one, and does not grant access. An authorised admin rebind remains a
+     * separate, explicit step.
+     *
+     * Logs nothing. No licence code, owner email, or device binding is written anywhere.
+     */
+    suspend fun recoverLicense(
+        licenseCode: String,
+        ownerEmail: String,
+        newDeviceBinding: String,
+        reason: String? = null
+    ): RecoveryResult = withContext(Dispatchers.IO) {
+        val endpoint = "$baseUrl/v1/license/recover"
+        try {
+            val payload = JSONObject().apply {
+                put("licenseCode", licenseCode.trim())
+                put("ownerEmail", ownerEmail.trim().lowercase())
+                put("newDeviceBinding", newDeviceBinding.trim())
+                if (!reason.isNullOrBlank()) {
+                    put("reason", reason)
+                }
+            }
+
+            val response = transport.post(
+                url = endpoint,
+                jsonPayload = payload.toString(),
+                connectTimeoutMs = connectTimeoutMs,
+                readTimeoutMs = readTimeoutMs
+            )
+
+            val json = try {
+                if (response.body.isNotBlank()) JSONObject(response.body) else JSONObject()
+            } catch (e: Exception) {
+                JSONObject()
+            }
+
+            val status = json.optString("status", "")
+            if (response.statusCode == 200 && status == "RECOVERY_PENDING") {
+                return@withContext RecoveryResult.RecoveryPending()
+            }
+
+            // Backend contract codes. Raw server messages are deliberately discarded so that no
+            // internal detail can reach the customer-facing UI.
+            when (json.optJSONObject("error")?.optString("code", "")) {
+                "INVALID_REQUEST" -> RecoveryResult.InvalidRequest()
+                "LICENSE_NOT_FOUND" -> RecoveryResult.LicenseNotFound()
+                "LICENSE_REVOKED" -> RecoveryResult.LicenseRevoked()
+                "EMAIL_MISMATCH" -> RecoveryResult.EmailMismatch()
+                else -> RecoveryResult.UnexpectedError()
+            }
+        } catch (e: java.io.IOException) {
+            RecoveryResult.NetworkError()
+        } catch (e: Exception) {
+            RecoveryResult.UnexpectedError()
+        }
+    }
+
+    /**
      * Reports a non-blocking marketing/conversion event to the server.
      * Respects offline-first constraints and strictly transmits zero business data.
      */

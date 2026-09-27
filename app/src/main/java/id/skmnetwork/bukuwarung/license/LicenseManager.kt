@@ -210,6 +210,41 @@ open class LicenseManager(
         context?.let { secureStorage.clearLicenseCode(it) }
     }
 
+    /**
+     * Requests a device recovery for an existing licence.
+     *
+     * The device binding is deliberately NOT a parameter: it is read from the repository so that
+     * this method can only ever submit the per-install UUID created by
+     * UserPreferencesRepository.getOrCreateDeviceId(). No new UUID is generated, and no hardware
+     * identifier is involved, so a customer can neither supply nor influence the value.
+     *
+     * This never clears credentials, never calls validateOnline(), never calls the admin rebind
+     * endpoint, and never mutates the local licence status. A successful result means the server
+     * recorded a PENDING recovery request and nothing more.
+     */
+    suspend fun requestDeviceRecovery(
+        licenseCode: String,
+        ownerEmail: String
+    ): RecoveryResult {
+        val repository = userPreferencesRepository
+            ?: return RecoveryResult.UnexpectedError()
+
+        val cleanCode = licenseCode.trim()
+        val cleanEmail = ownerEmail.trim().lowercase()
+        if (cleanCode.isEmpty() || cleanEmail.isEmpty()) {
+            return RecoveryResult.InvalidRequest()
+        }
+
+        val deviceId = repository.getOrCreateDeviceId()
+
+        return apiClient.recoverLicense(
+            licenseCode = cleanCode,
+            ownerEmail = cleanEmail,
+            newDeviceBinding = deviceId,
+            reason = null
+        )
+    }
+
     suspend fun getEntitlementInfo(): LicenseEntitlementData {
         return userPreferencesRepository?.getLicenseEntitlement() ?: LicenseEntitlementData()
     }

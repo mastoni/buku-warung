@@ -56,6 +56,7 @@ import id.skmnetwork.bukuwarung.BuildConfig
 import id.skmnetwork.bukuwarung.license.ActivationResult
 import id.skmnetwork.bukuwarung.license.LicenseManager
 import id.skmnetwork.bukuwarung.license.LicenseStatus
+import id.skmnetwork.bukuwarung.license.RecoveryResult
 import id.skmnetwork.bukuwarung.ui.components.AppCard
 import id.skmnetwork.bukuwarung.ui.components.PrimaryButton
 import id.skmnetwork.bukuwarung.ui.components.SecondaryButton
@@ -94,6 +95,9 @@ fun LicenseGateScreen(
 
     var activationResult by remember { mutableStateOf<ActivationResult?>(null) }
     var validationErrorMessage by remember { mutableStateOf<String?>(null) }
+    var recoveryInFlight by remember { mutableStateOf(false) }
+    var recoveryState by remember { mutableStateOf<RecoveryResult?>(null) }
+    val recoveryPending = recoveryState is RecoveryResult.RecoveryPending
 
     Surface(
         modifier = Modifier
@@ -199,6 +203,7 @@ fun LicenseGateScreen(
                                 ownerEmailInput = it
                                 validationErrorMessage = null
                                 activationResult = null
+                                recoveryState = null
                             },
                             label = { Text("Email Pemilik") },
                             placeholder = { Text("contoh@email.com") },
@@ -223,6 +228,7 @@ fun LicenseGateScreen(
                                 licenseCodeInput = it.uppercase()
                                 validationErrorMessage = null
                                 activationResult = null
+                                recoveryState = null
                             },
                             label = { Text("Kode Lisensi") },
                             placeholder = { Text("BW-XXXX-XXXX-XXXX") },
@@ -298,6 +304,78 @@ fun LicenseGateScreen(
                                             )
                                         }
                                     }
+                                }
+                            }
+                        }
+
+                        // Device recovery: shown only after the activation attempt reported
+                        // DEVICE_MISMATCH, and only with the credentials already entered above.
+                        // A pending result means the request was recorded; the licence stays
+                        // inactive until an authorised admin rebinds the device.
+                        val canRequestRecovery =
+                            !recoveryPending && !recoveryInFlight &&
+                                activationResult is ActivationResult.DeviceMismatch
+
+                        if (canRequestRecovery || recoveryPending || recoveryState is RecoveryResult.RecoveryPending) {
+                            Column(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalArrangement = Arrangement.spacedBy(AppSpacing.sm)
+                            ) {
+                                recoveryState?.let { state ->
+                                    val message = when (state) {
+                                        is RecoveryResult.RecoveryPending ->
+                                            "Permintaan pemulihan perangkat berhasil dikirim. " +
+                                                "Silakan tunggu persetujuan dukungan."
+                                        is RecoveryResult.InvalidRequest -> state.message
+                                        is RecoveryResult.LicenseNotFound -> state.message
+                                        is RecoveryResult.LicenseRevoked -> state.message
+                                        is RecoveryResult.EmailMismatch -> state.message
+                                        is RecoveryResult.NetworkError -> state.message
+                                        is RecoveryResult.UnexpectedError -> state.message
+                                    }
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .background(
+                                                if (recoveryPending) Color(0xFFE8F5E9) else Color(0xFFFFEBEE)
+                                            )
+                                            .padding(AppSpacing.md)
+                                    ) {
+                                        Text(
+                                            text = message,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = if (recoveryPending) AppColors.GreenPrimary else AppColors.TextPrimary
+                                        )
+                                    }
+                                }
+
+                                if (!recoveryPending) {
+                                    PrimaryButton(
+                                        text = if (recoveryInFlight) "Mengirim..." else "Pulihkan Perangkat",
+                                        onClick = {
+                                            // Guard against duplicate taps while a request runs.
+                                            if (recoveryInFlight || recoveryPending) return@PrimaryButton
+
+                                            val cleanEmail = ownerEmailInput.trim()
+                                            val cleanCode = licenseCodeInput.trim()
+                                            if (cleanEmail.isBlank() || cleanCode.isBlank()) {
+                                                validationErrorMessage =
+                                                    "Masukkan email dan kode lisensi terlebih dahulu."
+                                                return@PrimaryButton
+                                            }
+
+                                            scope.launch {
+                                                recoveryInFlight = true
+                                                validationErrorMessage = null
+                                                recoveryState = licenseManager.requestDeviceRecovery(
+                                                    licenseCode = cleanCode,
+                                                    ownerEmail = cleanEmail
+                                                )
+                                                recoveryInFlight = false
+                                            }
+                                        }
+                                    )
                                 }
                             }
                         }
