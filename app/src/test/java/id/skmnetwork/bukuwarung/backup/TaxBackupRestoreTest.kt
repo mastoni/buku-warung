@@ -71,12 +71,18 @@ class TaxBackupRestoreTest {
                 headers = listOf("uuid", "business_id", "device_id", "product_uuid", "movement_type", "delta_quantity", "current_stock_snapshot", "reference_uuid", "note", "created_at"),
                 rows = listOf(listOf("mov_uuid_1", "BIZ_001", "DEV_001", "prod_uuid_1", "INITIAL", "0.0", "0.0", "NULL", "Migrasi baseline stok", "1700000000000"))
             )
-            val tabs = mapOf(
-                "01_Business" to businessTab,
-                "03_Categories" to categoryTab,
-                "04_Products" to productTab,
-                "16_StockMovements" to stockTab
-            )
+            val tabs = buildMap {
+                put("01_Business", businessTab)
+                put("03_Categories", categoryTab)
+                put("04_Products", productTab)
+                put("16_StockMovements", stockTab)
+                // Gate H.4.2-CODE-FIX.1: every required data tab must be present, or the
+                // validator rejects the archive before any restore could clear the matching local
+                // table. Empty tabs are valid - this fixture just needs to be structurally whole.
+                BackupValidator.REQUIRED_DATA_TAB_NAMES
+                    .filter { it !in setOf("01_Business", "03_Categories", "04_Products", "16_StockMovements") }
+                    .forEach { put(it, SheetTab(name = it, headers = listOf("uuid", "business_id"), rows = emptyList())) }
+            }
             val checksum = CanonicalSerializer.calculateChecksum(tabs)
             val snapshot = BackupSnapshot(
                 metadata = BackupMetadata(

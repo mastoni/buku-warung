@@ -170,11 +170,13 @@ class BackupRestoreIntegrityTest {
     // TASK 4 - versioned, coercion-proof canonical checksum
     // =======================================================================
 
-    private fun tabsWith(values: List<String>) = mapOf(
-        "04_Products" to SheetTab(
-            "04_Products",
-            listOf("uuid", "business_id", "name", "price", "qty"),
-            values.mapIndexed { i, v -> listOf("P-$i", BUSINESS_A, "Beras", v, "2.5") }
+    private fun tabsWith(values: List<String>) = wholeTabMap(
+        mapOf(
+            "04_Products" to SheetTab(
+                "04_Products",
+                listOf("uuid", "business_id", "name", "price", "qty"),
+                values.mapIndexed { i, v -> listOf("P-$i", BUSINESS_A, "Beras", v, "2.5") }
+            )
         )
     )
 
@@ -239,15 +241,31 @@ class BackupRestoreIntegrityTest {
         assertTrue("A tampered row must be rejected", thrown is ChecksumMismatchException)
     }
 
+    /**
+     * Gate H.4.2-CODE-FIX.1 - a structurally WHOLE tab map.
+     *
+     * `BackupValidator.assertRequiredTabsPresent` now rejects an archive that is missing any
+     * required data tab, so a checksum-focused fixture has to be complete to reach the checksum
+     * assertion. Only the tabs under test carry rows; the rest are legitimately empty.
+     */
+    private fun wholeTabMap(overrides: Map<String, SheetTab>): Map<String, SheetTab> =
+        buildMap {
+            BackupValidator.REQUIRED_DATA_TAB_NAMES.forEach { name ->
+                put(name, overrides[name] ?: SheetTab(name, listOf("uuid", "business_id"), emptyList()))
+            }
+        }
+
     @Test
     fun legacyArchivesWithoutAnAlgorithmFieldStillValidate() {
         // 03_Categories has no foreign keys, so the relational checks are satisfied and the
         // checksum assertion is isolated.
-        val original = mapOf(
-            "03_Categories" to SheetTab(
-                "03_Categories",
-                listOf("uuid", "business_id", "name"),
-                listOf(listOf("C-1", BUSINESS_A, "Sembako"), listOf("C-2", BUSINESS_A, "Minuman"))
+        val original = wholeTabMap(
+            mapOf(
+                "03_Categories" to SheetTab(
+                    "03_Categories",
+                    listOf("uuid", "business_id", "name"),
+                    listOf(listOf("C-1", BUSINESS_A, "Sembako"), listOf("C-2", BUSINESS_A, "Minuman"))
+                )
             )
         )
         val legacyChecksum = CanonicalSerializer.calculateChecksum(
@@ -273,11 +291,13 @@ class BackupRestoreIntegrityTest {
 
     @Test
     fun aNewArchiveWrittenWithCanonicalV2Validates() {
-        val original = mapOf(
-            "03_Categories" to SheetTab(
-                "03_Categories",
-                listOf("uuid", "business_id", "name"),
-                listOf(listOf("C-1", BUSINESS_A, "Sembako"))
+        val original = wholeTabMap(
+            mapOf(
+                "03_Categories" to SheetTab(
+                    "03_Categories",
+                    listOf("uuid", "business_id", "name"),
+                    listOf(listOf("C-1", BUSINESS_A, "Sembako"))
+                )
             )
         )
         val archive = BackupSnapshot(

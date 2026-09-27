@@ -98,7 +98,15 @@ object BackupRestoreContract {
      * Called BEFORE the delete phase, so a cross-tenant archive is refused while the database is
      * still untouched.
      *
-     * @throws CrossTenantBackupException when a row claims a different business.
+     * Gate H.4.2-CODE-FIX.1 - this fails CLOSED on every value that is not exactly the target
+     * tenant. It previously skipped a row whose business_id was the `NULL` sentinel, which let a
+     * row through unverified; the restore then inserted that business_id verbatim, creating rows
+     * in a pseudo-tenant that every repository filters out and that becomes visible the moment the
+     * device's business id changes. A sentinel is not a tenant, so it is rejected like any other
+     * unexpected value. The exporter never writes `NULL` for business_id, so no legitimate archive
+     * is affected.
+     *
+     * @throws CrossTenantBackupException when a row claims a different, blank, or absent business.
      */
     fun assertSingleTenant(snapshot: BackupSnapshot, targetBusinessId: String) {
         require(targetBusinessId.isNotBlank()) {
@@ -112,7 +120,16 @@ object BackupRestoreContract {
                     ?: throw CrossTenantBackupException(
                         "Tab $tabName row ${rowIndex + 1} has no business_id column; refusing a restore that cannot be tenant-verified"
                     )
-                if (claimed == CanonicalSerializer.NULL_SENTINEL) continue
+                if (claimed == CanonicalSerializer.NULL_SENTINEL) {
+                    throw CrossTenantBackupException(
+                        "Tab $tabName row ${rowIndex + 1} has a NULL business_id; refusing a restore that cannot be tenant-verified"
+                    )
+                }
+                if (claimed.isBlank()) {
+                    throw CrossTenantBackupException(
+                        "Tab $tabName row ${rowIndex + 1} has a blank business_id; refusing a restore that cannot be tenant-verified"
+                    )
+                }
                 if (claimed != targetBusinessId) {
                     throw CrossTenantBackupException(
                         "Cross-tenant restore rejected: tab $tabName row ${rowIndex + 1} claims business_id " +

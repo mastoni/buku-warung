@@ -133,10 +133,20 @@ private const val PRIVACY_POLICY_URL = "https://bukuwarung.skmnetwork.com/privac
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
+    /**
+     * Gate H.4.2-CODE-FIX.1 - REQUIRED, no default.
+     *
+     * This previously defaulted to null, and the null branch built
+     * `BackupRestoreManager(db, prefsRepo)` with no transport. That selected the
+     * `MockSheetsTransport` default, so the backup screen would report
+     * "Data warung berhasil dicadangkan ke Google Sheets." while writing to a process-local map.
+     * Making the ViewModel mandatory removes the only main-source path that could reach a mock
+     * transport; AppNavigation already supplies the real one built over GoogleSheetsApiTransport.
+     */
+    backupViewModel: BackupViewModel,
     userPreferencesRepository: UserPreferencesRepository? = null,
     licenseManager: LicenseManager? = null,
-    printerService: id.skmnetwork.bukuwarung.printer.PrinterService? = null,
-    backupViewModel: BackupViewModel? = null
+    printerService: id.skmnetwork.bukuwarung.printer.PrinterService? = null
 ) {
     val context = LocalContext.current
     val windowSize = rememberAppWindowSize()
@@ -146,11 +156,7 @@ fun SettingsScreen(
     val fallbackPrinterService = remember { id.skmnetwork.bukuwarung.printer.PrinterService() }
     val activePrinterService = printerService ?: fallbackPrinterService
 
-    val bViewModel: BackupViewModel = backupViewModel ?: run {
-        val db = remember { AppDatabase.getDatabase(context) }
-        val mgr = remember { BackupRestoreManager(db, prefsRepo) }
-        remember { BackupViewModel(mgr, prefsRepo) }
-    }
+    val bViewModel: BackupViewModel = backupViewModel
 
     val backupState by bViewModel.backupState.collectAsStateWithLifecycle()
     val restoreState by bViewModel.restoreState.collectAsStateWithLifecycle()

@@ -8,12 +8,67 @@ import java.util.Locale
  */
 object BackupValidator {
 
+    /**
+     * Gate H.4.2-CODE-FIX.1 - tabs whose absence makes a restore destructive.
+     *
+     * `BackupRestoreContract.RESTORE_DELETE_ORDER` clears all twenty domain tables before
+     * re-inserting. Validation used to read every tab through a nullable `getTab(...)?.rows`, so a
+     * tab that was simply *absent* - a truncated `values:batchGet` response, a hand-deleted tab, a
+     * partial export - passed every check. The restore then deleted that table and re-inserted
+     * nothing, and still reported success. A missing tab must be a hard failure.
+     *
+     * `19_DigitalTransactions`, `20_PurchaseOrders` and `21_PurchaseOrderItems` are deliberately
+     * EXCLUDED. `BackupRestoreManager.exportSnapshot` omits them whenever the merchant's profile
+     * lacks `CAP_DIGITAL_ITEMS` or `ACTIVITY_WHOLESALE_PURCHASE`, so they are legitimately absent
+     * from a valid archive and requiring them would break every such restore. The capability
+     * switch that also clears those three tables is pre-existing, documented behaviour and is out
+     * of scope for this gate.
+     *
+     * `00_README` and `00_Metadata` are not data tabs and are not required here; the metadata tab
+     * is already mandatory in practice because its absence makes the checksum/businessId checks
+     * unreadable upstream in `GoogleSheetsApiTransport.readBackup`.
+     */
+    private val CAPABILITY_GATED_TAB_NAMES = setOf(
+        "19_DigitalTransactions",
+        "20_PurchaseOrders",
+        "21_PurchaseOrderItems"
+    )
+
+    val REQUIRED_DATA_TAB_NAMES: List<String> = CanonicalSerializer.DATA_TAB_NAMES
+        .filterNot { it in CAPABILITY_GATED_TAB_NAMES }
+
+    /**
+     * Gate H.4.2-CODE-FIX.1 - asserts every required data tab is present.
+     *
+     * Empty is fine and expected (a fresh shop legitimately has no sales, customers or cash rows).
+     * *Missing* is not. No empty tab is created and no default row list is substituted.
+     *
+     * @throws CorruptedBackupException listing every missing tab at once, so a merchant with a
+     * truncated response is told the full story instead of being sent round six times.
+     */
+    fun assertRequiredTabsPresent(snapshot: BackupSnapshot) {
+        val missing = REQUIRED_DATA_TAB_NAMES.filter { snapshot.getTab(it) == null }
+        if (missing.isNotEmpty()) {
+            throw CorruptedBackupException(
+                "Backup is missing ${missing.size} required data tab(s): ${missing.joinToString(", ")}. " +
+                    "Refusing to restore, because the matching local tables would be cleared and " +
+                    "never repopulated."
+            )
+        }
+    }
+
     fun validate(snapshot: BackupSnapshot, expectedBusinessId: String? = null) {
         val metadata = snapshot.metadata
 
         // 1. Backup Format Version check
         // Accept current format "1.1" and legacy format "1.0" per design §19.2/§20.4.
         // Any other format is rejected as incompatible.
+        //
+        // Ordering note (Gate H.4.2-CODE-FIX.1): format and schema compatibility are evaluated
+        // BEFORE tab presence, because "can this build read this archive at all" is a different
+        // question from "is this archive structurally complete". A future format such as 2.0 must
+        // still surface as IncompatibleBackupFormatException rather than as a missing-tab
+        // corruption. Both checks still run long before the restore opens its DELETE phase.
         val supportedFormats = setOf(CanonicalSerializer.BACKUP_FORMAT_VERSION, "1.0", "1.1", "1.2")
         if (metadata.backupFormatVersion !in supportedFormats) {
             throw IncompatibleBackupFormatException(
@@ -27,6 +82,9 @@ object BackupValidator {
                 "Unsupported Room schema version: expected between 9 and ${CanonicalSerializer.ROOM_SCHEMA_VERSION}, got '${metadata.roomSchemaVersion}'"
             )
         }
+
+        // 2a. Gate H.4.2-CODE-FIX.1 - tab presence, before any data is read or written.
+        assertRequiredTabsPresent(snapshot)
 
         // 2b. Business ID scoping check (D-1)
         if (!expectedBusinessId.isNullOrBlank() && metadata.businessId != expectedBusinessId) {

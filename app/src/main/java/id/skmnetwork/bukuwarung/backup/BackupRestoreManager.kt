@@ -17,22 +17,34 @@ import kotlinx.coroutines.withContext
  * Coordinates consistent snapshot export, decoupled transport SPI,
  * pre-validation, atomic Room restore, and DataStore reconciliation.
  */
-class BackupRestoreManager(
-    private val database: AppDatabase,
-    private val userPreferencesRepository: UserPreferencesRepository,
-    val transport: SheetsBackupTransport = MockSheetsTransport()
-) {
+    class BackupRestoreManager(
+        private val database: AppDatabase,
+        private val userPreferencesRepository: UserPreferencesRepository,
+        /**
+         * Gate H.4.2-CODE-FIX.1 - REQUIRED, no default.
+         *
+         * This used to default to `MockSheetsTransport()`, which meant any call site that omitted
+         * the argument silently got an in-memory store, a fabricated `SPREADSHEET_<millis>` id,
+         * and a green "berhasil dicadangkan" with nothing written to Google Drive. There is exactly
+         * one production wiring (AppNavigation) and it passes a real `GoogleSheetsApiTransport`;
+         * making the dependency mandatory turns that into a compile-time guarantee instead of a
+         * convention.
+         */
+        val transport: SheetsBackupTransport
+    ) {
 
-    /**
-     * Creates a new spreadsheet if transport supports creation, or returns a deterministic identifier.
-     */
-    suspend fun ensureSpreadsheetCreated(title: String): Result<String> {
-        return if (transport is id.skmnetwork.bukuwarung.backup.transport.GoogleSheetsApiTransport) {
+        /**
+         * Creates the backup spreadsheet and returns its Google spreadsheet id.
+         *
+         * Gate H.4.2-CODE-FIX.1 - this now delegates purely to the [SheetsBackupTransport]
+         * abstraction. It previously type-cast to `GoogleSheetsApiTransport` and, for anything
+         * else, returned `Result.success("SPREADSHEET_${System.currentTimeMillis()}")`: a
+         * fabricated identifier reported as a success, so a non-Google transport produced a backup
+         * that looked complete and existed nowhere. No implementation can fabricate an id now.
+         */
+        suspend fun ensureSpreadsheetCreated(title: String): Result<String> =
             transport.createSpreadsheet(title)
-        } else {
-            Result.success("SPREADSHEET_${System.currentTimeMillis()}")
-        }
-    }
+
 
     /**
      * Captures DataStore + Room snapshot and returns a deterministic BackupSnapshot.

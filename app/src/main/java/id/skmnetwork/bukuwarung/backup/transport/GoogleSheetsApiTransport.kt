@@ -302,7 +302,7 @@ class GoogleSheetsApiTransport(
     /**
      * Creates a new Google Spreadsheet with all 19 canonical tabs on the owner's Google Drive.
      */
-    suspend fun createSpreadsheet(title: String): Result<String> = withContext(Dispatchers.IO) {
+    override suspend fun createSpreadsheet(title: String): Result<String> = withContext(Dispatchers.IO) {
         val tokenResult = authProvider.getAccessToken()
         if (tokenResult.isFailure) {
             return@withContext Result.failure(
