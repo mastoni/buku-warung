@@ -104,7 +104,9 @@ import id.skmnetwork.bukuwarung.ui.theme.AppColors
 import id.skmnetwork.bukuwarung.ui.theme.AppShapes
 import id.skmnetwork.bukuwarung.ui.theme.AppSpacing
 import id.skmnetwork.bukuwarung.ui.theme.rememberAppWindowSize
+import id.skmnetwork.bukuwarung.util.formatQuantityValue
 import id.skmnetwork.bukuwarung.util.formatRupiah
+import id.skmnetwork.bukuwarung.domain.money.MoneyCalculator
 import id.skmnetwork.bukuwarung.domain.tax.TaxSettings
 import id.skmnetwork.bukuwarung.domain.tax.TaxPriceMode
 import kotlinx.coroutines.launch
@@ -255,7 +257,7 @@ fun PosScreen(
     var discountInputText by remember { mutableStateOf("") }
 
     val totalItemCount = cart.sumOf { it.quantity }.toInt()
-    val totalPrice = cart.sumOf { (it.product.sellingPrice) * it.quantity.toLong() }
+    val totalPrice = cart.sumOf { MoneyCalculator.lineSubtotal(it.product.sellingPrice, it.quantity) }
 
     val parsedDiscountValue = discountInputText.trim().toDoubleOrNull() ?: 0.0
     val discountCalcResult = remember(totalPrice, discountType, parsedDiscountValue) {
@@ -280,7 +282,7 @@ fun PosScreen(
         id.skmnetwork.bukuwarung.domain.tax.TaxCalculator.calculateSaleTax(
             items = cart.map { cartLine ->
                 id.skmnetwork.bukuwarung.domain.tax.SaleItemTaxInput(
-                    lineSubtotal = (cartLine.product.sellingPrice * cartLine.quantity.toLong()),
+                    lineSubtotal = MoneyCalculator.lineSubtotal(cartLine.product.sellingPrice, cartLine.quantity),
                     taxable = taxSettings.enabled && cartLine.product.taxable,
                     taxRateOverride = if (taxSettings.enabled && cartLine.product.taxable) cartLine.product.taxRateOverride else null
                 )
@@ -561,9 +563,9 @@ fun PosScreen(
                                 ) {
                                     Column(Modifier.weight(1f)) {
                                         Text(prod.name, fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.bodySmall)
-                                        Text("${qty.toInt()} × ${formatRupiah(prod.sellingPrice)}", color = AppColors.TextSecondary, style = MaterialTheme.typography.labelSmall)
+                                        Text("${formatQuantityValue(qty)} × ${formatRupiah(prod.sellingPrice)}", color = AppColors.TextSecondary, style = MaterialTheme.typography.labelSmall)
                                     }
-                                    Text(formatRupiah(prod.sellingPrice * qty.toLong()), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodySmall)
+                                    Text(formatRupiah(MoneyCalculator.lineSubtotal(prod.sellingPrice, qty)), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodySmall)
                                 }
                             }
                         }
@@ -2137,7 +2139,7 @@ private fun PosCartLineItem(
                         overflow = TextOverflow.Ellipsis
                     )
                     Text(
-                        "${formatRupiah(prod.sellingPrice)} × ${cartLine.quantity.toInt()} = ${formatRupiah(prod.sellingPrice * cartLine.quantity.toLong())}",
+                        "${formatRupiah(prod.sellingPrice)} × ${formatQuantityValue(cartLine.quantity)} = ${formatRupiah(MoneyCalculator.lineSubtotal(prod.sellingPrice, cartLine.quantity))}",
                         color = AppColors.TextSecondary,
                         fontSize = 11.sp
                     )

@@ -65,12 +65,14 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import id.skmnetwork.bukuwarung.data.local.entity.SaleItemEntity
 import id.skmnetwork.bukuwarung.data.local.entity.SaleTransactionEntity
+import id.skmnetwork.bukuwarung.domain.money.MoneyCalculator
 import id.skmnetwork.bukuwarung.ui.components.AppCard
 import id.skmnetwork.bukuwarung.ui.product.ProductViewModel
 import id.skmnetwork.bukuwarung.ui.theme.AppColors
 import id.skmnetwork.bukuwarung.ui.theme.AppResponsive
 import id.skmnetwork.bukuwarung.ui.theme.AppShapes
 import id.skmnetwork.bukuwarung.ui.theme.AppSpacing
+import id.skmnetwork.bukuwarung.util.formatQuantityValue
 import id.skmnetwork.bukuwarung.util.formatRupiah
 import id.skmnetwork.bukuwarung.data.preferences.UserSettings
 import id.skmnetwork.bukuwarung.printer.PrinterService
@@ -88,6 +90,25 @@ val RETURN_REASONS = listOf(
     "Kelebihan pembelian",
     "Lainnya"
 )
+
+/**
+ * Gate H.2 - the single refund rule shared by this preview and the persisted ledger.
+ *
+ * The preview previously used its own formula, `item.price * quantity.toLong()`, while
+ * `SaleRepository.processSaleReturn` charged a proportional share of the sale item's stored
+ * `subtotal`. Those two disagree even for whole units once a discount or tax is applied, and
+ * grossly so for fractional units: returning 1.5 of 5 kg at Rp 15.000/kg previewed Rp 15.000
+ * while the ledger moved Rp 22.500.
+ *
+ * Both sides now call [MoneyCalculator.proportionalShare] against the sale item's persisted
+ * `subtotal` and `quantity`, so the merchant is shown exactly the amount that will be recorded.
+ */
+fun refundPreviewAmount(item: SaleItemEntity, returnQuantity: Double): Long =
+    MoneyCalculator.proportionalShare(
+        originalAmount = item.subtotal,
+        portionQuantity = returnQuantity,
+        originalQuantity = item.quantity
+    )
 
 @Composable
 fun SaleReturnDialog(
@@ -127,8 +148,8 @@ fun SaleReturnDialog(
 
     val totalReturnItemCount = returnCart.values.sum()
     val totalRefundAmount = returnCart.entries.sumOf { (itemId, qty) ->
-        val item = saleItems.find { it.id == itemId }
-        (item?.price ?: 0L) * qty.toLong()
+        val item = saleItems.find { it.id == itemId } ?: return@sumOf 0L
+        refundPreviewAmount(item, qty)
     }
 
     if (showConfirmationDialog) {
@@ -485,7 +506,7 @@ fun SaleReturnDialog(
                                         Spacer(Modifier.height(AppSpacing.xs))
                                         Row(modifier = Modifier.fillMaxWidth()) {
                                             Text(
-                                                "Maksimal dapat diretur: ${maxReturnable.toInt()}",
+                                                "Maksimal dapat diretur: ${formatQuantityValue(maxReturnable)}",
                                                 style = MaterialTheme.typography.labelSmall,
                                                 color = AppColors.GreenPrimary,
                                                 fontWeight = FontWeight.Medium
@@ -493,7 +514,7 @@ fun SaleReturnDialog(
                                             if (currentReturnQty > 0.0) {
                                                 Spacer(Modifier.weight(1f))
                                                 Text(
-                                                    "Refund: ${formatRupiah(item.price * currentReturnQty.toLong())}",
+                                                    "Refund: ${formatRupiah(refundPreviewAmount(item, currentReturnQty))}",
                                                     style = MaterialTheme.typography.labelSmall,
                                                     fontWeight = FontWeight.Bold,
                                                     color = AppColors.GreenPrimary

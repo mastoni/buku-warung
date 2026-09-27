@@ -11,6 +11,7 @@ import id.skmnetwork.bukuwarung.data.local.entity.StockMovementEntity
 import id.skmnetwork.bukuwarung.data.local.entity.SupplierEntity
 import id.skmnetwork.bukuwarung.data.local.entity.SupplierPayableEntity
 import id.skmnetwork.bukuwarung.data.local.entity.SyncQueueEntity
+import id.skmnetwork.bukuwarung.domain.money.MoneyCalculator
 import id.skmnetwork.bukuwarung.domain.tax.TaxCalculator
 import id.skmnetwork.bukuwarung.domain.tax.TaxCalculationResult
 import id.skmnetwork.bukuwarung.domain.tax.TaxPriceMode
@@ -100,7 +101,7 @@ class PurchaseRepository(
 
                 val itemTaxContexts = purchaseItems.map { (prodId, qty) ->
                     val prod = productMap[prodId]!!
-                    val lineSubtotal = prod.purchasePrice * qty.toLong()
+                    val lineSubtotal = MoneyCalculator.lineSubtotal(prod.purchasePrice, qty)
                     val effectiveRate = when {
                         taxSettings == null || !taxSettings.enabled -> 0.0
                         !prod.taxable -> 0.0
@@ -121,7 +122,7 @@ class PurchaseRepository(
                 val totalTaxableBase = itemTaxContexts.sumOf { it.taxResult.taxableBase }
                 val totalTaxAmount = itemTaxContexts.sumOf { it.taxResult.taxAmount }
                 val grossSubtotal = purchaseItems.entries.sumOf { (prodId, qty) ->
-                    productMap[prodId]!!.purchasePrice * qty.toLong()
+                    MoneyCalculator.lineSubtotal(productMap[prodId]!!.purchasePrice, qty)
                 }
                 val grandTotal = grossSubtotal + totalTaxAmount
 

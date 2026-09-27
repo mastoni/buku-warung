@@ -5,6 +5,7 @@ import id.skmnetwork.bukuwarung.data.local.database.AppDatabase
 import id.skmnetwork.bukuwarung.data.local.entity.FulfillmentMode
 import id.skmnetwork.bukuwarung.data.repository.DigitalTransactionRepository
 import id.skmnetwork.bukuwarung.data.repository.SaleRepository
+import id.skmnetwork.bukuwarung.domain.money.MoneyCalculator
 import id.skmnetwork.bukuwarung.domain.tax.TaxSettings
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -42,8 +43,8 @@ class CheckoutOrchestrator(
                             providerId = line.product.digitalProviderId.orEmpty(),
                             providerProductCode = line.product.digitalProductCode.orEmpty(),
                             destinationNumber = line.destinationNumber?.trim().orEmpty(),
-                            sellingPrice = line.product.sellingPrice * line.quantity.toLong(),
-                            actualPurchasePrice = line.product.purchasePrice * line.quantity.toLong()
+                            sellingPrice = MoneyCalculator.lineSubtotal(line.product.sellingPrice, line.quantity),
+                            actualPurchasePrice = MoneyCalculator.lineSubtotal(line.product.purchasePrice, line.quantity)
                         )
                     }
                 }

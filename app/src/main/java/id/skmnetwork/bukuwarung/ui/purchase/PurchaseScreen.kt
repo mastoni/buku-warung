@@ -76,6 +76,7 @@ import id.skmnetwork.bukuwarung.data.local.entity.PurchaseTransactionEntity
 import id.skmnetwork.bukuwarung.data.local.entity.SupplierEntity
 import id.skmnetwork.bukuwarung.data.preferences.UserSettings
 import id.skmnetwork.bukuwarung.domain.business.BusinessTaxonomyRegistry
+import id.skmnetwork.bukuwarung.domain.money.MoneyCalculator
 import id.skmnetwork.bukuwarung.ui.components.ProductImageThumbnail
 import id.skmnetwork.bukuwarung.ui.product.ProductViewModel
 import id.skmnetwork.bukuwarung.ui.supplier.SupplierViewModel
@@ -134,7 +135,7 @@ fun PurchaseScreen(
 
     val totalPurchaseAmount = purchaseCart.entries.sumOf { (prodId, qty) ->
         val prod = dbProducts.find { it.id == prodId }
-        (prod?.purchasePrice ?: 0L) * qty.toLong()
+        MoneyCalculator.lineSubtotal(prod?.purchasePrice ?: 0L, qty)
     }
 
     val windowSize = rememberAppWindowSize()
@@ -524,7 +525,7 @@ fun PurchaseScreen(
                         ) {
                             items(dbProducts, key = { it.id }) { product ->
                                 val qty = purchaseCart[product.id] ?: 0.0
-                                val itemSubtotal = product.purchasePrice * qty.toLong()
+                                val itemSubtotal = MoneyCalculator.lineSubtotal(product.purchasePrice, qty)
 
                                 PurchaseItemCard(
                                     product = product,

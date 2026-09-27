@@ -13,6 +13,7 @@ import id.skmnetwork.bukuwarung.data.local.entity.PurchaseTransactionEntity
 import id.skmnetwork.bukuwarung.data.local.entity.StockMovementEntity
 import id.skmnetwork.bukuwarung.data.local.entity.SupplierPayableEntity
 import id.skmnetwork.bukuwarung.data.local.entity.SyncQueueEntity
+import id.skmnetwork.bukuwarung.domain.money.MoneyCalculator
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
@@ -105,7 +106,7 @@ class PurchaseOrderRepository(
                 val orderItems = items.map { itemInput ->
                     val product = productMap[itemInput.productId]!!
                     val unitPrice = itemInput.estimatedPrice ?: product.purchasePrice
-                    val subtotal = (itemInput.quantity * unitPrice).toLong()
+                    val subtotal = MoneyCalculator.lineSubtotal(unitPrice, itemInput.quantity)
                     totalEstimated += subtotal
 
                     PurchaseOrderItemEntity(
@@ -217,7 +218,7 @@ class PurchaseOrderRepository(
                 val orderItems = items.map { itemInput ->
                     val product = productMap[itemInput.productId]!!
                     val unitPrice = itemInput.estimatedPrice ?: product.purchasePrice
-                    val subtotal = (itemInput.quantity * unitPrice).toLong()
+                    val subtotal = MoneyCalculator.lineSubtotal(unitPrice, itemInput.quantity)
                     totalEstimated += subtotal
 
                     PurchaseOrderItemEntity(
@@ -405,7 +406,7 @@ class PurchaseOrderRepository(
                     if (unitPrice < 0L) {
                         throw IllegalArgumentException("Harga beli tidak boleh negatif")
                     }
-                    val subtotal = (item.orderedQuantity * unitPrice).toLong()
+                    val subtotal = MoneyCalculator.lineSubtotal(unitPrice, item.orderedQuantity)
                     totalAmount += subtotal
                     Triple(item, product, unitPrice to subtotal)
                 }

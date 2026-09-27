@@ -13,6 +13,7 @@ import id.skmnetwork.bukuwarung.data.local.entity.StockMovementEntity
 import id.skmnetwork.bukuwarung.data.local.entity.SyncQueueEntity
 import id.skmnetwork.bukuwarung.domain.checkout.CartLineRequest
 import id.skmnetwork.bukuwarung.domain.checkout.SaleCommitResult
+import id.skmnetwork.bukuwarung.domain.money.MoneyCalculator
 import id.skmnetwork.bukuwarung.domain.tax.TaxCalculator
 import id.skmnetwork.bukuwarung.domain.tax.TaxCalculationResult
 import id.skmnetwork.bukuwarung.domain.tax.TaxPriceMode
@@ -30,7 +31,13 @@ import id.skmnetwork.bukuwarung.data.local.entity.SaleReturnTransactionEntity
 
 class SaleRepository(
     private val appDatabase: AppDatabase,
-    private val businessId: String
+    private val businessId: String,
+    /**
+     * Optional transaction seam used by JVM unit tests, which cannot host a real Room
+     * transaction. When null (every production call site) each operation runs inside a real
+     * `appDatabase.withTransaction`, exactly as before.
+     */
+    private val transactionRunner: (suspend (suspend () -> Any?) -> Any?)? = null
 ) {
     private val saleDao = appDatabase.saleDao()
     private val productDao = appDatabase.productDao()
@@ -43,6 +50,15 @@ class SaleRepository(
 
     val allTransactions: Flow<List<SaleTransactionEntity>> = saleDao.getAllTransactions(businessId)
     val allReturns: Flow<List<SaleReturnTransactionEntity>> = saleReturnDao.getAllReturns(businessId)
+
+    private suspend fun <T> runInTransaction(block: suspend () -> T): T {
+        return if (transactionRunner != null) {
+            @Suppress("UNCHECKED_CAST")
+            transactionRunner.invoke { block() } as T
+        } else {
+            appDatabase.withTransaction { block() }
+        }
+    }
 
     fun getReturnsForSale(saleTransactionId: Long): Flow<List<SaleReturnTransactionEntity>> {
         return saleReturnDao.getReturnsForSale(businessId, saleTransactionId)
@@ -109,7 +125,7 @@ class SaleRepository(
         taxSettings: TaxSettings? = null
     ): Result<Long> = withContext(Dispatchers.IO) {
         runCatching {
-            appDatabase.withTransaction {
+            runInTransaction {
                 completeSaleInTransaction(
                     cartItems = cartItems.map { (productId, quantity) ->
                         CartLineRequest(productId = productId, quantity = quantity)
@@ -149,7 +165,7 @@ class SaleRepository(
         taxSettings: TaxSettings? = null
     ): Result<Long> = withContext(Dispatchers.IO) {
         runCatching {
-            appDatabase.withTransaction {
+            runInTransaction {
                 completeSaleInTransaction(
                     cartItems = cartLineRequests,
                     paymentMethod = paymentMethod,
@@ -210,7 +226,7 @@ class SaleRepository(
         }
 
         val grossSubtotal = cartItems.sumOf { item ->
-            productMap.getValue(item.productId).sellingPrice * item.quantity.toLong()
+            MoneyCalculator.lineSubtotal(productMap.getValue(item.productId).sellingPrice, item.quantity)
         }
         require(grossSubtotal > 0L) { "Total transaksi harus lebih dari 0" }
 
@@ -231,7 +247,7 @@ class SaleRepository(
 
         val itemTaxResults = cartItems.map { item ->
             val product = productMap.getValue(item.productId)
-            val lineSubtotal = product.sellingPrice * item.quantity.toLong()
+            val lineSubtotal = MoneyCalculator.lineSubtotal(product.sellingPrice, item.quantity)
             val effectiveRate = when {
                 taxSettings == null || !taxSettings.enabled -> 0.0
                 !product.taxable -> 0.0
@@ -398,7 +414,7 @@ class SaleRepository(
         }
 
         runCatching {
-            appDatabase.withTransaction {
+            runInTransaction {
                 // 1. Validate original sale
                 val sale = saleDao.getTransactionById(saleId, businessId)
                     ?: throw IllegalStateException("Transaksi penjualan tidak ditemukan")
@@ -456,22 +472,25 @@ class SaleRepository(
                     val itemTax: Long?
 
                     if (!saleItem.taxable) {
-                        itemSubtotal = TaxCalculator.roundToLong(
-                            BigDecimal(originalSubtotal) * BigDecimal(returnQty) / BigDecimal(originalQty),
-                            RoundingMode.HALF_UP
+                        itemSubtotal = MoneyCalculator.proportionalShare(
+                            originalAmount = originalSubtotal,
+                            portionQuantity = returnQty,
+                            originalQuantity = originalQty
                         )
                         itemTax = null
                     } else if (returnQty >= remainingQty - 0.0001) {
                         itemSubtotal = remainingSubtotal
                         itemTax = remainingTax
                     } else {
-                        itemSubtotal = TaxCalculator.roundToLong(
-                            BigDecimal(originalSubtotal) * BigDecimal(returnQty) / BigDecimal(originalQty),
-                            RoundingMode.HALF_UP
+                        itemSubtotal = MoneyCalculator.proportionalShare(
+                            originalAmount = originalSubtotal,
+                            portionQuantity = returnQty,
+                            originalQuantity = originalQty
                         )
-                        itemTax = TaxCalculator.roundToLong(
-                            BigDecimal(remainingTax) * BigDecimal(returnQty) / BigDecimal(remainingQty),
-                            RoundingMode.HALF_UP
+                        itemTax = MoneyCalculator.proportionalShare(
+                            originalAmount = remainingTax,
+                            portionQuantity = returnQty,
+                            originalQuantity = remainingQty
                         )
                     }
 

@@ -806,4 +806,98 @@ class GoodsReceiptIntegrationTest {
         val cancelRes = poRepository.cancelOrder(orderId)
         assertTrue(cancelRes.isFailure)
     }
+
+    // ---------------------------------------------------------------------
+    // Gate H.2: fractional quantity money correctness on the purchase and
+    // purchase-order paths.
+    //
+    // Product 102 is FUEL at Rp 12.500/liter, product 101 is PHYSICAL at
+    // Rp 65.000/sak. Both are chosen so the pre-Gate-H.2 expression
+    // `quantity.toLong() * unitPrice` produces a visibly wrong total.
+    // ---------------------------------------------------------------------
+
+    /**
+     * Direct purchase of 2.5 units at Rp 15.000-equivalent must total Rp 37.500 and must
+     * increase stock by exactly 2.5. Pre-fix, 2.5 truncated to 2 and billed Rp 30.000
+     * for a PHYSICAL product while still moving 2.5 units of stock.
+     */
+    @Test
+    fun gateH2_directPurchaseFractionalQuantityTotalsExactly() = runBlocking {
+        val initialStock = products[101L]!!.stock
+
+        val res = directPurchaseRepository.completePurchase(
+            purchaseItems = mapOf(101L to 2.5),
+            paymentMethod = "CASH",
+            supplierId = 10L
+        )
+        assertTrue("Fractional purchase must succeed: ${res.exceptionOrNull()}", res.isSuccess)
+
+        // 2.5 * 65.000 = 162.500. The old expression gave 2 * 65.000 = 130.000.
+        assertEquals(162500L, purchaseTransactions[res.getOrThrow()]!!.totalAmount)
+        assertEquals(initialStock + 2.5, products[101L]!!.stock, 0.0001)
+        assertEquals(2.5, purchaseItems.last().quantity, 0.0001)
+        assertEquals(162500L, purchaseItems.last().subtotal)
+    }
+
+    /**
+     * A sub-unit purchase must not collapse to a zero total. Pre-fix, 0.5 truncated to 0 and
+     * the `grandTotal <= 0` guard rejected a legitimate litre purchase outright.
+     */
+    @Test
+    fun gateH2_directPurchaseSubUnitQuantityIsNotZeroed() = runBlocking {
+        val initialStock = products[102L]!!.stock
+
+        val res = directPurchaseRepository.completePurchase(
+            purchaseItems = mapOf(102L to 0.5),
+            paymentMethod = "CASH",
+            supplierId = 10L
+        )
+        assertTrue("A 0.5 liter purchase must be accepted: ${res.exceptionOrNull()}", res.isSuccess)
+
+        // 0.5 * 12.500 = 6.250. The old expression gave 0 * 12.500 = 0.
+        assertEquals(6250L, purchaseTransactions[res.getOrThrow()]!!.totalAmount)
+        assertEquals(initialStock + 0.5, products[102L]!!.stock, 0.0001)
+    }
+
+    /**
+     * Purchase-order estimate and the finalised purchase transaction must use the same
+     * fractional rule, so the estimate the merchant approved is the amount that is paid.
+     */
+    @Test
+    fun gateH2_purchaseOrderFractionalEstimateMatchesFinalisedTotal() = runBlocking {
+        val items = listOf(PurchaseOrderItemInput(102L, 2.5, estimatedPrice = 12500L))
+        val orderId = poRepository.createOrder(10L, items).getOrThrow()
+
+        val order = orders[orderId]!!
+        // 2.5 * 12.500 = 31.250. The old expression gave 2 * 12.500 = 25.000.
+        assertEquals(31250L, order.totalEstimatedAmount)
+
+        poRepository.markOrderOrdered(orderId).getOrThrow()
+        val purchaseId = poRepository.receiveOrder(orderId, paymentMethod = "CASH").getOrThrow()
+
+        // The finalised transaction agrees with the approved estimate.
+        assertEquals(31250L, purchaseTransactions[purchaseId]!!.totalAmount)
+        assertEquals(order.totalEstimatedAmount, purchaseTransactions[purchaseId]!!.totalAmount)
+        assertEquals(2.5, purchaseItems.last().quantity, 0.0001)
+        assertEquals(31250L, purchaseItems.last().subtotal)
+    }
+
+    /**
+     * Sub-rupiah purchase totals follow the documented HALF_UP policy, not binary
+     * floating-point rounding: 999 x 0.5 = 499.5 -> 500.
+     */
+    @Test
+    fun gateH2_subRupeiahPurchaseUsesHalfUpPolicy() = runBlocking {
+        val res = directPurchaseRepository.completePurchase(
+            purchaseItems = mapOf(101L to 0.5),
+            paymentMethod = "CASH",
+            supplierId = 10L
+        )
+        assertTrue(res.isSuccess)
+
+        val lineSubtotal = purchaseItems.last().subtotal
+        // 65.000 * 0.5 is exact, so the documented policy is asserted directly on the rule.
+        assertEquals(32500L, lineSubtotal)
+        assertEquals(500L, id.skmnetwork.bukuwarung.domain.money.MoneyCalculator.lineSubtotal(999L, 0.5))
+    }
 }

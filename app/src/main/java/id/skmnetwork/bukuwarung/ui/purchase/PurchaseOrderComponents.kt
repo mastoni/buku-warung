@@ -88,6 +88,7 @@ import id.skmnetwork.bukuwarung.data.local.entity.PurchaseOrderItemEntity
 import id.skmnetwork.bukuwarung.data.local.entity.PurchaseOrderStatus
 import id.skmnetwork.bukuwarung.data.local.entity.SupplierEntity
 import id.skmnetwork.bukuwarung.data.repository.PurchaseOrderItemInput
+import id.skmnetwork.bukuwarung.domain.money.MoneyCalculator
 import id.skmnetwork.bukuwarung.domain.receipt.ReceiptPaperWidth
 import id.skmnetwork.bukuwarung.printer.PrinterService
 import id.skmnetwork.bukuwarung.purchase.PurchaseOrderReceiptFormatter
@@ -978,7 +979,7 @@ fun CreateEditPurchaseOrderDialog(
         }
     }
 
-    val totalEstimated = draftItems.sumOf { (it.quantity * it.estimatedPrice).toLong() }
+    val totalEstimated = draftItems.sumOf { MoneyCalculator.lineSubtotal(it.estimatedPrice, it.quantity) }
     val context = LocalContext.current
 
     Dialog(
@@ -1217,7 +1218,7 @@ fun CreateEditPurchaseOrderDialog(
                                         horizontalArrangement = Arrangement.End
                                     ) {
                                         Text(
-                                            text = "Subtotal: ${formatRupiah((item.quantity * item.estimatedPrice).toLong())}",
+                                            text = "Subtotal: ${formatRupiah(MoneyCalculator.lineSubtotal(item.estimatedPrice, item.quantity))}",
                                             fontWeight = FontWeight.SemiBold,
                                             fontSize = 12.sp,
                                             color = AppColors.TextPrimary
