@@ -83,33 +83,34 @@ export class AdminService {
       );
 
       const licenseId = Number(result.lastInsertRowid);
-      let orderNumber: string | undefined;
 
-      if (customerName || customerContact) {
-        orderNumber = `BW-ORD-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-        const encryptedDeliveryCode = encryptDeliveryLicenseCode(licenseCode);
-        this.db
-          .prepare(`
-            INSERT INTO orders (
-              order_number, customer_name, customer_contact, owner_email, product, amount,
-              status, payment_status, license_id, verified_at, verified_by, encrypted_delivery_license_code, created_at, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, 'LICENSE_CREATED', 'PAID', ?, ?, ?, ?, ?, ?)
-          `)
-          .run(
-            orderNumber,
-            customerName || canonicalEmail,
-            customerContact || canonicalEmail,
-            canonicalEmail,
-            product,
-            price,
-            licenseId,
-            now,
-            actor,
-            encryptedDeliveryCode,
-            now,
-            now
-          );
-      }
+      // An order row is ALWAYS created so that every license has a delivery/recovery path.
+      // Previously the row (and therefore encrypted_delivery_license_code) was only created
+      // when customerName || customerContact was supplied, which could leave a license with no
+      // retrievable License Code at all. Missing fields keep their existing fallbacks below.
+      const orderNumber = `BW-ORD-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+      const encryptedDeliveryCode = encryptDeliveryLicenseCode(licenseCode);
+      this.db
+        .prepare(`
+          INSERT INTO orders (
+            order_number, customer_name, customer_contact, owner_email, product, amount,
+            status, payment_status, license_id, verified_at, verified_by, encrypted_delivery_license_code, created_at, updated_at
+          ) VALUES (?, ?, ?, ?, ?, ?, 'LICENSE_CREATED', 'PAID', ?, ?, ?, ?, ?, ?)
+        `)
+        .run(
+          orderNumber,
+          customerName || canonicalEmail,
+          customerContact || canonicalEmail,
+          canonicalEmail,
+          product,
+          price,
+          licenseId,
+          now,
+          actor,
+          encryptedDeliveryCode,
+          now,
+          now
+        );
 
       this.db
         .prepare(`

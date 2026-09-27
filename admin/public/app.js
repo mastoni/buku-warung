@@ -992,15 +992,30 @@ async function openDeliveryPreparationModal(orderId, directLicenseCode) {
       }
     }
 
+    // Retrieval state distinguishes three outcomes that were previously collapsed into one
+    // misleading "historical code missing" message:
+    //   'available'   - backend returned a code
+    //   'unavailable' - backend responded, but this order has no recoverable delivery code
+    //   'failed'      - request itself failed (network / auth / server error)
+    let retrievalState = directLicenseCode ? 'available' : 'unavailable';
+    let hasDeliveryCode = true;
+
     if (!licenseCode) {
       try {
         const delivRes = await fetch(`/api/orders/${orderId}/delivery-license`);
         if (delivRes.ok) {
           const delivData = await delivRes.json();
           licenseCode = delivData.data?.licenseCode || '';
+          hasDeliveryCode =
+            typeof delivData.data?.hasDeliveryCode === 'boolean'
+              ? delivData.data.hasDeliveryCode
+              : Boolean(licenseCode);
+          retrievalState = licenseCode ? 'available' : 'unavailable';
+        } else {
+          retrievalState = 'failed';
         }
       } catch {
-        licenseCode = '';
+        retrievalState = 'failed';
       }
     }
 
@@ -1014,8 +1029,20 @@ async function openDeliveryPreparationModal(orderId, directLicenseCode) {
     // Display recipient info
     document.getElementById('waRecipientInfo').textContent = `${order.customer_name} (${order.customer_whatsapp || order.customer_contact}) — ${order.owner_email}`;
 
-    const displayLicenseText = licenseCode || '(Kode lisensi historis tidak tersimpan)';
-    const waLicenseCodeText = licenseCode || '[Hubungi Admin untuk Kode Lisensi]';
+    const displayLicenseText =
+      licenseCode ||
+      (retrievalState === 'failed'
+        ? '(Gagal mengambil Kode Lisensi — coba ulang)'
+        : hasDeliveryCode
+          ? '(Kode Lisensi belum tersedia untuk order ini)'
+          : '(Kode Lisensi tidak tersimpan pada order ini dan tidak dapat dipulihkan otomatis)');
+    const waLicenseCodeText =
+      licenseCode ||
+      (retrievalState === 'failed'
+        ? '[Admin gagal mengambil Kode Lisensi — mohon hubungi CS SKMNetwork]'
+        : hasDeliveryCode
+          ? '[Kode Lisensi belum tersedia untuk pesanan ini]'
+          : '[Kode Lisensi tidak tersimpan untuk pesanan ini — mohon hubungi CS SKMNetwork]');
 
     // Display delivery package info
     const deliveryInfoEl = document.getElementById('deliveryPackageInfo');

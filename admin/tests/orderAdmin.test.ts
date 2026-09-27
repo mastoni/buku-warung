@@ -243,7 +243,24 @@ describe('Buku Warung Sales & Order Management Admin BFF (C.10.1)', () => {
     expect(appJs).toContain('/delivery-license');
     expect(appJs).toContain('openDeliveryPreparationModal');
     expect(appJs).not.toContain('BW-XXXX-XXXX-XXXX');
-    expect(appJs).toContain('[Hubungi Admin untuk Kode Lisensi]');
-    expect(appJs).toContain('(Kode lisensi historis tidak tersimpan)');
+  });
+
+  it('13. Delivery modal distinguishes unavailable delivery code from a failed retrieval', () => {
+    const appJsPath = path.resolve(__dirname, '../public/app.js');
+    const appJs = fs.readFileSync(appJsPath, 'utf8');
+
+    // The retrieval outcome must be driven by the backend's hasDeliveryCode flag, not assumed.
+    expect(appJs).toContain('hasDeliveryCode');
+    expect(appJs).toContain('retrievalState');
+    expect(appJs).toContain("'failed'");
+    expect(appJs).toContain("'unavailable'");
+
+    // A failed request must never be reported as a missing historical code.
+    expect(appJs).toContain('(Gagal mengambil Kode Lisensi');
+    expect(appJs).toContain('(Kode Lisensi tidak tersimpan pada order ini dan tidak dapat dipulihkan otomatis)');
+
+    // The superseded blanket message must be gone.
+    expect(appJs).not.toContain('(Kode lisensi historis tidak tersimpan)');
+    expect(appJs).not.toContain('[Hubungi Admin untuk Kode Lisensi]');
   });
 });

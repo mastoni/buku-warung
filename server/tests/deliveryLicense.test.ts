@@ -256,4 +256,259 @@ describe('Admin License Delivery Code Persistence & Encryption', () => {
       expect(getRes.data?.hasDeliveryCode).toBe(true);
     });
   });
+
+  describe('4. Secure Re-delivery for an Existing (ACTIVE) License', () => {
+    let app2: FastifyInstance;
+    let db2: Database.Database;
+    const key2 = config.adminApiKey;
+
+    beforeAll(async () => {
+      db2 = getDatabase(':memory:');
+      app2 = buildApp();
+      await app2.ready();
+    });
+
+    afterAll(async () => {
+      await app2.close();
+    });
+
+    /** Creates a paid order, generates its license, and returns ids + the plaintext code. */
+    const seedDeliveredLicense = (email: string) => {
+      const svc = new AdminService(db2);
+      const order = svc.createOrder({
+        customerName: 'Recovery User',
+        customerContact: '081200000001',
+        ownerEmail: email,
+        amount: 50000
+      });
+      const oid = order.data!.id;
+      svc.verifyOrderPayment(oid, { paymentMethod: 'QRIS' });
+      const gen = svc.generateLicenseForOrder(oid);
+      return { svc, oid, licenseId: gen.data!.licenseId, code: gen.data!.licenseCode };
+    };
+
+    const getDelivery = (oid: number) =>
+      app2.inject({
+        method: 'GET',
+        url: `/v1/admin/orders/${oid}/delivery-license`,
+        headers: { authorization: `Bearer ${key2}` }
+      });
+
+    const activate = (code: string, email: string, device: string) =>
+      app2.inject({
+        method: 'POST',
+        url: '/v1/license/activate',
+        payload: { licenseCode: code, ownerEmail: email, deviceBinding: device }
+      });
+
+    it('TEST 1: ACTIVE license still returns the SAME code with hasDeliveryCode=true', async () => {
+      const { oid, code, licenseId } = seedDeliveredLicense('active.recover@example.com');
+      const act = await activate(code, 'active.recover@example.com', 'device-active-1');
+      expect(act.statusCode).toBe(200);
+      expect(JSON.parse(act.body).status).toBe('ACTIVE');
+      expect(db2.prepare('SELECT status FROM licenses WHERE id = ?').get(licenseId)).toEqual({
+        status: 'ACTIVE'
+      });
+
+      const res = await getDelivery(oid);
+      expect(res.statusCode).toBe(200);
+      const body = JSON.parse(res.body);
+      expect(body.data.licenseCode).toBe(code);
+      expect(body.data.hasDeliveryCode).toBe(true);
+    });
+
+    it('TEST 2: REVOKED license is still retrievable by admin but no longer validates', async () => {
+      const { svc, oid, code, licenseId } = seedDeliveredLicense('revoked.recover@example.com');
+      await activate(code, 'revoked.recover@example.com', 'device-revoked-1');
+      svc.revokeLicense(licenseId, 'ADMIN_API', 'audit test revocation');
+
+      // Retrieval path is status-agnostic: the code is still returned to an authenticated admin.
+      const res = await getDelivery(oid);
+      expect(res.statusCode).toBe(200);
+      expect(JSON.parse(res.body).data.licenseCode).toBe(code);
+
+      // But the entitlement is dead: activation/validation must not succeed.
+      const reAct = await activate(code, 'revoked.recover@example.com', 'device-revoked-2');
+      expect(JSON.parse(reAct.body).status).not.toBe('ACTIVE');
+    });
+
+    it('TEST 3: NULL delivery code on an ACTIVE license is reported as unavailable, not silently empty', async () => {
+      const { oid, code, licenseId } = seedDeliveredLicense('legacy.active@example.com');
+      await activate(code, 'legacy.active@example.com', 'device-legacy-1');
+      // Reproduce the real production gap: order predates the encrypted delivery code.
+      db2.prepare('UPDATE orders SET encrypted_delivery_license_code = NULL WHERE id = ?').run(oid);
+      expect(db2.prepare('SELECT status FROM licenses WHERE id = ?').get(licenseId)).toEqual({
+        status: 'ACTIVE'
+      });
+
+      const res = await getDelivery(oid);
+      expect(res.statusCode).toBe(200);
+      const data = JSON.parse(res.body).data;
+      expect(data.licenseCode).toBeNull();
+      expect(data.hasDeliveryCode).toBe(false);
+      // Machine-readable signal so the frontend can tell "unrecoverable" from "request failed".
+      expect(data).toHaveProperty('hasDeliveryCode', false);
+    });
+
+    it('TEST 4: reconcile on an ACTIVE license with the correct code restores retrieval', async () => {
+      const { svc, oid, code, licenseId } = seedDeliveredLicense('reconcile.active@example.com');
+      await activate(code, 'reconcile.active@example.com', 'device-reconcile-1');
+      db2.prepare('UPDATE orders SET encrypted_delivery_license_code = NULL WHERE id = ?').run(oid);
+
+      const rec = svc.reconcileOrderDeliveryLicense(oid, code);
+      expect(rec.success).toBe(true);
+
+      const stored = db2.prepare('SELECT encrypted_delivery_license_code FROM orders WHERE id = ?').get(oid) as any;
+      expect(stored.encrypted_delivery_license_code).toBeTruthy();
+      expect(stored.encrypted_delivery_license_code).not.toContain(code);
+
+      const res = await getDelivery(oid);
+      expect(JSON.parse(res.body).data.licenseCode).toBe(code);
+      // Reconciliation must not disturb the entitlement.
+      expect(db2.prepare('SELECT status FROM licenses WHERE id = ?').get(licenseId)).toEqual({
+        status: 'ACTIVE'
+      });
+    });
+
+    it('TEST 5: reconcile with a wrong code fails and leaves the database untouched', async () => {
+      const { svc, oid, licenseId } = seedDeliveredLicense('wrong.code@example.com');
+      db2.prepare('UPDATE orders SET encrypted_delivery_license_code = NULL WHERE id = ?').run(oid);
+      const before = db2.prepare('SELECT * FROM orders WHERE id = ?').get(oid);
+
+      const rec = svc.reconcileOrderDeliveryLicense(oid, 'BW-WRONG-CODE-9999');
+      expect(rec.success).toBe(false);
+      expect(rec.error?.code).toBe('HASH_MISMATCH');
+
+      const after = db2.prepare('SELECT * FROM orders WHERE id = ?').get(oid);
+      expect(after.encrypted_delivery_license_code).toBeNull();
+      expect(after.license_id).toBe(before.license_id);
+      expect(after.status).toBe(before.status);
+      expect(db2.prepare('SELECT status FROM licenses WHERE id = ?').get(licenseId)).toEqual({
+        status: 'PENDING'
+      });
+    });
+
+    it('TEST 6: retrieval is read-only — it mutates no license, order, or device state', async () => {
+      const { oid, code, licenseId } = seedDeliveredLicense('readonly.check@example.com');
+      await activate(code, 'readonly.check@example.com', 'device-readonly-1');
+
+      const beforeOrder = db2.prepare('SELECT * FROM orders WHERE id = ?').get(oid);
+      const beforeLicense = db2.prepare('SELECT * FROM licenses WHERE id = ?').get(licenseId);
+      const beforeDevices = db2.prepare('SELECT * FROM license_devices WHERE license_id = ?').all(licenseId);
+
+      await getDelivery(oid);
+      await getDelivery(oid);
+
+      expect(db2.prepare('SELECT * FROM orders WHERE id = ?').get(oid)).toEqual(beforeOrder);
+      expect(db2.prepare('SELECT * FROM licenses WHERE id = ?').get(licenseId)).toEqual(beforeLicense);
+      expect(db2.prepare('SELECT * FROM license_devices WHERE license_id = ?').all(licenseId)).toEqual(
+        beforeDevices
+      );
+    });
+
+    it('TEST 7: each retrieval writes exactly one audit row that never contains the plaintext code', async () => {
+      const { svc, oid, code, licenseId } = seedDeliveredLicense('audit.redeliver@example.com');
+      const before = db2
+        .prepare("SELECT COUNT(*) as c FROM audit_logs WHERE action = 'GET_DELIVERY_LICENSE' AND license_id = ?")
+        .get(licenseId) as { c: number };
+
+      await getDelivery(oid);
+
+      const after = db2
+        .prepare("SELECT COUNT(*) as c FROM audit_logs WHERE action = 'GET_DELIVERY_LICENSE' AND license_id = ?")
+        .get(licenseId) as { c: number };
+      expect(after.c).toBe(before.c + 1);
+
+      const rows = db2
+        .prepare("SELECT reason FROM audit_logs WHERE action = 'GET_DELIVERY_LICENSE' AND license_id = ?")
+        .all(licenseId) as Array<{ reason: string }>;
+      for (const r of rows) {
+        expect(r.reason).not.toContain(code);
+      }
+      expect(svc).toBeTruthy();
+    });
+  });
+
+  describe('5. createLicense always has a delivery/recovery path', () => {
+    let app3: FastifyInstance;
+    let db3: Database.Database;
+    const key3 = config.adminApiKey;
+
+    beforeAll(async () => {
+      db3 = getDatabase(':memory:');
+      app3 = buildApp();
+      await app3.ready();
+    });
+
+    afterAll(async () => {
+      await app3.close();
+    });
+
+    const createViaApi = (payload: Record<string, unknown>) =>
+      app3.inject({
+        method: 'POST',
+        url: '/v1/admin/licenses',
+        headers: { authorization: `Bearer ${key3}` },
+        payload
+      });
+
+    it('createLicense WITH customer info persists encrypted delivery code and creates an order', async () => {
+      const res = await createViaApi({
+        ownerEmail: 'with.info@example.com',
+        customerName: 'With Info',
+        customerContact: '081200000111'
+      });
+      expect(res.statusCode).toBe(201);
+      const data = JSON.parse(res.body).data;
+      expect(data.orderNumber).toBeTruthy();
+
+      const order = db3.prepare('SELECT * FROM orders WHERE order_number = ?').get(data.orderNumber) as any;
+      expect(order).toBeDefined();
+      expect(order.license_id).toBe(data.licenseId);
+      expect(order.status).toBe('LICENSE_CREATED');
+      expect(order.encrypted_delivery_license_code).toBeTruthy();
+      expect(order.encrypted_delivery_license_code).not.toContain(data.licenseCode);
+    });
+
+    it('createLicense WITHOUT customerName/customerContact STILL creates an order with a retrievable code', async () => {
+      const res = await createViaApi({ ownerEmail: 'no.info@example.com' });
+      expect(res.statusCode).toBe(201);
+      const data = JSON.parse(res.body).data;
+      expect(data.orderNumber).toBeTruthy();
+
+      // The regression this guards: previously no order row existed, so the License Code
+      // could never be retrieved again.
+      const order = db3.prepare('SELECT * FROM orders WHERE order_number = ?').get(data.orderNumber) as any;
+      expect(order).toBeDefined();
+      expect(order.license_id).toBe(data.licenseId);
+      expect(order.encrypted_delivery_license_code).toBeTruthy();
+      expect(order.encrypted_delivery_license_code).not.toContain(data.licenseCode);
+
+      // Existing fallbacks preserved.
+      expect(order.customer_name).toBe('no.info@example.com');
+      expect(order.customer_contact).toBe('no.info@example.com');
+      expect(order.owner_email).toBe('no.info@example.com');
+
+      // And it is retrievable through the authenticated admin endpoint.
+      const deliv = await app3.inject({
+        method: 'GET',
+        url: `/v1/admin/orders/${order.id}/delivery-license`,
+        headers: { authorization: `Bearer ${key3}` }
+      });
+      expect(deliv.statusCode).toBe(200);
+      expect(JSON.parse(deliv.body).data.licenseCode).toBe(data.licenseCode);
+      expect(JSON.parse(deliv.body).data.hasDeliveryCode).toBe(true);
+    });
+
+    it('createLicense stores only a hash on the license row, never plaintext', async () => {
+      const res = await createViaApi({ ownerEmail: 'hash.only@example.com' });
+      const data = JSON.parse(res.body).data;
+      const lic = db3.prepare('SELECT * FROM licenses WHERE id = ?').get(data.licenseId) as any;
+      expect(lic.license_code_hash).toBe(hashLicenseCode(data.licenseCode));
+      expect(lic.license_code_hash).not.toBe(data.licenseCode);
+      const cols = db3.prepare('PRAGMA table_info(licenses)').all().map((c: any) => c.name);
+      expect(cols).not.toContain('license_code');
+      expect(cols).not.toContain('license_code_plain');
+    });
+  });
 });
