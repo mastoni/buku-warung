@@ -372,7 +372,7 @@ function renderPublicOrderPage(nonce: string, pricing?: PricingResult): string {
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Buku Warung v0.1.0 — Pesan Aplikasi Kasir Warung</title>
-<meta name="description" content="Pesan aplikasi kasir Buku Warung ${effectivePriceFormatted} sekali beli tanpa langganan. 100% offline, cetak struk thermal, catat hutang piutang.">
+<meta name="description" content="Pesan aplikasi kasir Buku Warung ${effectivePriceFormatted} sekali beli tanpa langganan. Offline-first untuk transaksi harian, cetak struk thermal, catat hutang piutang. Aktivasi lisensi dan fitur online tertentu memerlukan koneksi internet.">
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
