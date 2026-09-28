@@ -46,6 +46,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
@@ -64,6 +65,7 @@ import id.skmnetwork.bukuwarung.util.formatRupiah
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import android.widget.Toast
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -72,6 +74,7 @@ fun CashScreen(
     userSettings: UserSettings? = null
 ) {
     val windowSize = rememberAppWindowSize()
+    val context = LocalContext.current
     val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
     val cashBalance by viewModel.cashBalance.collectAsStateWithLifecycle()
     val cashTransactions by viewModel.cashTransactions.collectAsStateWithLifecycle()
@@ -165,17 +168,38 @@ fun CashScreen(
                     onClick = {
                         if (isSaving) return@Button
                         isSaving = true
+                        // Captured before the write, so the confirmation names what was actually
+                        // recorded even if the dialog state changes while the write is in flight.
+                        val recordedType = dialogType
+                        val recordedAmount = manualAmount.trim().toLongOrNull() ?: 0L
                         viewModel.addManualCash(
-                            type = dialogType,
+                            type = recordedType,
                             amountStr = manualAmount,
                             description = manualDescription,
                             onSuccess = {
                                 isSaving = false
+                                // Step 7: the ledger is append-only and never edited, so a
+                                // merchant who taps "Simpan Transaksi" and sees the dialog close
+                                // has no other way to tell a successful record from a cancelled
+                                // one. The balance and list update on their own - this only says
+                                // it happened, using the app's existing transient-acknowledgement
+                                // pattern rather than a new notification system.
+                                Toast.makeText(
+                                    context,
+                                    if (recordedType == "INCOME") {
+                                        "Pemasukan ${formatRupiah(recordedAmount)} tersimpan"
+                                    } else {
+                                        "Pengeluaran ${formatRupiah(recordedAmount)} tersimpan"
+                                    },
+                                    Toast.LENGTH_SHORT
+                                ).show()
                                 showCashDialog = false
                                 manualAmount = ""
                                 manualDescription = ""
                             },
                             onError = { error ->
+                                // No confirmation here: the dialog stays open and shows the error,
+                                // so a failed write can never be mistaken for a saved one.
                                 isSaving = false
                                 dialogError = error
                             }
