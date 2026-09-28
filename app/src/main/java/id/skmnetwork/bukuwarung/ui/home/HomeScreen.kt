@@ -88,7 +88,7 @@ import java.util.Locale
  * 1. Store Identity Header (Branding, Shop Name, Subtitle, Active Badge & Initial Avatar)
  * 2. Welcoming Greeting & Dynamic Indonesian Date Banner (Focal Point)
  * 3. Financial Summary 2x2 Pastel Grid (Penjualan, Pengeluaran, Saldo Kas, Stok Menipis)
- * 4. Menu Utama (8 comfortable pastel icon tiles in 4-column grid with generous touch targets)
+ * 4. Menu Utama (pastel icon tiles in a 4-column grid, count derived from [homeMenuItems])
  * 5. Low Stock Notice Banner (if active)
  * 6. UMKM Motivation Banner ("Warung Kecil, Langkah Besar Masa Depan")
  */
@@ -395,7 +395,9 @@ fun HomeScreen(
                         color = AppColors.TextPrimary
                     )
                     Text(
-                        text = "8 Fitur",
+                        // Step 10: derived from the very list the grid below renders, so the
+                        // count cannot drift away from the tiles it is labelling.
+                        text = homeMenuFeatureCountLabel(terminology),
                         fontSize = 12.5.sp,
                         fontWeight = FontWeight.Medium,
                         color = AppColors.TextSecondary
@@ -666,6 +668,87 @@ data class MenuItemData(
 )
 
 /**
+ * The single source of truth for the "Menu Utama" grid.
+ *
+ * Step 10: the header next to the grid used to read a hardcoded feature count while the grid itself
+ * built its items from a local list, so the two could drift apart silently. The list now lives
+ * here and is read by both the header (for its count) and the grid (for what it renders), which
+ * makes the number truthful by construction and self-updating: add, remove or gate a destination
+ * here and the displayed count follows.
+ *
+ * The items are navigation destinations, not `BusinessCapability` entries - the grid is not
+ * capability-gated and every tile is always shown - so this count describes the main menu, and is
+ * deliberately not the business type's capability set.
+ */internal fun homeMenuItems(terminology: BusinessTerminology): List<MenuItemData> = listOf(
+    MenuItemData(
+        label = "${terminology.transactionLabel}\n(Kasir)",
+        icon = Icons.Default.PointOfSale,
+        iconBg = Color(0xFFE8F7EF),
+        iconTint = Color(0xFF0B9F57),
+        destination = AppScreen.POS
+    ),
+    MenuItemData(
+        label = "${terminology.productLabel}\n& ${terminology.stockLabel}",
+        icon = Icons.Default.Inventory2,
+        iconBg = Color(0xFFE8F3FF),
+        iconTint = Color(0xFF096DD9),
+        destination = AppScreen.PRODUCTS
+    ),
+    MenuItemData(
+        label = "${terminology.purchaseLabel}\n(Kulakan)",
+        icon = Icons.Default.ShoppingBag,
+        iconBg = Color(0xFFFFF7E6),
+        iconTint = Color(0xFFD46B08),
+        destination = AppScreen.PURCHASE
+    ),
+    MenuItemData(
+        label = "${terminology.customerLabel}\n& Piutang",
+        icon = Icons.Default.People,
+        iconBg = Color(0xFFF0EDFE),
+        iconTint = Color(0xFF722ED1),
+        destination = AppScreen.CUSTOMERS
+    ),
+    MenuItemData(
+        label = "${terminology.supplierLabel}\n& ${terminology.debtLabel}",
+        icon = Icons.Default.LocalShipping,
+        iconBg = Color(0xFFE6FFFB),
+        iconTint = Color(0xFF08979C),
+        destination = AppScreen.SUPPLIERS
+    ),
+    MenuItemData(
+        label = "Uang\nKas",
+        icon = Icons.Default.AccountBalanceWallet,
+        iconBg = Color(0xFFFFF0F6),
+        iconTint = Color(0xFFC41D7F),
+        destination = AppScreen.CASH
+    ),
+    MenuItemData(
+        label = "Laporan\nBisnis",
+        icon = Icons.Default.Assessment,
+        iconBg = Color(0xFFE6F7FF),
+        iconTint = Color(0xFF1890FF),
+        destination = AppScreen.REPORTS
+    ),
+    MenuItemData(
+        label = "Pengaturan\nAplikasi",
+        icon = Icons.Default.Settings,
+        iconBg = Color(0xFFF5F5F5),
+        iconTint = Color(0xFF595959),
+        destination = AppScreen.SETTINGS
+    )
+)
+
+/**
+ * The count shown beside "Menu Utama".
+ *
+ * Step 10: this replaces the feature count that used to be baked into the header as a literal.
+ * The number is read from [homeMenuItems], the same list the grid renders, so it can never claim a
+ * count the menu does not have.
+ */
+internal fun homeMenuFeatureCountLabel(terminology: BusinessTerminology): String =
+    "${homeMenuItems(terminology).size} Fitur"
+
+/**
  * Adaptive menu grid: 4 columns (compact), 5 (medium), 8 (expanded)
  */
 @Composable
@@ -675,64 +758,7 @@ fun MenuGrid(
     columnCount: Int = 4
 ) {
     val isDark = MaterialTheme.colorScheme.background == Color(0xFF111827)
-    val menus = listOf(
-        MenuItemData(
-            label = "${terminology.transactionLabel}\n(Kasir)",
-            icon = Icons.Default.PointOfSale,
-            iconBg = Color(0xFFE8F7EF),
-            iconTint = Color(0xFF0B9F57),
-            destination = AppScreen.POS
-        ),
-        MenuItemData(
-            label = "${terminology.productLabel}\n& ${terminology.stockLabel}",
-            icon = Icons.Default.Inventory2,
-            iconBg = Color(0xFFE8F3FF),
-            iconTint = Color(0xFF096DD9),
-            destination = AppScreen.PRODUCTS
-        ),
-        MenuItemData(
-            label = "${terminology.purchaseLabel}\n(Kulakan)",
-            icon = Icons.Default.ShoppingBag,
-            iconBg = Color(0xFFFFF7E6),
-            iconTint = Color(0xFFD46B08),
-            destination = AppScreen.PURCHASE
-        ),
-        MenuItemData(
-            label = "${terminology.customerLabel}\n& Piutang",
-            icon = Icons.Default.People,
-            iconBg = Color(0xFFF0EDFE),
-            iconTint = Color(0xFF722ED1),
-            destination = AppScreen.CUSTOMERS
-        ),
-        MenuItemData(
-            label = "${terminology.supplierLabel}\n& ${terminology.debtLabel}",
-            icon = Icons.Default.LocalShipping,
-            iconBg = Color(0xFFE6FFFB),
-            iconTint = Color(0xFF08979C),
-            destination = AppScreen.SUPPLIERS
-        ),
-        MenuItemData(
-            label = "Uang\nKas",
-            icon = Icons.Default.AccountBalanceWallet,
-            iconBg = Color(0xFFFFF0F6),
-            iconTint = Color(0xFFC41D7F),
-            destination = AppScreen.CASH
-        ),
-        MenuItemData(
-            label = "Laporan\nBisnis",
-            icon = Icons.Default.Assessment,
-            iconBg = Color(0xFFE6F7FF),
-            iconTint = Color(0xFF1890FF),
-            destination = AppScreen.REPORTS
-        ),
-        MenuItemData(
-            label = "Pengaturan\nAplikasi",
-            icon = Icons.Default.Settings,
-            iconBg = Color(0xFFF5F5F5),
-            iconTint = Color(0xFF595959),
-            destination = AppScreen.SETTINGS
-        )
-    )
+    val menus = homeMenuItems(terminology)
 
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         menus.chunked(columnCount).forEach { rowItems ->
