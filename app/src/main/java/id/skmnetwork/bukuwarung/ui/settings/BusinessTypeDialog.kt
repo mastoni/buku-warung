@@ -86,8 +86,15 @@ fun BusinessTypeDialog(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .verticalScroll(rememberScrollState())
-                    .heightIn(max = 460.dp),
+                    // Step 15A: this used to carry `.heightIn(max = 460.dp)` after the scroll
+                    // modifier. On a 411x891 screen that produced a fixed viewport that did not
+                    // actually scroll: only 4 of the 19 business types were reachable, the
+                    // acknowledgement block below them was composed but never laid out, and the
+                    // confirm button could never render - so a business type change could not be
+                    // completed at all. The other scrolling dialogs in the app
+                    // (StockAdjustmentDialog, the supplier dialogs, the catalog sheet) use exactly
+                    // this pair of modifiers and let the AlertDialog's own bounds do the capping.
+                    .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(AppSpacing.sm)
             ) {
                 Surface(
