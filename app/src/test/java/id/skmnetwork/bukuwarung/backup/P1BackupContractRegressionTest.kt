@@ -77,16 +77,29 @@ class P1BackupContractRegressionTest {
 
     @Test
     fun p1_1_everyRequiredTabIsActuallyRequired() {
-        // 21 data tabs minus the 3 capability-gated ones.
-        assertEquals(18, BackupValidator.REQUIRED_DATA_TAB_NAMES.size)
+        // Step 14A: all 21 data tabs are required. 19/20/21 used to be exempt because
+        // exportSnapshot omitted them without CAP_DIGITAL_ITEMS / ACTIVITY_WHOLESALE_PURCHASE, and
+        // that made a normal backup destructive. They are now exported unconditionally.
+        assertEquals(21, BackupValidator.REQUIRED_DATA_TAB_NAMES.size)
         assertTrue("01_Business is mandatory", "01_Business" in BackupValidator.REQUIRED_DATA_TAB_NAMES)
         assertTrue("18_SaleReturnItems is mandatory", "18_SaleReturnItems" in BackupValidator.REQUIRED_DATA_TAB_NAMES)
-        // Capability-gated tabs are deliberately NOT required: exportSnapshot omits them when the
-        // merchant lacks CAP_DIGITAL_ITEMS / ACTIVITY_WHOLESALE_PURCHASE, so requiring them would
-        // break every such restore.
-        assertFalse("19_DigitalTransactions is capability gated", "19_DigitalTransactions" in BackupValidator.REQUIRED_DATA_TAB_NAMES)
-        assertFalse("20_PurchaseOrders is capability gated", "20_PurchaseOrders" in BackupValidator.REQUIRED_DATA_TAB_NAMES)
-        assertFalse("21_PurchaseOrderItems is capability gated", "21_PurchaseOrderItems" in BackupValidator.REQUIRED_DATA_TAB_NAMES)
+        assertTrue(
+            "19_DigitalTransactions is mandatory: a missing one deletes live digital rows",
+            "19_DigitalTransactions" in BackupValidator.REQUIRED_DATA_TAB_NAMES
+        )
+        assertTrue(
+            "20_PurchaseOrders is mandatory: a missing one deletes live purchase orders",
+            "20_PurchaseOrders" in BackupValidator.REQUIRED_DATA_TAB_NAMES
+        )
+        assertTrue(
+            "21_PurchaseOrderItems is mandatory: a missing one deletes live PO items",
+            "21_PurchaseOrderItems" in BackupValidator.REQUIRED_DATA_TAB_NAMES
+        )
+        assertEquals(
+            "The required list must be exactly the declared data tabs",
+            CanonicalSerializer.DATA_TAB_NAMES,
+            BackupValidator.REQUIRED_DATA_TAB_NAMES
+        )
     }
 
     @Test
@@ -158,11 +171,31 @@ class P1BackupContractRegressionTest {
     }
 
     @Test
-    fun p1_absentCapabilityGatedTabsStillValidate() {
-        // A wholesale-only merchant's archive legitimately has no digital / PO tabs.
-        val snapshot = fullSnapshot(omitTabs = setOf("19_DigitalTransactions", "20_PurchaseOrders", "21_PurchaseOrderItems"))
-        runCatching { BackupValidator.validate(snapshot, BUSINESS) }
-            .onFailure { fail("Capability-gated tabs must remain optional, got $it") }
+    fun p1_missingDigitalAndPurchaseOrderTabsAreRejected() {
+        // Step 14A reversal. This used to assert the opposite: that a snapshot without these three
+        // tabs still validated. It did, because exportSnapshot omitted them whenever the merchant's
+        // profile lacked CAP_DIGITAL_ITEMS / ACTIVITY_WHOLESALE_PURCHASE - and a merchant can hold
+        // digital transactions and purchase orders without either, because nothing gates those
+        // writes. The archive passed, the restore deleted the live rows, inserted nothing, and
+        // reported success.
+        for (missing in listOf("19_DigitalTransactions", "20_PurchaseOrders", "21_PurchaseOrderItems")) {
+            val snapshot = fullSnapshot(omitTabs = setOf(missing))
+            val thrown = runCatching { BackupValidator.validate(snapshot, BUSINESS) }.exceptionOrNull()
+            assertTrue(
+                "A snapshot missing $missing must be rejected, got $thrown",
+                thrown is CorruptedBackupException
+            )
+            assertTrue(
+                "The error must name the missing tab",
+                thrown!!.message!!.contains(missing)
+            )
+        }
+
+        val allThree = fullSnapshot(
+            omitTabs = setOf("19_DigitalTransactions", "20_PurchaseOrders", "21_PurchaseOrderItems")
+        )
+        val thrown = runCatching { BackupValidator.validate(allThree, BUSINESS) }.exceptionOrNull()
+        assertTrue("All three missing must be rejected", thrown is CorruptedBackupException)
     }
 
     // =======================================================================

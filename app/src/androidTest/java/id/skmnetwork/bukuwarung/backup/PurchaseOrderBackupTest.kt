@@ -237,7 +237,9 @@ class PurchaseOrderBackupTest {
     }
 
     @Test
-    fun testPurchaseOrderNotExportedWithoutCapability() = runBlocking {
+    fun testPurchaseOrderExportedRegardlessOfActivity() = runBlocking {
+        // Step 14A reversal, same reasoning as the digital case: nothing gates raising a purchase
+        // order, so a profile without ACTIVITY_WHOLESALE_PURCHASE must still archive both tabs.
         userPreferencesRepository.setBusinessId("TEST_BIZ_NO_PO")
         userPreferencesRepository.updateBusinessProfile(
             primaryType = "WARUNG_BENGKEL",
@@ -257,7 +259,11 @@ class PurchaseOrderBackupTest {
         )
 
         val snapshot = backupRestoreManager.exportSnapshot()
-        assertNull("PurchaseOrders tab must be absent when ACTIVITY_WHOLESALE_PURCHASE is not active", snapshot.getTab("20_PurchaseOrders"))
-        assertNull("PurchaseOrderItems tab must be absent when ACTIVITY_WHOLESALE_PURCHASE is not active", snapshot.getTab("21_PurchaseOrderItems"))
+        val poTab = snapshot.getTab("20_PurchaseOrders")
+        val poiTab = snapshot.getTab("21_PurchaseOrderItems")
+        assertNotNull("PurchaseOrders tab must be present without ACTIVITY_WHOLESALE_PURCHASE", poTab)
+        assertNotNull("PurchaseOrderItems tab must be present without ACTIVITY_WHOLESALE_PURCHASE", poiTab)
+        assertEquals("No purchase order was seeded, so the tab must be empty", 0, poTab!!.rows.size)
+        assertEquals("No purchase order item was seeded, so the tab must be empty", 0, poiTab!!.rows.size)
     }
 }

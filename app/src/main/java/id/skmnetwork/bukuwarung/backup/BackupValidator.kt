@@ -9,33 +9,26 @@ import java.util.Locale
 object BackupValidator {
 
     /**
-     * Gate H.4.2-CODE-FIX.1 - tabs whose absence makes a restore destructive.
+     * Gate H.4.2-CODE-FIX.1 - asserts every required data tab is present.
      *
-     * `BackupRestoreContract.RESTORE_DELETE_ORDER` clears all twenty domain tables before
-     * re-inserting. Validation used to read every tab through a nullable `getTab(...)?.rows`, so a
-     * tab that was simply *absent* - a truncated `values:batchGet` response, a hand-deleted tab, a
-     * partial export - passed every check. The restore then deleted that table and re-inserted
-     * nothing, and still reported success. A missing tab must be a hard failure.
+     * Every one of the 21 data tabs is required, `19_DigitalTransactions`, `20_PurchaseOrders` and
+     * `21_PurchaseOrderItems` included. They used to be excluded from this list because
+     * `exportSnapshot` omitted them whenever the merchant's profile lacked `CAP_DIGITAL_ITEMS` or
+     * `ACTIVITY_WHOLESALE_PURCHASE`. Since neither data path is capability-gated - a merchant may
+     * legitimately sell pulsa or raise a purchase order whatever their business type - that
+     * exclusion turned a normal backup into a destructive one: the archive passed validation, the
+     * restore deleted the live `digital_transactions` / `purchase_orders` / `purchase_order_items`
+     * rows, inserted nothing, and reported success.
      *
-     * `19_DigitalTransactions`, `20_PurchaseOrders` and `21_PurchaseOrderItems` are deliberately
-     * EXCLUDED. `BackupRestoreManager.exportSnapshot` omits them whenever the merchant's profile
-     * lacks `CAP_DIGITAL_ITEMS` or `ACTIVITY_WHOLESALE_PURCHASE`, so they are legitimately absent
-     * from a valid archive and requiring them would break every such restore. The capability
-     * switch that also clears those three tables is pre-existing, documented behaviour and is out
-     * of scope for this gate.
+     * Step 14A exports all three tabs unconditionally, so requiring them here is the same contract
+     * the other eighteen already follow, and a genuinely truncated archive is a hard failure again.
      *
      * `00_README` and `00_Metadata` are not data tabs and are not required here; the metadata tab
      * is already mandatory in practice because its absence makes the checksum/businessId checks
      * unreadable upstream in `GoogleSheetsApiTransport.readBackup`.
      */
-    private val CAPABILITY_GATED_TAB_NAMES = setOf(
-        "19_DigitalTransactions",
-        "20_PurchaseOrders",
-        "21_PurchaseOrderItems"
-    )
 
     val REQUIRED_DATA_TAB_NAMES: List<String> = CanonicalSerializer.DATA_TAB_NAMES
-        .filterNot { it in CAPABILITY_GATED_TAB_NAMES }
 
     /**
      * Gate H.4.2-CODE-FIX.1 - asserts every required data tab is present.

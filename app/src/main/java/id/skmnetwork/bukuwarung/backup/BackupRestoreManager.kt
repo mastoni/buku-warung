@@ -5,8 +5,6 @@ import android.database.Cursor
 import androidx.room.withTransaction
 import id.skmnetwork.bukuwarung.data.local.database.AppDatabase
 import id.skmnetwork.bukuwarung.data.preferences.UserPreferencesRepository
-import id.skmnetwork.bukuwarung.domain.business.BusinessActivity
-import id.skmnetwork.bukuwarung.domain.business.BusinessCapability
 import id.skmnetwork.bukuwarung.domain.business.BusinessTaxonomyRegistry
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -68,8 +66,13 @@ import kotlinx.coroutines.withContext
             userSettings.primaryBusinessType,
             userSettings.secondaryActivities
         )
-        val hasDigitalItems = resolvedProfile.hasCapability(BusinessCapability.CAP_DIGITAL_ITEMS)
-        val hasWholesalePurchase = resolvedProfile.hasActivity(BusinessActivity.ACTIVITY_WHOLESALE_PURCHASE)
+        // Step 14A: business type and capability are context, not permission, and the merchant's
+        // data is written without any capability gate. Tabs 19/20/21 are therefore exported
+        // unconditionally, exactly like the other eighteen: an empty tab is valid, a missing one is
+        // not. Gating them on CAP_DIGITAL_ITEMS / ACTIVITY_WHOLESALE_PURCHASE let a merchant who
+        // legitimately sold pulsa or raised a purchase order archive without those rows, after
+        // which a restore deletes the live rows, inserts nothing and still reports success.
+        // `resolvedProfile` stays in use for the informational `capabilities` metadata field below.
 
         // Gate H.4.1: consistent read snapshot of the whole tenant. Nothing below performs
         // network I/O; the immutable snapshot is returned once the transaction has committed.
@@ -764,145 +767,139 @@ import kotlinx.coroutines.withContext
             rows = CanonicalSerializer.sortTabRows("18_SaleReturnItems", returnItemRows)
         )
 
-        // 16. Tab 19_DigitalTransactions (conditional on CAP_DIGITAL_ITEMS)
-        val tab19 = if (hasDigitalItems) {
-            val digitalRows = mutableListOf<List<String>>()
-            db.query("SELECT dt.uuid, dt.business_id, si.uuid as sale_item_uuid, dt.provider_id, dt.provider_product_code, dt.destination_number, dt.selling_price, dt.actual_purchase_price, dt.status, dt.provider_reference_id, dt.sn_token, dt.failure_reason, dt.created_at, dt.updated_at FROM digital_transactions dt LEFT JOIN sale_items si ON dt.sale_item_id = si.id WHERE dt.business_id = ?", arrayOf(businessId)).use { cursor ->
-                while (cursor.moveToNext()) {
-                    val uuid = cursor.getString(0)
-                    val bId = cursor.getString(1)
-                    val saleItemUuid = cursor.getString(2) ?: "NULL"
-                    val providerId = cursor.getString(3)
-                    val providerProductCode = cursor.getString(4)
-                    val destinationNumber = cursor.getString(5)
-                    val sellingPrice = cursor.getLong(6)
-                    val actualPurchasePrice = cursor.getLong(7)
-                    val status = cursor.getString(8)
-                    val providerReferenceId = if (cursor.isNull(9)) null else cursor.getString(9)
-                    val snToken = if (cursor.isNull(10)) null else cursor.getString(10)
-                    val failureReason = if (cursor.isNull(11)) null else cursor.getString(11)
-                    val createdAt = cursor.getLong(12)
-                    val updatedAt = cursor.getLong(13)
+        // 16. Tab 19_DigitalTransactions (always exported; the query is tenant-scoped)
+        val digitalRows = mutableListOf<List<String>>()
+        db.query("SELECT dt.uuid, dt.business_id, si.uuid as sale_item_uuid, dt.provider_id, dt.provider_product_code, dt.destination_number, dt.selling_price, dt.actual_purchase_price, dt.status, dt.provider_reference_id, dt.sn_token, dt.failure_reason, dt.created_at, dt.updated_at FROM digital_transactions dt LEFT JOIN sale_items si ON dt.sale_item_id = si.id WHERE dt.business_id = ?", arrayOf(businessId)).use { cursor ->
+            while (cursor.moveToNext()) {
+                val uuid = cursor.getString(0)
+                val bId = cursor.getString(1)
+                val saleItemUuid = cursor.getString(2) ?: "NULL"
+                val providerId = cursor.getString(3)
+                val providerProductCode = cursor.getString(4)
+                val destinationNumber = cursor.getString(5)
+                val sellingPrice = cursor.getLong(6)
+                val actualPurchasePrice = cursor.getLong(7)
+                val status = cursor.getString(8)
+                val providerReferenceId = if (cursor.isNull(9)) null else cursor.getString(9)
+                val snToken = if (cursor.isNull(10)) null else cursor.getString(10)
+                val failureReason = if (cursor.isNull(11)) null else cursor.getString(11)
+                val createdAt = cursor.getLong(12)
+                val updatedAt = cursor.getLong(13)
 
-                    digitalRows.add(
-                        listOf(
-                            uuid,
-                            bId,
-                            saleItemUuid,
-                            CanonicalSerializer.sanitize(providerId),
-                            CanonicalSerializer.sanitize(providerProductCode),
-                            CanonicalSerializer.sanitize(destinationNumber),
-                            sellingPrice.toString(),
-                            actualPurchasePrice.toString(),
-                            status,
-                            CanonicalSerializer.sanitize(providerReferenceId),
-                            CanonicalSerializer.sanitize(snToken),
-                            CanonicalSerializer.sanitize(failureReason),
-                            createdAt.toString(),
-                            updatedAt.toString()
-                        )
+                digitalRows.add(
+                    listOf(
+                        uuid,
+                        bId,
+                        saleItemUuid,
+                        CanonicalSerializer.sanitize(providerId),
+                        CanonicalSerializer.sanitize(providerProductCode),
+                        CanonicalSerializer.sanitize(destinationNumber),
+                        sellingPrice.toString(),
+                        actualPurchasePrice.toString(),
+                        status,
+                        CanonicalSerializer.sanitize(providerReferenceId),
+                        CanonicalSerializer.sanitize(snToken),
+                        CanonicalSerializer.sanitize(failureReason),
+                        createdAt.toString(),
+                        updatedAt.toString()
                     )
-                }
+                )
             }
-            SheetTab(
-                name = "19_DigitalTransactions",
-                headers = listOf("uuid", "business_id", "sale_item_uuid", "provider_id", "provider_product_code", "destination_number", "selling_price", "actual_purchase_price", "status", "provider_reference_id", "sn_token", "failure_reason", "created_at", "updated_at"),
-                rows = CanonicalSerializer.sortTabRows("19_DigitalTransactions", digitalRows)
-            )
-        } else null
+        }
+        val tab19 = SheetTab(
+            name = "19_DigitalTransactions",
+            headers = listOf("uuid", "business_id", "sale_item_uuid", "provider_id", "provider_product_code", "destination_number", "selling_price", "actual_purchase_price", "status", "provider_reference_id", "sn_token", "failure_reason", "created_at", "updated_at"),
+            rows = CanonicalSerializer.sortTabRows("19_DigitalTransactions", digitalRows)
+        )
 
         // 17. Tab 20_PurchaseOrders + 21_PurchaseOrderItems (conditional on ACTIVITY_WHOLESALE_PURCHASE)
-        val tab20 = if (hasWholesalePurchase) {
-            val poRows = mutableListOf<List<String>>()
-            db.query("SELECT po.id, po.uuid, po.business_id, po.device_id, po.order_number, s.uuid as supplier_uuid, po.supplier_name_snapshot, po.supplier_phone_snapshot, po.status, po.total_estimated_amount, po.notes, po.created_at, po.updated_at, po.sent_at, po.received_at, po.final_purchase_id FROM purchase_orders po LEFT JOIN suppliers s ON po.supplier_id = s.id WHERE po.business_id = ?", arrayOf(businessId)).use { cursor ->
-                while (cursor.moveToNext()) {
-                    val uuid = cursor.getString(1)
-                    val bId = cursor.getString(2)
-                    val dId = cursor.getString(3)
-                    val orderNumber = cursor.getString(4)
-                    val supplierUuid = cursor.getString(5) ?: "NULL"
-                    val supplierNameSnapshot = cursor.getString(6)
-                    val supplierPhoneSnapshot = if (cursor.isNull(7)) null else cursor.getString(7)
-                    val status = cursor.getString(8)
-                    val totalEstimatedAmount = cursor.getLong(9)
-                    val notes = if (cursor.isNull(10)) null else cursor.getString(10)
-                    val createdAt = cursor.getLong(11)
-                    val updatedAt = cursor.getLong(12)
-                    val sentAt = if (cursor.isNull(13)) null else cursor.getLong(13)
-                    val receivedAt = if (cursor.isNull(14)) null else cursor.getLong(14)
-                    val finalPurchaseId = if (cursor.isNull(15)) null else cursor.getLong(15)
-                    // Gate H.4: every other foreign key travels as a UUID. This one used to travel
-                    // as the raw autoincrement id, which becomes meaningless after a restore
-                    // reallocates ids, so the restored order pointed at an unrelated purchase.
-                    val finalPurchaseUuid = if (finalPurchaseId != null) purchaseIdToUuid[finalPurchaseId] ?: "NULL" else "NULL"
+        val poRows = mutableListOf<List<String>>()
+        db.query("SELECT po.id, po.uuid, po.business_id, po.device_id, po.order_number, s.uuid as supplier_uuid, po.supplier_name_snapshot, po.supplier_phone_snapshot, po.status, po.total_estimated_amount, po.notes, po.created_at, po.updated_at, po.sent_at, po.received_at, po.final_purchase_id FROM purchase_orders po LEFT JOIN suppliers s ON po.supplier_id = s.id WHERE po.business_id = ?", arrayOf(businessId)).use { cursor ->
+            while (cursor.moveToNext()) {
+                val uuid = cursor.getString(1)
+                val bId = cursor.getString(2)
+                val dId = cursor.getString(3)
+                val orderNumber = cursor.getString(4)
+                val supplierUuid = cursor.getString(5) ?: "NULL"
+                val supplierNameSnapshot = cursor.getString(6)
+                val supplierPhoneSnapshot = if (cursor.isNull(7)) null else cursor.getString(7)
+                val status = cursor.getString(8)
+                val totalEstimatedAmount = cursor.getLong(9)
+                val notes = if (cursor.isNull(10)) null else cursor.getString(10)
+                val createdAt = cursor.getLong(11)
+                val updatedAt = cursor.getLong(12)
+                val sentAt = if (cursor.isNull(13)) null else cursor.getLong(13)
+                val receivedAt = if (cursor.isNull(14)) null else cursor.getLong(14)
+                val finalPurchaseId = if (cursor.isNull(15)) null else cursor.getLong(15)
+                // Gate H.4: every other foreign key travels as a UUID. This one used to travel
+                // as the raw autoincrement id, which becomes meaningless after a restore
+                // reallocates ids, so the restored order pointed at an unrelated purchase.
+                val finalPurchaseUuid = if (finalPurchaseId != null) purchaseIdToUuid[finalPurchaseId] ?: "NULL" else "NULL"
 
-                    poRows.add(
-                        listOf(
-                            uuid,
-                            bId,
-                            dId,
-                            CanonicalSerializer.sanitize(orderNumber),
-                            supplierUuid,
-                            CanonicalSerializer.sanitize(supplierNameSnapshot),
-                            CanonicalSerializer.sanitize(supplierPhoneSnapshot),
-                            status,
-                            totalEstimatedAmount.toString(),
-                            CanonicalSerializer.sanitize(notes),
-                            createdAt.toString(),
-                            updatedAt.toString(),
-                            CanonicalSerializer.formatLong(sentAt),
-                            CanonicalSerializer.formatLong(receivedAt),
-                            finalPurchaseUuid
-                        )
+                poRows.add(
+                    listOf(
+                        uuid,
+                        bId,
+                        dId,
+                        CanonicalSerializer.sanitize(orderNumber),
+                        supplierUuid,
+                        CanonicalSerializer.sanitize(supplierNameSnapshot),
+                        CanonicalSerializer.sanitize(supplierPhoneSnapshot),
+                        status,
+                        totalEstimatedAmount.toString(),
+                        CanonicalSerializer.sanitize(notes),
+                        createdAt.toString(),
+                        updatedAt.toString(),
+                        CanonicalSerializer.formatLong(sentAt),
+                        CanonicalSerializer.formatLong(receivedAt),
+                        finalPurchaseUuid
                     )
-                }
+                )
             }
-            SheetTab(
-                name = "20_PurchaseOrders",
-                headers = listOf("uuid", "business_id", "device_id", "order_number", "supplier_uuid", "supplier_name_snapshot", "supplier_phone_snapshot", "status", "total_estimated_amount", "notes", "created_at", "updated_at", "sent_at", "received_at", "final_purchase_uuid"),
-                rows = CanonicalSerializer.sortTabRows("20_PurchaseOrders", poRows)
-            )
-        } else null
+        }
+        val tab20 = SheetTab(
+            name = "20_PurchaseOrders",
+            headers = listOf("uuid", "business_id", "device_id", "order_number", "supplier_uuid", "supplier_name_snapshot", "supplier_phone_snapshot", "status", "total_estimated_amount", "notes", "created_at", "updated_at", "sent_at", "received_at", "final_purchase_uuid"),
+            rows = CanonicalSerializer.sortTabRows("20_PurchaseOrders", poRows)
+        )
 
-        val tab21 = if (hasWholesalePurchase) {
-            val poiRows = mutableListOf<List<String>>()
-            db.query("SELECT id, uuid, business_id, po_uuid, product_uuid, product_name, ordered_quantity, unit, estimated_price, estimated_subtotal, received_quantity, notes FROM purchase_order_items WHERE business_id = ?", arrayOf(businessId)).use { cursor ->
-                while (cursor.moveToNext()) {
-                    val uuid = cursor.getString(1)
-                    val bId = cursor.getString(2)
-                    val poUuid = cursor.getString(3)
-                    val productUuid = cursor.getString(4)
-                    val productName = cursor.getString(5)
-                    val orderedQty = cursor.getDouble(6)
-                    val unit = cursor.getString(7)
-                    val estimatedPrice = cursor.getLong(8)
-                    val estimatedSubtotal = cursor.getLong(9)
-                    val receivedQty = cursor.getDouble(10)
-                    val notes = if (cursor.isNull(11)) null else cursor.getString(11)
+        val poiRows = mutableListOf<List<String>>()
+        db.query("SELECT id, uuid, business_id, po_uuid, product_uuid, product_name, ordered_quantity, unit, estimated_price, estimated_subtotal, received_quantity, notes FROM purchase_order_items WHERE business_id = ?", arrayOf(businessId)).use { cursor ->
+            while (cursor.moveToNext()) {
+                val uuid = cursor.getString(1)
+                val bId = cursor.getString(2)
+                val poUuid = cursor.getString(3)
+                val productUuid = cursor.getString(4)
+                val productName = cursor.getString(5)
+                val orderedQty = cursor.getDouble(6)
+                val unit = cursor.getString(7)
+                val estimatedPrice = cursor.getLong(8)
+                val estimatedSubtotal = cursor.getLong(9)
+                val receivedQty = cursor.getDouble(10)
+                val notes = if (cursor.isNull(11)) null else cursor.getString(11)
 
-                    poiRows.add(
-                        listOf(
-                            uuid,
-                            bId,
-                            poUuid,
-                            productUuid,
-                            CanonicalSerializer.sanitize(productName),
-                            CanonicalSerializer.formatDouble(orderedQty),
-                            CanonicalSerializer.sanitize(unit),
-                            estimatedPrice.toString(),
-                            estimatedSubtotal.toString(),
-                            CanonicalSerializer.formatDouble(receivedQty),
-                            CanonicalSerializer.sanitize(notes)
-                        )
+                poiRows.add(
+                    listOf(
+                        uuid,
+                        bId,
+                        poUuid,
+                        productUuid,
+                        CanonicalSerializer.sanitize(productName),
+                        CanonicalSerializer.formatDouble(orderedQty),
+                        CanonicalSerializer.sanitize(unit),
+                        estimatedPrice.toString(),
+                        estimatedSubtotal.toString(),
+                        CanonicalSerializer.formatDouble(receivedQty),
+                        CanonicalSerializer.sanitize(notes)
                     )
-                }
+                )
             }
-            SheetTab(
-                name = "21_PurchaseOrderItems",
-                headers = listOf("uuid", "business_id", "po_uuid", "product_uuid", "product_name", "ordered_quantity", "unit", "estimated_price", "estimated_subtotal", "received_quantity", "notes"),
-                rows = CanonicalSerializer.sortTabRows("21_PurchaseOrderItems", poiRows)
-            )
-        } else null
+        }
+        val tab21 = SheetTab(
+            name = "21_PurchaseOrderItems",
+            headers = listOf("uuid", "business_id", "po_uuid", "product_uuid", "product_name", "ordered_quantity", "unit", "estimated_price", "estimated_subtotal", "received_quantity", "notes"),
+            rows = CanonicalSerializer.sortTabRows("21_PurchaseOrderItems", poiRows)
+        )
 
         val dataTabs = mutableMapOf(
             "01_Business" to tab01,

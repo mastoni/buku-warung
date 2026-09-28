@@ -129,7 +129,10 @@ class AdaptiveBackupTest {
     }
 
     @Test
-    fun testDigitalTransactionsSheetAbsentWhenCapabilityInactive() = runBlocking {
+    fun testDigitalTransactionsSheetPresentWhenCapabilityInactive() = runBlocking {
+        // Step 14A: the tab is no longer gated on CAP_DIGITAL_ITEMS. A business type without the
+        // capability still exports 19_DigitalTransactions, empty here, because nothing gates the
+        // digital write path and an empty tab is a valid archive while a missing one is destructive.
         userPreferencesRepository.updateBusinessProfile(
             primaryType = "WARUNG_BENGKEL",
             secondaryActivities = emptySet()
@@ -137,11 +140,11 @@ class AdaptiveBackupTest {
         seedCommonData("TEST_BIZ_NO_DIGITAL")
 
         val snapshot = backupRestoreManager.exportSnapshot()
-        assertNull("19_DigitalTransactions must be absent when CAP_DIGITAL_ITEMS is inactive", snapshot.getTab("19_DigitalTransactions"))
+        val digitalTab = snapshot.getTab("19_DigitalTransactions")
+        assertNotNull("19_DigitalTransactions must be present even without CAP_DIGITAL_ITEMS", digitalTab)
+        assertEquals("No digital rows were seeded, so the tab must be empty", 0, digitalTab!!.rows.size)
         for (tabName in CanonicalSerializer.DATA_TAB_NAMES) {
-            if (tabName != "19_DigitalTransactions" && tabName != "20_PurchaseOrders" && tabName != "21_PurchaseOrderItems") {
-                assertTrue("Universal tab $tabName must always exist", snapshot.getTab(tabName) != null)
-            }
+            assertTrue("Every data tab $tabName must always exist", snapshot.getTab(tabName) != null)
         }
     }
 
@@ -191,7 +194,9 @@ class AdaptiveBackupTest {
     }
 
     @Test
-    fun testPurchaseOrderSheetsAbsentWhenActivityInactive() = runBlocking {
+    fun testPurchaseOrderSheetsPresentWhenActivityInactive() = runBlocking {
+        // Step 14A: same reversal for the purchase-order tabs. Nothing gates raising a purchase
+        // order, so the tabs are exported for every business type, empty when there is no data.
         userPreferencesRepository.updateBusinessProfile(
             primaryType = "WARUNG_BENGKEL",
             secondaryActivities = emptySet()
@@ -199,8 +204,12 @@ class AdaptiveBackupTest {
         seedCommonData("TEST_BIZ_NO_PO")
 
         val snapshot = backupRestoreManager.exportSnapshot()
-        assertNull("20_PurchaseOrders must be absent when ACTIVITY_WHOLESALE_PURCHASE is inactive", snapshot.getTab("20_PurchaseOrders"))
-        assertNull("21_PurchaseOrderItems must be absent when ACTIVITY_WHOLESALE_PURCHASE is inactive", snapshot.getTab("21_PurchaseOrderItems"))
+        val poTab = snapshot.getTab("20_PurchaseOrders")
+        val poiTab = snapshot.getTab("21_PurchaseOrderItems")
+        assertNotNull("20_PurchaseOrders must be present without ACTIVITY_WHOLESALE_PURCHASE", poTab)
+        assertNotNull("21_PurchaseOrderItems must be present without ACTIVITY_WHOLESALE_PURCHASE", poiTab)
+        assertEquals(0, poTab!!.rows.size)
+        assertEquals(0, poiTab!!.rows.size)
     }
 
     @Test

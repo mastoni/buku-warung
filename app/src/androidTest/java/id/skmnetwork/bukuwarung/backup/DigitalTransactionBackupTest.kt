@@ -178,7 +178,11 @@ class DigitalTransactionBackupTest {
     }
 
     @Test
-    fun testDigitalTransactionNotExportedWithoutCapability() = runBlocking {
+    fun testDigitalTransactionExportedRegardlessOfCapability() = runBlocking {
+        // Step 14A reversal. This used to assert the tab was ABSENT for a profile without
+        // CAP_DIGITAL_ITEMS. Because a merchant may legitimately create and sell a digital product
+        // whatever their business type, that omission made a normal backup destructive: the restore
+        // deletes the live digital_transactions rows and, with the tab missing, reinserts nothing.
         userPreferencesRepository.setBusinessId("TEST_BIZ_NO_DIGITAL")
         userPreferencesRepository.updateBusinessProfile(
             primaryType = "WARUNG_BENGKEL",
@@ -198,6 +202,11 @@ class DigitalTransactionBackupTest {
         )
 
         val snapshot = backupRestoreManager.exportSnapshot()
-        assertNull("DigitalTransactions tab must be absent when CAP_DIGITAL_ITEMS is not active", snapshot.getTab("19_DigitalTransactions"))
+        val digitalTab = snapshot.getTab("19_DigitalTransactions")
+        assertNotNull(
+            "DigitalTransactions tab must be present even without CAP_DIGITAL_ITEMS",
+            digitalTab
+        )
+        assertEquals("No digital row was seeded, so the tab must be empty", 0, digitalTab!!.rows.size)
     }
 }
