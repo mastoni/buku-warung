@@ -106,6 +106,7 @@ import id.skmnetwork.bukuwarung.ui.components.ProductImageThumbnail
 import id.skmnetwork.bukuwarung.ui.customer.CustomerViewModel
 import id.skmnetwork.bukuwarung.ui.navigation.CheckoutSuccessData
 import id.skmnetwork.bukuwarung.ui.product.ProductViewModel
+import id.skmnetwork.bukuwarung.ui.report.ReportPeriod
 import id.skmnetwork.bukuwarung.ui.theme.AppColors
 import id.skmnetwork.bukuwarung.ui.theme.AppShapes
 import id.skmnetwork.bukuwarung.ui.theme.AppSpacing
@@ -151,6 +152,12 @@ fun PosScreen(
 
     var query by remember { mutableStateOf("") }
     var salesHistoryQuery by remember { mutableStateOf("") }
+    // Step 9 - sale history discoverability. The period chips reuse the reports screen's
+    // ReportPeriod vocabulary and its date range, and the payment chips reuse the codes the POS
+    // itself writes, so neither filter invents a value the sale model does not already carry.
+    // null period and SalesPaymentFilter.ALL are the clear state.
+    var salesHistoryPeriod by remember { mutableStateOf<ReportPeriod?>(null) }
+    var salesHistoryPayment by remember { mutableStateOf(SalesPaymentFilter.ALL) }
     var selectedCategoryId by remember { mutableStateOf<Long?>(null) } // null = Semua
 
     val context = LocalContext.current
@@ -270,12 +277,17 @@ fun PosScreen(
         matchesQuery && matchesCategory
     }
 
-    val filteredSales = sales.filter { sale ->
-        val customer = customers.find { it.id == sale.customerId }
-        val matchesNumber = sale.transactionNumber.contains(salesHistoryQuery, ignoreCase = true)
-        val matchesCust = customer?.name?.contains(salesHistoryQuery, ignoreCase = true) == true
-        matchesNumber || matchesCust
+    val customerNamesById = remember(customers) {
+        customers.associate { it.id to it.name }
     }
+
+    val filteredSales = filterSalesHistory(
+        sales = sales,
+        customerNamesById = customerNamesById,
+        query = salesHistoryQuery,
+        period = salesHistoryPeriod,
+        paymentFilter = salesHistoryPayment
+    )
 
     var discountType by remember { mutableStateOf(DiscountType.FIXED) }
     var discountInputText by remember { mutableStateOf("") }
@@ -1058,6 +1070,10 @@ fun PosScreen(
                 allSalesCount = sales.size,
                 customers = customers,
                 terminology = terminology,
+                selectedPeriod = salesHistoryPeriod,
+                selectedPayment = salesHistoryPayment,
+                onSelectPeriod = { salesHistoryPeriod = it },
+                onSelectPayment = { salesHistoryPayment = it },
                 onOpenSale = { selectedSaleForDetail = it },
                 onBackToRegister = { selectedTab = 0 }
             )

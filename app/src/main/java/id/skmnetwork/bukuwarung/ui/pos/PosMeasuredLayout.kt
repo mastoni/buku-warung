@@ -1034,12 +1034,46 @@ fun PosPhoneCartDialog(
 // Sales history pane - preserved behaviour, reached from the top bar instead of a mode tab
 // =====================================================================================
 
+/**
+ * Step 9 - a scrollable row of filter chips sharing the measured category chip metrics
+ * (42dp tall, category chip shape and padding, same palette) so the history filters are the same
+ * control the product categories already are, just applied to sales.
+ */
+@Composable
+private fun PosFilterChipRow(
+    labels: List<String>,
+    selectedIndex: Int,
+    onSelect: (Int) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(PosMetrics.CategoryRowHeight)
+            .horizontalScroll(rememberScrollState()),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(PosMetrics.CategoryChipGap)
+    ) {
+        labels.forEachIndexed { index, label ->
+            PosCategoryChip(
+                label = label,
+                isSelected = index == selectedIndex,
+                onClick = { onSelect(index) }
+            )
+        }
+    }
+}
+
 @Composable
 fun PosSalesHistoryPane(
     sales: List<id.skmnetwork.bukuwarung.data.local.entity.SaleTransactionEntity>,
     allSalesCount: Int,
     customers: List<CustomerEntity>,
     terminology: id.skmnetwork.bukuwarung.domain.business.BusinessTerminology,
+    selectedPeriod: id.skmnetwork.bukuwarung.ui.report.ReportPeriod?,
+    selectedPayment: SalesPaymentFilter,
+    onSelectPeriod: (id.skmnetwork.bukuwarung.ui.report.ReportPeriod?) -> Unit,
+    onSelectPayment: (SalesPaymentFilter) -> Unit,
     onOpenSale: (id.skmnetwork.bukuwarung.data.local.entity.SaleTransactionEntity) -> Unit,
     onBackToRegister: () -> Unit,
     modifier: Modifier = Modifier
@@ -1074,6 +1108,35 @@ fun PosSalesHistoryPane(
                 modifier = Modifier.width(180.dp)
             )
         }
+
+        // Step 9 - the two existing filter controls, using the same chip metrics, shapes and
+        // palette as the product category chips so the history pane needs no new visual language.
+        // Both start cleared, and each chip is a single tap target sized for the 411x891 device.
+        val salePeriods = id.skmnetwork.bukuwarung.ui.report.ReportPeriod.entries
+        PosFilterChipRow(
+            labels = salePeriods.map { it.label },
+            // "Semua" is ReportPeriod.ALL_TIME, so the cleared state is that chip - the filter
+            // itself is off, and the chip that says it is the one shown as selected.
+            selectedIndex = salePeriods.indexOf(
+                selectedPeriod ?: id.skmnetwork.bukuwarung.ui.report.ReportPeriod.ALL_TIME
+            ),
+            onSelect = { index ->
+                val period = salePeriods[index]
+                onSelectPeriod(if (period == id.skmnetwork.bukuwarung.ui.report.ReportPeriod.ALL_TIME) null else period)
+            }
+        )
+
+        Spacer(Modifier.height(PosMetrics.RadiusSmall))
+
+        val salePaymentFilters = SalesPaymentFilter.entries
+        PosFilterChipRow(
+            labels = salePaymentFilters.map { it.label },
+            selectedIndex = salePaymentFilters.indexOf(selectedPayment),
+            onSelect = { index -> onSelectPayment(salePaymentFilters[index]) }
+        )
+
+        Spacer(Modifier.height(PosMetrics.CartItemGap))
+
         if (sales.isEmpty()) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text(
