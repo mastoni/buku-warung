@@ -32,6 +32,8 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -68,12 +70,32 @@ import id.skmnetwork.bukuwarung.ui.theme.AppColors
 import id.skmnetwork.bukuwarung.ui.theme.rememberAppWindowSize
 import id.skmnetwork.bukuwarung.util.formatRupiah
 
+/**
+ * Step 4 - what a product row's overflow menu asked for.
+ *
+ * The overflow affordance used to be wired straight to Edit, which made it a second copy of the
+ * row's own tap target rather than a menu. It is now an action entry point. These are not new
+ * capabilities: every one of them already exists and is reachable from the product form - the menu
+ * only names them, and each entry lands on the SAME screen and the SAME dialog it always used.
+ */
+enum class ProductRowAction {
+    /** Open the product form. */
+    EDIT,
+
+    /** Open the existing stock adjustment / stock-count dialog. */
+    ADJUST_STOCK,
+
+    /** Open the existing delete confirmation. */
+    DELETE
+}
+
 @Composable
 fun ProductsScreen(
     viewModel: ProductViewModel,
     userSettings: UserSettings? = null,
     onAddProduct: () -> Unit = {},
     onEditProduct: (Long) -> Unit = {},
+    onProductAction: (Long, ProductRowAction) -> Unit = { _, _ -> },
     onNavigateToCatalog: () -> Unit = {}
 ) {
     val resolvedProfile = remember(userSettings?.primaryBusinessType, userSettings?.secondaryActivities) {
@@ -297,9 +319,15 @@ fun ProductsScreen(
                         ProductItemCard(
                             product = product,
                             serviceLabel = resolvedProfile.terminology.serviceLabel,
+                            productLabel = productLabel,
                             onEdit = {
                                 if (product.id > 0) {
                                     onEditProduct(product.id)
+                                }
+                            },
+                            onMoreActions = { action ->
+                                if (product.id > 0) {
+                                    onProductAction(product.id, action)
                                 }
                             }
                         )
@@ -421,10 +449,13 @@ private fun ProductsHeader(
 private fun ProductItemCard(
     product: ProductEntity,
     serviceLabel: String = "Layanan",
-    onEdit: () -> Unit
+    productLabel: String = "Produk",
+    onEdit: () -> Unit,
+    onMoreActions: (ProductRowAction) -> Unit
 ) {
     val stock = product.stock
     val minStock = product.minimumStock
+    var menuExpanded by remember { mutableStateOf(false) }
 
     Surface(
         onClick = onEdit,
@@ -494,17 +525,55 @@ private fun ProductItemCard(
                 )
             }
 
-            // Edit / Action Menu Button
-            IconButton(
-                onClick = onEdit,
-                modifier = Modifier.size(36.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.MoreVert,
-                    contentDescription = "Opsi Produk",
-                    tint = AppColors.TextSecondary,
-                    modifier = Modifier.size(20.dp)
-                )
+            // Overflow action menu. It no longer opens Edit directly: the row itself is the Edit
+            // target, so a menu here that also opened Edit was a second copy of the same action
+            // under an icon that promises a list. Opening this menu only toggles local state - it
+            // performs no repository call and mutates nothing.
+            Box {
+                IconButton(
+                    onClick = { menuExpanded = true },
+                    modifier = Modifier.size(36.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.MoreVert,
+                        contentDescription = "Opsi Produk",
+                        tint = AppColors.TextSecondary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+
+                // The app's existing action-menu surface (the same Material3 DropdownMenu already
+                // used for the return-reason picker), so this reads as native to the app.
+                DropdownMenu(
+                    expanded = menuExpanded,
+                    onDismissRequest = { menuExpanded = false }
+                ) {
+                    DropdownMenuItem(
+                        text = { Text("Edit $productLabel") },
+                        onClick = {
+                            menuExpanded = false
+                            onMoreActions(ProductRowAction.EDIT)
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Sesuaikan Stok / Opname") },
+                        onClick = {
+                            menuExpanded = false
+                            onMoreActions(ProductRowAction.ADJUST_STOCK)
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = {
+                            // Same destructive token as the delete button and the delete
+                            // confirmation that this opens.
+                            Text("Hapus $productLabel", color = MaterialTheme.colorScheme.error)
+                        },
+                        onClick = {
+                            menuExpanded = false
+                            onMoreActions(ProductRowAction.DELETE)
+                        }
+                    )
+                }
             }
         }
     }
@@ -789,8 +858,11 @@ fun ProductRowWithMoreOptions(
     stock: Double,
     unit: String = "pcs",
     imageUri: String? = null,
-    onEdit: () -> Unit = {}
+    productLabel: String = "Produk",
+    onEdit: () -> Unit = {},
+    onMoreActions: (ProductRowAction) -> Unit = {}
 ) {
+    var menuExpanded by remember { mutableStateOf(false) }
     Surface(
         onClick = onEdit,
         shape = RoundedCornerShape(14.dp),
@@ -822,8 +894,38 @@ fun ProductRowWithMoreOptions(
                 Text(formatRupiah(price), color = AppColors.GreenPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                 Text("Stok: ${if (stock % 1.0 == 0.0) stock.toInt().toString() else stock.toString()} $unit", style = MaterialTheme.typography.labelSmall, color = AppColors.TextSecondary)
             }
-            IconButton(onClick = onEdit) {
-                Icon(Icons.Default.MoreVert, "Opsi", tint = AppColors.TextSecondary)
+            Box {
+                IconButton(onClick = { menuExpanded = true }) {
+                    Icon(Icons.Default.MoreVert, "Opsi", tint = AppColors.TextSecondary)
+                }
+                DropdownMenu(
+                    expanded = menuExpanded,
+                    onDismissRequest = { menuExpanded = false }
+                ) {
+                    DropdownMenuItem(
+                        text = { Text("Edit $productLabel") },
+                        onClick = {
+                            menuExpanded = false
+                            onMoreActions(ProductRowAction.EDIT)
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Sesuaikan Stok / Opname") },
+                        onClick = {
+                            menuExpanded = false
+                            onMoreActions(ProductRowAction.ADJUST_STOCK)
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = {
+                            Text("Hapus $productLabel", color = MaterialTheme.colorScheme.error)
+                        },
+                        onClick = {
+                            menuExpanded = false
+                            onMoreActions(ProductRowAction.DELETE)
+                        }
+                    )
+                }
             }
         }
     }

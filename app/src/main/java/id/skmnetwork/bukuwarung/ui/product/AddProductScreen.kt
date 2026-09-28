@@ -100,6 +100,10 @@ fun AddProductScreen(
     defaultLowStockLimit: Int = 2,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    // Step 4: which dialog the product row's overflow menu asked to open on arrival. EDIT (or null)
+    // simply shows the form, which is the original behaviour. The other two open the dialogs this
+    // screen has always hosted - no new dialog, no new stock path, no new confirmation.
+    initialAction: ProductRowAction = ProductRowAction.EDIT,
 ) {
     val context = LocalContext.current
     val isEditMode = productIdToEdit != null
@@ -151,6 +155,18 @@ fun AddProductScreen(
         }
     }
     var showDeleteDialog by remember { mutableStateOf(false) }
+
+    // Step 4: the overflow menu is an entry point, so it may ask to land directly on one of the
+    // dialogs below. This only flips the same local flags the on-screen buttons flip; it runs once
+    // per request and is inert when adding a product, where neither dialog is valid.
+    LaunchedEffect(initialAction, productIdToEdit) {
+        if (productIdToEdit == null) return@LaunchedEffect
+        when (initialAction) {
+            ProductRowAction.ADJUST_STOCK -> showStockAdjustmentDialog = true
+            ProductRowAction.DELETE -> showDeleteDialog = true
+            ProductRowAction.EDIT -> Unit
+        }
+    }
     var showBarcodeScannerDialog by remember { mutableStateOf(false) }
     var showCameraPhotoDialog by remember { mutableStateOf(false) }
     var showCategorySelectionDialog by remember { mutableStateOf(false) }

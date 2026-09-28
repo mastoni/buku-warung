@@ -245,6 +245,11 @@ private fun ActiveTenantApp(
     var screen by remember(activeBusinessId) { mutableStateOf(AppScreen.HOME) }
     var previousScreen by remember(activeBusinessId) { mutableStateOf(AppScreen.PRODUCTS) }
     var selectedProductId by remember(activeBusinessId) { mutableStateOf<Long?>(null) }
+    // Step 4: which existing product dialog the row's overflow menu asked to open. Reset together
+    // with the id so a later visit to the form never inherits a stale request.
+    var selectedProductAction by remember(activeBusinessId) {
+        mutableStateOf(id.skmnetwork.bukuwarung.ui.product.ProductRowAction.EDIT)
+    }
 
     val productRepository = remember(activeBusinessId) { ProductRepository(database, activeBusinessId) }
     val customerRepository = remember(activeBusinessId) { CustomerRepository(database, activeBusinessId) }
@@ -412,8 +417,14 @@ private fun ActiveTenantApp(
     // ==========================================
     // 5. MAIN APP SCAFFOLD
     // ==========================================
-    fun navigateToAddProduct(fromScreen: AppScreen, productId: Long? = null) {
+    fun navigateToAddProduct(
+        fromScreen: AppScreen,
+        productId: Long? = null,
+        action: id.skmnetwork.bukuwarung.ui.product.ProductRowAction =
+            id.skmnetwork.bukuwarung.ui.product.ProductRowAction.EDIT
+    ) {
         selectedProductId = productId
+        selectedProductAction = action
         previousScreen = fromScreen
         screen = AppScreen.ADD_PRODUCT
     }
@@ -471,6 +482,13 @@ private fun ActiveTenantApp(
                     onEditProduct = { productId ->
                         navigateToAddProduct(fromScreen = AppScreen.PRODUCTS, productId = productId)
                     },
+                    onProductAction = { productId, action ->
+                        navigateToAddProduct(
+                            fromScreen = AppScreen.PRODUCTS,
+                            productId = productId,
+                            action = action
+                        )
+                    },
                     onNavigateToCatalog = {
                         previousScreen = AppScreen.PRODUCTS
                         screen = AppScreen.CATALOG
@@ -488,8 +506,11 @@ private fun ActiveTenantApp(
                     userSettings = userSettings,
                     productIdToEdit = selectedProductId,
                     defaultLowStockLimit = userSettings.defaultLowStockLimit,
+                    initialAction = selectedProductAction,
                     onBack = {
                         selectedProductId = null
+                        selectedProductAction =
+                            id.skmnetwork.bukuwarung.ui.product.ProductRowAction.EDIT
                         screen = previousScreen
                     }
                 )
