@@ -12,6 +12,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -127,7 +128,8 @@ fun PosScreen(
     userSettings: UserSettings = UserSettings(),
     printerService: id.skmnetwork.bukuwarung.printer.PrinterService? = null,
     onNavigateToAddProduct: () -> Unit = {},
-    onNavigateToSettings: () -> Unit = {}
+    onNavigateToSettings: () -> Unit = {},
+    onOpenNavigation: () -> Unit = {}
 ) {
     val resolvedProfile = remember(userSettings.primaryBusinessType, userSettings.secondaryActivities) {
         BusinessTaxonomyRegistry.resolve(
@@ -235,6 +237,8 @@ fun PosScreen(
     var showCashPaymentDialog by remember { mutableStateOf(false) }
     var showQrisPaymentDialog by remember { mutableStateOf(false) }
     var showCheckoutSuccessDialog by remember { mutableStateOf(false) }
+    // PHONE only: the cart body the tablet shows permanently, shown on demand instead.
+    var showPhoneCartDialog by remember { mutableStateOf(false) }
 
     var selectedSaleForDetail by remember { mutableStateOf<SaleTransactionEntity?>(null) }
     var selectedSaleForReturn by remember { mutableStateOf<SaleTransactionEntity?>(null) }
@@ -1017,7 +1021,15 @@ fun PosScreen(
         topBar = {
             PosTopBar(
                 title = "KASIR",
-                onMenuClick = { selectedTab = if (selectedTab == 0) 1 else 0 },
+                onMenuClick = {
+                    if (windowSize.isCompact) {
+                        // On a phone the bottom navigation bar is always present, so the menu icon
+                        // keeps its existing "go to / leave sales history" role.
+                        selectedTab = if (selectedTab == 0) 1 else 0
+                    } else {
+                        onOpenNavigation()
+                    }
+                },
                 onHistoryClick = { selectedTab = 1 },
                 onAddProductClick = onNavigateToAddProduct,
                 onSettingsClick = onNavigateToSettings,
@@ -1062,14 +1074,18 @@ fun PosScreen(
                         end = PosMetrics.LeftPanePadding,
                         top = PosMetrics.ContentPaddingTop,
                         bottom = PosMetrics.ContentPaddingBottom
-                    ),
-                verticalArrangement = Arrangement.spacedBy(PosMetrics.PrimaryColumnGap)
+                    )
             ) {
+                // The product area is a measured stack - search 54 -> 12 -> tabs 48 -> 8 ->
+                // category 42 -> 16 -> grid - so the gaps are explicit rather than one uniform
+                // spacing applied between all four slots.
                 PosSearchBar(
                     query = query,
                     onQueryChange = { query = it },
                     onScanClick = { showPosScannerDialog = true }
                 )
+
+                Spacer(Modifier.height(PosMetrics.SearchToTabsGap))
 
                 PosModeTabs(
                     labels = listOf("Produk Satuan", "Paket Hemat"),
@@ -1077,11 +1093,15 @@ fun PosScreen(
                     onSelect = { productMode = it }
                 )
 
+                Spacer(Modifier.height(PosMetrics.TabsToCategoryGap))
+
                 PosCategoryRow(
                     categories = dbCategories,
                     selectedCategoryId = selectedCategoryId,
                     onSelect = { selectedCategoryId = it }
                 )
+
+                Spacer(Modifier.height(PosMetrics.CategoryToGridGap))
 
                 if (productMode == 1) {
                     // Section 5 requires the second mode tab. There is no bundle/paket data model in
@@ -1155,6 +1175,91 @@ fun PosScreen(
             }
         }
 
+        // ONE cart body. The tablet shows it permanently in the right pane, the phone shows the
+        // exact same composables inside a dialog. Same customer card, same item rows, same quantity
+        // control, same empty state, same calculations - only the container differs.
+        // It is a ColumnScope receiver so the item list keeps the same weight(1f) fill in both.
+        val cartBody: @Composable ColumnScope.() -> Unit = {
+            // Customer card, 72dp
+            PosCustomerCard(
+                customer = selectedCustomerForCredit,
+                customerLabel = terminology.customerLabel,
+                onClick = { showCustomerPickerSheet = true }
+            )
+
+            Spacer(Modifier.height(PosMetrics.PrimaryColumnGap))
+
+            // Cart items
+            if (cart.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "Keranjang masih kosong",
+                        fontSize = PosType.Helper,
+                        color = PosPalette.TextSecondary
+                    )
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(PosMetrics.CartItemGap)
+                ) {
+                    items(cart.size) { index ->
+                        val line = cart[index]
+                        Column(verticalArrangement = Arrangement.spacedBy(PosMetrics.RadiusSmall)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.Top
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = line.product.name,
+                                        fontSize = PosType.CartProduct,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = PosPalette.TextPrimary,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    Text(
+                                        text = formatRupiah(line.product.sellingPrice),
+                                        fontSize = PosType.CartPrice,
+                                        color = PosPalette.TextSecondary
+                                    )
+                                }
+                                Icon(
+                                    imageVector = Icons.Default.Delete,
+                                    contentDescription = "Hapus",
+                                    tint = PosPalette.TextSecondary,
+                                    modifier = Modifier
+                                        .size(PosMetrics.ProductAddTouchTarget)
+                                        .clickable { cart.removeAt(index) }
+                                )
+                            }
+                            PosQuantityControl(
+                                quantity = line.quantity,
+                                onIncrement = { addProductToCart(line.product) },
+                                onDecrement = {
+                                    if (line.quantity - 1.0 <= 0.0) {
+                                        cart.removeAt(index)
+                                    } else {
+                                        cart[index] = line.copy(quantity = line.quantity - 1.0)
+                                    }
+                                },
+                                enabled = line.product.itemType == ItemType.SERVICE.name ||
+                                        line.product.itemType == ItemType.DIGITAL.name ||
+                                        line.quantity < line.product.stock
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
         val cartPane: @Composable () -> Unit = {
             Column(
                 modifier = Modifier
@@ -1166,7 +1271,7 @@ fun PosScreen(
                         bottom = PosMetrics.PaymentCtaBottomMargin
                     )
             ) {
-                // 11. Cart header, 64dp
+                // Cart header, 64dp
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -1185,84 +1290,7 @@ fun PosScreen(
                     }
                 }
 
-                // 12. Customer card, 72dp
-                PosCustomerCard(
-                    customer = selectedCustomerForCredit,
-                    customerLabel = terminology.customerLabel,
-                    onClick = { showCustomerPickerSheet = true }
-                )
-
-                Spacer(Modifier.height(PosMetrics.PrimaryColumnGap))
-
-                // 13. Cart items
-                if (cart.isEmpty()) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(1f),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "Keranjang masih kosong",
-                            fontSize = PosType.Helper,
-                            color = PosPalette.TextSecondary
-                        )
-                    }
-                } else {
-                    LazyColumn(
-                        modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(PosMetrics.CartItemGap)
-                    ) {
-                        items(cart.size) { index ->
-                            val line = cart[index]
-                            Column(verticalArrangement = Arrangement.spacedBy(PosMetrics.RadiusSmall)) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.Top
-                                ) {
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(
-                                            text = line.product.name,
-                                            fontSize = PosType.CartProduct,
-                                            fontWeight = FontWeight.SemiBold,
-                                            color = PosPalette.TextPrimary,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
-                                        Text(
-                                            text = formatRupiah(line.product.sellingPrice),
-                                            fontSize = PosType.CartPrice,
-                                            color = PosPalette.TextSecondary
-                                        )
-                                    }
-                                    Icon(
-                                        imageVector = Icons.Default.Delete,
-                                        contentDescription = "Hapus",
-                                        tint = PosPalette.TextSecondary,
-                                        modifier = Modifier
-                                            .size(PosMetrics.ProductAddTouchTarget)
-                                            .clickable { cart.removeAt(index) }
-                                    )
-                                }
-                                PosQuantityControl(
-                                    quantity = line.quantity,
-                                    onIncrement = { addProductToCart(line.product) },
-                                    onDecrement = {
-                                        if (line.quantity - 1.0 <= 0.0) {
-                                            cart.removeAt(index)
-                                        } else {
-                                            cart[index] = line.copy(quantity = line.quantity - 1.0)
-                                        }
-                                    },
-                                    enabled = line.product.itemType == ItemType.SERVICE.name ||
-                                            line.product.itemType == ItemType.DIGITAL.name ||
-                                            line.quantity < line.product.stock
-                                )
-                            }
-                        }
-                    }
-                }
+                cartBody()
 
                 Spacer(Modifier.height(PosMetrics.PrimaryColumnGap))
 
@@ -1316,7 +1344,8 @@ fun PosScreen(
         }
 
         if (windowSize.isCompact) {
-            // 21. PHONE - no permanent cart panel, anchored bottom bar instead.
+            // PHONE - no permanent cart panel. The bottom bar carries the count, the total and the
+            // same CTA, and opens the same cart body the tablet shows permanently.
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -1325,22 +1354,49 @@ fun PosScreen(
                 Box(modifier = Modifier.weight(1f)) { productPane() }
                 if (cart.isNotEmpty()) {
                     PosBottomCartBar(
-                        itemCountLabel = "$totalItemCount item",
+                        itemCountLabel = "$totalItemCount ${terminology.productLabel.lowercase()}",
                         totalValue = formatRupiah(grandTotal),
                         ctaLabel = "BAYAR",
                         ctaEnabled = !isCheckingOut,
+                        onBarClick = { showPhoneCartDialog = true },
                         onCtaClick = { showPaymentSelectorDialog = true }
                     )
                 }
             }
         } else {
-            // 22. TABLET - 66.6 / 33.4 split.
+            // TABLET - 66.6 / 33.4 split over the full screen width.
             PosTabletSplit(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding),
                 productPane = productPane,
                 cartPane = cartPane
+            )
+        }
+
+        // PHONE cart detail: the same cart body the tablet shows permanently, hosted on demand.
+        // It lives here rather than after the Scaffold so it shares the cartBody composable.
+        if (showPhoneCartDialog) {
+            PosPhoneCartDialog(
+                cartSummaryLabel = "Keranjang Belanja",
+                discountValue = "-${formatRupiah(discountAmount)}",
+                subtotalLabel = if (taxSettings.enabled) "Total incl. PPN" else null,
+                subtotalValue = if (taxSettings.enabled) formatRupiah(grandTotal) else null,
+                totalLabel = "Total",
+                totalValue = formatRupiah(grandTotal),
+                cartContent = { cartBody() },
+                onClearClick = { showClearCartDialog = true },
+                ctaLabel = "LANJUT PEMBAYARAN",
+                ctaEnabled = cart.isNotEmpty() && !isCheckingOut,
+                onCtaClick = {
+                    if (hasMissingProviderDestination) {
+                        Toast.makeText(context, "Isi nomor tujuan produk digital", Toast.LENGTH_SHORT).show()
+                        return@PosPhoneCartDialog
+                    }
+                    showPhoneCartDialog = false
+                    showPaymentSelectorDialog = true
+                },
+                onDismiss = { showPhoneCartDialog = false }
             )
         }
     }

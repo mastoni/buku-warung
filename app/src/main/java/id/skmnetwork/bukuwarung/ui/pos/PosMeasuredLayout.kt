@@ -32,6 +32,7 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material.icons.filled.ReceiptLong
 import androidx.compose.material3.Icon
@@ -56,6 +57,7 @@ import id.skmnetwork.bukuwarung.data.local.entity.CustomerEntity
 import id.skmnetwork.bukuwarung.data.local.entity.ItemType
 import id.skmnetwork.bukuwarung.data.local.entity.ProductEntity
 import id.skmnetwork.bukuwarung.domain.checkout.CartLine
+import id.skmnetwork.bukuwarung.ui.components.ProductImageThumbnail
 import id.skmnetwork.bukuwarung.ui.theme.AppColors
 import id.skmnetwork.bukuwarung.util.formatQuantityValue
 import id.skmnetwork.bukuwarung.util.formatRupiah
@@ -108,12 +110,20 @@ fun PosTopBar(
                 .padding(horizontal = PosMetrics.TopBarPadding),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                imageVector = Icons.Default.Menu,
-                contentDescription = "Menu",
-                tint = Color.White,
-                modifier = Modifier.size(PosMetrics.TopBarIconSize)
-            )
+            // 24dp icon on a 48dp touch target, per the touch-target rule.
+            Box(
+                modifier = Modifier
+                    .size(PosMetrics.ProductAddTouchTarget)
+                    .clickable { onMenuClick() },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Menu,
+                    contentDescription = "Menu",
+                    tint = Color.White,
+                    modifier = Modifier.size(PosMetrics.TopBarIconSize)
+                )
+            }
             Spacer(Modifier.width(PosMetrics.TopBarTitleGap))
             Text(
                 text = title,
@@ -124,25 +134,22 @@ fun PosTopBar(
                 overflow = TextOverflow.Ellipsis
             )
             Spacer(Modifier.weight(1f))
-            Icon(
-                imageVector = Icons.Default.ReceiptLong,
+            PosTopBarAction(
+                icon = Icons.Default.ReceiptLong,
                 contentDescription = "Riwayat",
-                tint = Color.White,
-                modifier = Modifier.size(PosMetrics.TopBarIconSize)
+                onClick = onHistoryClick
             )
             Spacer(Modifier.width(PosMetrics.TopBarActionGap))
-            Icon(
-                imageVector = Icons.Default.StarBorder,
+            PosTopBarAction(
+                icon = Icons.Default.StarBorder,
                 contentDescription = "Paket",
-                tint = Color.White,
-                modifier = Modifier.size(PosMetrics.TopBarIconSize)
+                onClick = onAddProductClick
             )
             Spacer(Modifier.width(PosMetrics.TopBarActionGap))
-            Icon(
-                imageVector = Icons.Default.Settings,
+            PosTopBarAction(
+                icon = Icons.Default.Settings,
                 contentDescription = "Pengaturan",
-                tint = Color.White,
-                modifier = Modifier.size(PosMetrics.TopBarIconSize)
+                onClick = onSettingsClick
             )
             Spacer(Modifier.width(PosMetrics.TopBarActionGap))
             // 56 x 56 rounded refresh action, white on green per the reference.
@@ -162,6 +169,31 @@ fun PosTopBar(
                 }
             }
         }
+    }
+}
+
+/**
+ * A 24dp top-bar icon on a 48dp touch target. The contract fixes the icon at 24dp and the touch
+ * target rule at >= 48dp, so the padding lives here rather than being inlined at each call site.
+ */
+@Composable
+private fun PosTopBarAction(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    contentDescription: String,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .size(PosMetrics.ProductAddTouchTarget)
+            .clickable { onClick() },
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = contentDescription,
+            tint = Color.White,
+            modifier = Modifier.size(PosMetrics.TopBarIconSize)
+        )
     }
 }
 
@@ -367,14 +399,14 @@ fun MeasuredProductCard(
             .alpha(contentAlpha)
     ) {
         Column(
-            modifier = Modifier.padding(PosMetrics.RadiusSmall),
-            verticalArrangement = Arrangement.spacedBy(PosMetrics.RadiusSmall)
+            modifier = Modifier.padding(PosMetrics.ProductCardPadding),
+            verticalArrangement = Arrangement.spacedBy(PosMetrics.ProductCardInnerGap)
         ) {
             // TOP - stock badge
             Surface(
                 shape = PosMetrics.ChipShape,
                 color = if (isOutOfStock) PosPalette.Destructive.copy(alpha = 0.12f) else PosPalette.ProductAreaBackground,
-                modifier = Modifier.heightIn(min = PosMetrics.RadiusSmall)
+                modifier = Modifier.heightIn(min = PosMetrics.ProductBadgeHeight)
             ) {
                 Text(
                     text = if (isOutOfStock) "Habis" else "${terminologyStockLabel(isStockable)}: ${formatQuantityValue(product.stock)}",
@@ -386,7 +418,9 @@ fun MeasuredProductCard(
                 )
             }
 
-            // CENTER - image zone, fixed 78dp so cards keep a predictable height
+            // CENTER - image zone. ProductImageThumbnail already exists for the product form and
+            // the catalogue, reads product.imageUri, and falls back to the same Inventory2 icon when
+            // a product has no photo, so the POS reuses it instead of hardcoding a placeholder.
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -394,11 +428,10 @@ fun MeasuredProductCard(
                     .background(PosPalette.ProductAreaBackground, PosMetrics.CtaShape),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector = Icons.Default.Inventory2,
-                    contentDescription = null,
+                ProductImageThumbnail(
+                    imageUri = product.imageUri,
                     tint = PosPalette.TextSecondary,
-                    modifier = Modifier.size(40.dp)
+                    modifier = Modifier.size(PosMetrics.ProductImageZoneHeight)
                 )
             }
 
@@ -408,7 +441,7 @@ fun MeasuredProductCard(
                 fontSize = PosType.ProductName,
                 fontWeight = FontWeight.SemiBold,
                 color = PosPalette.TextPrimary,
-                maxLines = 1,
+                maxLines = 2,
                 overflow = TextOverflow.Ellipsis
             )
             if (!productCode.isNullOrBlank()) {
@@ -606,8 +639,9 @@ fun PosCartClearAction(onClick: () -> Unit) {
         fontWeight = FontWeight.SemiBold,
         color = PosPalette.Destructive,
         modifier = Modifier
+            .heightIn(min = PosMetrics.CartClearTouchTarget)
             .clickable { onClick() }
-            .padding(horizontal = PosMetrics.RadiusSmall, vertical = PosMetrics.RadiusSmall)
+            .padding(horizontal = PosMetrics.RadiusSmall)
     )
 }
 
@@ -706,6 +740,11 @@ private fun PosSummaryRow(label: String, value: String) {
 
 // =====================================================================================
 // 21. PHONE - bottom cart bar
+//
+// The phone bar is the same cart, collapsed: it carries the item count, the total and the same
+// primary CTA. Tapping it opens the same cart detail the tablet shows permanently, so the phone
+// and the tablet expose identical product, quantity, subtotal, discount and total information
+// and the payment step behind them is literally the same dialog.
 // =====================================================================================
 
 @Composable
@@ -714,6 +753,7 @@ fun PosBottomCartBar(
     totalValue: String,
     ctaLabel: String,
     ctaEnabled: Boolean,
+    onBarClick: () -> Unit,
     onCtaClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -726,16 +766,30 @@ fun PosBottomCartBar(
             modifier = Modifier.padding(PosMetrics.RadiusSmall),
             verticalArrangement = Arrangement.spacedBy(PosMetrics.RadiusSmall)
         ) {
+            // The summary row is the cart entry point on the phone: the same 48dp touch rule, the
+            // same tokens, the same values the tablet summary shows.
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = PosMetrics.ProductAddTouchTarget)
+                    .clickable { onBarClick() },
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = itemCountLabel,
-                    fontSize = PosType.Helper,
-                    color = PosPalette.TextSecondary
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.ShoppingCart,
+                        contentDescription = "Keranjang",
+                        tint = PosPalette.Primary,
+                        modifier = Modifier.size(PosMetrics.SearchLeadingIconSize)
+                    )
+                    Spacer(Modifier.width(PosMetrics.RadiusSmall))
+                    Text(
+                        text = itemCountLabel,
+                        fontSize = PosType.Helper,
+                        color = PosPalette.TextSecondary
+                    )
+                }
                 Text(
                     text = totalValue,
                     fontSize = PosType.ProductPrice,
@@ -748,6 +802,88 @@ fun PosBottomCartBar(
                 enabled = ctaEnabled,
                 onClick = onCtaClick
             )
+        }
+    }
+}
+
+// =====================================================================================
+// 21b. PHONE - cart detail
+//
+// This is the tablet cart panel hosted as a full-height dialog. The customer card, the item rows,
+// the quantity control, the summary and the CTA are the same composables the tablet uses, so the
+// phone is not a second design: it is the same cart in a different container.
+// =====================================================================================
+
+@Composable
+fun PosPhoneCartDialog(
+    cartSummaryLabel: String,
+    discountValue: String,
+    subtotalLabel: String?,
+    subtotalValue: String?,
+    totalLabel: String,
+    totalValue: String,
+    cartContent: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit,
+    onClearClick: () -> Unit,
+    ctaLabel: String,
+    ctaEnabled: Boolean,
+    onCtaClick: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = PosMetrics.CartPanelShape,
+            color = PosPalette.Surface,
+            modifier = Modifier
+                .fillMaxWidth(PosMetrics.PhoneCartDialogWidthFraction)
+                .fillMaxHeight(PosMetrics.PhoneCartDialogHeightFraction)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(
+                        start = PosMetrics.RightPanePadding,
+                        end = PosMetrics.RightPanePadding,
+                        top = PosMetrics.ContentPaddingTop,
+                        bottom = PosMetrics.PaymentCtaBottomMargin
+                    )
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(PosMetrics.CartHeaderHeight),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = cartSummaryLabel,
+                        fontSize = PosType.SectionTitle,
+                        fontWeight = FontWeight.SemiBold,
+                        color = PosPalette.TextPrimary
+                    )
+                    PosCartClearAction(onClick = onClearClick)
+                }
+
+                cartContent()
+
+                Spacer(Modifier.height(PosMetrics.PrimaryColumnGap))
+
+                PosCartSummary(
+                    discountLabel = "Diskon",
+                    discountValue = discountValue,
+                    subtotalLabel = subtotalLabel,
+                    subtotalValue = subtotalValue,
+                    totalLabel = totalLabel,
+                    totalValue = totalValue
+                )
+
+                Spacer(Modifier.height(PosMetrics.RadiusSmall))
+
+                PosPaymentCta(
+                    label = ctaLabel,
+                    enabled = ctaEnabled,
+                    onClick = onCtaClick
+                )
+            }
         }
     }
 }
@@ -863,6 +999,10 @@ fun PosSalesHistoryPane(
 
 // =====================================================================================
 // 22. TABLET SPLIT - 66.6 / 33.4, never hardcoded to 852dp
+//
+// The cart pane width is derived from the width the POS actually gets, which on tablet is the
+// whole screen: the app's navigation rail is not part of the POS workspace, so it must not eat
+// into the 66.6 / 33.4 split.
 // =====================================================================================
 
 @Composable

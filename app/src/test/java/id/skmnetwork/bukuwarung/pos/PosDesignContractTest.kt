@@ -77,11 +77,14 @@ class PosDesignContractTest {
 
     @Test
     fun s05_categoryRowMatchesTheContract() {
-        assertEquals(56.dp, PosMetrics.CategoryRowHeight)
-        assertEquals(10.dp, PosMetrics.CategoryChipGap)
+        // The chip keeps the 42dp visual height the contract fixes; the row is its 48dp touch target.
+        assertEquals(48.dp, PosMetrics.CategoryRowHeight)
         assertEquals(42.dp, PosMetrics.CategoryChipHeight)
+        assertEquals(10.dp, PosMetrics.CategoryChipGap)
         assertEquals(18.dp, PosMetrics.CategoryChipPaddingHorizontal)
         assertEquals(21.dp, PosMetrics.CategoryChipRadius)
+        // The chip must sit on a >= 48dp touch target.
+        assertTrue(PosMetrics.CategoryRowHeight >= 48.dp)
         // Section 6: chips stay a scrollable row, never a dropdown.
         val source = readSource("ui/pos/PosMeasuredLayout.kt")
         assertTrue("Categories must stay a horizontal row", source.contains("horizontalScroll(rememberScrollState())"))
@@ -89,18 +92,56 @@ class PosDesignContractTest {
     }
 
     @Test
+    fun s05b_productAreaVerticalRhythmMatchesTheContract() {
+        // Section 6 states the product area as a stack, so each gap is its own value.
+        assertEquals(54.dp, PosMetrics.SearchHeight)
+        assertEquals(12.dp, PosMetrics.SearchToTabsGap)
+        assertEquals(48.dp, PosMetrics.ModeTabsHeight)
+        assertEquals(8.dp, PosMetrics.TabsToCategoryGap)
+        assertEquals(42.dp, PosMetrics.CategoryChipHeight)
+        assertEquals(16.dp, PosMetrics.CategoryToGridGap)
+
+        val source = readSource("ui/pos/PosScreen.kt")
+        assertTrue("The search -> tabs gap must be applied", source.contains("PosMetrics.SearchToTabsGap"))
+        assertTrue("The tabs -> category gap must be applied", source.contains("PosMetrics.TabsToCategoryGap"))
+        assertTrue("The category -> grid gap must be applied", source.contains("PosMetrics.CategoryToGridGap"))
+    }
+
+    @Test
     fun s06_productGridAndCardMatchTheContract() {
         assertEquals(5, PosMetrics.ProductGridColumnsExpanded)
+        assertEquals(2, PosMetrics.ProductGridColumnsCompact)
         assertEquals(16.dp, PosMetrics.ProductGridHorizontalGap)
         assertEquals(12.dp, PosMetrics.ProductGridVerticalGap)
         assertEquals(150.dp, 150.dp) // card target width, derived from the grid rather than fixed
-        assertEquals(198.dp, PosMetrics.ProductCardMinHeight)
+        // Section 10: 180-190dp, not the 198dp the previous revision used.
+        assertTrue(
+            "The product card must be 180-190dp tall",
+            PosMetrics.ProductCardMinHeight >= 180.dp && PosMetrics.ProductCardMinHeight <= 190.dp
+        )
         assertEquals(16.dp, PosMetrics.ProductCardRadius)
         assertEquals(2.dp, PosMetrics.ProductSelectedBorder)
-        assertEquals(78.dp, PosMetrics.ProductImageZoneHeight)
+        // Section 10: the image area is 64-72dp.
+        assertTrue(
+            "The product image area must be 64-72dp",
+            PosMetrics.ProductImageZoneHeight >= 64.dp && PosMetrics.ProductImageZoneHeight <= 72.dp
+        )
         // Add button: 36dp visual, 48dp touch target.
         assertEquals(36.dp, PosMetrics.ProductAddButtonSize)
         assertTrue(PosMetrics.ProductAddTouchTarget >= 48.dp)
+
+        // Section 10: the product name wraps to two lines and then ellipsises.
+        val layout = readSource("ui/pos/PosMeasuredLayout.kt")
+        val cardBlock = layout.substringAfter("fun MeasuredProductCard").substringBefore("private fun terminologyStockLabel")
+        assertTrue("The product name must allow two lines", cardBlock.contains("maxLines = 2"))
+        assertTrue("The product name must ellipsise", cardBlock.contains("TextOverflow.Ellipsis"))
+
+        // Section 11: the existing image component is reused, not a hardcoded placeholder.
+        assertTrue("The POS must reuse the existing product image", layout.contains("ProductImageThumbnail("))
+        assertTrue(
+            "The POS must pass the product's own image, not a placeholder",
+            layout.contains("imageUri = product.imageUri")
+        )
     }
 
     @Test
@@ -143,9 +184,9 @@ class PosDesignContractTest {
     @Test
     fun s10_everyDpValueComesFromTheContract() {
         // Section 20 says "use multiples of 4dp", but sections 3-8 and 19 explicitly specify
-        // 18dp, 22dp, 54dp, 42dp, 21dp, 78dp, 198dp, 3dp, 1dp, 2dp and 10dp. The specific sections
-        // win, so the rule that is actually enforced is: no value may appear that the contract did
-        // not name. That is what prevents an arbitrary 13/15/17/19/23dp from creeping in later.
+        // 18dp, 22dp, 54dp, 42dp, 21dp, 3dp, 1dp, 2dp and 10dp. The specific sections win, so the
+        // rule that is actually enforced is: no value may appear that the contract did not name.
+        // That is what prevents an arbitrary 13/15/17/19/23dp from creeping in later.
         val contractValues = setOf(
             // Section 3 - content padding and gaps
             18, 22, 16,
@@ -155,20 +196,22 @@ class PosDesignContractTest {
             54, 12, 1, 16,
             // Section 5 - mode tabs
             48, 3,
-            // Section 6 - categories
-            56, 10, 42, 18, 21,
+            // Section 6 - product area rhythm and categories
+            12, 8, 48, 10, 42, 18, 21,
             // Section 7 / 8 - grid and card
-            16, 150, 198, 2, 78, 32, 36, 48,
+            16, 150, 2, 64, 32, 36, 48, 8, 4, 20, 184,
             // Section 11 / 12 - cart and customer
             64, 72, 14, 40,
             // Section 13 - cart items
             112, 56,
             // Section 15 - CTA
             56, 12,
+            // Section 24 - touch targets
+            48,
             // Section 1 - the cart floor
             400,
             // Section 19 / 20 - radii and spacing scale
-            4, 8, 20, 24, 32
+            20, 24, 32
         )
         val source = readSource("ui/pos/PosDesign.kt")
         val sizes = Regex("""=\s*(\d+)\.dp""")
@@ -264,6 +307,80 @@ class PosDesignContractTest {
         val source = readSource("ui/pos/PosMeasuredLayout.kt")
         val typeBranches = Regex("""when\s*\(\s*resolvedProfile""").findAll(source).count()
         assertEquals("The measured layout must not branch on business type", 0, typeBranches)
+    }
+
+    @Test
+    fun s18_tabletPosIsNotSqueezedByAPermanentRail() {
+        // Section 3: the reference is product area + cart, not sidebar + product area + cart.
+        val source = readSource("ui/navigation/AppNavigation.kt")
+        val railIndex = source.indexOf("NavigationRail(")
+        val posBranchIndex = source.indexOf("screen == AppScreen.POS")
+        val railBranchIndex = source.lastIndexOf("NavigationRail(")
+        assertTrue("The POS branch must exist", posBranchIndex > 0)
+        assertTrue(
+            "The POS must be handled before the permanent-rail branch",
+            posBranchIndex in 0 until railBranchIndex
+        )
+        assertTrue(
+            "Tablet POS navigation must be an overlay drawer, not a permanent rail",
+            source.contains("ModalNavigationDrawer(")
+        )
+        // Navigation is preserved, not removed.
+        assertTrue("The rail is still used on the other screens", railIndex > 0)
+    }
+
+    @Test
+    fun s19_phoneAndTabletShareOneCart() {
+        // Sections 17 / 20: one cart design, two containers.
+        val screen = readSource("ui/pos/PosScreen.kt")
+        assertTrue(
+            "The cart body must be extracted so both layouts share it",
+            screen.contains("val cartBody: @Composable ColumnScope.() -> Unit = {")
+        )
+        assertTrue("The tablet pane must render the shared cart body", screen.contains("cartBody()"))
+        assertTrue("The phone dialog must render the same cart body", screen.contains("cartContent = { cartBody() }"))
+        assertEquals(
+            "The cart body must be defined once",
+            1,
+            Regex("val cartBody: @Composable ColumnScope\\.\\(\\) -> Unit = \\{").findAll(screen).count()
+        )
+    }
+
+    @Test
+    fun s20_frequentlyUsedActionsHaveA48dpTouchTarget() {
+        // Section 24.
+        val layout = readSource("ui/pos/PosMeasuredLayout.kt")
+        assertTrue("The add button keeps a 48dp touch target", layout.contains("PosMetrics.ProductAddTouchTarget"))
+        assertTrue(
+            "Top bar icons are 24dp visuals on 48dp touch targets",
+            layout.contains("size(PosMetrics.ProductAddTouchTarget)")
+        )
+        assertTrue(
+            "Hapus Semua is a text action and needs a 48dp touch height",
+            layout.contains("PosMetrics.CartClearTouchTarget")
+        )
+        assertTrue(PosMetrics.CartClearTouchTarget >= 48.dp)
+        assertTrue(PosMetrics.ProductAddTouchTarget >= 48.dp)
+    }
+
+    @Test
+    fun s21_phoneUsesTheSameCtaAndSummaryLanguage() {
+        // Sections 16 / 17: the phone CTA is the same component, not a second design.
+        val layout = readSource("ui/pos/PosMeasuredLayout.kt")
+        val bottomBar = layout.substringAfter("fun PosBottomCartBar").substringBefore("fun PosPhoneCartDialog")
+        assertTrue("The phone bar must reuse the shared CTA", bottomBar.contains("PosPaymentCta("))
+        assertTrue("The phone bar must show the item count", bottomBar.contains("itemCountLabel"))
+        assertTrue("The phone bar must show the total", bottomBar.contains("totalValue"))
+        // One CTA definition, reused by the phone bar, the tablet cart and the phone cart dialog.
+        assertEquals(
+            "There must be exactly one CTA component, not a phone and a tablet variant",
+            1,
+            Regex("fun PosPaymentCta\\(").findAll(layout).count()
+        )
+        assertTrue(
+            "The phone cart dialog must reuse the same CTA",
+            layout.substringAfter("fun PosPhoneCartDialog").contains("PosPaymentCta(")
+        )
     }
 
     // ---- helpers ---------------------------------------------------------------

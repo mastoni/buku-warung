@@ -64,9 +64,27 @@ object PosMetrics {
     val ModeTabIndicatorHeight: Dp = 3.dp
     val ModeTabDividerHeight: Dp = 1.dp
 
-    // ---- 6. Category row -------------------------------------------------------
+    // ---- 6. Product area vertical rhythm -----------------------------------------
+    //
+    // The contract states the product area as a stack: search 54 -> 12 -> tabs 48 -> 8 ->
+    // category 42 -> 16 -> grid. These three gaps are therefore their own tokens, and the column
+    // must not use one uniform gap for all four slots.
 
-    val CategoryRowHeight: Dp = 56.dp
+    /** Search -> product mode tabs. */
+    val SearchToTabsGap: Dp = 12.dp
+    /** Mode tabs -> category row. */
+    val TabsToCategoryGap: Dp = 8.dp
+    /** Category row -> product grid. */
+    val CategoryToGridGap: Dp = 16.dp
+
+    /** ---- 6. Category row ------------------------------------------------------- */
+
+    /**
+     * The category row is the touch surface (48dp, per the accessibility rule), while the chip
+     * itself keeps the 42dp visual height the contract specifies. Same visual-size / touch-size
+     * split the add button already uses.
+     */
+    val CategoryRowHeight: Dp = 48.dp
     val CategoryChipGap: Dp = 10.dp
     val CategoryChipHeight: Dp = 42.dp
     val CategoryChipPaddingHorizontal: Dp = 18.dp
@@ -81,12 +99,18 @@ object PosMetrics {
     val ProductGridHorizontalGap: Dp = 16.dp
     val ProductGridVerticalGap: Dp = 12.dp
     val ProductCardRadius: Dp = 16.dp
-    val ProductCardMinHeight: Dp = 198.dp
+    val ProductCardMinHeight: Dp = 184.dp
     val ProductSelectedBorder: Dp = 2.dp
-    val ProductImageZoneHeight: Dp = 78.dp
+    val ProductImageZoneHeight: Dp = 64.dp
     val ProductAddButtonSize: Dp = 36.dp
     /** Visual size stays 36dp, the touch target is 48dp. */
     val ProductAddTouchTarget: Dp = 48.dp
+    /** Inner padding of a product card. */
+    val ProductCardPadding: Dp = 8.dp
+    /** Gap between the card's internal blocks. */
+    val ProductCardInnerGap: Dp = 4.dp
+    /** The stock badge keeps a predictable height so card rows line up. */
+    val ProductBadgeHeight: Dp = 20.dp
 
     // ---- 11. Cart panel --------------------------------------------------------
 
@@ -115,6 +139,20 @@ object PosMetrics {
     val PaymentCtaTextSize = 16.sp
     val PaymentCtaBottomMargin: Dp = 16.dp
 
+    // ---- 21. Phone cart detail -------------------------------------------------
+    //
+    // Fractions, not dp: the same dialog must fit a 360dp phone and a 430dp one.
+
+    const val PhoneCartDialogWidthFraction: Float = 0.92f
+    const val PhoneCartDialogHeightFraction: Float = 0.9f
+
+    // ---- 16. Cart action touch targets ------------------------------------------
+    //
+    // "Hapus Semua" is a text action, so it needs an explicit >= 48dp touch height, the same rule
+    // the icon buttons already follow.
+
+    val CartClearTouchTarget: Dp = 48.dp
+
     // ---- 17. Colours -----------------------------------------------------------
     // Colours are NOT defined here on purpose. Step 3 section 17 requires the existing design tokens
     // to be used, and forbids creating a new green. See PosPalette below for the mapping.
@@ -132,6 +170,7 @@ object PosMetrics {
     val ChipShape = RoundedCornerShape(RadiusChip)
     val CustomerCardShape = RoundedCornerShape(RadiusCustomer)
     val QtyControlShape = RoundedCornerShape(RadiusSmall)
+    val CartPanelShape = RoundedCornerShape(RadiusCard)
 
     /**
      * Section 6 specifies a 21dp category-chip radius, which is inside the 20-24dp chip band of

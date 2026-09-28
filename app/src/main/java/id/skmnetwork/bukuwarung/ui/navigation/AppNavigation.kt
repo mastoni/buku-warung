@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Assessment
 import androidx.compose.material.icons.filled.Inventory2
@@ -13,8 +14,11 @@ import androidx.compose.material.icons.filled.PointOfSale
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Storefront
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalDrawerSheet
+import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
@@ -23,6 +27,7 @@ import androidx.compose.material3.NavigationRailItem
 import androidx.compose.material3.NavigationRailItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -60,6 +65,7 @@ import id.skmnetwork.bukuwarung.ui.customer.CustomerViewModelFactory
 import id.skmnetwork.bukuwarung.ui.customer.CustomersScreen
 import id.skmnetwork.bukuwarung.ui.home.HomeScreen
 import id.skmnetwork.bukuwarung.ui.license.LicenseGateScreen
+import id.skmnetwork.bukuwarung.ui.pos.PosMetrics
 import id.skmnetwork.bukuwarung.ui.pos.PosScreen
 import id.skmnetwork.bukuwarung.ui.product.AddProductScreen
 import id.skmnetwork.bukuwarung.ui.product.ProductViewModel
@@ -419,6 +425,16 @@ private fun ActiveTenantApp(
         screen = it
     }
 
+    // The POS is the one screen that must own the full workspace: the reference layout is top bar +
+    // product area + cart, and a permanent rail would push the 66.6 / 33.4 split and the 5-column
+    // grid off their measured targets. Navigation is not removed - on tablet it moves into this
+    // overlay drawer, which the POS top bar already has a menu icon to open.
+    val posDrawerState = rememberDrawerState(DrawerValue.Closed)
+    val posDrawerScope = rememberCoroutineScope()
+    val openPosDrawer: () -> Unit = {
+        posDrawerScope.launch { posDrawerState.open() }
+    }
+
     val content: @Composable (Modifier) -> Unit = { modifier ->
         Box(modifier = modifier) {
             when (screen) {
@@ -443,7 +459,8 @@ private fun ActiveTenantApp(
                     },
                     onNavigateToSettings = {
                         screen = AppScreen.SETTINGS
-                    }
+                    },
+                    onOpenNavigation = openPosDrawer
                 )
                 AppScreen.PRODUCTS -> ProductsScreen(
                     viewModel = productViewModel,
@@ -535,6 +552,27 @@ private fun ActiveTenantApp(
             containerColor = MaterialTheme.colorScheme.background
         ) { padding ->
             content(Modifier.fillMaxSize().padding(padding))
+        }
+    } else if (screen == AppScreen.POS) {
+        // POS on tablet: the full screen goes to the POS, navigation lives in the overlay drawer.
+        ModalNavigationDrawer(
+            drawerState = posDrawerState,
+            drawerContent = {
+                ModalDrawerSheet(
+                    modifier = Modifier.widthIn(max = PosMetrics.CartMinWidth)
+                ) {
+                    RailNav(
+                        current = screen,
+                        previousScreen = previousScreen,
+                        onSelect = {
+                            onNavSelect(it)
+                            posDrawerScope.launch { posDrawerState.close() }
+                        }
+                    )
+                }
+            }
+        ) {
+            content(Modifier.fillMaxSize())
         }
     } else {
         Row(modifier = Modifier.fillMaxSize()) {
