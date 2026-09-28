@@ -99,6 +99,9 @@ class PurchaseOrderBackupTest {
         val poUuid = UUID.randomUUID().toString()
         val now = 2000000L
         val poEntity = PurchaseOrderEntity(
+            // The item rows reference their order by this uuid, and the restore re-links them that
+            // way because primary keys are reallocated. The entity would otherwise mint its own.
+            uuid = poUuid,
             businessId = "TEST_BIZ",
             deviceId = "DEV_1",
             orderNumber = "PO-2000001",
@@ -119,6 +122,10 @@ class PurchaseOrderBackupTest {
         val poi1 = PurchaseOrderItemEntity(
             purchaseOrderId = poId,
             poUuid = poUuid,
+            // The entity defaults business_id to LEGACY_BUSINESS, and PurchaseOrderRepository
+            // always stamps the active tenant on its items. A fixture that builds items by hand has
+            // to do the same, or the tenant-scoped export legitimately returns nothing.
+            businessId = "TEST_BIZ",
             productId = product1.id,
             productUuid = product1.uuid,
             productName = product1.name,
@@ -131,6 +138,7 @@ class PurchaseOrderBackupTest {
         val poi2 = PurchaseOrderItemEntity(
             purchaseOrderId = poId,
             poUuid = poUuid,
+            businessId = "TEST_BIZ",
             productId = product2.id,
             productUuid = product2.uuid,
             productName = product2.name,
@@ -155,6 +163,7 @@ class PurchaseOrderBackupTest {
         assertEquals("PO-2000001", poRow[3])
         val supplier = database.supplierDao().getSupplierById(supplierId, "TEST_BIZ")
         assertEquals(supplier!!.uuid, poRow[4])
+        val supplierUuid = supplier.uuid
         assertEquals("PT. Bumbu Sejahtera", poRow[5])
         assertEquals("0215550001", poRow[6])
         assertEquals("ORDERED", poRow[7])
@@ -163,8 +172,10 @@ class PurchaseOrderBackupTest {
         assertEquals(now.toString(), poRow[10])
         assertEquals((now + 100).toString(), poRow[11])
         assertEquals((now + 50).toString(), poRow[12])
-        assertEquals("", poRow[13])
-        assertEquals("", poRow[14])
+        // received_at and final_purchase_uuid are null here, and a null column travels as the
+        // canonical NULL sentinel rather than an empty string.
+        assertEquals(CanonicalSerializer.NULL_SENTINEL, poRow[13])
+        assertEquals(CanonicalSerializer.NULL_SENTINEL, poRow[14])
 
         assertEquals(2, poiTab!!.rows.size)
         val poiRow1 = poiTab.rows.find { it[3] == product1.uuid }!!
@@ -178,7 +189,8 @@ class PurchaseOrderBackupTest {
         assertEquals("5000", poiRow1[7])
         assertEquals("50000", poiRow1[8])
         assertEquals("0.0", poiRow1[9])
-        assertEquals("", poiRow1[10])
+        // notes was not set on this item.
+        assertEquals(CanonicalSerializer.NULL_SENTINEL, poiRow1[10])
 
         val spreadsheetId = "PO_ROUNDTRIP_1"
         val backupResult = backupRestoreManager.performBackup(spreadsheetId)
@@ -193,7 +205,8 @@ class PurchaseOrderBackupTest {
         val restoreResult = backupRestoreManager.performRestore(spreadsheetId, "TEST_BIZ")
         assertTrue(restoreResult.isSuccess)
 
-        val restoredSupplier = database.supplierDao().getSupplierById(supplierId, "TEST_BIZ")
+        // Re-linked by uuid, since the restore reallocates primary keys.
+        val restoredSupplier = database.supplierDao().getSupplierByUuid(supplierUuid, "TEST_BIZ")
         assertNotNull("Supplier must be restored", restoredSupplier)
         assertEquals("PT. Bumbu Sejahtera", restoredSupplier!!.name)
 

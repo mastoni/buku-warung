@@ -66,6 +66,20 @@ class AdaptiveBackupTest {
         supplierRepository = SupplierRepository(database, "TEST_BIZ")
     }
 
+    /**
+     * Binds the tenant-scoped repositories to the tenant the current test seeds.
+     *
+     * The fixture used to pin every repository to one hardcoded id while the tests seeded
+     * per-test ids, so the writes landed in one tenant and the reads looked in another and found
+     * nothing. Each test still seeds and reads exactly the tenant it names.
+     */
+    private fun useBusiness(businessId: String) {
+        productRepository = ProductRepository(database, businessId)
+        saleRepository = SaleRepository(database, businessId)
+        customerRepository = CustomerRepository(database, businessId)
+        supplierRepository = SupplierRepository(database, businessId)
+    }
+
     @After
     fun tearDown() {
         database.close()
@@ -73,6 +87,7 @@ class AdaptiveBackupTest {
 
     private suspend fun seedCommonData(businessId: String) {
         userPreferencesRepository.setBusinessId(businessId)
+        useBusiness(businessId)
         val cat = productRepository.createCategory("Umum").getOrThrow()
         productRepository.insertProductWithCategory(
             name = "Produk A",

@@ -137,7 +137,8 @@ class DigitalTransactionBackupTest {
         assertEquals("SUCCESS", row[8])
         assertEquals("REF_123", row[9])
         assertEquals("TOKEN_ABC", row[10])
-        assertEquals("", row[11])
+        // A null column travels as the canonical NULL sentinel, not an empty string.
+        assertEquals(CanonicalSerializer.NULL_SENTINEL, row[11])
         assertEquals("1000000", row[12])
         assertEquals("1000100", row[13])
 
@@ -159,7 +160,14 @@ class DigitalTransactionBackupTest {
         assertNotNull("Digital transaction must be restored", restoredDigital)
         assertEquals(insertedDigital.uuid, restoredDigital!!.uuid)
         assertEquals("TEST_BIZ", restoredDigital.businessId)
-        assertEquals(saleItem.id, restoredDigital.saleItemId)
+        // The restore reallocates primary keys on purpose, so the sale-item link is proven through
+        // the uuid the archive carries, not through the pre-restore row id.
+        val linkedSaleItem = database.saleDao().getItemsForTransaction(
+            database.saleDao().getAllTransactions("TEST_BIZ").first().first().id,
+            "TEST_BIZ"
+        ).firstOrNull { it.id == restoredDigital.saleItemId }
+        assertNotNull("The restored digital transaction must still point at its sale item", linkedSaleItem)
+        assertEquals(saleItem.uuid, linkedSaleItem!!.uuid)
         assertEquals("PROVIDER_A", restoredDigital.providerId)
         assertEquals("PULSA_50K", restoredDigital.providerProductCode)
         assertEquals("081234567890", restoredDigital.destinationNumber)
@@ -172,7 +180,10 @@ class DigitalTransactionBackupTest {
         assertEquals(1000000L, restoredDigital.createdAt)
         assertEquals(1000100L, restoredDigital.updatedAt)
 
-        val restoredSaleItem = database.saleDao().getItemsForTransaction(sale.id, "TEST_BIZ").firstOrNull()
+        // Re-linked by uuid, since the restore reallocates primary keys.
+        val restoredSale = database.saleDao().getAllTransactions("TEST_BIZ").first().firstOrNull()
+        assertNotNull("Sale must be restored for relationship", restoredSale)
+        val restoredSaleItem = database.saleDao().getItemsForTransaction(restoredSale!!.id, "TEST_BIZ").firstOrNull()
         assertNotNull("Sale item must be restored for relationship", restoredSaleItem)
         assertEquals(saleItem.uuid, restoredSaleItem!!.uuid)
     }
