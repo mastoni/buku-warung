@@ -92,7 +92,12 @@ fun BukuWarungApp() {
     val userPreferencesRepository = remember { UserPreferencesRepository(context) }
     val licenseManager = remember { LicenseManager(userPreferencesRepository = userPreferencesRepository, context = context) }
 
-    val userSettings by userPreferencesRepository.userSettings.collectAsStateWithLifecycle(initialValue = UserSettings())
+    // P0: the initial value is null, NOT UserSettings(). "DataStore has not emitted yet" and
+    // "the business identity has not been created yet" are different states: a blank business id
+    // used to be resolved to LEGACY_BUSINESS on the very first frame, which is what pinned every
+    // repository to a tenant that can never contain data. See TenantGate.
+    val loadedUserSettings: UserSettings? by userPreferencesRepository.userSettings
+        .collectAsStateWithLifecycle(initialValue = null)
     val licenseState by licenseManager.licenseState.collectAsStateWithLifecycle()
 
     // Gate H.5.1 section 2 - cold start validation.
@@ -139,28 +144,14 @@ fun BukuWarungApp() {
 
     var isCheckingExistingUser by remember { mutableStateOf(true) }
     var isDebugBypassed by remember { mutableStateOf(false) }
-    var isPinUnlocked by remember { mutableStateOf(false) }
-    var showFirstSetupScreen by remember { mutableStateOf(false) }
-
-    var screen by remember { mutableStateOf(AppScreen.HOME) }
-    var previousScreen by remember { mutableStateOf(AppScreen.PRODUCTS) }
-    var selectedProductId by remember { mutableStateOf<Long?>(null) }
 
     val database = remember { AppDatabase.getDatabase(context) }
-    val businessId = userSettings.businessId.ifBlank { "LEGACY_BUSINESS" }
-    val productRepository = remember { ProductRepository(database, businessId) }
-    val customerRepository = remember { CustomerRepository(database, businessId) }
-    val saleRepository = remember { SaleRepository(database, businessId) }
-    val mockBackendApi = remember { id.skmnetwork.bukuwarung.data.remote.MockBackendApi() }
-    val digitalTransactionRepository = remember { DigitalTransactionRepository(database.digitalTransactionDao(), mockBackendApi) }
-    val checkoutOrchestrator = remember {
-        CheckoutOrchestrator(database, saleRepository, digitalTransactionRepository)
-    }
-    val supplierRepository = remember { SupplierRepository(database, businessId) }
-    val reportRepository = remember { ReportRepository(database, businessId) }
-    val notificationRepository = remember {
-        id.skmnetwork.bukuwarung.notification.NotificationRepository(database, userPreferencesRepository, businessId)
-    }
+
+    // P0 - the tenant is NOT decided here any more. No repository, no ViewModel and no tenant query
+    // is created in this composable: TenantGate resolves the ACTIVE business id and only then
+    // composes ActiveTenantApp, which keys every tenant-scoped object on that id. There is
+    // deliberately no `ifBlank { "LEGACY_BUSINESS" }` fallback left; LEGACY_BUSINESS survives only
+    // as the migration/reconciliation sentinel inside autoMigrateExistingUserIfNeeded.
 
     LaunchedEffect(Unit) {
         userPreferencesRepository.autoMigrateExistingUserIfNeeded(database)
@@ -181,6 +172,89 @@ fun BukuWarungApp() {
                 utmCampaign = "buku_warung_v020"
             )
         }
+    }
+
+    // ==========================================
+    // 1. LICENSE & INITIAL MIGRATION CHECK
+    // ==========================================
+    // Gate H.5.1: access is decided by the evaluated runtime state, never by a stored string.
+    // STALE_ACTIVE still grants access (inside the grace window) but is surfaced as "perlu koneksi".
+    if (licenseState.phase == LicensePhase.CHECKING || isCheckingExistingUser) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            CircularProgressIndicator(color = AppColors.GreenPrimary)
+        }
+        return
+    }
+
+    if (!licenseState.grantsAccess && !isDebugBypassed) {
+        LicenseGateScreen(
+            licenseManager = licenseManager,
+            licenseState = licenseState,
+            onBypassForDemo = { isDebugBypassed = true }
+        )
+        return
+    }
+
+    // ==========================================
+    // 2. ACTIVE TENANT GATE (P0)
+    // ==========================================
+    // Everything that reads tenant-scoped data lives behind this gate. It hands down the ACTIVE
+    // business id and refuses to compose anything at all while that identity is unknown, so the
+    // first frame can never build a repository against a placeholder tenant.
+    TenantGate(userSettings = loadedUserSettings) { userSettings, activeBusinessId ->
+        ActiveTenantApp(
+            activeBusinessId = activeBusinessId,
+            userSettings = userSettings,
+            userPreferencesRepository = userPreferencesRepository,
+            licenseManager = licenseManager,
+            database = database
+        )
+    }
+}
+
+/**
+ * The main app, reachable only with a resolved active tenant.
+ *
+ * Every tenant-scoped repository is created with `remember(activeBusinessId)`, and every
+ * tenant-scoped ViewModel is fetched with a tenant-qualified `viewModel(key = ...)`, so a tenant
+ * change rebuilds the repository together with the ViewModel that holds it instead of leaving a
+ * stale repository from the previous tenant in place.
+ */
+@Composable
+private fun ActiveTenantApp(
+    activeBusinessId: String,
+    userSettings: UserSettings,
+    userPreferencesRepository: UserPreferencesRepository,
+    licenseManager: LicenseManager,
+    database: AppDatabase
+) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+
+    var showFirstSetupScreen by remember(activeBusinessId) { mutableStateOf(false) }
+    var isPinUnlocked by remember(activeBusinessId) { mutableStateOf(false) }
+    var screen by remember(activeBusinessId) { mutableStateOf(AppScreen.HOME) }
+    var previousScreen by remember(activeBusinessId) { mutableStateOf(AppScreen.PRODUCTS) }
+    var selectedProductId by remember(activeBusinessId) { mutableStateOf<Long?>(null) }
+
+    val productRepository = remember(activeBusinessId) { ProductRepository(database, activeBusinessId) }
+    val customerRepository = remember(activeBusinessId) { CustomerRepository(database, activeBusinessId) }
+    val saleRepository = remember(activeBusinessId) { SaleRepository(database, activeBusinessId) }
+    val mockBackendApi = remember { id.skmnetwork.bukuwarung.data.remote.MockBackendApi() }
+    val digitalTransactionRepository = remember { DigitalTransactionRepository(database.digitalTransactionDao(), mockBackendApi) }
+    val checkoutOrchestrator = remember(activeBusinessId) {
+        CheckoutOrchestrator(database, saleRepository, digitalTransactionRepository)
+    }
+    val supplierRepository = remember(activeBusinessId) { SupplierRepository(database, activeBusinessId) }
+    val reportRepository = remember(activeBusinessId) { ReportRepository(database, activeBusinessId) }
+    val notificationRepository = remember(activeBusinessId) {
+        id.skmnetwork.bukuwarung.notification.NotificationRepository(database, userPreferencesRepository, activeBusinessId)
+    }
+    val purchaseOrderRepository = remember(activeBusinessId) {
+        id.skmnetwork.bukuwarung.data.repository.PurchaseOrderRepository(database, activeBusinessId)
     }
 
     val printerService = remember { id.skmnetwork.bukuwarung.printer.PrinterService() }
@@ -247,15 +321,19 @@ fun BukuWarungApp() {
     }
 
     val productViewModel: ProductViewModel = viewModel(
+        key = "tenant:$activeBusinessId:product",
         factory = ProductViewModelFactory(productRepository, checkoutOrchestrator)
     )
     val customerViewModel: CustomerViewModel = viewModel(
+        key = "tenant:$activeBusinessId:customer",
         factory = CustomerViewModelFactory(customerRepository, checkoutOrchestrator)
     )
     val supplierViewModel: SupplierViewModel = viewModel(
+        key = "tenant:$activeBusinessId:supplier",
         factory = SupplierViewModelFactory(supplierRepository)
     )
     val reportViewModel: ReportViewModel = viewModel(
+        key = "tenant:$activeBusinessId:report",
         factory = ReportViewModelFactory(reportRepository)
     )
     val authCredentialProvider = remember {
@@ -271,46 +349,23 @@ fun BukuWarungApp() {
             transport = googleSheetsTransport
         )
     }
+    // Deliberately NOT re-keyed per tenant: the backup manager works on the database and the
+    // DataStore, so this ViewModel holds no tenant-scoped state.
     val backupViewModel: BackupViewModel = viewModel(
         factory = BackupViewModelFactory(backupRestoreManager, userPreferencesRepository, authCredentialProvider)
     )
-    val purchaseOrderRepository = remember {
-        id.skmnetwork.bukuwarung.data.repository.PurchaseOrderRepository(database, businessId)
-    }
     val purchaseOrderViewModel: id.skmnetwork.bukuwarung.ui.purchase.PurchaseOrderViewModel = viewModel(
+        key = "tenant:$activeBusinessId:purchaseOrder",
         factory = id.skmnetwork.bukuwarung.ui.purchase.PurchaseOrderViewModelFactory(purchaseOrderRepository, userPreferencesRepository)
     )
     val notificationViewModel: id.skmnetwork.bukuwarung.notification.NotificationViewModel = viewModel(
+        key = "tenant:$activeBusinessId:notification",
         factory = id.skmnetwork.bukuwarung.notification.NotificationViewModelFactory(notificationRepository)
     )
     val unreadNotificationCount by notificationViewModel.unreadCount.collectAsStateWithLifecycle(initialValue = 0)
 
     // ==========================================
-    // 1. LICENSE & INITIAL MIGRATION CHECK
-    // ==========================================
-    // Gate H.5.1: access is decided by the evaluated runtime state, never by a stored string.
-    // STALE_ACTIVE still grants access (inside the grace window) but is surfaced as "perlu koneksi".
-    if (licenseState.phase == LicensePhase.CHECKING || isCheckingExistingUser) {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
-            CircularProgressIndicator(color = AppColors.GreenPrimary)
-        }
-        return
-    }
-
-    if (!licenseState.grantsAccess && !isDebugBypassed) {
-        LicenseGateScreen(
-            licenseManager = licenseManager,
-            licenseState = licenseState,
-            onBypassForDemo = { isDebugBypassed = true }
-        )
-        return
-    }
-
-    // ==========================================
-    // 2. FIRST INSTALL / SETUP FLOW
+    // 3. FIRST INSTALL / SETUP FLOW
     // ==========================================
     if (!userSettings.isSetupCompleted) {
         if (!showFirstSetupScreen) {
@@ -338,7 +393,7 @@ fun BukuWarungApp() {
     }
 
     // ==========================================
-    // 3. SECURITY / PIN LOCK GATE
+    // 4. SECURITY / PIN LOCK GATE
     // ==========================================
     if (userSettings.pinEnabled && userSettings.hasPinSet && !isPinUnlocked) {
         PinLockScreen(
@@ -349,7 +404,7 @@ fun BukuWarungApp() {
     }
 
     // ==========================================
-    // 4. MAIN APP SCAFFOLD
+    // 5. MAIN APP SCAFFOLD
     // ==========================================
     fun navigateToAddProduct(fromScreen: AppScreen, productId: Long? = null) {
         selectedProductId = productId
