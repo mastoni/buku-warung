@@ -36,6 +36,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -105,11 +106,35 @@ fun BukuWarungApp() {
     // Gate H.5.1 section 3 - foreground validation attached to the PROCESS lifecycle, so Activity
     // recreation, configuration change and multi-Activity navigation never look like a new
     // foreground transition. All de-duplication and rate limiting live in LicenseManager.
+    //
+    // Gate H.5.3 (H.5.2-P2-3): the observer is acquired defensively. ProcessLifecycleOwner is
+    // initialised by androidx.startup, which Android exposes a per-app kill switch for in Developer
+    // Options. If it is unavailable, this block is simply skipped: the app does not crash, no fake
+    // ACTIVE state is produced, and the cold-start validation above still runs normally. The
+    // dependency and the global AndroidX Startup configuration are both left untouched.
     DisposableEffect(licenseManager) {
-        val processLifecycle = ProcessLifecycleOwner.get().lifecycle
-        val observer = ForegroundLicenseValidationObserver(licenseManager, scope)
-        processLifecycle.addObserver(observer)
-        onDispose { processLifecycle.removeObserver(observer) }
+        var attachedLifecycle: Lifecycle? = null
+        var attachedObserver: ForegroundLicenseValidationObserver? = null
+        try {
+            val processLifecycle = ProcessLifecycleOwner.get().lifecycle
+            val created = ForegroundLicenseValidationObserver(licenseManager, scope)
+            processLifecycle.addObserver(created)
+            attachedLifecycle = processLifecycle
+            attachedObserver = created
+        } catch (_: Exception) {
+            // Foreground validation is unavailable on this process. Nothing else depends on it.
+        }
+        onDispose {
+            val lifecycleRef = attachedLifecycle
+            val observerRef = attachedObserver
+            if (lifecycleRef != null && observerRef != null) {
+                try {
+                    lifecycleRef.removeObserver(observerRef)
+                } catch (_: Exception) {
+                    // Best effort: the process may already be tearing down.
+                }
+            }
+        }
     }
 
     var isCheckingExistingUser by remember { mutableStateOf(true) }

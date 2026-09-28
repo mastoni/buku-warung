@@ -59,6 +59,7 @@ import id.skmnetwork.bukuwarung.license.LicenseManager
 import id.skmnetwork.bukuwarung.license.LicensePhase
 import id.skmnetwork.bukuwarung.license.LicenseRuntimeState
 import id.skmnetwork.bukuwarung.license.RecoveryResult
+import id.skmnetwork.bukuwarung.license.TransientReason
 import id.skmnetwork.bukuwarung.ui.components.AppCard
 import id.skmnetwork.bukuwarung.ui.components.PrimaryButton
 import id.skmnetwork.bukuwarung.ui.components.SecondaryButton
@@ -182,9 +183,16 @@ fun LicenseGateScreen(
                     else ->
                         "Lisensi tidak valid. Silakan masukkan kode lisensi yang benar di bawah."
                 }
-                LicensePhase.TRANSIENT_ERROR ->
-                    "Server lisensi tidak dapat dihubungi. Status lisensi Anda yang tersimpan tetap " +
-                        "berlaku dan akan diperiksa kembali nanti."
+                LicensePhase.TRANSIENT_ERROR -> when (licenseState.transientReason) {
+                    // Gate H.5.3 (H.5.2-P1-1): local storage unreadable. Fail closed and retryable,
+                    // and say plainly that the merchant has to do nothing except relaunch.
+                    TransientReason.LOCAL_STORAGE_UNAVAILABLE ->
+                        "Penyimpanan lisensi di perangkat ini tidak dapat dibaca. " +
+                            "Aplikasi akan otomatis pulih setelah penyimpanan tersedia kembali."
+                    else ->
+                        "Server lisensi tidak dapat dihubungi. Status lisensi Anda yang tersimpan tetap " +
+                            "berlaku dan akan diperiksa kembali nanti."
+                }
                 LicensePhase.STALE_ACTIVE ->
                     "Lisensi perlu diperiksa ulang. Status lokal Anda tetap berlaku untuk sementara."
                 else -> null
@@ -322,9 +330,28 @@ fun LicenseGateScreen(
                                 is ActivationResult.ServerError ->
                                     Pair("Kesalahan Server", "Terjadi gangguan pada server lisensi. Silakan coba beberapa saat lagi.")
                                 // Gate H.5.1 section 5: no verdict was obtained, so this is explicitly
-                                // NOT an invalid-licence message.
-                                is ActivationResult.Transient ->
-                                    Pair("Server Tidak Merespons", "Tidak ada jawaban dari server lisensi (HTTP ${res.httpStatus}). Kode lisensi Anda tidak bermasalah. Silakan coba lagi sebentar.")
+                                // NOT an invalid-licence message. Gate H.5.3 adds the two local
+                                // reasons, which need their own copy.
+                                is ActivationResult.Transient -> when (res.reason) {
+                                    TransientReason.LOCAL_STORAGE_UNAVAILABLE ->
+                                        Pair(
+                                            "Penyimpanan Perangkat Bermasalah",
+                                            "Data lisensi di perangkat ini tidak dapat dibaca. " +
+                                                "Kode lisensi Anda tidak hilang. Silakan coba lagi."
+                                        )
+                                    TransientReason.ACTIVATION_SUPERSEDED ->
+                                        Pair(
+                                            "Aktivasi Diperbarui",
+                                            "Status lisensi berubah saat aktivasi diproses. " +
+                                                "Silakan coba lagi sebentar."
+                                        )
+                                    else ->
+                                        Pair(
+                                            "Server Tidak Merespons",
+                                            "Tidak ada jawaban dari server lisensi (HTTP ${res.httpStatus}). " +
+                                                "Kode lisensi Anda tidak bermasalah. Silakan coba lagi sebentar."
+                                        )
+                                }
                                 is ActivationResult.Active ->
                                     Pair("", "")
                             }

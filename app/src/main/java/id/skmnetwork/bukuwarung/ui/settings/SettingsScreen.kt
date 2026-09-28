@@ -121,6 +121,7 @@ import id.skmnetwork.bukuwarung.ui.theme.AppColors
 import id.skmnetwork.bukuwarung.ui.theme.AppShapes
 import id.skmnetwork.bukuwarung.ui.theme.AppSpacing
 import id.skmnetwork.bukuwarung.ui.theme.rememberAppWindowSize
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import java.io.File
 import java.text.SimpleDateFormat
@@ -1807,25 +1808,40 @@ fun SettingsScreen(
                             onClick = {
                                 scope.launch {
                                     isCheckingLicense = true
-                                    // Gate H.5.1: validateOnline already publishes the resulting state,
-                                    // so no follow-up local refresh is needed (and re-refreshing here used
-                                    // to wipe the transient reason away).
-                                    val result = licManager.validateOnline()
-                                    isCheckingLicense = false
-                                    val message = when (result) {
-                                        is ValidationResult.Valid -> "Lisensi valid dan aktif"
-                                        is ValidationResult.CredentialUnavailable ->
-                                            result.message
-                                        // Gate H.5.1: no verdict was obtained. The licence is NOT
-                                        // deactivated and the stored code is kept.
-                                        is ValidationResult.Transient ->
-                                            "Tidak dapat menghubungi server lisensi. Status lokal dan kode lisensi Anda tetap tersimpan."
-                                        is ValidationResult.EmailMismatch -> result.message
-                                        is ValidationResult.DeviceMismatch -> result.message
-                                        is ValidationResult.Revoked -> result.message
-                                        is ValidationResult.Invalid -> result.message
+                                    try {
+                                        // Gate H.5.1: validateOnline already publishes the resulting
+                                        // state, so no follow-up local refresh is needed (and
+                                        // re-refreshing here used to wipe the transient reason away).
+                                        val result = licManager.validateOnline()
+                                        val message = when (result) {
+                                            is ValidationResult.Valid -> "Lisensi valid dan aktif"
+                                            is ValidationResult.CredentialUnavailable ->
+                                                result.message
+                                            // Gate H.5.1: no verdict was obtained. The licence is NOT
+                                            // deactivated and the stored code is kept.
+                                            is ValidationResult.Transient ->
+                                                "Tidak dapat menghubungi server lisensi. Status lokal dan kode lisensi Anda tetap tersimpan."
+                                            is ValidationResult.EmailMismatch -> result.message
+                                            is ValidationResult.DeviceMismatch -> result.message
+                                            is ValidationResult.Revoked -> result.message
+                                            is ValidationResult.Invalid -> result.message
+                                        }
+                                        Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+                                    } catch (e: CancellationException) {
+                                        // Structured concurrency: rethrow, never converted into a
+                                        // user-visible "error" that we then swallow.
+                                        throw e
+                                    } catch (_: Exception) {
+                                        // Gate H.5.3 (H.5.2-P1-1): nothing may leave this button
+                                        // permanently disabled. The licence state is untouched.
+                                        Toast.makeText(
+                                            context,
+                                            "Gagal memeriksa lisensi. Silakan coba lagi.",
+                                            Toast.LENGTH_LONG
+                                        ).show()
+                                    } finally {
+                                        isCheckingLicense = false
                                     }
-                                    Toast.makeText(context, message, Toast.LENGTH_LONG).show()
                                 }
                             }
                         )

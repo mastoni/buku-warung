@@ -885,8 +885,10 @@ class LicenseLifecycleH51Test {
             source.contains("ForegroundLicenseValidationObserver"))
         assertTrue("The observer must attach to the process lifecycle",
             source.contains("ProcessLifecycleOwner.get()"))
+        // Gate H.5.3 (H.5.2-P2-3) renamed the handle captured for disposal, because the acquisition
+        // is now guarded and must only remove a listener it actually attached.
         assertTrue("The observer must be removed on dispose",
-            source.contains("processLifecycle.removeObserver(observer)"))
+            source.contains("removeObserver(observerRef)"))
         assertTrue("Access must be decided by the evaluated state",
             source.contains("licenseState.grantsAccess"))
     }

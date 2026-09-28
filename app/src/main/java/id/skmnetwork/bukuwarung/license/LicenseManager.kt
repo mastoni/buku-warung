@@ -88,9 +88,67 @@ open class LicenseManager(
 
     init {
         scope.launch {
-            refreshLicense()
+            // Gate H.5.3 (H.5.2-P1-1): this scope is a SupervisorJob with no CoroutineExceptionHandler,
+            // so any escaping exception here would terminate the process. refreshLicense() is already
+            // guarded internally; this is a second line of defence for the launch site itself.
+            try {
+                refreshLicense()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                publish(localStorageUnavailableState())
+            }
         }
     }
+
+    // ------------------------------------------------------------------ local storage safety (H.5.3 / H.5.2-P1-1)
+
+    /**
+     * Gate H.5.3 (H.5.2-P1-1): the outcome of a local licence read.
+     *
+     * A failed read is a first-class result, never an exception that escapes. It resolves into a
+     * NON-GRANTING state, because a licence whose freshness cannot be established must not be
+     * presented as usable, and it never deletes the entitlement or the credential.
+     */
+    private sealed interface LocalRead {
+        data class Ok(val state: PersistedLicenseState) : LocalRead
+        data class Failed(val cause: Throwable) : LocalRead
+    }
+
+    /**
+     * Reads the persisted licence, converting a local storage failure into [LocalRead.Failed].
+     *
+     * `CancellationException` is rethrown, never converted, so structured concurrency keeps working
+     * and a cancelled lifecycle scope still releases its resources.
+     */
+    private suspend fun readLocalState(): LocalRead {
+        return try {
+            LocalRead.Ok(readPersisted())
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            LocalRead.Failed(e)
+        }
+    }
+
+    /**
+     * The state published when local storage cannot be read.
+     *
+     * `fallbackPhase` is deliberately [LicensePhase.UNLICENSED] so [LicenseRuntimeState.grantsAccess]
+     * is false: this is fail-CLOSED, never a silent permanent ACTIVE. The last known
+     * `lastValidatedAt` is carried forward so the foreground TTL gate keeps behaving, and no storage
+     * mutation is performed anywhere on this path.
+     */
+    private fun localStorageUnavailableState(): LicenseRuntimeState =
+        LicenseRuntimeState(
+            phase = LicensePhase.TRANSIENT_ERROR,
+            transientReason = TransientReason.LOCAL_STORAGE_UNAVAILABLE,
+            fallbackPhase = LicensePhase.UNLICENSED,
+            lastValidatedAt = _licenseState.value.lastValidatedAt,
+            activatedAt = _licenseState.value.activatedAt,
+            freshTtlMillis = policy.freshTtlMillis,
+            graceWindowMillis = policy.graceWindowMillis
+        )
 
     // ------------------------------------------------------------------ state evaluation
 
@@ -130,21 +188,35 @@ open class LicenseManager(
             return
         }
 
-        publish(LicenseStateEvaluator.evaluateFreshness(readPersisted(), clock(), policy))
+        // Gate H.5.3 (H.5.2-P1-1): a local read failure publishes a non-granting transient state
+        // instead of throwing out of the init launch.
+        when (val read = readLocalState()) {
+            is LocalRead.Failed -> publish(localStorageUnavailableState())
+            is LocalRead.Ok -> publish(
+                LicenseStateEvaluator.evaluateFreshness(read.state, clock(), policy)
+            )
+        }
     }
 
     private suspend fun evaluateWithTransient(transientReason: TransientReason?): LicenseRuntimeState {
-        val base = LicenseStateEvaluator.evaluateFreshness(readPersisted(), clock(), policy)
-        if (transientReason != null && base.grantsAccess) {
-            // A transient failure must never present a stale licence as a fresh one, and must never
-            // hide the fact that the verdict is unknown. The freshness underneath is carried along.
-            return base.copy(
-                phase = LicensePhase.TRANSIENT_ERROR,
-                transientReason = transientReason,
-                fallbackPhase = base.phase
-            )
+        return when (val read = readLocalState()) {
+            is LocalRead.Failed -> localStorageUnavailableState()
+            is LocalRead.Ok -> {
+                val base = LicenseStateEvaluator.evaluateFreshness(read.state, clock(), policy)
+                if (transientReason != null && base.grantsAccess) {
+                    // A transient failure must never present a stale licence as a fresh one, and must
+                    // never hide the fact that the verdict is unknown. The freshness underneath is
+                    // carried along.
+                    base.copy(
+                        phase = LicensePhase.TRANSIENT_ERROR,
+                        transientReason = transientReason,
+                        fallbackPhase = base.phase
+                    )
+                } else {
+                    base.copy(transientReason = transientReason)
+                }
+            }
         }
-        return base.copy(transientReason = transientReason)
     }
 
     private suspend fun readPersisted(): PersistedLicenseState {
@@ -161,8 +233,18 @@ open class LicenseManager(
         _licenseStatus.value = state.status
     }
 
-    private suspend fun ownerTestActive(): Boolean =
-        BuildConfig.ENABLE_OWNER_TEST && userPreferencesRepository?.isOwnerTestActivated() == true
+    // Gate H.5.3 (H.5.2-P1-1): a local storage failure must never be read as an owner-test
+    // activation, and must never throw out of the evaluation path.
+    private suspend fun ownerTestActive(): Boolean {
+        if (!BuildConfig.ENABLE_OWNER_TEST) return false
+        return try {
+            userPreferencesRepository?.isOwnerTestActivated() == true
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            false
+        }
+    }
 
     private fun fromLegacyStatus(status: LicenseStatus): LicenseRuntimeState = when (status) {
         LicenseStatus.ACTIVE -> LicenseRuntimeState(phase = LicensePhase.FRESH_ACTIVE, lastValidatedAt = clock())
@@ -252,12 +334,22 @@ open class LicenseManager(
      * A licence is validatable when it is entitled, not blocked, and its credential can be read.
      * Checking this before entering the single-flight keeps validation from being issued for an
      * installation that has nothing to validate, and prevents any trigger/validation feedback loop.
+     *
+     * Gate H.5.3 (H.5.2-P1-1): a local storage failure answers "nothing to validate" instead of
+     * throwing. The caller then falls through to [evaluateAndPublish], which publishes the
+     * non-granting local-storage state, and the lifecycle coroutine stays usable for the next trigger.
      */
     private suspend fun hasValidatableEntitlement(): Boolean {
         val repo = userPreferencesRepository ?: return false
-        if (repo.isLicenseBlocked()) return false
-        if (!repo.getLicenseEntitlement().isEntitled) return false
-        return getStoredLicenseCode().isNotBlank()
+        return try {
+            if (repo.isLicenseBlocked()) return false
+            if (!repo.getLicenseEntitlement().isEntitled) return false
+            getStoredLicenseCode().isNotBlank()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            false
+        }
     }
 
     // ------------------------------------------------------------------ validation
@@ -300,7 +392,17 @@ open class LicenseManager(
         val repo = userPreferencesRepository
             ?: return ValidationResult.Transient.HttpRejection(0, TransientReason.CLIENT_UNAVAILABLE)
 
-        val persisted = readPersisted()
+        // Gate H.5.3 (H.5.2-P1-1): a local read failure becomes a transient result, so a corrupt
+        // DataStore can neither crash the process nor be mistaken for a licence verdict.
+        val persisted = when (val read = readLocalState()) {
+            is LocalRead.Failed ->
+                return ValidationResult.Transient.HttpRejection(
+                    0,
+                    TransientReason.LOCAL_STORAGE_UNAVAILABLE
+                )
+            is LocalRead.Ok -> read.state
+        }
+
         if (persisted.blocked) {
             return when (persisted.blockReason) {
                 LicenseBlockReason.DEVICE_MISMATCH -> ValidationResult.DeviceMismatch()
@@ -315,7 +417,17 @@ open class LicenseManager(
             return ValidationResult.Invalid("Aplikasi belum diaktivasi")
         }
 
-        val deviceId = repo.getOrCreateDeviceId()
+        val deviceId = try {
+            repo.getOrCreateDeviceId()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            return ValidationResult.Transient.HttpRejection(
+                0,
+                TransientReason.LOCAL_STORAGE_UNAVAILABLE
+            )
+        }
+
         val licenseCode = getStoredLicenseCode()
         if (licenseCode.isBlank()) {
             // Local availability problem, not a server verdict. The entitlement and the block reason
@@ -332,11 +444,17 @@ open class LicenseManager(
     }
 
     /**
-     * Applies a validation verdict, guarded by the sequence ordering of Gate H.5.1 section 9.
+     * Applies a validation verdict, guarded by the sequence ordering of Gate H.5.1 section 9 and by
+     * local storage safety from Gate H.5.3.
      *
      * Returns false when the verdict was discarded because a newer one had already been applied.
      * A [ValidationResult.Transient] and a [ValidationResult.CredentialUnavailable] never delete the
      * entitlement and never delete the credential.
+     *
+     * The ordering watermark is advanced ONLY by a verdict that actually mutates persisted state. A
+     * transient outcome writes nothing, so letting it advance the watermark would let a failed
+     * attempt suppress a legitimate activation (H.5.3 / H.5.2-P2-2), and letting an older real
+     * verdict through after a newer transient is harmless because the transient changed nothing.
      */
     suspend fun commitValidationOutcome(sequence: Long, result: ValidationResult): Boolean =
         orderingMutex.withLock {
@@ -344,41 +462,65 @@ open class LicenseManager(
                 // A late response from an earlier attempt. It must not overwrite a newer verdict.
                 return@withLock false
             }
-            latestAppliedSequence.set(sequence)
 
             val repo = userPreferencesRepository
             var transient: TransientReason? = null
+            var mutatesState = false
+            var storageWriteFailed = false
             if (repo != null) {
-                when (result) {
-                    is ValidationResult.Valid -> repo.markLicenseValidated(clock())
+                try {
+                    when (result) {
+                        is ValidationResult.Valid -> {
+                            repo.markLicenseValidated(clock()); mutatesState = true
+                        }
 
-                    // Definitive and blocking, but the credential is deliberately RETAINED so the
-                    // merchant can re-activate or run the Task 7A recovery flow from the gate.
-                    is ValidationResult.DeviceMismatch -> repo.blockLicenseEntitlement(
-                        blockReason = UserPreferencesRepository.BLOCK_REASON_DEVICE_MISMATCH
-                    )
+                        // Definitive and blocking, but the credential is deliberately RETAINED so the
+                        // merchant can re-activate or run the Task 7A recovery flow from the gate.
+                        is ValidationResult.DeviceMismatch -> {
+                            repo.blockLicenseEntitlement(
+                                blockReason = UserPreferencesRepository.BLOCK_REASON_DEVICE_MISMATCH
+                            )
+                            mutatesState = true
+                        }
 
-                    is ValidationResult.Revoked -> {
-                        repo.clearLicenseEntitlement()
-                        clearStoredLicenseCode()
+                        is ValidationResult.Revoked -> {
+                            repo.clearLicenseEntitlement()
+                            clearStoredLicenseCode()
+                            mutatesState = true
+                        }
+
+                        is ValidationResult.EmailMismatch -> {
+                            repo.clearLicenseEntitlement()
+                            clearStoredLicenseCode()
+                            mutatesState = true
+                        }
+
+                        is ValidationResult.Invalid -> {
+                            repo.clearLicenseEntitlement()
+                            clearStoredLicenseCode()
+                            mutatesState = true
+                        }
+
+                        is ValidationResult.CredentialUnavailable -> Unit
+                        is ValidationResult.Transient -> transient = result.reason
                     }
-
-                    is ValidationResult.EmailMismatch -> {
-                        repo.clearLicenseEntitlement()
-                        clearStoredLicenseCode()
-                    }
-
-                    is ValidationResult.Invalid -> {
-                        repo.clearLicenseEntitlement()
-                        clearStoredLicenseCode()
-                    }
-
-                    is ValidationResult.CredentialUnavailable -> Unit
-                    is ValidationResult.Transient -> transient = result.reason
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (_: Exception) {
+                    // Gate H.5.3 (H.5.2-P1-1): a failed write must not escape, must not advance the
+                    // ordering watermark, and must not be reported as a licence decision.
+                    storageWriteFailed = true
                 }
             }
 
-            publish(evaluateWithTransient(transient))
+            if (mutatesState) latestAppliedSequence.set(sequence)
+
+            publish(
+                when {
+                    storageWriteFailed -> localStorageUnavailableState()
+                    else -> evaluateWithTransient(transient)
+                }
+            )
             true
         }
 
@@ -393,16 +535,31 @@ open class LicenseManager(
      *
      * Gate H.5.1 section 7: activation is NOT a validation. `lastValidatedAt` is written as 0 and the
      * runtime state is therefore never FRESH until a real POST /v1/license/validate has succeeded.
+     *
+     * Gate H.5.3 (H.5.2-P2-2): activation participates in the same ordering invariant as validation.
+     * It takes a sequence number BEFORE the request and applies its write under [orderingMutex], so:
+     *  - a validation response that was issued earlier can no longer overwrite the activation;
+     *  - a validation issued later can still apply a definitive rejection on top of it;
+     *  - it never takes [singleFlightMutex] and never waits for an in-flight validation, so there is
+     *    no deadlock and no unnecessary serialisation.
      */
     suspend fun activateLicense(
         licenseCode: String,
         ownerEmail: String
     ): ActivationResult {
-        if (userPreferencesRepository == null) {
-            return ActivationResult.ServerError("Preferences repository tidak tersedia")
+        val repo = userPreferencesRepository
+            ?: return ActivationResult.ServerError("Preferences repository tidak tersedia")
+
+        val sequence = sequenceIssuer.incrementAndGet()
+
+        val deviceId = try {
+            repo.getOrCreateDeviceId()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            return ActivationResult.Transient(TransientReason.LOCAL_STORAGE_UNAVAILABLE)
         }
 
-        val deviceId = userPreferencesRepository.getOrCreateDeviceId()
         val result = apiClient.activateLicense(
             licenseCode = licenseCode,
             ownerEmail = ownerEmail,
@@ -410,20 +567,40 @@ open class LicenseManager(
         )
 
         if (result is ActivationResult.Active) {
-            val now = clock()
             // Persist the encrypted credential if a Context is available. A storage failure is not
             // fatal: the server-side binding already succeeded, and the resulting
             // CredentialUnavailable is transient, so the merchant can simply re-activate.
             context?.let { ctx ->
                 secureStorage.saveEncryptedLicenseCode(ctx, licenseCode)
             }
-            userPreferencesRepository.saveLicenseEntitlement(
-                status = "ACTIVE",
-                ownerEmail = ownerEmail.trim().lowercase(),
-                activatedAt = now,
-                lastValidatedAt = NEVER_VALIDATED
-            )
+
+            val normalisedEmail = ownerEmail.trim().lowercase()
+            val applied = try {
+                orderingMutex.withLock {
+                    if (sequence < latestAppliedSequence.get()) {
+                        false
+                    } else {
+                        repo.saveLicenseEntitlement(
+                            status = "ACTIVE",
+                            ownerEmail = normalisedEmail,
+                            activatedAt = clock(),
+                            lastValidatedAt = NEVER_VALIDATED
+                        )
+                        latestAppliedSequence.set(sequence)
+                        true
+                    }
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                evaluateAndPublish()
+                return ActivationResult.Transient(TransientReason.LOCAL_STORAGE_UNAVAILABLE)
+            }
+
             evaluateAndPublish()
+            if (!applied) {
+                return ActivationResult.Transient(TransientReason.ACTIVATION_SUPERSEDED)
+            }
         }
 
         return result
@@ -484,21 +661,43 @@ open class LicenseManager(
      * the merchant can re-activate with the same code.
      */
     suspend fun expireLicenseEntitlement() {
-        userPreferencesRepository?.expireLicenseEntitlement()
+        try {
+            userPreferencesRepository?.expireLicenseEntitlement()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            // Gate H.5.3 (H.5.2-P1-1): a failed write must not escape.
+        }
         evaluateAndPublish()
     }
 
     // ------------------------------------------------------------------ misc
 
+    /**
+     * Gate H.5.3 (H.5.2-P1-1): a local read failure yields the default record instead of throwing, so
+     * a caller's LaunchedEffect cannot be torn down by a corrupt DataStore.
+     */
     suspend fun getEntitlementInfo(): LicenseEntitlementData {
-        return userPreferencesRepository?.getLicenseEntitlement() ?: LicenseEntitlementData()
+        return try {
+            userPreferencesRepository?.getLicenseEntitlement() ?: LicenseEntitlementData()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            LicenseEntitlementData()
+        }
     }
 
     suspend fun activateOwnerTest(): Boolean {
         if (!BuildConfig.ENABLE_OWNER_TEST) {
             return false
         }
-        userPreferencesRepository?.setOwnerTestActivated(true)
+        try {
+            userPreferencesRepository?.setOwnerTestActivated(true)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            return false
+        }
         evaluateAndPublish()
         return _licenseState.value.grantsAccess
     }
@@ -546,16 +745,30 @@ open class LicenseManager(
     /**
      * Claims the one-and-only LICENSE_GATE_VIEWED entitlement for this installation.
      * Returns true only for the caller that won the claim; every later call returns false.
+     *
+     * Gate H.5.3 (H.5.2-P1-1): guarded because this is called from a LaunchedEffect on the gate
+     * screen, which is exactly where a merchant with unreadable local state ends up. A telemetry
+     * claim must never be able to tear down that composition.
      */
-    suspend fun claimLicenseGateView(): Boolean =
+    suspend fun claimLicenseGateView(): Boolean = try {
         userPreferencesRepository?.claimLicenseGateViewRecorded() ?: false
+    } catch (e: CancellationException) {
+        throw e
+    } catch (_: Exception) {
+        false
+    }
 
     /**
      * Claims the one-and-only APP_FIRST_OPEN entitlement for this installation.
      * Returns true only for the caller that won the claim.
      */
-    suspend fun claimAppFirstOpen(): Boolean =
+    suspend fun claimAppFirstOpen(): Boolean = try {
         userPreferencesRepository?.claimAppFirstOpenRecorded() ?: false
+    } catch (e: CancellationException) {
+        throw e
+    } catch (_: Exception) {
+        false
+    }
 
     companion object {
         /**

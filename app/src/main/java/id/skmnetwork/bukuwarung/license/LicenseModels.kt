@@ -71,7 +71,23 @@ enum class TransientReason {
     HTTP_UNEXPECTED,
     MALFORMED_RESPONSE,
     CREDENTIAL_UNAVAILABLE,
-    CLIENT_UNAVAILABLE
+    CLIENT_UNAVAILABLE,
+
+    /**
+     * Gate H.5.3 (H.5.2-P1-1): the local store could not be read or written.
+     *
+     * This is NOT a licence verdict and it is NOT a pass: the runtime state it produces does not
+     * grant access, because a licence whose freshness cannot be established must not be presented as
+     * usable. It is transient, so it deletes neither the entitlement nor the credential, and it
+     * resolves on its own as soon as local storage works again.
+     */
+    LOCAL_STORAGE_UNAVAILABLE,
+
+    /**
+     * Gate H.5.3 (H.5.2-P2-2): an activation succeeded on the server but a newer attempt had already
+     * decided the local state, so the activation was not applied. The merchant is asked to retry.
+     */
+    ACTIVATION_SUPERSEDED
 }
 
 /**
