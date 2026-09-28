@@ -2,7 +2,9 @@ package id.skmnetwork.bukuwarung.preferences
 
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.emptyPreferences
+import androidx.datastore.preferences.core.mutablePreferencesOf
 import id.skmnetwork.bukuwarung.data.preferences.UserPreferencesRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
@@ -12,6 +14,14 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+
+/**
+ * The raw keys an older build persisted, spelled out here exactly as it wrote them. Step 12A retired
+ * the concept, so the app declares neither key any more; the test re-declares them to reproduce
+ * what an install upgraded from that build still has on disk.
+ */
+private val LEGACY_BUSINESS_TYPE_LOCKED_KEY = booleanPreferencesKey("business_type_locked")
+private val LEGACY_IS_SETUP_COMPLETED_KEY = booleanPreferencesKey("is_setup_completed")
 
 class InMemoryPreferencesDataStore(
     initialValue: Preferences = emptyPreferences()
@@ -176,5 +186,102 @@ class UserPreferencesUnitTest {
         assertTrue(settings.cashEnabled)
         assertFalse(settings.qrisEnabled)
         assertEquals(10, settings.defaultLowStockLimit)
+    }
+
+    /**
+     * Step 12A - the business type is not locked after onboarding.
+     *
+     * The PR-11.1 rule that made the type immutable once setup completed is retired: the merchant
+     * may change it, the change is acknowledged in the UI, and nothing about the change rewrites
+     * existing data. This proves the persistence layer still allows it.
+     */
+    @Test
+    fun testF_BusinessTypeStaysChangeableAfterSetupCompletes() = runBlocking {
+        prefsRepo.saveInitialSetupProfile(
+            shopName = "Warung Berkah Jaya",
+            ownerName = "Pak Berkah",
+            phone = "081298765432",
+            address = "Jl. Prosperity No. 9",
+            primaryBusinessType = "WARUNG_SEMBAKO",
+            secondaryActivities = setOf("ACTIVITY_GOODS_SELLING"),
+            profileVersion = 1
+        )
+        val afterSetup = prefsRepo.userSettings.first()
+        assertTrue("Setup must be complete for this scenario", afterSetup.isSetupCompleted)
+        assertEquals("WARUNG_SEMBAKO", afterSetup.primaryBusinessType)
+
+        // Post-onboarding change must succeed and be readable straight back.
+        prefsRepo.updateBusinessProfile(
+            primaryType = "KONTER_PULSA_HP",
+            secondaryActivities = setOf("ACTIVITY_GOODS_SELLING", "ACTIVITY_SERVICE_LABOR"),
+            version = 1
+        )
+
+        val afterChange = prefsRepo.userSettings.first()
+        assertEquals(
+            "Business type must remain changeable after setup completed",
+            "KONTER_PULSA_HP",
+            afterChange.primaryBusinessType
+        )
+        assertTrue(
+            "Setup completion must not be undone by a type change",
+            afterChange.isSetupCompleted
+        )
+        assertEquals(
+            "Existing secondary activities must be carried over, not dropped",
+            true,
+            afterChange.secondaryActivities.contains("ACTIVITY_GOODS_SELLING")
+        )
+        assertTrue(
+            "Newly seeded activities must be present too",
+            afterChange.secondaryActivities.contains("ACTIVITY_SERVICE_LABOR")
+        )
+        assertEquals("Warung Berkah Jaya", afterChange.shopName)
+        assertEquals("Pak Berkah", afterChange.ownerName)
+    }
+
+    /**
+     * Step 12A - an install upgraded from a build that wrote `business_type_locked = true` must
+     * not be blocked by that leftover value.
+     *
+     * The key is no longer declared, so the entry is simply unread. The merchant's change still
+     * lands, which is the invariant that matters for existing installs.
+     */
+    @Test
+    fun testG_LegacyBusinessTypeLockValueCannotBlockAChange() = runBlocking {
+        val legacyStore = InMemoryPreferencesDataStore(
+            mutablePreferencesOf(
+                LEGACY_BUSINESS_TYPE_LOCKED_KEY to true,
+                LEGACY_IS_SETUP_COMPLETED_KEY to true
+            )
+        )
+        val legacyRepo = UserPreferencesRepository(context = null, dataStore = legacyStore)
+
+        // The retired flag is not surfaced to the app any more...
+        val legacySettings = legacyRepo.userSettings.first()
+        assertTrue("The upgraded install is past setup", legacySettings.isSetupCompleted)
+        assertEquals("WARUNG_SEMBAKO", legacySettings.primaryBusinessType)
+
+        // ...and it cannot stand in the way of changing the business type.
+        legacyRepo.updateBusinessProfile(
+            primaryType = "RUMAH_MAKAN",
+            secondaryActivities = setOf("ACTIVITY_GOODS_SELLING", "ACTIVITY_DINE_IN"),
+            version = 1
+        )
+
+        assertEquals(
+            "A stale business_type_locked=true must not prevent the change",
+            "RUMAH_MAKAN",
+            legacyRepo.userSettings.first().primaryBusinessType
+        )
+        assertEquals(
+            "A second change must be possible too; the lock is not a one-time gate",
+            "KULINER_CAFE",
+            legacyRepo.updateBusinessProfile(
+                primaryType = "KULINER_CAFE",
+                secondaryActivities = setOf("ACTIVITY_DINE_IN"),
+                version = 1
+            ).let { legacyRepo.userSettings.first().primaryBusinessType }
+        )
     }
 }

@@ -44,7 +44,6 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Inventory2
-import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Payment
@@ -545,35 +544,12 @@ fun SettingsScreen(
 
                         Spacer(Modifier.height(2.dp))
 
-                        if (settingsState.isSetupCompleted && settingsState.businessTypeLocked) {
-                            Surface(
-                                shape = RoundedCornerShape(10.dp),
-                                color = MaterialTheme.colorScheme.surfaceVariant,
-                                border = BorderStroke(1.dp, Color(0xFFE0E0E0)),
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(horizontal = 14.dp, vertical = 10.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Lock,
-                                        contentDescription = null,
-                                        tint = Color.Gray,
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                    Text(
-                                        text = "Tipe usaha terkunci setelah onboarding",
-                                        color = Color.Gray,
-                                        fontWeight = FontWeight.Medium,
-                                        fontSize = 12.sp
-                                    )
-                                }
-                            }
-                        } else {
+                        // Step 12A: the PR-11.1 "business type is locked after onboarding" rule is
+                        // retired, so the lock notice it used to render is gone. Once setup is
+                        // complete the acknowledged "Ubah Jenis Usaha" action above is the single,
+                        // authoritative way to change the business type. Before setup completes the
+                        // full profile editor is still offered, exactly as before.
+                        if (!settingsState.isSetupCompleted) {
                             OutlinedButton(
                                 onClick = { showBusinessProfileDialog = true },
                                 modifier = Modifier.fillMaxWidth(),

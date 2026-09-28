@@ -42,9 +42,12 @@ data class UserSettings(
     val primaryBusinessType: String = "WARUNG_SEMBAKO",
     val secondaryActivities: Set<String> = setOf("ACTIVITY_GOODS_SELLING"),
     val profileVersion: Int = 1,
-
-    // 16. BUSINESS TYPE LOCKING (PR-11.1)
-    val businessTypeLocked: Boolean = false,
+    // Step 12A: the "business type is locked after onboarding" rule from PR-11.1 is retired.
+    // Business type stays changeable after setup, with an explicit acknowledgement, and existing
+    // data is never rewritten. A `business_type_locked` entry written by an older build may still
+    // sit in an existing install's preferences file; it is deliberately ignored from now on, so a
+    // stale `true` cannot disable or contradict the change flow. Nothing reads it, and the key is
+    // no longer declared, so the leftover entry is simply inert.
 
     // 17. TAX / PPN CONFIGURATION (PR-12.2)
     val taxEnabled: Boolean = false,
@@ -203,8 +206,10 @@ class UserPreferencesRepository(
         val SECONDARY_ACTIVITIES = androidx.datastore.preferences.core.stringSetPreferencesKey("secondary_activities")
         val PROFILE_VERSION = intPreferencesKey("profile_version")
 
-        // 16. BUSINESS TYPE LOCKING (PR-11.1)
-        val BUSINESS_TYPE_LOCKED = booleanPreferencesKey("business_type_locked")
+        // Step 12A: no BUSINESS_TYPE_LOCKED key. An install upgraded from a build that wrote
+        // `business_type_locked` keeps that entry in its preferences file; it is never read, so it
+        // cannot influence behaviour. There is no migration to clean it up because an unread key
+        // is already harmless.
 
         // 17. TAX / PPN CONFIGURATION (PR-12.2)
         val TAX_ENABLED = booleanPreferencesKey("tax_enabled")
@@ -258,7 +263,6 @@ class UserPreferencesRepository(
             primaryBusinessType = prefs[Keys.PRIMARY_BUSINESS_TYPE] ?: "WARUNG_SEMBAKO",
             secondaryActivities = prefs[Keys.SECONDARY_ACTIVITIES] ?: setOf("ACTIVITY_GOODS_SELLING"),
             profileVersion = prefs[Keys.PROFILE_VERSION] ?: 1,
-            businessTypeLocked = prefs[Keys.BUSINESS_TYPE_LOCKED] ?: false,
 
             taxEnabled = prefs[Keys.TAX_ENABLED] ?: false,
             taxRate = prefs[Keys.TAX_RATE] ?: 0.0,
@@ -634,7 +638,6 @@ class UserPreferencesRepository(
             prefs[Keys.OWNER_NAME] = ownerName.trim()
             prefs[Keys.PHONE] = phone.trim()
             prefs[Keys.ADDRESS] = address.trim()
-            prefs[Keys.BUSINESS_TYPE_LOCKED] = true
         }
     }
 
@@ -659,7 +662,6 @@ class UserPreferencesRepository(
             prefs[Keys.PRIMARY_BUSINESS_TYPE] = primaryBusinessType.trim()
             prefs[Keys.SECONDARY_ACTIVITIES] = secondaryActivities
             prefs[Keys.PROFILE_VERSION] = profileVersion
-            prefs[Keys.BUSINESS_TYPE_LOCKED] = true
         }
     }
 
@@ -807,11 +809,6 @@ class UserPreferencesRepository(
     suspend fun isOwnerTestActivated(): Boolean {
         val prefs = dataStore.data.first()
         return prefs[Keys.OWNER_TEST_ACTIVATED] ?: false
-    }
-
-    suspend fun isBusinessTypeLocked(): Boolean {
-        val prefs = dataStore.data.first()
-        return prefs[Keys.BUSINESS_TYPE_LOCKED] ?: false
     }
 
     suspend fun setOwnerTestActivated(activated: Boolean) {
