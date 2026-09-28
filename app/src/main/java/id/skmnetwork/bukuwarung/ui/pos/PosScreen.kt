@@ -1021,15 +1021,12 @@ fun PosScreen(
         topBar = {
             PosTopBar(
                 title = "KASIR",
-                onMenuClick = {
-                    if (windowSize.isCompact) {
-                        // On a phone the bottom navigation bar is always present, so the menu icon
-                        // keeps its existing "go to / leave sales history" role.
-                        selectedTab = if (selectedTab == 0) 1 else 0
-                    } else {
-                        onOpenNavigation()
-                    }
-                },
+                // The hamburger is the drawer's trigger. It is shown only where the drawer is the
+                // app navigation. On a phone the bottom navigation bar is permanently visible and is
+                // the app navigation, so the header shows page identity and POS actions only - no
+                // second navigation affordance competing with it.
+                showMenuAction = !windowSize.isCompact,
+                onMenuClick = onOpenNavigation,
                 onHistoryClick = { selectedTab = 1 },
                 onAddProductClick = onNavigateToAddProduct,
                 onSettingsClick = onNavigateToSettings,

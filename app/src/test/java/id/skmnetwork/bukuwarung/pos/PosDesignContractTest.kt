@@ -383,6 +383,50 @@ class PosDesignContractTest {
         )
     }
 
+    @Test
+    fun s22_mobileKeepsBottomNavAndHasNoCompetingHeaderNav() {
+        // The bottom navigation bar is the app navigation on compact and must stay.
+        val navigation = readSource("ui/navigation/AppNavigation.kt")
+        assertTrue(
+            "Compact must keep the bottom navigation bar",
+            navigation.contains("BottomNav(")
+        )
+        val compactIndex = navigation.indexOf("if (windowSize.isCompact) {")
+        val bottomNavIndex = navigation.indexOf("BottomNav(")
+        assertTrue(
+            "The bottom navigation must belong to the compact branch",
+            compactIndex in 0 until bottomNavIndex
+        )
+        assertTrue(
+            "Compact must not be given a drawer: the bottom bar is the app navigation",
+            navigation.substringAfter("if (windowSize.isCompact) {").substringBefore("} else")
+                .contains("ModalNavigationDrawer(").not()
+        )
+
+        // The POS header is page identity, not a second navigation system.
+        val screen = readSource("ui/pos/PosScreen.kt")
+        assertTrue(
+            "The hamburger is shown only where the drawer is the app navigation",
+            screen.contains("showMenuAction = !windowSize.isCompact")
+        )
+        val topBarBlock = screen.substringAfter("PosTopBar(").substringBefore("containerColor =")
+        assertTrue(
+            "The mobile header must not wire the menu to a history toggle; the Riwayat action owns that",
+            !topBarBlock.contains("selectedTab = if (selectedTab == 0) 1 else 0")
+        )
+        assertTrue(
+            "History must stay reachable through its own POS action",
+            topBarBlock.contains("onHistoryClick = { selectedTab = 1 }")
+        )
+
+        // No new navigation system is introduced by the POS itself.
+        val layout = readSource("ui/pos/PosMeasuredLayout.kt")
+        assertTrue(
+            "The POS must not define its own drawer",
+            !layout.contains("ModalNavigationDrawer")
+        )
+    }
+
     // ---- helpers ---------------------------------------------------------------
 
     private fun readSource(relativePath: String): String {

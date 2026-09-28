@@ -96,7 +96,8 @@ fun PosTopBar(
     onHistoryClick: () -> Unit,
     onAddProductClick: () -> Unit,
     onSettingsClick: () -> Unit,
-    onRefreshClick: () -> Unit
+    onRefreshClick: () -> Unit,
+    showMenuAction: Boolean
 ) {
     Surface(
         color = PosPalette.Primary,
@@ -110,19 +111,25 @@ fun PosTopBar(
                 .padding(horizontal = PosMetrics.TopBarPadding),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // 24dp icon on a 48dp touch target, per the touch-target rule.
-            Box(
-                modifier = Modifier
-                    .size(PosMetrics.ProductAddTouchTarget)
-                    .clickable { onMenuClick() },
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Menu,
-                    contentDescription = "Menu",
-                    tint = Color.White,
-                    modifier = Modifier.size(PosMetrics.TopBarIconSize)
-                )
+            // The hamburger opens the navigation drawer, which only exists where there is no other
+            // app navigation: on a phone the bottom navigation bar is always present, so a second
+            // hamburger above it would read as a competing navigation system. It is therefore shown
+            // only when the drawer is the navigation (tablet), never on compact.
+            if (showMenuAction) {
+                // 24dp icon on a 48dp touch target, per the touch-target rule.
+                Box(
+                    modifier = Modifier
+                        .size(PosMetrics.ProductAddTouchTarget)
+                        .clickable { onMenuClick() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Menu,
+                        contentDescription = "Menu",
+                        tint = Color.White,
+                        modifier = Modifier.size(PosMetrics.TopBarIconSize)
+                    )
+                }
             }
             Spacer(Modifier.width(PosMetrics.TopBarTitleGap))
             Text(
