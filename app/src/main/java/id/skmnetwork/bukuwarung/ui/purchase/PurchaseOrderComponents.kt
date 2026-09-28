@@ -95,6 +95,7 @@ import id.skmnetwork.bukuwarung.purchase.PurchaseOrderReceiptFormatter
 import id.skmnetwork.bukuwarung.ui.theme.AppColors
 import id.skmnetwork.bukuwarung.ui.theme.AppResponsive
 import id.skmnetwork.bukuwarung.util.formatRupiah
+import id.skmnetwork.bukuwarung.util.parseQuantityInput
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -1182,12 +1183,11 @@ fun CreateEditPurchaseOrderDialog(
                                             onValueChange = { newVal ->
                                                 val clean = newVal.replace(',', '.')
                                                 qtyInput = clean
-                                                val parsed = clean.toDoubleOrNull()
+                                                val parsed = parseQuantityInput(clean)
                                                 if (parsed != null && parsed > 0.0) {
                                                     item.quantity = parsed
                                                 }
-                                            },
-                                            label = { Text("Jumlah (${item.unit})", fontSize = 10.sp) },
+                                            },                                            label = { Text("Jumlah (${item.unit})", fontSize = 10.sp) },
                                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                                             singleLine = true,
                                             modifier = Modifier.weight(1f),

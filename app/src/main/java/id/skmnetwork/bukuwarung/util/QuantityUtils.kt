@@ -19,3 +19,27 @@ fun formatQuantityValue(quantity: Double): String {
     val raw = quantity.toString()
     return if (raw.contains('.')) raw.trimEnd('0').trimEnd('.') else raw
 }
+
+/**
+ * Canonical parsing of a merchant-typed quantity, the counterpart to [formatQuantityValue].
+ *
+ * Indonesian keyboards and receipts write "1,25", while the internal representation is a
+ * Double, so a comma is accepted as the decimal separator and normalised to a dot before
+ * parsing. Both spellings therefore produce the identical number, and "1.25" is never truncated
+ * to "1" on the way in.
+ *
+ * Returns null for anything that is not a number, so a caller can reject it rather than
+ * silently storing a zero. The caller still owns the business rules - this function only
+ * converts text; it never clamps, rounds or invents a value.
+ */
+fun parseQuantityInput(text: String): Double? {
+    val normalised = text.trim().replace(',', '.')
+    if (normalised.isEmpty()) return null
+    val parsed = normalised.toDoubleOrNull() ?: return null
+    // "NaN" and "Infinity" are accepted by Double parsing, but they are not quantities: letting one
+    // through would poison every total it ever reaches. Reject them here so no caller has to
+    // remember to check.
+    if (parsed.isNaN() || parsed.isInfinite()) return null
+    return parsed
+}
+

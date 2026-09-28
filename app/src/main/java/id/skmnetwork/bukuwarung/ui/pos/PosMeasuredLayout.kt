@@ -41,8 +41,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -57,9 +62,11 @@ import id.skmnetwork.bukuwarung.data.local.entity.CustomerEntity
 import id.skmnetwork.bukuwarung.data.local.entity.ItemType
 import id.skmnetwork.bukuwarung.data.local.entity.ProductEntity
 import id.skmnetwork.bukuwarung.domain.checkout.CartLine
+import id.skmnetwork.bukuwarung.ui.components.AppTextField
 import id.skmnetwork.bukuwarung.ui.components.ProductImageThumbnail
 import id.skmnetwork.bukuwarung.ui.theme.AppColors
 import id.skmnetwork.bukuwarung.util.formatQuantityValue
+import id.skmnetwork.bukuwarung.util.parseQuantityInput
 import id.skmnetwork.bukuwarung.util.formatRupiah
 
 /**
@@ -522,9 +529,16 @@ fun PosQuantityControl(
     onIncrement: () -> Unit,
     onDecrement: () -> Unit,
     enabled: Boolean = true,
-    compact: Boolean = false
+    compact: Boolean = false,
+    // Step 5: when supplied, the displayed number becomes tappable and opens the precise-entry
+    // dialog. Left null, the control stays a pure stepper.
+    productName: String = "",
+    unit: String = "",
+    maxQuantity: Double? = null,
+    onQuantityInput: ((Double) -> Unit)? = null
 ) {
     val width = if (compact) PosMetrics.CartQtyControlWidth else 96.dp
+    var showInput by remember { mutableStateOf(false) }
     Surface(
         shape = PosMetrics.QtyControlShape,
         color = PosPalette.ProductAreaBackground,
@@ -547,14 +561,31 @@ fun PosQuantityControl(
                     modifier = Modifier.size(PosMetrics.SearchLeadingIconSize)
                 )
             }
-            Text(
-                text = formatQuantityValue(quantity),
-                fontSize = PosType.CartPrice,
-                fontWeight = FontWeight.SemiBold,
-                color = PosPalette.TextPrimary,
-                maxLines = 1,
-                modifier = Modifier.width(36.dp)
-            )
+            // Step 5: the stepper stays the quick adjustment, and the number becomes the precise
+            // entry. Tapping it opens the same editor a merchant would expect, instead of
+            // requiring a dozen presses of "+" to reach 1.25.
+            Box(
+                modifier = Modifier
+                    .width(36.dp)
+                    .fillMaxHeight()
+                    .then(
+                        if (onQuantityInput != null) {
+                            Modifier.clickable(enabled = enabled) { showInput = true }
+                        } else {
+                            Modifier
+                        }
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = formatQuantityValue(quantity),
+                    fontSize = PosType.CartPrice,
+                    fontWeight = FontWeight.SemiBold,
+                    color = PosPalette.TextPrimary,
+                    maxLines = 1,
+                    modifier = Modifier.width(36.dp)
+                )
+            }
             Box(
                 modifier = Modifier
                     .size(PosMetrics.ProductAddTouchTarget)
@@ -570,6 +601,110 @@ fun PosQuantityControl(
             }
         }
     }
+
+    if (showInput && onQuantityInput != null) {
+        PosQuantityInputDialog(
+            productName = productName,
+            unit = unit,
+            currentQuantity = quantity,
+            maxQuantity = maxQuantity,
+            onDismiss = { showInput = false },
+            onConfirm = { precise ->
+                showInput = false
+                onQuantityInput(precise)
+            }
+        )
+    }
+}
+
+/**
+ * Step 5 - precise quantity entry.
+ *
+ * Reuses the app's existing [id.skmnetwork.bukuwarung.ui.components.AppTextField] and the existing
+ * comma-or-dot parser, so this reads as native to the rest of the app and accepts exactly the
+ * spellings the stock dialog and the purchase screen already accept.
+ *
+ * It changes text only. The caller decides what a value means, so the stock cap, the removal of
+ * an emptied line and the money calculation all stay in the POS, untouched by this dialog.
+ */
+@Composable
+fun PosQuantityInputDialog(
+    productName: String,
+    unit: String,
+    currentQuantity: Double,
+    maxQuantity: Double?,
+    onDismiss: () -> Unit,
+    onConfirm: (Double) -> Unit
+) {
+    var text by remember(currentQuantity) { mutableStateOf(formatQuantityValue(currentQuantity)) }
+    var error by remember { mutableStateOf<String?>(null) }
+
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Jumlah", fontWeight = FontWeight.Bold) },
+        text = {
+            val errorText = error
+            Column(verticalArrangement = Arrangement.spacedBy(PosMetrics.RadiusSmall)) {
+                Text(
+                    text = productName,
+                    fontSize = PosType.CartProduct,
+                    fontWeight = FontWeight.SemiBold,
+                    color = PosPalette.TextPrimary
+                )
+                AppTextField(
+                    value = text,
+                    onValueChange = {
+                        text = it
+                        error = null
+                    },
+                    label = "Jumlah ($unit)",
+                    isError = errorText != null,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
+                )
+                if (maxQuantity != null) {
+                    Text(
+                        text = "Maksimal ${formatQuantityValue(maxQuantity)} $unit",
+                        fontSize = PosType.Helper,
+                        color = PosPalette.TextSecondary
+                    )
+                }
+                if (errorText != null) {
+                    Text(
+                        text = errorText,
+                        fontSize = PosType.Helper,
+                        color = PosPalette.Destructive
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    val parsed = parseQuantityInput(text)
+                    if (parsed == null || parsed.isNaN() || parsed.isInfinite()) {
+                        error = "Masukkan angka yang valid"
+                        return@TextButton
+                    }
+                    if (parsed < 0.0) {
+                        error = "Jumlah tidak boleh kurang dari 0"
+                        return@TextButton
+                    }
+                    if (maxQuantity != null && parsed > maxQuantity) {
+                        error = "Jumlah maksimal ${formatQuantityValue(maxQuantity)} $unit"
+                        return@TextButton
+                    }
+                    onConfirm(parsed)
+                }
+            ) {
+                Text("Simpan", fontWeight = FontWeight.Bold)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Batal")
+            }
+        }
+    )
 }
 
 // =====================================================================================

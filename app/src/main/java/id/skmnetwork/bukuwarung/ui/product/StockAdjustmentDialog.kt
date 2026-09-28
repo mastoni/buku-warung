@@ -27,6 +27,7 @@ import id.skmnetwork.bukuwarung.ui.components.SecondaryButton
 import id.skmnetwork.bukuwarung.ui.theme.AppColors
 import id.skmnetwork.bukuwarung.ui.theme.AppSpacing
 import id.skmnetwork.bukuwarung.util.formatQuantityValue
+import id.skmnetwork.bukuwarung.util.parseQuantityInput
 
 /**
  * Step 2 (D) - stock correction.
@@ -55,7 +56,7 @@ fun StockAdjustmentDialog(
     var localError by remember { mutableStateOf<String?>(null) }
     val errorText = localError ?: externalError
 
-    val parsedStock = actualStockText.trim().replace(',', '.').toDoubleOrNull()
+    val parsedStock = parseQuantityInput(actualStockText)
     val delta = parsedStock?.minus(currentStock)
 
     AlertDialog(
@@ -187,7 +188,7 @@ fun StockAdjustmentDialog(
             if (isStockable) {
                 TextButton(
                     onClick = {
-                        val parsed = actualStockText.trim().replace(',', '.').toDoubleOrNull()
+                        val parsed = parseQuantityInput(actualStockText)
                         if (parsed == null) {
                             localError = "Masukkan angka stok yang valid"
                             return@TextButton

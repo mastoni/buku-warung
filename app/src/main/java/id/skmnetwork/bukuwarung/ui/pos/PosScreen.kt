@@ -213,6 +213,16 @@ fun PosScreen(
         }
     }
 
+    /**
+     * Step 5: only stockable goods get the precise-entry editor.
+     *
+     * A service or a digital item has no stock and the register has always billed it one unit at a
+     * time, so inventing a fractional rule for those would be a product decision, not a UX one.
+     * Those lines keep exactly the stepper behaviour they had.
+     */
+    fun isStockableCartLine(product: ProductEntity): Boolean =
+        product.itemType != ItemType.SERVICE.name && product.itemType != ItemType.DIGITAL.name
+
     fun updateCartDestination(index: Int, destinationNumber: String) {
         val normalized = normalizedDestination(destinationNumber)
         val current = cart[index]
@@ -1249,7 +1259,31 @@ fun PosScreen(
                                 },
                                 enabled = line.product.itemType == ItemType.SERVICE.name ||
                                         line.product.itemType == ItemType.DIGITAL.name ||
-                                        line.quantity < line.product.stock
+                                        line.quantity < line.product.stock,
+                                // Step 5: precise entry for stockable goods, which is where a
+                                // merchant sells by weight or volume and the stepper alone would
+                                // mean pressing "+" a dozen times for 1.25.
+                                productName = line.product.name,
+                                unit = line.product.unit,
+                                maxQuantity = if (isStockableCartLine(line.product)) {
+                                    line.product.stock
+                                } else {
+                                    null
+                                },
+                                onQuantityInput = if (isStockableCartLine(line.product)) {
+                                    { precise ->
+                                        // The same rules the stepper obeys: an emptied line is
+                                        // removed, and a value above the remaining stock is
+                                        // refused. No rounding, no truncation.
+                                        if (precise <= 0.0) {
+                                            cart.removeAt(index)
+                                        } else if (precise <= line.product.stock) {
+                                            cart[index] = line.copy(quantity = precise)
+                                        }
+                                    }
+                                } else {
+                                    null
+                                }
                             )
                         }
                     }
