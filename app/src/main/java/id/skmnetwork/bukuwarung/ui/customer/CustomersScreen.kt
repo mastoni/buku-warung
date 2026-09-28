@@ -104,6 +104,11 @@ fun CustomersScreen(
     var paymentAmountInput by remember { mutableStateOf("") }
     var paymentNoteInput by remember { mutableStateOf("") }
     var paymentError by remember { mutableStateOf<String?>(null) }
+    // Step 8: which open debt the payment is aimed at. A customer can hold several open debts
+    // at once (one row is created per credit sale), so the target is chosen explicitly here
+    // instead of being implied. Null means "nothing picked yet", which falls back to the debt
+    // that was previously targeted, so a customer with a single open debt is unaffected.
+    var selectedDebtIdForPayment by remember { mutableStateOf<Long?>(null) }
 
     val windowSize = rememberAppWindowSize()
 
@@ -485,7 +490,15 @@ fun CustomersScreen(
                     // Primary Action: Bayar Hutang
                     if (openDebts.isNotEmpty()) {
                         Button(
-                            onClick = { showPayDebtDialog = true },
+                            onClick = {
+                                // Every dialog visit starts from a clean target so a previous
+                                // choice can never be carried over into a different payment.
+                                selectedDebtIdForPayment = null
+                                paymentAmountInput = ""
+                                paymentNoteInput = ""
+                                paymentError = null
+                                showPayDebtDialog = true
+                            },
                             shape = RoundedCornerShape(10.dp),
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = AppColors.GreenPrimary,
@@ -532,7 +545,23 @@ fun CustomersScreen(
                             modifier = Modifier.heightIn(max = 200.dp)
                         ) {
                             items(customerDebts, key = { it.id }) { debt ->
-                                CustomerDebtItemCard(debt = debt)
+                                // Step 8A: the history row is the explicit target. Tapping an open
+                                // debt opens the payment dialog already bound to that debt, so the
+                                // merchant identifies the record instead of the UI picking one.
+                                CustomerDebtItemCard(
+                                    debt = debt,
+                                    onPay = if (debt.status == "OPEN") {
+                                        {
+                                            selectedDebtIdForPayment = debt.id
+                                            paymentAmountInput = ""
+                                            paymentNoteInput = ""
+                                            paymentError = null
+                                            showPayDebtDialog = true
+                                        }
+                                    } else {
+                                        null
+                                    }
+                                )
                             }
                         }
                     }
@@ -549,8 +578,14 @@ fun CustomersScreen(
         // 4. PAY DEBT DIALOG
         // ==========================================
         if (showPayDebtDialog && openDebts.isNotEmpty()) {
-            val debtToPay = openDebts.first()
-            val outstanding = debtToPay.totalDebt - debtToPay.paidAmount
+            // Step 8A: `openDebts.first()` used to be the payment target, so with several open
+            // debts the money landed on whichever row happened to sort first without the merchant
+            // being told. The target now comes from an explicit selection and is null until the
+            // merchant makes one, so the confirm button stays disabled rather than guessing. No
+            // new debt field is introduced - reference, date and amounts are the ones the history
+            // list already shows.
+            val selectableDebts = openDebts.sortedByDescending { it.createdAt }
+            val debtToPay = resolveDebtPaymentTarget(openDebts, selectedDebtIdForPayment)
 
             AlertDialog(
                 onDismissRequest = { if (!isSaving) showPayDebtDialog = false },
@@ -571,37 +606,34 @@ fun CustomersScreen(
                         verticalArrangement = Arrangement.spacedBy(10.dp),
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Surface(
-                            shape = RoundedCornerShape(10.dp),
-                            color = MaterialTheme.colorScheme.surfaceVariant,
-                            border = BorderStroke(1.dp, Color(0xFFEFF3F0)),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Column(modifier = Modifier.padding(10.dp)) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Text("Total Hutang:", fontSize = 12.sp, color = AppColors.TextSecondary)
-                                    Text(formatRupiah(debtToPay.totalDebt), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                                }
-                                Spacer(Modifier.height(3.dp))
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Text("Sudah Dibayar:", fontSize = 12.sp, color = AppColors.TextSecondary)
-                                    Text(formatRupiah(debtToPay.paidAmount), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                                }
-                                Spacer(Modifier.height(3.dp))
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Text("Sisa Hutang:", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFFD32F2F))
-                                    Text(formatRupiah(outstanding), fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color(0xFFD32F2F))
-                                }
+                        // Only rendered once a concrete debt is targeted, so the figures always
+                        // belong to that debt and never to a customer-wide aggregate.
+                        if (debtToPay != null) {
+                            DebtSummaryCard(debt = debtToPay)
+                        }
+
+                        // Only rendered when there is genuinely a choice to make.
+                        if (openDebts.size > 1) {
+                            Text(
+                                text = "Pilih hutang yang dibayar",
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 12.sp,
+                                    color = AppColors.TextPrimary
+                                )
+                            )
+                            selectableDebts.forEach { candidate ->
+                                val remainingForCandidate = candidate.totalDebt - candidate.paidAmount
+                                DebtTargetRow(
+                                    debtId = candidate.id,
+                                    dateText = formatDebtDate(candidate.createdAt),
+                                    remainingText = formatRupiah(remainingForCandidate),
+                                    isSelected = candidate.id == selectedDebtIdForPayment,
+                                    enabled = !isSaving,
+                                    onClick = { selectedDebtIdForPayment = candidate.id }
+                                )
                             }
+                            Spacer(Modifier.height(4.dp))
                         }
 
                         if (paymentError != null) {
@@ -644,15 +676,19 @@ fun CustomersScreen(
                     Button(
                         onClick = {
                             if (isSaving) return@Button
+                            // The merchant must have named the debt; with several open debts the
+                            // button stays disabled until one is picked.
+                            val targetDebt = debtToPay ?: return@Button
                             isSaving = true
                             paymentError = null
                             customerViewModel.payDebt(
-                                debtId = debtToPay.id,
+                                debtId = targetDebt.id,
                                 amountStr = paymentAmountInput,
                                 note = paymentNoteInput,
                                 onSuccess = {
                                     isSaving = false
                                     showPayDebtDialog = false
+                                    selectedDebtIdForPayment = null
                                     paymentAmountInput = ""
                                     paymentNoteInput = ""
                                     Toast.makeText(context, "Pembayaran hutang berhasil!", Toast.LENGTH_SHORT).show()
@@ -663,7 +699,7 @@ fun CustomersScreen(
                                 }
                             )
                         },
-                        enabled = !isSaving,
+                        enabled = !isSaving && debtToPay != null,
                         shape = RoundedCornerShape(10.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = AppColors.GreenPrimary,
@@ -1080,10 +1116,174 @@ private fun CustomerListItemCard(
 }
 
 /**
- * Card for debt mutation item inside customer detail.
+ * Prefix of the reference the debt history list already shows for a debt row, reused so the
+ * payment dialog names the same thing the merchant sees in the list. No field is invented for
+ * display: it is derived from the debt primary key the list already renders as "Hutang TRX-<id>".
+ */
+private const val debtReferencePrefix = "TRX-"
+
+/**
+ * Step 8A - resolves the single open debt a payment is aimed at.
+ *
+ * A customer can hold several open debts at the same time, because [SaleRepository] inserts one
+ * debt row per credit sale, so the payment target has to be chosen rather than implied. The
+ * merchant's choice is [selectedDebtId], made either by tapping a debt in the customer's
+ * "Histori Hutang / Piutang" list or in the dialog's own list.
+ *
+ * Returns null when there is genuinely no target:
+ *  - no open debt at all, so there is nothing to pay;
+ *  - several open debts and no choice made yet, so the payment must not fall back to whichever
+ *    row happened to sort first. The caller keeps the confirm button disabled until the merchant
+ *    picks, which is what makes the target explicit.
+ *
+ * A customer with exactly one open debt is not a choice, so that debt is the target and the
+ * existing single-debt flow is unchanged.
+ *
+ * No FIFO/LIFO/oldest-first rule is encoded anywhere: the product rule for which debt an
+ * unconfirmed payment should reduce is not defined in the model, so the merchant is asked instead.
+ */
+internal fun resolveDebtPaymentTarget(
+    openDebts: List<DebtEntity>,
+    selectedDebtId: Long?
+): DebtEntity? {
+    if (openDebts.isEmpty()) return null
+    val selectable = openDebts.sortedByDescending { it.createdAt }
+    val selected = selectedDebtId?.let { id -> selectable.firstOrNull { it.id == id } }
+    if (selected != null) return selected
+    return selectable.singleOrNull()
+}
+
+private fun formatDebtDate(createdAt: Long): String {
+    return try {
+        SimpleDateFormat("d MMM yyyy", Locale("id", "ID")).format(Date(createdAt))
+    } catch (_: Exception) {
+        "-"
+    }
+}
+
+/**
+ * The debt being paid, named and fully described, using only fields the debt history list already
+ * shows. Rendered only after a concrete debt is targeted, so the totals on screen are that debt's
+ * own totals and never the customer's aggregate.
  */
 @Composable
-private fun CustomerDebtItemCard(debt: DebtEntity) {
+private fun DebtSummaryCard(debt: DebtEntity) {
+    Surface(
+        shape = RoundedCornerShape(10.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        border = BorderStroke(1.dp, Color(0xFFEFF3F0)),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(10.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = "Hutang $debtReferencePrefix${debt.id}",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = AppColors.TextPrimary
+                )
+                Text(
+                    text = formatDebtDate(debt.createdAt),
+                    fontSize = 11.sp,
+                    color = AppColors.TextSecondary
+                )
+            }
+            Spacer(Modifier.height(3.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text("Total Hutang:", fontSize = 12.sp, color = AppColors.TextSecondary)
+                Text(formatRupiah(debt.totalDebt), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+            }
+            Spacer(Modifier.height(3.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text("Sudah Dibayar:", fontSize = 12.sp, color = AppColors.TextSecondary)
+                Text(formatRupiah(debt.paidAmount), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+            }
+            Spacer(Modifier.height(3.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text("Sisa Hutang:", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFFD32F2F))
+                Text(
+                    text = formatRupiah(debt.totalDebt - debt.paidAmount),
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFFD32F2F)
+                )
+            }
+        }
+    }
+}
+
+/** One selectable open debt inside the payment dialog. */
+@Composable
+private fun DebtTargetRow(
+    debtId: Long,
+    dateText: String,
+    remainingText: String,
+    isSelected: Boolean,
+    enabled: Boolean,
+    onClick: () -> Unit
+) {
+    Surface(
+        shape = RoundedCornerShape(10.dp),
+        color = if (isSelected) AppColors.GreenPrimary.copy(alpha = 0.10f) else MaterialTheme.colorScheme.surfaceVariant,
+        border = BorderStroke(
+            1.dp,
+            if (isSelected) AppColors.GreenPrimary else MaterialTheme.colorScheme.outlineVariant
+        ),
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 48.dp)
+            .clickable(enabled = enabled, onClick = onClick)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 10.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "Hutang $debtReferencePrefix$debtId",
+                    fontSize = 12.5.sp,
+                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold,
+                    color = AppColors.TextPrimary
+                )
+                Text(
+                    text = dateText,
+                    fontSize = 10.5.sp,
+                    color = AppColors.TextSecondary
+                )
+            }
+            Text(
+                text = "Sisa: $remainingText",
+                fontSize = 11.5.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFFD32F2F)
+            )
+        }
+    }
+}
+
+/**
+ * Card for debt mutation item inside customer detail.
+ *
+ * When [onPay] is supplied the card itself is the explicit target selector: tapping a specific open
+ * debt opens the payment dialog already aimed at that debt, so the merchant identifies the record
+ * before any money moves. Settled debts are never tappable.
+ */
+@Composable
+private fun CustomerDebtItemCard(debt: DebtEntity, onPay: (() -> Unit)? = null) {
     val isPaid = debt.status == "PAID"
     val remaining = debt.totalDebt - debt.paidAmount
     val formattedDate = remember(debt.createdAt) {
@@ -1098,7 +1298,9 @@ private fun CustomerDebtItemCard(debt: DebtEntity) {
         shape = RoundedCornerShape(10.dp),
         color = MaterialTheme.colorScheme.surfaceVariant,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(if (onPay != null) Modifier.clickable(onClick = onPay) else Modifier)
     ) {
         Row(
             modifier = Modifier
@@ -1108,7 +1310,7 @@ private fun CustomerDebtItemCard(debt: DebtEntity) {
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Hutang TRX-${debt.id}",
+                    text = "Hutang $debtReferencePrefix${debt.id}",
                     style = MaterialTheme.typography.bodySmall.copy(
                         fontWeight = FontWeight.Bold,
                         fontSize = 12.5.sp,
