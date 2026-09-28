@@ -57,6 +57,7 @@ import id.skmnetwork.bukuwarung.data.local.entity.SaleReturnTransactionEntity
 import id.skmnetwork.bukuwarung.data.local.entity.SaleTransactionEntity
 import id.skmnetwork.bukuwarung.ui.components.AppCard
 import id.skmnetwork.bukuwarung.ui.product.ProductViewModel
+import id.skmnetwork.bukuwarung.util.formatQuantityValue
 import id.skmnetwork.bukuwarung.ui.theme.AppColors
 import id.skmnetwork.bukuwarung.ui.theme.AppResponsive
 import id.skmnetwork.bukuwarung.ui.theme.AppShapes
@@ -247,7 +248,7 @@ fun SaleDetailDialog(
                                     Column(Modifier.weight(1f)) {
                                         Text(item.productName, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
                                         Text(
-                                            "${item.quantity.toInt()} × ${formatRupiah(item.price)}",
+                                            "${formatQuantityValue(item.quantity)} × ${formatRupiah(item.price)}",
                                             style = MaterialTheme.typography.bodySmall,
                                             color = AppColors.TextSecondary
                                         )
@@ -410,7 +411,7 @@ fun SaleDetailDialog(
                                         HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), color = Color(0xFFFFCDD2))
                                         itemsForThisReturn.forEach { retItem ->
                                             Row(modifier = Modifier.fillMaxWidth()) {
-                                                Text("• ${retItem.productName} (${retItem.quantity.toInt()} item)", style = MaterialTheme.typography.labelSmall, color = AppColors.TextPrimary, modifier = Modifier.weight(1f))
+                                                Text("• ${retItem.productName} (${formatQuantityValue(retItem.quantity)} item)", style = MaterialTheme.typography.labelSmall, color = AppColors.TextPrimary, modifier = Modifier.weight(1f))
                                                 Text(formatRupiah(retItem.subtotal), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold)
                                             }
                                         }

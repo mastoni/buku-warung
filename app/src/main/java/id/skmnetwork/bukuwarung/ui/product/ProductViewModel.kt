@@ -15,6 +15,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
+import id.skmnetwork.bukuwarung.util.loadingFlag
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -22,6 +23,10 @@ class ProductViewModel(
     private val repository: ProductRepository,
     private val checkoutOrchestrator: CheckoutOrchestrator? = null
 ) : ViewModel() {
+
+    // Step 2 (H): attached to the RAW source flows, before stateIn, so the initial value of a
+    // StateFlow is never mistaken for a real answer. Shared by Home, Products and Cash.
+    val isLoading: StateFlow<Boolean> = repository.allProducts.loadingFlag(viewModelScope)
 
     val products: StateFlow<List<ProductEntity>> = repository.allProducts
         .stateIn(
@@ -284,7 +289,6 @@ class ProductViewModel(
         categoryName: String,
         purchasePriceStr: String,
         sellingPriceStr: String,
-        stockStr: String,
         minimumStockStr: String,
         unitStr: String,
         barcodeStr: String? = null,
@@ -315,12 +319,8 @@ class ProductViewModel(
             return
         }
 
-        val stock = stockStr.trim().ifEmpty { "0" }.toDoubleOrNull()
-        if (stock == null || stock < 0) {
-            onError("Tulis angka yang valid")
-            return
-        }
-
+        // Step 2 (A): stock is intentionally NOT a parameter here. Editing a product must never be
+        // able to rewrite live stock - see ProductRepository.adjustStock.
         val minimumStock = minimumStockStr.trim().ifEmpty { "0" }.toDoubleOrNull()
         if (minimumStock == null || minimumStock < 0) {
             onError("Tulis angka yang valid")
@@ -348,7 +348,6 @@ class ProductViewModel(
                     categoryName = categoryName,
                     purchasePrice = purchasePrice,
                     sellingPrice = sellingPrice,
-                    stock = stock,
                     minimumStock = minimumStock,
                     unit = unit,
                     barcode = barcodeStr,
@@ -365,6 +364,40 @@ class ProductViewModel(
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
                     onError("Gagal memperbarui produk: ${e.localizedMessage ?: "Terjadi kesalahan"}")
+                }
+            }
+        }
+    }
+
+    /**
+     * Step 2 (D) - correct a product's stock, recording it as a stock movement.
+     *
+     * @param isStockCount true for a physical stock count (OPNAME), false for a correction.
+     */
+    fun adjustStock(
+        productId: Long,
+        newStock: Double,
+        note: String?,
+        isStockCount: Boolean = false,
+        onSuccess: (id.skmnetwork.bukuwarung.data.repository.ProductRepository.StockAdjustmentResult) -> Unit,
+        onError: (String) -> Unit
+    ) {
+        if (newStock < 0) {
+            onError("Stok tidak boleh kurang dari 0")
+            return
+        }
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val result = repository.adjustStock(
+                    productId = productId,
+                    newStock = newStock,
+                    note = note,
+                    movementType = if (isStockCount) "OPNAME" else "ADJUSTMENT"
+                )
+                withContext(Dispatchers.Main) { onSuccess(result) }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    onError(e.localizedMessage ?: "Gagal menyimpan penyesuaian stok")
                 }
             }
         }

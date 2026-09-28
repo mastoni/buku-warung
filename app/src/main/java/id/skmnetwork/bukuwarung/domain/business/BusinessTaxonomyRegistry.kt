@@ -1,5 +1,7 @@
 package id.skmnetwork.bukuwarung.domain.business
 
+import id.skmnetwork.bukuwarung.data.local.entity.ItemType
+
 /**
  * Gate G3 — Business Taxonomy Registry
  * Central, deterministic registry mapping BusinessType presets and resolving
@@ -188,7 +190,9 @@ object BusinessTaxonomyRegistry {
                 transactionLabel = "Transaksi"
             ),
             preferredUnits = listOf("pcs", "voucher", "token", "paket", "unit"),
-            defaultCategories = listOf("Pulsa & Paket Data", "Voucher Fisik", "Aksesoris HP", "Charger & Kabel", "Perdana")
+            defaultCategories = listOf("Pulsa & Paket Data", "Voucher Fisik", "Aksesoris HP", "Charger & Kabel", "Perdana"),
+            // Step 2 (F): a konter sells pulsa first.
+            suggestedItemType = ItemType.DIGITAL
         ),
 
         // 2. SERVICES
@@ -216,7 +220,9 @@ object BusinessTaxonomyRegistry {
                 transactionLabel = "Nota Servis"
             ),
             preferredUnits = listOf("pcs", "botol", "set", "jasa", "paket", "liter"),
-            defaultCategories = listOf("Jasa Servis", "Oli & Pelumas", "Sparepart Mesin", "Ban & Velg", "Kelistrikan")
+            defaultCategories = listOf("Jasa Servis", "Oli & Pelumas", "Sparepart Mesin", "Ban & Velg", "Kelistrikan"),
+            // Step 2 (F): a bengkel books services first.
+            suggestedItemType = ItemType.SERVICE
         ),
 
         BusinessType.CUCI_KENDARAAN to BusinessPreset(
@@ -239,7 +245,9 @@ object BusinessTaxonomyRegistry {
                 transactionLabel = "Nota Cuci"
             ),
             preferredUnits = listOf("kendaraan", "layanan", "paket", "pcs", "botol"),
-            defaultCategories = listOf("Cuci Motor", "Cuci Mobil", "Poles & Detailing", "Aksesoris / Parfum")
+            defaultCategories = listOf("Cuci Motor", "Cuci Mobil", "Poles & Detailing", "Aksesoris / Parfum"),
+            // Step 2 (F): a car wash sells services, not stock.
+            suggestedItemType = ItemType.SERVICE
         ),
 
         BusinessType.SERVICE_ELEKTRONIK_HP to BusinessPreset(
@@ -266,7 +274,9 @@ object BusinessTaxonomyRegistry {
                 transactionLabel = "Nota Servis"
             ),
             preferredUnits = listOf("jasa", "pcs", "unit", "set", "paket"),
-            defaultCategories = listOf("Jasa Servis HP", "Jasa Servis Laptop", "Sparepart LCD", "Baterai", "Aksesoris")
+            defaultCategories = listOf("Jasa Servis HP", "Jasa Servis Laptop", "Sparepart LCD", "Baterai", "Aksesoris"),
+            // Step 2 (F): repair services come first.
+            suggestedItemType = ItemType.SERVICE
         ),
 
         BusinessType.LAUNDRY to BusinessPreset(
@@ -290,7 +300,9 @@ object BusinessTaxonomyRegistry {
                 transactionLabel = "Nota Laundry"
             ),
             preferredUnits = listOf("kg", "potong", "meter", "pasang", "set", "lembar"),
-            defaultCategories = listOf("Cuci Kering Setrika", "Cuci Kering", "Setrika Saja", "Bed Cover & Karpet", "Sepatu & Tas")
+            defaultCategories = listOf("Cuci Kering Setrika", "Cuci Kering", "Setrika Saja", "Bed Cover & Karpet", "Sepatu & Tas"),
+            // Step 2 (F): laundry is a service.
+            suggestedItemType = ItemType.SERVICE
         ),
 
         BusinessType.SALON_BARBERSHOP to BusinessPreset(
@@ -313,7 +325,9 @@ object BusinessTaxonomyRegistry {
                 transactionLabel = "Struk Layanan"
             ),
             preferredUnits = listOf("orang", "layanan", "paket", "pcs", "botol"),
-            defaultCategories = listOf("Potong Rambut", "Cuci & Styling", "Pewarnaan", "Perawatan Wajah", "Produk Pomade / Shampo")
+            defaultCategories = listOf("Potong Rambut", "Cuci & Styling", "Pewarnaan", "Perawatan Wajah", "Produk Pomade / Shampo"),
+            // Step 2 (F): a salon sells services first.
+            suggestedItemType = ItemType.SERVICE
         ),
 
         BusinessType.JAHIT_TAILOR to BusinessPreset(
@@ -338,7 +352,9 @@ object BusinessTaxonomyRegistry {
                 transactionLabel = "Nota Jahit"
             ),
             preferredUnits = listOf("potong", "stel", "meter", "lusin", "pcs"),
-            defaultCategories = listOf("Jahit Baru", "Permak Pakaian", "Kain & Bahan", "Kancing & Resleting")
+            defaultCategories = listOf("Jahit Baru", "Permak Pakaian", "Kain & Bahan", "Kancing & Resleting"),
+            // Step 2 (F): tailoring is a service.
+            suggestedItemType = ItemType.SERVICE
         ),
 
         BusinessType.PERCETAKAN_FOTOCOPY to BusinessPreset(
@@ -364,7 +380,9 @@ object BusinessTaxonomyRegistry {
                 transactionLabel = "Nota Cetak"
             ),
             preferredUnits = listOf("lembar", "rim", "buku", "meter", "pcs", "jilid"),
-            defaultCategories = listOf("Fotocopy", "Print Dokumen", "Jilid & Laminating", "Cetak Banner & Stiker", "Alat Tulis Kantor")
+            defaultCategories = listOf("Fotocopy", "Print Dokumen", "Jilid & Laminating", "Cetak Banner & Stiker", "Alat Tulis Kantor"),
+            // Step 2 (F): printing is a service.
+            suggestedItemType = ItemType.SERVICE
         ),
 
         BusinessType.JASA_TEKNISI to BusinessPreset(
@@ -389,7 +407,9 @@ object BusinessTaxonomyRegistry {
                 transactionLabel = "Kwitansi Layanan"
             ),
             preferredUnits = listOf("titik", "unit", "hari", "jasa", "paket", "meter"),
-            defaultCategories = listOf("Servis & Cuci AC", "Instalasi Listrik", "Perbaikan Pompa Air", "Tukang Bangunan", "Pipa & Saluran")
+            defaultCategories = listOf("Servis & Cuci AC", "Instalasi Listrik", "Perbaikan Pompa Air", "Tukang Bangunan", "Pipa & Saluran"),
+            // Step 2 (F): technician work is a service.
+            suggestedItemType = ItemType.SERVICE
         ),
 
         // 3. FOOD_BEV
@@ -539,7 +559,8 @@ object BusinessTaxonomyRegistry {
             capabilities = allCapabilities,
             terminology = basePreset.terminology,
             preferredUnits = basePreset.preferredUnits.toList(),
-            defaultCategories = basePreset.defaultCategories.toList()
+            defaultCategories = basePreset.defaultCategories.toList(),
+            suggestedItemType = basePreset.suggestedItemType
         )
     }
 

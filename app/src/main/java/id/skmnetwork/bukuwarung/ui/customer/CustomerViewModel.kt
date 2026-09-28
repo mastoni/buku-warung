@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
+import id.skmnetwork.bukuwarung.util.loadingFlag
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -27,10 +28,16 @@ class CustomerViewModel(
 
     val searchQuery = MutableStateFlow("")
 
-    val customers: StateFlow<List<CustomerEntity>> = searchQuery
+    private val customerSource = searchQuery
         .flatMapLatest { query ->
             repository.searchCustomers(query)
         }
+
+    // Step 2 (H): the list used to show "Belum ada pelanggan" before the first database read
+    // finished, which was indistinguishable from a genuinely empty customer book.
+    val isLoading: StateFlow<Boolean> = customerSource.loadingFlag(viewModelScope)
+
+    val customers: StateFlow<List<CustomerEntity>> = customerSource
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),

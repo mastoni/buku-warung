@@ -173,6 +173,11 @@ fun SettingsScreen(
             secondaryActivities = settingsState.secondaryActivities
         )
     }
+
+    // Step 2 (C): business type change after onboarding.
+    var showBusinessTypeDialog by remember { mutableStateOf(false) }
+    var isSavingBusinessType by remember { mutableStateOf(false) }
+    var businessTypeError by remember { mutableStateOf<String?>(null) }
     val terminology = resolvedProfile.terminology
     val shopLabel = "Usaha"
     val productLabel = terminology.productLabel
@@ -503,6 +508,18 @@ fun SettingsScreen(
                                 fontSize = 11.5.sp,
                                 color = AppColors.TextSecondary
                             )
+                        )
+
+                        // Step 2 (C): a merchant who picked the wrong type at setup could previously
+                        // never correct it - the type was only ever written by onboarding or a backup
+                        // restore. Changing it affects labels, units, category presets and the default
+                        // product type for NEW products. It never rewrites existing products, sales,
+                        // purchases or stock history.
+                        Spacer(Modifier.height(8.dp))
+                        SecondaryButton(
+                            text = "Ubah Jenis Usaha",
+                            onClick = { showBusinessTypeDialog = true },
+                            modifier = Modifier.fillMaxWidth()
                         )
 
                         if (resolvedProfile.activities.isNotEmpty()) {
@@ -2287,6 +2304,47 @@ fun SettingsScreen(
                         Icon(Icons.Default.PhotoLibrary, contentDescription = null, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(4.dp))
                         Text("Dari Galeri")
+                    }
+                }
+            )
+        }
+
+        if (showBusinessTypeDialog) {
+            BusinessTypeDialog(
+                currentBusinessType = settingsState.primaryBusinessType,
+                isSaving = isSavingBusinessType,
+                errorText = businessTypeError,
+                onDismiss = {
+                    showBusinessTypeDialog = false
+                    businessTypeError = null
+                },
+                onSave = { newType, seededActivities ->
+                    isSavingBusinessType = true
+                    businessTypeError = null
+                    scope.launch {
+                        // Step 2 (C): only the preference is rewritten. Existing merchant-selected
+                        // secondary activities are kept, and nothing about existing data changes.
+                        val merged = mergeSecondaryActivities(
+                            current = settingsState.secondaryActivities,
+                            seededForNewType = seededActivities
+                        )
+                        try {
+                            prefsRepo.updateBusinessProfile(
+                                primaryType = newType.id,
+                                secondaryActivities = merged,
+                                version = settingsState.profileVersion
+                            )
+                            isSavingBusinessType = false
+                            showBusinessTypeDialog = false
+                            Toast.makeText(
+                                context,
+                                "Jenis usaha diubah ke ${newType.displayName}",
+                                Toast.LENGTH_LONG
+                            ).show()
+                        } catch (e: Exception) {
+                            isSavingBusinessType = false
+                            businessTypeError = e.localizedMessage ?: "Gagal menyimpan jenis usaha"
+                        }
                     }
                 }
             )

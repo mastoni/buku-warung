@@ -69,6 +69,7 @@ import id.skmnetwork.bukuwarung.domain.business.BusinessTerminology
 import id.skmnetwork.bukuwarung.domain.business.ResolvedBusinessProfile
 import id.skmnetwork.bukuwarung.ui.navigation.AppScreen
 import id.skmnetwork.bukuwarung.ui.product.ProductViewModel
+import id.skmnetwork.bukuwarung.ui.components.AppLoadingState
 import id.skmnetwork.bukuwarung.ui.theme.AppColors
 import id.skmnetwork.bukuwarung.ui.theme.AppResponsive
 import id.skmnetwork.bukuwarung.ui.theme.AppSpacing
@@ -109,6 +110,7 @@ fun HomeScreen(
     val terminology = resolvedProfile.terminology
     val hasStockCapability = resolvedProfile.hasCapability(BusinessCapability.CAP_INVENTORY_STOCK)
 
+    val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
     val dbProducts by viewModel.products.collectAsStateWithLifecycle()
     val cashBalance by viewModel.cashBalance.collectAsStateWithLifecycle()
     val todaySalesTotal by viewModel.todaySalesTotal.collectAsStateWithLifecycle()
@@ -157,6 +159,12 @@ fun HomeScreen(
 
     // Horizontal padding: Compact=16dp, Tablet=24dp
     val horizontalPadding = windowSize.horizontalPadding
+
+    // Step 2 (H): do not present placeholder zeros or an empty list as if they were real answers.
+    if (isLoading) {
+        AppLoadingState()
+        return
+    }
 
     Scaffold(
         topBar = {

@@ -75,6 +75,8 @@ import id.skmnetwork.bukuwarung.pdf.reports.DebtReportMode
 import id.skmnetwork.bukuwarung.pdf.reports.ProductReportPdfBuilder
 import id.skmnetwork.bukuwarung.pdf.reports.PurchaseReportPdfBuilder
 import id.skmnetwork.bukuwarung.pdf.reports.SalesReportPdfBuilder
+import id.skmnetwork.bukuwarung.util.formatQuantityValue
+import id.skmnetwork.bukuwarung.ui.components.AppLoadingState
 import id.skmnetwork.bukuwarung.ui.theme.AppColors
 import id.skmnetwork.bukuwarung.ui.theme.AppSpacing
 import id.skmnetwork.bukuwarung.ui.theme.rememberAppWindowSize
@@ -93,6 +95,7 @@ fun ReportsScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val selectedPeriod by reportViewModel.selectedPeriod.collectAsStateWithLifecycle()
+    val isLoading by reportViewModel.isLoading.collectAsStateWithLifecycle()
     var isRincianLabaExpanded by remember { mutableStateOf(false) }
 
     val resolvedProfile = remember(userSettings?.primaryBusinessType, userSettings?.secondaryActivities) {
@@ -290,6 +293,12 @@ fun ReportsScreen(
     val qrisSales = (grossSalesVal - cashSales - creditSales).coerceAtLeast(0L)
 
     val hasPeriodTransactions = salesCount > 0 || purchaseCount > 0 || (cashIncomeTotal ?: 0L) > 0L || (cashExpenseTotal ?: 0L) > 0L
+
+    // Step 2 (H): a report page full of 0L placeholders reads as real data. Wait for the first value.
+    if (isLoading) {
+        AppLoadingState()
+        return
+    }
 
     Scaffold(
         topBar = {
@@ -1483,7 +1492,7 @@ private fun TopProductItemRow(
                     color = AppColors.TextPrimary
                 )
             )
-            val qtyText = if (item.totalQuantity % 1.0 == 0.0) "${item.totalQuantity.toInt()} pcs" else "${item.totalQuantity} pcs"
+            val qtyText = "${formatQuantityValue(item.totalQuantity)} pcs"
             Text(
                 text = "Terjual: $qtyText",
                 style = MaterialTheme.typography.bodySmall.copy(

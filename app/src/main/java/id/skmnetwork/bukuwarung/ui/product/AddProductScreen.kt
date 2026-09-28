@@ -81,6 +81,7 @@ import id.skmnetwork.bukuwarung.ui.components.CameraProductPhotoDialog
 import id.skmnetwork.bukuwarung.ui.components.PrimaryButton
 import id.skmnetwork.bukuwarung.ui.components.ProductImageThumbnail
 import id.skmnetwork.bukuwarung.ui.components.SecondaryButton
+import id.skmnetwork.bukuwarung.util.formatQuantityValue
 import id.skmnetwork.bukuwarung.ui.theme.AppColors
 import id.skmnetwork.bukuwarung.ui.theme.rememberAppWindowSize
 import id.skmnetwork.bukuwarung.ui.theme.AppShapes
@@ -120,6 +121,12 @@ fun AddProductScreen(
     var purchasePrice by remember { mutableStateOf("") }
     var sellingPrice by remember { mutableStateOf("") }
     var stock by remember { mutableStateOf("") }
+
+    // Step 2 (A): the live stock of an existing product, read-only on this screen. It is never
+    // written back by the product form; only the stock adjustment flow below may change it.
+    var currentStock by remember { mutableStateOf(0.0) }
+    var showStockAdjustmentDialog by remember { mutableStateOf(false) }
+    var stockAdjustmentError by remember { mutableStateOf<String?>(null) }
     var minimumStock by remember { mutableStateOf(if (isEditMode) "" else defaultLowStockLimit.toString()) }
     var unit by remember { mutableStateOf(preferredUnits.firstOrNull() ?: "pcs") }
     var selectedItemType by remember { mutableStateOf(ItemType.PHYSICAL) }
@@ -132,6 +139,17 @@ fun AddProductScreen(
 
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var isSaving by remember { mutableStateOf(false) }
+
+    // Step 2 (F): the selected business type suggests a sensible starting product type. It is only a
+    // starting point - the merchant can always pick a different one, because a warung can also sell
+    // pulsa and a bengkel also sells parts. Applied once, only while ADDING: an existing product keeps
+    // the type it was created with.
+    val suggestedItemType = resolvedProfile.suggestedItemType
+    LaunchedEffect(productIdToEdit, suggestedItemType) {
+        if (productIdToEdit == null) {
+            selectedItemType = suggestedItemType
+        }
+    }
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showBarcodeScannerDialog by remember { mutableStateOf(false) }
     var showCameraPhotoDialog by remember { mutableStateOf(false) }
@@ -173,6 +191,7 @@ fun AddProductScreen(
                 purchasePrice = product.purchasePrice.toString()
                 sellingPrice = product.sellingPrice.toString()
                 stock = if (product.stock % 1.0 == 0.0) product.stock.toLong().toString() else product.stock.toString()
+                currentStock = product.stock
                 minimumStock = if (product.minimumStock % 1.0 == 0.0) product.minimumStock.toLong().toString() else product.minimumStock.toString()
                 unit = product.unit
                 barcode = product.barcode ?: ""
@@ -458,6 +477,42 @@ fun AddProductScreen(
         )
     }
 
+    if (showStockAdjustmentDialog && productIdToEdit != null) {
+        StockAdjustmentDialog(
+            productName = name,
+            unit = unit,
+            currentStock = currentStock,
+            isStockable = ItemType.isStockable(selectedItemType.name),
+            isSaving = isSaving,
+            externalError = if (showStockAdjustmentDialog) stockAdjustmentError else null,
+            onDismiss = {
+                showStockAdjustmentDialog = false
+                stockAdjustmentError = null
+            },
+            onSave = { newStock, note, isStockCount ->
+                isSaving = true
+                stockAdjustmentError = null
+                viewModel.adjustStock(
+                    productId = productIdToEdit,
+                    newStock = newStock,
+                    note = note,
+                    isStockCount = isStockCount,
+                    onSuccess = { result ->
+                        isSaving = false
+                        showStockAdjustmentDialog = false
+                        stockAdjustmentError = null
+                        currentStock = result.newStock
+                        errorMessage = null
+                    },
+                    onError = { error ->
+                        isSaving = false
+                        stockAdjustmentError = error
+                    }
+                )
+            }
+        )
+    }
+
     if (showDeleteDialog && productIdToEdit != null) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
@@ -612,6 +667,14 @@ fun AddProductScreen(
                     text = "Tipe $productLabel",
                     style = MaterialTheme.typography.bodySmall,
                     fontWeight = FontWeight.SemiBold,
+                    color = AppColors.TextSecondary
+                )
+                // Step 2 (F/G): explain that the choice was made for the merchant, and that it is not
+                // a restriction. This is a contextual default, not a lock.
+                Text(
+                    text = "Jenis usaha Anda membantu menentukan pilihan awal. " +
+                        "Anda tetap dapat menjual jenis produk lainnya.",
+                    style = MaterialTheme.typography.bodySmall,
                     color = AppColors.TextSecondary
                 )
                 Row(
@@ -813,15 +876,62 @@ fun AddProductScreen(
 
             // Stock Fields: Active for PHYSICAL and FUEL; hidden/untracked for SERVICE
             if (selectedItemType == ItemType.PHYSICAL || selectedItemType == ItemType.FUEL) {
-                AppTextField(
-                    value = stock,
-                    onValueChange = {
-                        stock = it
-                        errorMessage = null
-                    },
-                    label = "Stok Awal",
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
-                )
+                // Step 2 (A): on a new product the merchant sets the opening stock here. On an
+                // EXISTING product the live stock is shown read-only and can only be changed through
+                // "Sesuaikan Stok", which writes a stock movement. Previously this field was
+                // pre-filled with the current stock and written straight back, so correcting a price
+                // silently reset the day's real stock.
+                if (isEditMode) {
+                    AppCard(
+                        backgroundColor = MaterialTheme.colorScheme.surfaceVariant,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(AppSpacing.sm)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Stok Saat Ini",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = AppColors.TextSecondary
+                                )
+                                Text(
+                                    text = "${formatQuantityValue(currentStock)} ${unit}",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = AppColors.GreenDark
+                                )
+                            }
+                            Text(
+                                text = "Stok tidak lagi ikut berubah saat produk ini diedit. " +
+                                    "Untuk mengurangi atau menambah stok, gunakan penyesuaian stok " +
+                                    "agar riwayat stok tetap tercatat.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = AppColors.TextSecondary
+                            )
+                            SecondaryButton(
+                                text = "Sesuaikan Stok / Opname",
+                                onClick = { showStockAdjustmentDialog = true },
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                    }
+                } else {
+                    AppTextField(
+                        value = stock,
+                        onValueChange = {
+                            stock = it
+                            errorMessage = null
+                        },
+                        label = "Stok Awal",
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
+                    )
+                }
 
                 AppTextField(
                     value = minimumStock,
@@ -917,7 +1027,6 @@ fun AddProductScreen(
                             categoryName = category,
                             purchasePriceStr = purchasePrice,
                             sellingPriceStr = sellingPrice,
-                            stockStr = finalStockStr,
                             minimumStockStr = finalMinStockStr,
                             unitStr = unit,
                             barcodeStr = barcode,

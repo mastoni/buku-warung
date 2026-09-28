@@ -436,7 +436,7 @@ fun SaleReturnDialog(
                                                 color = AppColors.TextSecondary
                                             )
                                             Text(
-                                                "Terjual: ${item.quantity.toInt()} | Sudah diretur: ${alreadyReturned.toInt()}",
+                                                "Terjual: ${formatQuantityValue(item.quantity)} | Sudah diretur: ${formatQuantityValue(alreadyReturned)}",
                                                 style = MaterialTheme.typography.labelSmall,
                                                 color = AppColors.TextSecondary
                                             )

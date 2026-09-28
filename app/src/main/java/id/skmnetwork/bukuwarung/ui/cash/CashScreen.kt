@@ -57,6 +57,7 @@ import id.skmnetwork.bukuwarung.data.local.entity.CashTransactionEntity
 import id.skmnetwork.bukuwarung.data.preferences.UserSettings
 import id.skmnetwork.bukuwarung.ui.components.AppTextField
 import id.skmnetwork.bukuwarung.ui.product.ProductViewModel
+import id.skmnetwork.bukuwarung.ui.components.AppLoadingState
 import id.skmnetwork.bukuwarung.ui.theme.AppColors
 import id.skmnetwork.bukuwarung.ui.theme.rememberAppWindowSize
 import id.skmnetwork.bukuwarung.util.formatRupiah
@@ -71,6 +72,7 @@ fun CashScreen(
     userSettings: UserSettings? = null
 ) {
     val windowSize = rememberAppWindowSize()
+    val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
     val cashBalance by viewModel.cashBalance.collectAsStateWithLifecycle()
     val cashTransactions by viewModel.cashTransactions.collectAsStateWithLifecycle()
 
@@ -206,6 +208,12 @@ fun CashScreen(
     // ==========================================
     // MAIN CASH SCREEN SCAFFOLD
     // ==========================================
+    // Step 2 (H): do not present placeholder zeros or an empty list as if they were real answers.
+    if (isLoading) {
+        AppLoadingState()
+        return
+    }
+
     Scaffold(
         topBar = {
             CashHeader(transactionCount = cashTransactions.size)

@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
+import id.skmnetwork.bukuwarung.util.loadingFlag
 import java.util.Calendar
 
 enum class ReportPeriod(val label: String) {
@@ -45,11 +46,18 @@ class ReportViewModel(
         selectedPeriod.value = period
     }
 
+    // Step 2 (H): every report total was initialised to 0L, so a report opened for the first time
+    // rendered a full page of real-looking zeros before the database answered. This flag is attached
+    // to the raw sales-total source, which is the one the header depends on.
+    private val salesTotalSource = dateRange
+        .flatMapLatest { range -> repository.getSalesTotal(range.startDate, range.endDate) }
+
+    val isLoading: StateFlow<Boolean> = salesTotalSource.loadingFlag(viewModelScope)
+
     // ==========================================
     // 1. SALES & RETURNS REPORTS (Period-Filtered)
     // ==========================================
-    val salesTotal: StateFlow<Long?> = dateRange
-        .flatMapLatest { range -> repository.getSalesTotal(range.startDate, range.endDate) }
+    val salesTotal: StateFlow<Long?> = salesTotalSource
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0L)
 
     val salesTaxableBaseTotal: StateFlow<Long?> = dateRange

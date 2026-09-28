@@ -49,6 +49,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -222,6 +223,9 @@ fun PosScreen(
     }
 
     var showPaymentSelectorDialog by remember { mutableStateOf(false) }
+
+    // Step 2 (E): emptying the cart is destructive, so it is confirmed instead of immediate.
+    var showClearCartDialog by remember { mutableStateOf(false) }
     var showCashPaymentDialog by remember { mutableStateOf(false) }
     var showQrisPaymentDialog by remember { mutableStateOf(false) }
     var showCheckoutSuccessDialog by remember { mutableStateOf(false) }
@@ -513,6 +517,41 @@ fun PosScreen(
                         Toast.makeText(context, error, Toast.LENGTH_SHORT).show()
                     }
                 )
+            }
+        )
+    }
+
+    if (showClearCartDialog) {
+        AlertDialog(
+            onDismissRequest = { showClearCartDialog = false },
+            title = { Text("Kosongkan Keranjang?", fontWeight = FontWeight.Bold) },
+            text = {
+                Text(
+                    "Kosongkan semua barang dari keranjang? " +
+                        "Barang yang sudah dipilih akan dihapus dan harus dipilih ulang."
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showClearCartDialog = false
+                        cart.clear()
+                        discountInputText = ""
+                        selectedCustomerForCredit = null
+                    },
+                    enabled = !isCheckingOut
+                ) {
+                    Text(
+                        text = "Kosongkan",
+                        color = MaterialTheme.colorScheme.error,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showClearCartDialog = false }) {
+                    Text("Batal")
+                }
             }
         )
     }
@@ -881,7 +920,7 @@ fun PosScreen(
                             Column(Modifier.padding(AppSpacing.sm)) {
                                 data.items.forEach { (itemName, qty) ->
                                     Row(modifier = Modifier.fillMaxWidth()) {
-                                        Text("${qty.toInt()} × $itemName", style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
+                                        Text("${formatQuantityValue(qty)} × $itemName", style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
                                     }
                                 }
                             }
@@ -1390,6 +1429,29 @@ fun PosScreen(
 
                                     Spacer(Modifier.height(AppSpacing.sm))
 
+                                    // Step 2 (E): on a phone the cart had no way to be emptied at all
+                                    // except removing lines one by one. It now offers the same
+                                    // confirmed "Kosongkan" as the tablet cart pane.
+                                    if (cart.isNotEmpty()) {
+                                        OutlinedButton(
+                                            onClick = { showClearCartDialog = true },
+                                            enabled = !isCheckingOut,
+                                            shape = RoundedCornerShape(12.dp),
+                                            colors = ButtonDefaults.outlinedButtonColors(
+                                                contentColor = AppColors.RedExpense
+                                            ),
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .height(48.dp)
+                                        ) {
+                                            Text(
+                                                text = "Kosongkan Keranjang",
+                                                fontWeight = FontWeight.SemiBold
+                                            )
+                                        }
+                                        Spacer(Modifier.height(AppSpacing.sm))
+                                    }
+
                                     Button(
                                         onClick = {
                                             if (hasMissingProviderDestination) {
@@ -1619,13 +1681,13 @@ fun PosScreen(
                                         )
                                     }
                                     if (cart.isNotEmpty()) {
+                                        // Step 2 (E): the cart is a lot of work to rebuild by hand, so
+                                        // clearing it is confirmed rather than immediate.
                                         Surface(
                                             shape = RoundedCornerShape(8.dp),
                                             color = Color(0xFFFFEBEE),
                                             modifier = Modifier.clickable(enabled = !isCheckingOut) {
-                                                cart.clear()
-                                                discountInputText = ""
-                                                selectedCustomerForCredit = null
+                                                showClearCartDialog = true
                                             }
                                         ) {
                                             Text(
@@ -2003,7 +2065,7 @@ private fun PosProductCard(
                                 .padding(4.dp)
                         ) {
                             Text(
-                                text = "${currentCartQty.toInt()}x",
+                                text = "${formatQuantityValue(currentCartQty)}x",
                                 color = Color.White,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 11.sp,
@@ -2169,7 +2231,7 @@ private fun PosCartLineItem(
                         }
                     }
                     Text(
-                        "${cartLine.quantity.toInt()}",
+                        formatQuantityValue(cartLine.quantity),
                         fontWeight = FontWeight.Bold,
                         fontSize = 13.sp,
                         modifier = Modifier.padding(horizontal = 8.dp)

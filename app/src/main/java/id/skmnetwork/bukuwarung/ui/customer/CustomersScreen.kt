@@ -62,6 +62,7 @@ import id.skmnetwork.bukuwarung.data.local.entity.DebtEntity
 import id.skmnetwork.bukuwarung.data.preferences.UserSettings
 import id.skmnetwork.bukuwarung.domain.business.BusinessTaxonomyRegistry
 import id.skmnetwork.bukuwarung.ui.components.AppTextField
+import id.skmnetwork.bukuwarung.ui.components.AppLoadingState
 import id.skmnetwork.bukuwarung.ui.theme.AppColors
 import id.skmnetwork.bukuwarung.ui.theme.rememberAppWindowSize
 import id.skmnetwork.bukuwarung.util.formatRupiah
@@ -83,6 +84,7 @@ fun CustomersScreen(
     val terminology = resolvedProfile.terminology
     val customerLabel = terminology.customerLabel
 
+    val isLoading by customerViewModel.isLoading.collectAsStateWithLifecycle()
     val customers by customerViewModel.customers.collectAsStateWithLifecycle()
     var query by remember { mutableStateOf("") }
 
@@ -690,6 +692,12 @@ fun CustomersScreen(
     // ==========================================
     // 5. MAIN CUSTOMERS SCREEN SCAFFOLD
     // ==========================================
+    // Step 2 (H): do not present placeholder zeros or an empty list as if they were real answers.
+    if (isLoading) {
+        AppLoadingState()
+        return
+    }
+
     Scaffold(
         topBar = {
             CustomersTopHeader(

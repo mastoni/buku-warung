@@ -80,6 +80,7 @@ import id.skmnetwork.bukuwarung.domain.money.MoneyCalculator
 import id.skmnetwork.bukuwarung.ui.components.ProductImageThumbnail
 import id.skmnetwork.bukuwarung.ui.product.ProductViewModel
 import id.skmnetwork.bukuwarung.ui.supplier.SupplierViewModel
+import id.skmnetwork.bukuwarung.util.formatQuantityValue
 import id.skmnetwork.bukuwarung.ui.theme.AppColors
 import id.skmnetwork.bukuwarung.ui.theme.rememberAppWindowSize
 import id.skmnetwork.bukuwarung.util.formatRupiah
@@ -127,6 +128,10 @@ fun PurchaseScreen(
     var selectedPurchaseForDetail by remember { mutableStateOf<PurchaseTransactionEntity?>(null) }
     var showSuccessDialog by remember { mutableStateOf(false) }
     var isSaving by remember { mutableStateOf(false) }
+
+    // Step 2 (E): saving a purchase increases stock and may create a supplier payable. Confirmed.
+    var showPurchaseConfirmDialog by remember { mutableStateOf(false) }
+    var pendingPurchaseMethod by remember { mutableStateOf("CASH") }
     val context = LocalContext.current
 
     val currentMonthYear = remember {
@@ -255,6 +260,94 @@ fun PurchaseScreen(
     // ==========================================
     // PURCHASE SUCCESS DIALOG
     // ==========================================
+    if (showPurchaseConfirmDialog) {
+        val isCredit = pendingPurchaseMethod == "CREDIT"
+        AlertDialog(
+            onDismissRequest = { if (!isSaving) showPurchaseConfirmDialog = false },
+            title = {
+                Text(
+                    text = "Simpan $purchaseLabel?",
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Column {
+                    Text(
+                        text = if (isCredit) {
+                            "$purchaseLabel kredit ini akan menambah stok produk dan mencatat " +
+                                "hutang ke $supplierLabel. Tindakan ini tidak dapat dibatalkan."
+                        } else {
+                            "$purchaseLabel ini akan menambah stok produk secara permanen. " +
+                                "Tindakan ini tidak dapat dibatalkan."
+                        }
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        text = "Total: ${formatRupiah(totalPurchaseAmount)}",
+                        fontWeight = FontWeight.Bold,
+                        color = AppColors.GreenDark
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = "${purchaseCart.size} produk",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = AppColors.TextSecondary
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showPurchaseConfirmDialog = false
+                        isSaving = true
+                        if (pendingPurchaseMethod == "CASH") {
+                            viewModel.checkoutPurchase(
+                                purchaseItems = purchaseCart.toMap(),
+                                supplierId = selectedSupplierForCash?.id,
+                                onSuccess = {
+                                    isSaving = false
+                                    purchaseCart.clear()
+                                    selectedSupplierForCash = null
+                                    showSuccessDialog = true
+                                },
+                                onError = { error ->
+                                    isSaving = false
+                                    Toast.makeText(context, error, Toast.LENGTH_SHORT).show()
+                                }
+                            )
+                        } else {
+                            supplierViewModel.checkoutCreditPurchase(
+                                purchaseItems = purchaseCart.toMap(),
+                                supplierId = selectedSupplierForCredit!!.id,
+                                onSuccess = {
+                                    isSaving = false
+                                    purchaseCart.clear()
+                                    selectedSupplierForCredit = null
+                                    showSuccessDialog = true
+                                },
+                                onError = { error ->
+                                    isSaving = false
+                                    Toast.makeText(context, error, Toast.LENGTH_SHORT).show()
+                                }
+                            )
+                        }
+                    },
+                    enabled = !isSaving
+                ) {
+                    Text(
+                        text = if (isSaving) "Menyimpan..." else "Simpan $purchaseLabel",
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showPurchaseConfirmDialog = false }, enabled = !isSaving) {
+                    Text("Batal")
+                }
+            }
+        )
+    }
+
     if (showSuccessDialog) {
         AlertDialog(
             onDismissRequest = { showSuccessDialog = false },
@@ -392,7 +485,7 @@ fun PurchaseScreen(
                                     Column(modifier = Modifier.weight(1f)) {
                                         Text(item.productName, fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.bodySmall)
                                         Text(
-                                            "${item.quantity.toInt()} x ${formatRupiah(item.purchasePrice)}",
+                                            "${formatQuantityValue(item.quantity)} x ${formatRupiah(item.purchasePrice)}",
                                             color = AppColors.TextSecondary,
                                             style = MaterialTheme.typography.labelSmall
                                         )
@@ -715,39 +808,11 @@ fun PurchaseScreen(
                                         showSupplierPickerSheet = true
                                         return@Button
                                     }
-
-                                    isSaving = true
-                                    if (paymentMethod == "CASH") {
-                                        viewModel.checkoutPurchase(
-                                            purchaseItems = purchaseCart.toMap(),
-                                            supplierId = selectedSupplierForCash?.id,
-                                            onSuccess = {
-                                                isSaving = false
-                                                purchaseCart.clear()
-                                                selectedSupplierForCash = null
-                                                showSuccessDialog = true
-                                            },
-                                            onError = { error ->
-                                                isSaving = false
-                                                Toast.makeText(context, error, Toast.LENGTH_SHORT).show()
-                                            }
-                                        )
-                                    } else {
-                                        supplierViewModel.checkoutCreditPurchase(
-                                            purchaseItems = purchaseCart.toMap(),
-                                            supplierId = selectedSupplierForCredit!!.id,
-                                            onSuccess = {
-                                                isSaving = false
-                                                purchaseCart.clear()
-                                                selectedSupplierForCredit = null
-                                                showSuccessDialog = true
-                                            },
-                                            onError = { error ->
-                                                isSaving = false
-                                                Toast.makeText(context, error, Toast.LENGTH_SHORT).show()
-                                            }
-                                        )
-                                    }
+                                    // Step 2 (E): saving a purchase permanently increases stock and, for a
+                                    // credit purchase, records a supplier payable. There is no undo, so the
+                                    // merchant confirms the consequence first.
+                                    pendingPurchaseMethod = paymentMethod
+                                    showPurchaseConfirmDialog = true
                                 },
                                 enabled = !isSaving,
                                 shape = RoundedCornerShape(12.dp),
@@ -1193,7 +1258,7 @@ private fun PurchaseItemCard(
                         }
 
                         Text(
-                            text = "${quantity.toInt()}",
+                            text = formatQuantityValue(quantity),
                             fontWeight = FontWeight.Bold,
                             fontSize = 13.5.sp,
                             color = if (quantity > 0) AppColors.GreenPrimary else AppColors.TextPrimary,

@@ -59,8 +59,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import id.skmnetwork.bukuwarung.data.local.entity.ItemType
 import id.skmnetwork.bukuwarung.data.local.entity.ProductEntity
 import id.skmnetwork.bukuwarung.data.preferences.UserSettings
+import id.skmnetwork.bukuwarung.domain.business.BusinessCapability
 import id.skmnetwork.bukuwarung.domain.business.BusinessTaxonomyRegistry
 import id.skmnetwork.bukuwarung.ui.components.ProductImageThumbnail
+import id.skmnetwork.bukuwarung.util.formatQuantityValue
+import id.skmnetwork.bukuwarung.ui.components.AppLoadingState
 import id.skmnetwork.bukuwarung.ui.theme.AppColors
 import id.skmnetwork.bukuwarung.ui.theme.rememberAppWindowSize
 import id.skmnetwork.bukuwarung.util.formatRupiah
@@ -81,6 +84,20 @@ fun ProductsScreen(
     }
     val productLabel = resolvedProfile.terminology.productLabel
 
+    // Step 2 (G): a capability-derived HINT for the empty state. This is additive only - it never
+    // hides a feature or restricts a product type, because the taxonomy's capabilities are not yet
+    // backed by complete per-type behaviour.
+    val capabilityHint = when {
+        resolvedProfile.hasCapability(BusinessCapability.CAP_DIGITAL_ITEMS) ->
+            "Pilih tipe Produk Digital saat menambah ${productLabel.lowercase()} " +
+                "untuk pulsa, token, atau voucher."
+        resolvedProfile.hasCapability(BusinessCapability.CAP_SERVICE_ITEMS) ->
+            "Pilih tipe Jasa / Layanan untuk pekerjaan yang tidak memakai stok, " +
+                "misalnya servis atau jasa harian."
+        else -> null
+    }
+
+    val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
     val dbProducts by viewModel.products.collectAsStateWithLifecycle()
     val dbCategories by viewModel.categories.collectAsStateWithLifecycle()
 
@@ -99,6 +116,12 @@ fun ProductsScreen(
     }
 
     val categoryChipNames = listOf("Semua") + dbCategories.map { it.name }
+
+    // Step 2 (H): do not present placeholder zeros or an empty list as if they were real answers.
+    if (isLoading) {
+        AppLoadingState()
+        return
+    }
 
     Scaffold(
         topBar = {
@@ -245,6 +268,7 @@ fun ProductsScreen(
                 // Global Empty State (No products added yet)
                 ProductsEmptyState(
                     productLabel = productLabel,
+                    capabilityHint = capabilityHint,
                     onAddProduct = onAddProduct
                 )
             } else if (filteredProducts.isEmpty()) {
@@ -528,7 +552,8 @@ private fun StockStatusBadge(
             }
         }
         else -> {
-            val displayStock = if (stock % 1.0 == 0.0) stock.toInt().toString() else stock.toString()
+            // Step 2 (B): use the shared formatter instead of a second local copy of the same rule.
+            val displayStock = formatQuantityValue(stock)
 
             when {
                 stock <= 0 -> {
@@ -584,6 +609,7 @@ private fun StockStatusBadge(
 @Composable
 private fun ProductsEmptyState(
     productLabel: String = "Produk",
+    capabilityHint: String? = null,
     onAddProduct: () -> Unit
 ) {
     Box(
@@ -622,6 +648,21 @@ private fun ProductsEmptyState(
             )
 
             Spacer(Modifier.height(6.dp))
+
+            // Step 2 (G): the first safe use of BusinessCapability. It only ADDS a hint, it never
+            // hides a feature: a service business is told it can sell services, a pulsa shop is told
+            // it can sell pulsa, and a shop with no such capability is left alone.
+            if (capabilityHint != null) {
+                Text(
+                    text = capabilityHint,
+                    style = MaterialTheme.typography.bodySmall.copy(
+                        fontSize = 12.sp,
+                        color = AppColors.GreenDark
+                    ),
+                    textAlign = TextAlign.Center
+                )
+                Spacer(Modifier.height(6.dp))
+            }
 
             Text(
                 text = "Tambahkan $productLabel jualan untuk mulai mencatat stok dan transaksi kasir.",

@@ -3,6 +3,7 @@ package id.skmnetwork.bukuwarung.ui.components
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -12,6 +13,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -27,6 +29,23 @@ import androidx.compose.ui.unit.dp
 import id.skmnetwork.bukuwarung.ui.theme.AppColors
 import id.skmnetwork.bukuwarung.ui.theme.AppShapes
 import id.skmnetwork.bukuwarung.ui.theme.AppSpacing
+
+/**
+ * Step 2 (H) - the single loading affordance used by every data-backed screen.
+ *
+ * Deliberately a plain centred indicator rather than a skeleton: these screens have 13 to 30 separate
+ * figures on them, and a skeleton for each one would be far more noise than a merchant needs. The
+ * point is only to stop "Rp 0" and "Belum ada produk" being shown as if they were real answers.
+ */
+@Composable
+fun AppLoadingState(modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        CircularProgressIndicator(color = AppColors.GreenPrimary)
+    }
+}
 
 @Composable
 fun AppCard(

@@ -181,13 +181,21 @@ class ProductRepository(
         }
     }
 
+    /**
+     * Step 2 (A) - editing a product must NEVER rewrite live stock.
+     *
+     * The `stock` parameter is gone by design. A merchant opening a product to fix a price used to be
+     * able to silently reset stock to whatever stale number the form was pre-filled with, which
+     * destroyed the day's real stock figure and left no way to recover it. Stock is now changed only
+     * through [adjustStock], which writes a stock movement, so the ledger and the product row can
+     * never disagree.
+     */
     suspend fun updateProductWithCategory(
         productId: Long,
         name: String,
         categoryName: String,
         purchasePrice: Long,
         sellingPrice: Long,
-        stock: Double,
         minimumStock: Double,
         unit: String,
         barcode: String? = null,
@@ -226,7 +234,8 @@ class ProductRepository(
             name = name.trim(),
             purchasePrice = purchasePrice,
             sellingPrice = sellingPrice,
-            stock = stock,
+            // Live stock is deliberately carried over untouched. See [adjustStock].
+            stock = existingProduct.stock,
             minimumStock = minimumStock,
             unit = unit.trim().ifEmpty { "pcs" },
             itemType = resolvedItemType,
@@ -239,20 +248,6 @@ class ProductRepository(
         )
 
         appDatabase.withTransaction {
-            val stockDiff = stock - existingProduct.stock
-            if (stockDiff != 0.0 && ItemType.isStockable(existingProduct.itemType)) {
-                stockMovementDao.insertMovement(
-                    StockMovementEntity(
-                        businessId = businessId,
-                        productUuid = existingProduct.uuid,
-                        movementType = "ADJUSTMENT",
-                        deltaQuantity = stockDiff,
-                        currentStockSnapshot = stock,
-                        note = "Penyesuaian stok saat update produk",
-                        createdAt = now
-                    )
-                )
-            }
             productDao.updateProduct(product)
             syncQueueDao.insert(
                 SyncQueueEntity(
@@ -267,6 +262,90 @@ class ProductRepository(
             )
         }
     }
+
+    /** Outcome of a stock correction, used to report the difference back to the merchant. */
+    data class StockAdjustmentResult(
+        val productUuid: String,
+        val previousStock: Double,
+        val newStock: Double,
+        val delta: Double,
+        val movementId: Long
+    )
+
+    /**
+     * Step 2 (D) - the ONLY supported way to change an existing product's stock.
+     *
+     * Uses the existing stock-movement architecture: a movement row plus a sync-queue entry are
+     * written in the same transaction as the product update, so the ledger and the product row can
+     * never diverge. This is what the former "Stok Awal" field on the product form used to do, but
+     * without a movement record and without the merchant knowing it had happened.
+     *
+     * @param movementType `OPNAME` for a physical stock count, `ADJUSTMENT` for a correction.
+     */
+    suspend fun adjustStock(
+        productId: Long,
+        newStock: Double,
+        note: String? = null,
+        movementType: String = "ADJUSTMENT",
+        createdAt: Long = System.currentTimeMillis()
+    ): StockAdjustmentResult = withContext(Dispatchers.IO) {
+        val product = productDao.getProductById(productId, businessId)
+            ?: throw Exception("Produk tidak ditemukan")
+
+        // All the rules live in one pure, unit-tested place.
+        val validation = id.skmnetwork.bukuwarung.domain.stock.StockAdjustment.validate(
+            currentStock = product.stock,
+            proposedStock = newStock,
+            itemTypeName = product.itemType,
+            isStockCount = movementType == "OPNAME"
+        )
+        val accepted = validation as? id.skmnetwork.bukuwarung.domain.stock.StockAdjustmentValidation.Valid
+            ?: throw Exception(
+                (validation as id.skmnetwork.bukuwarung.domain.stock.StockAdjustmentValidation.Rejected).reason
+            )
+
+        val movementUuid = UUID.randomUUID().toString()
+        val movementId = appDatabase.withTransaction {
+            val id = stockMovementDao.insertMovement(
+                StockMovementEntity(
+                    uuid = movementUuid,
+                    businessId = businessId,
+                    productUuid = product.uuid,
+                    movementType = movementType,
+                    deltaQuantity = accepted.delta,
+                    currentStockSnapshot = accepted.newStock,
+                    note = note?.trim()?.ifEmpty { null }
+                        ?: if (movementType == "OPNAME") "Stok opname" else "Penyesuaian stok",
+                    createdAt = createdAt
+                )
+            )
+            productDao.updateProduct(product.copy(stock = accepted.newStock, updatedAt = createdAt))
+            syncQueueDao.insert(
+                SyncQueueEntity(
+                    businessId = businessId,
+                    deviceId = "LEGACY_DEVICE",
+                    entityType = "STOCK_ADJUSTMENT",
+                    entityUuid = movementUuid,
+                    operation = "INSERT",
+                    createdAt = createdAt,
+                    updatedAt = createdAt
+                )
+            )
+            id
+        }
+
+        StockAdjustmentResult(
+            productUuid = product.uuid,
+            previousStock = accepted.previousStock,
+            newStock = accepted.newStock,
+            delta = accepted.delta,
+            movementId = movementId
+        )
+    }
+
+    /** Ledger history for a product, newest first as stored. */
+    fun getStockMovementHistory(productUuid: String): Flow<List<StockMovementEntity>> =
+        stockMovementDao.getMovementsForProduct(businessId, productUuid)
 
     suspend fun deleteProductById(productId: Long) = withContext(Dispatchers.IO) {
         val existingProduct = productDao.getProductById(productId, businessId)
