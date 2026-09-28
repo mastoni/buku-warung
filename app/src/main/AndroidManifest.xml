@@ -25,8 +25,32 @@
         android:label="Buku Warung"
         android:supportsRtl="true"
         android:theme="@style/Theme.BukuWarung">
+        <!--
+            Step 16: the app keeps its whole UI in composition-scoped `remember` state, and the
+            app root (`BukuWarungApp`) holds its own gate state - `isDebugBypassed`,
+            `isCheckingExistingUser` and the `LicenseManager` instance. The manifest previously
+            declared no `configChanges`, so Android destroyed and rebuilt the entire composition on
+            every rotation. That reset the gate state, re-ran the licence and tenant gates from
+            scratch and dropped the merchant back onto the Licence Gate, which looks exactly like
+            the app exiting. There was never a crash: the process survived every rotation.
+
+            Declaring these two makes rotation a configuration change the Activity handles itself
+            instead of being recreated for, so the current screen, any open dialog and the gate
+            state all survive.
+
+              * `orientation` - the change that was reported.
+              * `screenSize`   - the mandatory companion. Since API 13 a rotation is reported as a
+                                  screen size swap (width/height exchange), not only as an
+                                  orientation change; without this flag Android still recreates the
+                                  Activity on rotation.
+
+            Deliberately NOT listed: uiMode, fontScale, locale, layoutDirection, density,
+            screenLayout and smallestScreenSize. Those are separate configuration changes with
+            separate risks, and the reported defect is orientation only.
+        -->
         <activity
             android:name=".MainActivity"
+            android:configChanges="orientation|screenSize"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
