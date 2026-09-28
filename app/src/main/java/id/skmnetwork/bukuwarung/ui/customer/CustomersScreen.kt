@@ -506,7 +506,7 @@ fun CustomersScreen(
                             ),
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(42.dp)
+                                .height(48.dp)
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Add,
@@ -821,7 +821,7 @@ fun CustomersScreen(
                     ),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(46.dp)
+                        .height(48.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.Add,

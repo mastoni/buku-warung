@@ -371,7 +371,7 @@ fun CashScreen(
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier
                             .weight(1f)
-                            .height(46.dp)
+                            .height(48.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Default.Add,
@@ -402,7 +402,7 @@ fun CashScreen(
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier
                             .weight(1f)
-                            .height(46.dp)
+                            .height(48.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Default.Add,

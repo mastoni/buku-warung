@@ -770,7 +770,7 @@ fun PurchaseScreen(
                                     color = if (paymentMethod == "CASH") AppColors.GreenPrimary else Color(0xFFF1F4F2),
                                     modifier = Modifier
                                         .weight(1f)
-                                        .height(40.dp)
+                                        .height(48.dp)
                                         .clickable { paymentMethod = "CASH" }
                                 ) {
                                     Box(contentAlignment = Alignment.Center) {
@@ -789,7 +789,7 @@ fun PurchaseScreen(
                                     color = if (paymentMethod == "CREDIT") Color(0xFFD32F2F) else Color(0xFFF1F4F2),
                                     modifier = Modifier
                                         .weight(1f)
-                                        .height(40.dp)
+                                        .height(48.dp)
                                         .clickable { paymentMethod = "CREDIT" }
                                 ) {
                                     Box(contentAlignment = Alignment.Center) {
@@ -1367,9 +1367,12 @@ private fun PurchaseItemCard(
                         color = AppColors.GreenPrimary
                     )
                     Spacer(Modifier.height(4.dp))
+                    // Step 19: this is a destructive control on a money row, so the tappable area
+                    // is restored to Material's 48dp. The Close icon keeps its own visual size,
+                    // and the onClick semantics, confirmation and cart maths are untouched.
                     IconButton(
                         onClick = onClear,
-                        modifier = Modifier.size(22.dp)
+                        modifier = Modifier.size(48.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Default.Close,
@@ -1548,7 +1551,7 @@ private fun PurchaseEmptyProductsState(
                     containerColor = AppColors.GreenPrimary,
                     contentColor = Color.White
                 ),
-                modifier = Modifier.height(44.dp)
+                modifier = Modifier.height(48.dp)
             ) {
                 Icon(
                     imageVector = Icons.Default.Add,
@@ -1630,7 +1633,7 @@ private fun PurchaseEmptyHistoryState(
                     containerColor = AppColors.GreenPrimary,
                     contentColor = Color.White
                 ),
-                modifier = Modifier.height(44.dp)
+                modifier = Modifier.height(48.dp)
             ) {
                 Icon(
                     imageVector = Icons.Default.ShoppingCart,

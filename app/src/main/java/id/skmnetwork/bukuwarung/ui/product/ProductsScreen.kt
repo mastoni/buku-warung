@@ -170,7 +170,7 @@ fun ProductsScreen(
                     color = AppColors.GreenPrimary,
                     contentColor = Color.White,
                     shadowElevation = 3.dp,
-                    modifier = Modifier.height(44.dp)
+                    modifier = Modifier.height(48.dp)
                 ) {
                     Row(
                         modifier = Modifier.padding(horizontal = 14.dp),
@@ -707,7 +707,7 @@ private fun ProductsEmptyState(
                     containerColor = AppColors.GreenPrimary,
                     contentColor = Color.White
                 ),
-                modifier = Modifier.height(44.dp)
+                modifier = Modifier.height(48.dp)
             ) {
                 Icon(
                     imageVector = Icons.Default.Add,

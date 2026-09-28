@@ -56,6 +56,11 @@ object PosMetrics {
     val SearchPadding: Dp = 16.dp
     val SearchLeadingIconSize: Dp = 24.dp
     val SearchTrailingIconSize: Dp = 24.dp
+    // Step 19: the barcode scanner is a primary POS action and the only way to open the scanner,
+    // so its tappable area follows the same 48dp accessibility rule as ProductAddTouchTarget and
+    // CartClearTouchTarget below. The visual icon stays at SearchTrailingIconSize; only the touch
+    // target grows, and 48dp still fits inside the 54dp SearchHeight so the field is unchanged.
+    val SearchTrailingTouchTarget: Dp = 48.dp
     val SearchPlaceholderSize = 16.sp
 
     // ---- 5. Mode tabs ----------------------------------------------------------

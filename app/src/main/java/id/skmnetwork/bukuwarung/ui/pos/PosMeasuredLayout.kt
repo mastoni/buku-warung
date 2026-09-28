@@ -247,14 +247,21 @@ fun PosSearchBar(
             )
         },
         trailingIcon = {
-            Icon(
-                imageVector = Icons.Default.QrCodeScanner,
-                contentDescription = "Pindai barcode",
-                tint = PosPalette.Primary,
+            // Step 19: 48dp tappable container, same visual icon size and same on-screen
+            // position (the icon is centred inside the target, so it does not move).
+            Box(
                 modifier = Modifier
-                    .size(PosMetrics.SearchTrailingIconSize)
-                    .clickable { onScanClick() }
-            )
+                    .size(PosMetrics.SearchTrailingTouchTarget)
+                    .clickable { onScanClick() },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.QrCodeScanner,
+                    contentDescription = "Pindai barcode",
+                    tint = PosPalette.Primary,
+                    modifier = Modifier.size(PosMetrics.SearchTrailingIconSize)
+                )
+            }
         },
         colors = OutlinedTextFieldDefaults.colors(
             focusedBorderColor = PosPalette.Primary,
