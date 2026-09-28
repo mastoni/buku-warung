@@ -77,7 +77,14 @@ import id.skmnetwork.bukuwarung.data.local.entity.SupplierEntity
 import id.skmnetwork.bukuwarung.data.preferences.UserSettings
 import id.skmnetwork.bukuwarung.domain.business.BusinessTaxonomyRegistry
 import id.skmnetwork.bukuwarung.domain.money.MoneyCalculator
+import id.skmnetwork.bukuwarung.ui.components.ALL_CATEGORIES_LABEL
+import id.skmnetwork.bukuwarung.ui.components.ProductCategoryChips
+import id.skmnetwork.bukuwarung.ui.components.ProductFilterEmptyState
+import id.skmnetwork.bukuwarung.ui.components.ProductFilterState
 import id.skmnetwork.bukuwarung.ui.components.ProductImageThumbnail
+import id.skmnetwork.bukuwarung.ui.components.ProductSearchField
+import id.skmnetwork.bukuwarung.ui.components.buildCategoryChipNames
+import id.skmnetwork.bukuwarung.ui.components.filterProductsBySearch
 import id.skmnetwork.bukuwarung.ui.product.ProductViewModel
 import id.skmnetwork.bukuwarung.ui.supplier.SupplierViewModel
 import id.skmnetwork.bukuwarung.util.formatQuantityValue
@@ -99,6 +106,7 @@ fun PurchaseScreen(
     onNavigateToAddProduct: () -> Unit = {}
 ) {
     val dbProducts by viewModel.products.collectAsStateWithLifecycle()
+    val dbCategories by viewModel.categories.collectAsStateWithLifecycle()
     val suppliers by supplierViewModel.suppliers.collectAsStateWithLifecycle()
     val purchases by viewModel.purchases.collectAsStateWithLifecycle()
     val purchaseCart = remember { mutableStateMapOf<Long, Double>() }
@@ -118,6 +126,24 @@ fun PurchaseScreen(
 
     var selectedTab by remember { mutableStateOf(0) } // 0: Belanja Baru, 1: Pesanan Supplier (PO), 2: Riwayat Belanja
     var showCreatePoDialog by remember { mutableStateOf(false) }
+
+    // Step 6 - discovery for the restock list. The list used to be the whole catalogue in whatever
+    // order the query returned, so finding one product meant scrolling past every other one.
+    // These controls reuse the Products screen's search field, category chips and empty state, and
+    // the same pure filter, so "search" means one thing in the app. Filtering is read-only: it
+    // never touches stock, the purchase cart or any persisted state.
+    var productQuery by remember { mutableStateOf("") }
+    var selectedCategoryId by remember { mutableStateOf<Long?>(null) }
+    var lowStockOnly by remember { mutableStateOf(false) }
+
+    val selectedCategoryObj = dbCategories.find { it.id == selectedCategoryId }
+    val productFilter = ProductFilterState(
+        query = productQuery,
+        selectedCategoryId = selectedCategoryId,
+        lowStockOnly = lowStockOnly
+    )
+    val restockProducts = filterProductsBySearch(dbProducts, productFilter)
+    val categoryChipNames = buildCategoryChipNames(dbCategories, selectedCategoryId)
 
     var paymentMethod by remember { mutableStateOf("CASH") } // "CASH" or "CREDIT"
     var selectedSupplierForCredit by remember { mutableStateOf<SupplierEntity?>(null) }
@@ -598,11 +624,54 @@ fun PurchaseScreen(
                         }
                     }
 
+                    // Step 6: search + filters, only when the catalogue actually has products.
+                    if (dbProducts.isNotEmpty() && (dbCategories.isNotEmpty() || lowStockOnly)) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(MaterialTheme.colorScheme.surface)
+                                .padding(bottom = 12.dp)
+                        ) {
+                            ProductSearchField(
+                                query = productQuery,
+                                onQueryChange = { productQuery = it },
+                                productLabel = productLabel
+                            )
+                            Spacer(Modifier.height(4.dp))
+                            ProductCategoryChips(
+                                categoryNames = categoryChipNames,
+                                selectedCategoryName = selectedCategoryObj?.name ?: ALL_CATEGORIES_LABEL,
+                                onSelectCategory = { name ->
+                                    // Selecting the same category again clears it, so a merchant can
+                                    // always get back to the whole list without hunting for a chip.
+                                    selectedCategoryId =
+                                        if (name == ALL_CATEGORIES_LABEL) null
+                                        else if (name == selectedCategoryObj?.name) null
+                                        else dbCategories.firstOrNull { it.name == name }?.id
+                                },
+                                toggleLabel = "Stok Menipis",
+                                isToggleActive = lowStockOnly,
+                                onToggle = { lowStockOnly = !lowStockOnly }
+                            )
+                        }
+                    }
+
                     if (dbProducts.isEmpty()) {
                         // Empty State when no products exist in catalog
                         PurchaseEmptyProductsState(
                             productLabel = productLabel,
                             onAddProduct = onNavigateToAddProduct
+                        )
+                    } else if (restockProducts.isEmpty()) {
+                        // Search / filter excluded everything. The catalogue is fine; the query is not.
+                        ProductFilterEmptyState(
+                            productLabel = productLabel,
+                            query = productQuery,
+                            onResetFilter = {
+                                productQuery = ""
+                                selectedCategoryId = null
+                                lowStockOnly = false
+                            }
                         )
                     } else {
                         // Product Restock List
@@ -616,7 +685,7 @@ fun PurchaseScreen(
                             ),
                             modifier = Modifier.fillMaxSize()
                         ) {
-                            items(dbProducts, key = { it.id }) { product ->
+                            items(restockProducts, key = { it.id }) { product ->
                                 val qty = purchaseCart[product.id] ?: 0.0
                                 val itemSubtotal = MoneyCalculator.lineSubtotal(product.purchasePrice, qty)
 

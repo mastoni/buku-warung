@@ -66,6 +66,11 @@ import id.skmnetwork.bukuwarung.domain.business.BusinessTaxonomyRegistry
 import id.skmnetwork.bukuwarung.ui.components.ProductImageThumbnail
 import id.skmnetwork.bukuwarung.util.formatQuantityValue
 import id.skmnetwork.bukuwarung.ui.components.AppLoadingState
+import id.skmnetwork.bukuwarung.ui.components.ProductCategoryChips
+import id.skmnetwork.bukuwarung.ui.components.ProductFilterEmptyState
+import id.skmnetwork.bukuwarung.ui.components.ProductFilterState
+import id.skmnetwork.bukuwarung.ui.components.ProductSearchField
+import id.skmnetwork.bukuwarung.ui.components.filterProductsBySearch
 import id.skmnetwork.bukuwarung.ui.theme.AppColors
 import id.skmnetwork.bukuwarung.ui.theme.rememberAppWindowSize
 import id.skmnetwork.bukuwarung.util.formatRupiah
@@ -126,16 +131,19 @@ fun ProductsScreen(
     val windowSize = rememberAppWindowSize()
     var query by remember { mutableStateOf("") }
     var selectedCategoryName by remember { mutableStateOf("Semua") }
+    // Step 6: the catalogue is now filterable, and "low stock" is the app's own predicate.
+    var lowStockOnly by remember { mutableStateOf(false) }
 
     val selectedCategoryObj = dbCategories.find { it.name.equals(selectedCategoryName, ignoreCase = true) }
 
-    val filteredProducts = dbProducts.filter { product ->
-        val matchesQuery = product.name.contains(query, ignoreCase = true) ||
-                (!product.barcode.isNullOrBlank() && product.barcode.contains(query, ignoreCase = true))
-        val matchesCategory = selectedCategoryName == "Semua" ||
-                (selectedCategoryObj != null && product.categoryId == selectedCategoryObj.id)
-        matchesQuery && matchesCategory
-    }
+    val filteredProducts = filterProductsBySearch(
+        products = dbProducts,
+        filter = ProductFilterState(
+            query = query,
+            selectedCategoryId = selectedCategoryObj?.id,
+            lowStockOnly = lowStockOnly
+        )
+    )
 
     val categoryChipNames = listOf("Semua") + dbCategories.map { it.name }
 
@@ -208,78 +216,24 @@ fun ProductsScreen(
                     .background(MaterialTheme.colorScheme.surface)
                     .padding(bottom = 12.dp)
             ) {
-                // Search Input
-                OutlinedTextField(
-                    value = query,
-                    onValueChange = { query = it },
-                    placeholder = {
-                        Text(
-                            text = "Cari $productLabel / barcode...",
-                            fontSize = 13.5.sp,
-                            color = AppColors.TextSecondary
-                        )
-                    },
-                    leadingIcon = {
-                        Icon(
-                            imageVector = Icons.Default.Search,
-                            contentDescription = "Cari",
-                            tint = AppColors.TextSecondary,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    },
-                    trailingIcon = {
-                        if (query.isNotEmpty()) {
-                            IconButton(onClick = { query = "" }) {
-                                Icon(
-                                    imageVector = Icons.Default.Clear,
-                                    contentDescription = "Hapus",
-                                    tint = AppColors.TextSecondary,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                            }
-                        }
-                    },
-                    singleLine = true,
-                    shape = RoundedCornerShape(14.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = MaterialTheme.colorScheme.surface,
-                        unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                        focusedBorderColor = AppColors.GreenPrimary,
-                        unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant
-                    ),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 6.dp)
-                        .height(52.dp)
+                // Search Input - the shared control, so Purchase filters the same way.
+                ProductSearchField(
+                    query = query,
+                    onQueryChange = { query = it },
+                    productLabel = productLabel
                 )
 
-                // Category Filter Chips
+                // Category Filter Chips - the shared control, plus the app's low-stock toggle.
                 if (categoryChipNames.size > 1) {
                     Spacer(Modifier.height(4.dp))
-                    LazyRow(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        contentPadding = PaddingValues(horizontal = 16.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        items(categoryChipNames.distinct()) { catName ->
-                            val isSelected = catName == selectedCategoryName
-                            Surface(
-                                shape = RoundedCornerShape(20.dp),
-                                color = if (isSelected) AppColors.GreenPrimary else MaterialTheme.colorScheme.surface,
-                                border = if (isSelected) null else BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                                shadowElevation = if (isSelected) 1.dp else 0.dp,
-                                onClick = { selectedCategoryName = catName }
-                            ) {
-                                Text(
-                                    text = catName,
-                                    color = if (isSelected) Color.White else AppColors.TextSecondary,
-                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                    fontSize = 13.sp,
-                                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp)
-                                )
-                            }
-                        }
-                    }
+                    ProductCategoryChips(
+                        categoryNames = categoryChipNames,
+                        selectedCategoryName = selectedCategoryName,
+                        onSelectCategory = { selectedCategoryName = it },
+                        toggleLabel = "Stok Menipis",
+                        isToggleActive = lowStockOnly,
+                        onToggle = { lowStockOnly = !lowStockOnly }
+                    )
                 }
             }
 
@@ -295,12 +249,13 @@ fun ProductsScreen(
                 )
             } else if (filteredProducts.isEmpty()) {
                 // Filter / Search Empty State
-                ProductsSearchEmptyState(
+                ProductFilterEmptyState(
                     productLabel = productLabel,
                     query = query,
                     onResetFilter = {
                         query = ""
                         selectedCategoryName = "Semua"
+                        lowStockOnly = false
                     }
                 )
             } else {
@@ -764,84 +719,6 @@ private fun ProductsEmptyState(
                     text = "Tambah $productLabel Pertama",
                     fontWeight = FontWeight.Bold,
                     fontSize = 13.5.sp
-                )
-            }
-        }
-    }
-}
-
-/**
- * Empty state when search or filter returns zero matches.
- */
-@Composable
-private fun ProductsSearchEmptyState(
-    productLabel: String = "Produk",
-    query: String,
-    onResetFilter: () -> Unit
-) {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(24.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(64.dp)
-                    .background(Color(0xFFF1F5F2), CircleShape),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.SearchOff,
-                    contentDescription = null,
-                    tint = AppColors.TextSecondary,
-                    modifier = Modifier.size(32.dp)
-                )
-            }
-
-            Spacer(Modifier.height(14.dp))
-
-            Text(
-                text = "$productLabel Tidak Ditemukan",
-                style = MaterialTheme.typography.titleMedium.copy(
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 15.5.sp,
-                    color = AppColors.TextPrimary
-                )
-            )
-
-            Spacer(Modifier.height(4.dp))
-
-            Text(
-                text = if (query.isNotEmpty()) "Tidak ada $productLabel yang cocok dengan \"$query\"" else "Tidak ada $productLabel di kategori ini",
-                style = MaterialTheme.typography.bodySmall.copy(
-                    fontSize = 12.5.sp,
-                    color = AppColors.TextSecondary,
-                    textAlign = TextAlign.Center
-                ),
-                modifier = Modifier.padding(horizontal = 20.dp)
-            )
-
-            Spacer(Modifier.height(16.dp))
-
-            Button(
-                onClick = onResetFilter,
-                shape = RoundedCornerShape(10.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFFE8F5E9),
-                    contentColor = AppColors.GreenPrimary
-                ),
-                elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp),
-                modifier = Modifier.height(38.dp)
-            ) {
-                Text(
-                    text = "Reset Pencarian",
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 12.5.sp
                 )
             }
         }
