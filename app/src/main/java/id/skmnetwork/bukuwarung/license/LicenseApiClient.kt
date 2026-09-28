@@ -1,14 +1,18 @@
 package id.skmnetwork.bukuwarung.license
 
 import id.skmnetwork.bukuwarung.BuildConfig
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.io.BufferedReader
+import java.io.IOException
 import java.io.InputStreamReader
 import java.io.OutputStreamWriter
 import java.net.HttpURLConnection
+import java.net.SocketTimeoutException
 import java.net.URL
+import java.net.UnknownHostException
 
 /**
  * HTTP response holder for License API communication.
@@ -108,6 +112,10 @@ class LicenseApiClient(
 
     /**
      * Activates a license on this device.
+     *
+     * Gate H.5.1: only a recognised backend error code may produce a definitive result. A body that
+     * cannot be parsed, or an HTTP status that carries no licence code, is a [ActivationResult.Transient]
+     * and must not be presented to the merchant as "your licence code is invalid".
      */
     suspend fun activateLicense(
         licenseCode: String,
@@ -129,11 +137,8 @@ class LicenseApiClient(
                 readTimeoutMs = readTimeoutMs
             )
 
-            val json = try {
-                if (response.body.isNotBlank()) JSONObject(response.body) else JSONObject()
-            } catch (e: Exception) {
-                JSONObject()
-            }
+            val json = parseJsonObject(response.body)
+                ?: return@withContext ActivationResult.Transient(TransientReason.MALFORMED_RESPONSE)
 
             val isSuccess = json.optBoolean("success", false)
             if (response.statusCode == 200 && isSuccess) {
@@ -152,23 +157,35 @@ class LicenseApiClient(
                 "DEVICE_MISMATCH" -> ActivationResult.DeviceMismatch()
                 "LICENSE_REVOKED" -> ActivationResult.Revoked()
                 "LICENSE_NOT_FOUND", "INVALID_REQUEST" -> ActivationResult.Invalid()
-                else -> {
-                    if (response.statusCode in 500..599) {
-                        ActivationResult.ServerError()
-                    } else {
-                        ActivationResult.Invalid()
-                    }
-                }
+                else -> ActivationResult.Transient(
+                    transientReasonFor(response.statusCode),
+                    httpStatus = response.statusCode
+                )
             }
-        } catch (e: java.io.IOException) {
+        } catch (e: CancellationException) {
+            // Structured concurrency: never convert a cancellation into a fabricated result.
+            throw e
+        } catch (e: SocketTimeoutException) {
+            ActivationResult.Transient(TransientReason.TIMEOUT)
+        } catch (e: UnknownHostException) {
+            ActivationResult.Transient(TransientReason.DNS_FAILURE)
+        } catch (e: IOException) {
             ActivationResult.NetworkError("Tidak dapat terhubung ke server lisensi")
         } catch (e: Exception) {
-            ActivationResult.ServerError("Terjadi kesalahan pada sistem")
+            ActivationResult.Transient(TransientReason.HTTP_SERVER_ERROR)
         }
     }
 
     /**
      * Validates whether the active license binding is valid on the server.
+     *
+     * Gate H.5.1 response contract:
+     *  - A DEFINITIVE outcome requires a recognised `status` value in a parseable JSON body.
+     *    Nothing else may decide the licence.
+     *  - HTTP 400 (schema), 401, 403, 404, 429, 5xx, an unparseable body, an empty body, an
+     *    unrecognised status, and every transport failure are TRANSIENT. They are returned as
+     *    [ValidationResult.Transient] and, by contract, never delete the local entitlement or the
+     *    stored credential.
      */
     suspend fun validateLicense(
         licenseCode: String,
@@ -190,37 +207,59 @@ class LicenseApiClient(
                 readTimeoutMs = readTimeoutMs
             )
 
-            val json = try {
-                if (response.body.isNotBlank()) JSONObject(response.body) else JSONObject()
-            } catch (e: Exception) {
-                JSONObject()
+            val json = parseJsonObject(response.body)
+                ?: return@withContext ValidationResult.Transient.MalformedResponse()
+
+            when (json.optString("status", "")) {
+                "VALID" -> return@withContext ValidationResult.Valid()
+                "DEVICE_MISMATCH" -> return@withContext ValidationResult.DeviceMismatch()
+                "EMAIL_MISMATCH" -> return@withContext ValidationResult.EmailMismatch()
+                "REVOKED" -> return@withContext ValidationResult.Revoked()
+                "INVALID" -> return@withContext ValidationResult.Invalid()
             }
 
-            val status = json.optString("status", "")
-            val isSuccess = json.optBoolean("success", false)
-
-            if (response.statusCode == 200 && (isSuccess || status == "VALID")) {
-                return@withContext ValidationResult.Valid()
-            }
-
-            when (status) {
-                "DEVICE_MISMATCH" -> ValidationResult.DeviceMismatch()
-                "EMAIL_MISMATCH" -> ValidationResult.EmailMismatch()
-                "REVOKED" -> ValidationResult.Revoked()
-                "INVALID" -> ValidationResult.Invalid()
-                else -> {
-                    if (response.statusCode in 500..599) {
-                        ValidationResult.ServerError()
-                    } else {
-                        ValidationResult.Invalid()
-                    }
-                }
-            }
-        } catch (e: java.io.IOException) {
-            ValidationResult.NetworkError("Tidak dapat terhubung ke server")
+            // No recognised licence status: this is infrastructure, not a verdict.
+            ValidationResult.Transient.HttpRejection(
+                httpStatus = response.statusCode,
+                reason = transientReasonFor(response.statusCode)
+            )
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: SocketTimeoutException) {
+            ValidationResult.Transient.Timeout()
+        } catch (e: UnknownHostException) {
+            ValidationResult.Transient.NetworkError(TransientReason.DNS_FAILURE)
+        } catch (e: IOException) {
+            ValidationResult.Transient.NetworkError()
         } catch (e: Exception) {
-            ValidationResult.ServerError("Terjadi kesalahan pada sistem")
+            ValidationResult.Transient.ServerError()
         }
+    }
+
+    /**
+     * Parses a response body, or returns null when the body is absent or is not a JSON object.
+     *
+     * Gate H.5.1: a null result must never be interpreted as a licence rejection. It is a
+     * malformed-response condition and is mapped to Transient by every caller.
+     */
+    private fun parseJsonObject(body: String): JSONObject? {
+        if (body.isBlank()) return null
+        return try {
+            JSONObject(body)
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    /** Gate H.5.1: HTTP status to transient classification. Anything unrecognised stays transient. */
+    private fun transientReasonFor(httpStatus: Int): TransientReason = when (httpStatus) {
+        400 -> TransientReason.HTTP_BAD_REQUEST
+        401 -> TransientReason.HTTP_UNAUTHORIZED
+        403 -> TransientReason.HTTP_FORBIDDEN
+        404 -> TransientReason.HTTP_NOT_FOUND
+        429 -> TransientReason.HTTP_TOO_MANY_REQUESTS
+        in 500..599 -> TransientReason.HTTP_SERVER_ERROR
+        else -> TransientReason.HTTP_UNEXPECTED
     }
 
     /**
@@ -277,6 +316,8 @@ class LicenseApiClient(
                 "EMAIL_MISMATCH" -> RecoveryResult.EmailMismatch()
                 else -> RecoveryResult.UnexpectedError()
             }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: java.io.IOException) {
             RecoveryResult.NetworkError()
         } catch (e: Exception) {
@@ -316,6 +357,8 @@ class LicenseApiClient(
                 readTimeoutMs = readTimeoutMs
             )
             response.statusCode in 200..299
+        } catch (e: CancellationException) {
+            throw e
         } catch (_: Exception) {
             false
         }

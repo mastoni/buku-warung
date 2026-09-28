@@ -24,6 +24,7 @@ import androidx.compose.material3.NavigationRailItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -35,6 +36,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import id.skmnetwork.bukuwarung.data.local.database.AppDatabase
@@ -47,8 +49,9 @@ import id.skmnetwork.bukuwarung.data.repository.ReportRepository
 import id.skmnetwork.bukuwarung.data.repository.SaleRepository
 import id.skmnetwork.bukuwarung.data.repository.SupplierRepository
 import id.skmnetwork.bukuwarung.domain.checkout.CheckoutOrchestrator
+import id.skmnetwork.bukuwarung.license.ForegroundLicenseValidationObserver
 import id.skmnetwork.bukuwarung.license.LicenseManager
-import id.skmnetwork.bukuwarung.license.LicenseStatus
+import id.skmnetwork.bukuwarung.license.LicensePhase
 import id.skmnetwork.bukuwarung.ui.cash.CashScreen
 import id.skmnetwork.bukuwarung.ui.catalog.CatalogScreen
 import id.skmnetwork.bukuwarung.ui.customer.CustomerViewModel
@@ -89,7 +92,25 @@ fun BukuWarungApp() {
     val licenseManager = remember { LicenseManager(userPreferencesRepository = userPreferencesRepository, context = context) }
 
     val userSettings by userPreferencesRepository.userSettings.collectAsStateWithLifecycle(initialValue = UserSettings())
-    val licenseStatus by licenseManager.licenseStatus.collectAsStateWithLifecycle()
+    val licenseState by licenseManager.licenseState.collectAsStateWithLifecycle()
+
+    // Gate H.5.1 section 2 - cold start validation.
+    // Keyed on the manager instance, so a recomposition or a configuration change (which retains the
+    // composition) never re-runs it; a genuine process recreation builds a new manager and does.
+    // LicenseManager additionally caps this at one attempt per process.
+    LaunchedEffect(licenseManager) {
+        licenseManager.triggerColdStartValidation()
+    }
+
+    // Gate H.5.1 section 3 - foreground validation attached to the PROCESS lifecycle, so Activity
+    // recreation, configuration change and multi-Activity navigation never look like a new
+    // foreground transition. All de-duplication and rate limiting live in LicenseManager.
+    DisposableEffect(licenseManager) {
+        val processLifecycle = ProcessLifecycleOwner.get().lifecycle
+        val observer = ForegroundLicenseValidationObserver(licenseManager, scope)
+        processLifecycle.addObserver(observer)
+        onDispose { processLifecycle.removeObserver(observer) }
+    }
 
     var isCheckingExistingUser by remember { mutableStateOf(true) }
     var isDebugBypassed by remember { mutableStateOf(false) }
@@ -242,7 +263,9 @@ fun BukuWarungApp() {
     // ==========================================
     // 1. LICENSE & INITIAL MIGRATION CHECK
     // ==========================================
-    if (licenseStatus == LicenseStatus.CHECKING || isCheckingExistingUser) {
+    // Gate H.5.1: access is decided by the evaluated runtime state, never by a stored string.
+    // STALE_ACTIVE still grants access (inside the grace window) but is surfaced as "perlu koneksi".
+    if (licenseState.phase == LicensePhase.CHECKING || isCheckingExistingUser) {
         Box(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center
@@ -252,10 +275,10 @@ fun BukuWarungApp() {
         return
     }
 
-    if (licenseStatus != LicenseStatus.ACTIVE && !isDebugBypassed) {
+    if (!licenseState.grantsAccess && !isDebugBypassed) {
         LicenseGateScreen(
             licenseManager = licenseManager,
-            licenseStatus = licenseStatus,
+            licenseState = licenseState,
             onBypassForDemo = { isDebugBypassed = true }
         )
         return

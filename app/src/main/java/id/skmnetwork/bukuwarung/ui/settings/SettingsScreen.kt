@@ -110,7 +110,7 @@ import id.skmnetwork.bukuwarung.domain.tax.TaxApplicability
 import id.skmnetwork.bukuwarung.domain.tax.TaxPriceMode
 import id.skmnetwork.bukuwarung.domain.business.ResolvedBusinessProfile
 import id.skmnetwork.bukuwarung.license.LicenseManager
-import id.skmnetwork.bukuwarung.license.LicenseStatus
+import id.skmnetwork.bukuwarung.license.LicensePhase
 import id.skmnetwork.bukuwarung.license.ValidationResult
 import id.skmnetwork.bukuwarung.ui.components.AppCard
 import id.skmnetwork.bukuwarung.ui.components.AppTextField
@@ -162,7 +162,8 @@ fun SettingsScreen(
     val restoreState by bViewModel.restoreState.collectAsStateWithLifecycle()
 
     val settingsState by prefsRepo.userSettings.collectAsStateWithLifecycle(initialValue = UserSettings())
-    val licenseStatus by licManager.licenseStatus.collectAsStateWithLifecycle()
+    // Gate H.5.1: the status shown to the merchant is the evaluated runtime state, not the stored string.
+    val licenseState by licManager.licenseState.collectAsStateWithLifecycle()
     val licenseTier by licManager.licenseTier.collectAsStateWithLifecycle()
 
     val resolvedProfile = remember(settingsState.primaryBusinessType, settingsState.secondaryActivities) {
@@ -1767,8 +1768,8 @@ fun SettingsScreen(
                 )
                 Surface(
                     shape = RoundedCornerShape(14.dp),
-                    color = if (licenseStatus == LicenseStatus.ACTIVE) Color(0xFFE8F5E9) else Color(0xFFFFF7E6),
-                    border = BorderStroke(1.dp, if (licenseStatus == LicenseStatus.ACTIVE) Color(0xFFC8E6C9) else Color(0xFFFFE0B2)),
+                    color = if (licenseState.grantsAccess) Color(0xFFE8F5E9) else Color(0xFFFFF7E6),
+                    border = BorderStroke(1.dp, if (licenseState.grantsAccess) Color(0xFFC8E6C9) else Color(0xFFFFE0B2)),
                     shadowElevation = 0.5.dp,
                     modifier = Modifier.fillMaxWidth()
                 ) {
@@ -1780,10 +1781,17 @@ fun SettingsScreen(
                             text = licenseTier.label,
                             fontWeight = FontWeight.Bold,
                             fontSize = 13.5.sp,
-                            color = if (licenseStatus == LicenseStatus.ACTIVE) AppColors.GreenDark else Color(0xFFD46B08)
+                            color = if (licenseState.grantsAccess) AppColors.GreenDark else Color(0xFFD46B08)
                         )
                         Text(
-                            text = "Status Lisensi: ${licenseStatus.name}",
+                            text = "Status Lisensi: " + when (licenseState.phase) {
+                                LicensePhase.FRESH_ACTIVE -> "AKTIF"
+                                LicensePhase.STALE_ACTIVE -> "Aktif (perlu koneksi)"
+                                LicensePhase.TRANSIENT_ERROR -> "Tidak dapat menghubungi server (status lokal tetap berlaku)"
+                                LicensePhase.UNLICENSED -> "Belum Aktif (UNLICENSED)"
+                                LicensePhase.BLOCKED -> "Diblokir (${licenseState.blockReason})"
+                                LicensePhase.CHECKING -> "Memeriksa..."
+                            },
                             style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.5.sp),
                             color = AppColors.TextSecondary
                         )
@@ -1799,13 +1807,19 @@ fun SettingsScreen(
                             onClick = {
                                 scope.launch {
                                     isCheckingLicense = true
+                                    // Gate H.5.1: validateOnline already publishes the resulting state,
+                                    // so no follow-up local refresh is needed (and re-refreshing here used
+                                    // to wipe the transient reason away).
                                     val result = licManager.validateOnline()
-                                    licManager.refreshLicense()
                                     isCheckingLicense = false
                                     val message = when (result) {
                                         is ValidationResult.Valid -> "Lisensi valid dan aktif"
-                                        is ValidationResult.NetworkError -> "Gagal terhubung ke server. Status lokal tetap aktif."
-                                        is ValidationResult.ServerError -> "Kesalahan server. Status lokal tetap aktif."
+                                        is ValidationResult.CredentialUnavailable ->
+                                            result.message
+                                        // Gate H.5.1: no verdict was obtained. The licence is NOT
+                                        // deactivated and the stored code is kept.
+                                        is ValidationResult.Transient ->
+                                            "Tidak dapat menghubungi server lisensi. Status lokal dan kode lisensi Anda tetap tersimpan."
                                         is ValidationResult.EmailMismatch -> result.message
                                         is ValidationResult.DeviceMismatch -> result.message
                                         is ValidationResult.Revoked -> result.message

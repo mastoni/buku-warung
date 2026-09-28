@@ -54,8 +54,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import id.skmnetwork.bukuwarung.BuildConfig
 import id.skmnetwork.bukuwarung.license.ActivationResult
+import id.skmnetwork.bukuwarung.license.LicenseBlockReason
 import id.skmnetwork.bukuwarung.license.LicenseManager
-import id.skmnetwork.bukuwarung.license.LicenseStatus
+import id.skmnetwork.bukuwarung.license.LicensePhase
+import id.skmnetwork.bukuwarung.license.LicenseRuntimeState
 import id.skmnetwork.bukuwarung.license.RecoveryResult
 import id.skmnetwork.bukuwarung.ui.components.AppCard
 import id.skmnetwork.bukuwarung.ui.components.PrimaryButton
@@ -67,7 +69,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun LicenseGateScreen(
     licenseManager: LicenseManager,
-    licenseStatus: LicenseStatus,
+    licenseState: LicenseRuntimeState,
     onBypassForDemo: () -> Unit
 ) {
     val context = LocalContext.current
@@ -98,6 +100,18 @@ fun LicenseGateScreen(
     var recoveryInFlight by remember { mutableStateOf(false) }
     var recoveryState by remember { mutableStateOf<RecoveryResult?>(null) }
     val recoveryPending = recoveryState is RecoveryResult.RecoveryPending
+
+    // Gate H.5.1 section 6: a lifecycle DEVICE_MISMATCH blocks access but RETAINS the owner email,
+    // so prefill it. The merchant can then reach the Task 7A recovery action directly instead of
+    // having to rediscover the mismatch through a fresh activation attempt.
+    LaunchedEffect(licenseState.blockReason) {
+        if (licenseState.blockReason == LicenseBlockReason.DEVICE_MISMATCH) {
+            val retained = licenseManager.getEntitlementInfo().ownerEmail
+            if (retained.isNotBlank() && ownerEmailInput.isBlank()) {
+                ownerEmailInput = retained
+            }
+        }
+    }
 
     Surface(
         modifier = Modifier
@@ -149,6 +163,43 @@ fun LicenseGateScreen(
             )
 
             Spacer(Modifier.height(AppSpacing.lg))
+
+            // Gate H.5.1 section 12 - explain the new lifecycle states without redesigning the gate.
+            // Reuses the existing AppCard + colour language already used further down this screen.
+            val gateNotice = when (licenseState.phase) {
+                LicensePhase.BLOCKED -> when (licenseState.blockReason) {
+                    LicenseBlockReason.DEVICE_MISMATCH ->
+                        "Lisensi ini aktif di perangkat lain. Kode lisensi Anda tetap tersimpan di " +
+                            "perangkat ini. Masukkan email dan kode lisensi di bawah, lalu gunakan " +
+                            "Pemulihan Perangkat."
+                    LicenseBlockReason.REVOKED ->
+                        "Lisensi ini telah dicabut. Hubungi administrator untuk informasi lebih lanjut."
+                    LicenseBlockReason.EMAIL_MISMATCH ->
+                        "Email pemilik lisensi tidak cocok. Silakan masukkan email yang benar."
+                    LicenseBlockReason.GRACE_EXPIRED ->
+                        "Lisensi perlu diperpanjang: perangkat ini terlalu lama tidak terhubung ke " +
+                            "server lisensi. Silakan masukkan kode lisensi Anda di bawah."
+                    else ->
+                        "Lisensi tidak valid. Silakan masukkan kode lisensi yang benar di bawah."
+                }
+                LicensePhase.TRANSIENT_ERROR ->
+                    "Server lisensi tidak dapat dihubungi. Status lisensi Anda yang tersimpan tetap " +
+                        "berlaku dan akan diperiksa kembali nanti."
+                LicensePhase.STALE_ACTIVE ->
+                    "Lisensi perlu diperiksa ulang. Status lokal Anda tetap berlaku untuk sementara."
+                else -> null
+            }
+
+            if (gateNotice != null) {
+                AppCard(backgroundColor = MaterialTheme.colorScheme.surfaceVariant) {
+                    Text(
+                        text = gateNotice,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = AppColors.TextPrimary
+                    )
+                }
+                Spacer(Modifier.height(AppSpacing.md))
+            }
 
             if (activationResult is ActivationResult.Active) {
                 val activeResult = activationResult as ActivationResult.Active
@@ -270,6 +321,10 @@ fun LicenseGateScreen(
                                     Pair("Koneksi Gagal", "Tidak dapat terhubung ke server. Periksa koneksi internet Anda.")
                                 is ActivationResult.ServerError ->
                                     Pair("Kesalahan Server", "Terjadi gangguan pada server lisensi. Silakan coba beberapa saat lagi.")
+                                // Gate H.5.1 section 5: no verdict was obtained, so this is explicitly
+                                // NOT an invalid-licence message.
+                                is ActivationResult.Transient ->
+                                    Pair("Server Tidak Merespons", "Tidak ada jawaban dari server lisensi (HTTP ${res.httpStatus}). Kode lisensi Anda tidak bermasalah. Silakan coba lagi sebentar.")
                                 is ActivationResult.Active ->
                                     Pair("", "")
                             }
@@ -308,13 +363,15 @@ fun LicenseGateScreen(
                             }
                         }
 
-                        // Device recovery: shown only after the activation attempt reported
-                        // DEVICE_MISMATCH, and only with the credentials already entered above.
+                        // Device recovery: shown after the activation attempt reported DEVICE_MISMATCH,
+                        // and also when a lifecycle validation already blocked this device for that same
+                        // reason (Gate H.5.1 section 6), so the 7A flow stays reachable.
                         // A pending result means the request was recorded; the licence stays
                         // inactive until an authorised admin rebinds the device.
                         val canRequestRecovery =
                             !recoveryPending && !recoveryInFlight &&
-                                activationResult is ActivationResult.DeviceMismatch
+                                (activationResult is ActivationResult.DeviceMismatch ||
+                                    licenseState.blockReason == LicenseBlockReason.DEVICE_MISMATCH)
 
                         if (canRequestRecovery || recoveryPending || recoveryState is RecoveryResult.RecoveryPending) {
                             Column(
@@ -508,14 +565,16 @@ fun LicenseGateScreen(
             Spacer(Modifier.height(AppSpacing.lg))
 
             Text(
-                text = when (licenseStatus) {
-                    LicenseStatus.ACTIVE -> "Status Lisensi: AKTIF"
-                    LicenseStatus.UNLICENSED -> "Status Lisensi: Belum Aktif (UNLICENSED)"
-                    LicenseStatus.CHECKING -> "Status Lisensi: Memeriksa..."
-                    else -> "Status Lisensi: ${licenseStatus.name}"
+                text = when (licenseState.phase) {
+                    LicensePhase.FRESH_ACTIVE -> "Status Lisensi: AKTIF"
+                    LicensePhase.STALE_ACTIVE -> "Status Lisensi: Aktif (perlu koneksi)"
+                    LicensePhase.TRANSIENT_ERROR -> "Status Lisensi: Tidak dapat menghubungi server"
+                    LicensePhase.UNLICENSED -> "Status Lisensi: Belum Aktif (UNLICENSED)"
+                    LicensePhase.BLOCKED -> "Status Lisensi: Diblokir (${licenseState.blockReason})"
+                    LicensePhase.CHECKING -> "Status Lisensi: Memeriksa..."
                 },
                 style = MaterialTheme.typography.labelSmall,
-                color = if (licenseStatus == LicenseStatus.ACTIVE) AppColors.GreenPrimary else AppColors.TextSecondary,
+                color = if (licenseState.grantsAccess) AppColors.GreenPrimary else AppColors.TextSecondary,
                 textAlign = TextAlign.Center
             )
         }

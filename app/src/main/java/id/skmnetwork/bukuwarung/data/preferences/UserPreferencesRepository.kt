@@ -192,6 +192,11 @@ class UserPreferencesRepository(
         val LICENSE_OWNER_EMAIL = stringPreferencesKey("commercial_license_owner_email")
         val LICENSE_ACTIVATED_AT = androidx.datastore.preferences.core.longPreferencesKey("commercial_license_activated_at")
         val LICENSE_LAST_VALIDATED_AT = androidx.datastore.preferences.core.longPreferencesKey("commercial_license_last_validated_at")
+        // Gate H.5.1: a definitive server rejection is retained (not silently cleared) so the gate can
+        // explain WHY access is denied after a process restart, and so DEVICE_MISMATCH can keep the
+        // owner email for the Task 7A recovery flow while the encrypted credential is preserved.
+        val LICENSE_BLOCKED = booleanPreferencesKey("commercial_license_blocked")
+        val LICENSE_BLOCK_REASON = stringPreferencesKey("commercial_license_block_reason")
 
         // 15. ADAPTIVE BUSINESS PROFILE (v0.2.0)
         val PRIMARY_BUSINESS_TYPE = stringPreferencesKey("primary_business_type")
@@ -998,13 +1003,21 @@ class UserPreferencesRepository(
         status: String,
         ownerEmail: String,
         activatedAt: Long,
-        lastValidatedAt: Long
+        lastValidatedAt: Long,
+        blocked: Boolean = false,
+        blockReason: String = BLOCK_REASON_NONE
     ) {
         dataStore.edit { prefs ->
             prefs[Keys.LICENSE_STATUS] = status
             prefs[Keys.LICENSE_OWNER_EMAIL] = ownerEmail
             prefs[Keys.LICENSE_ACTIVATED_AT] = activatedAt
             prefs[Keys.LICENSE_LAST_VALIDATED_AT] = lastValidatedAt
+            prefs[Keys.LICENSE_BLOCKED] = blocked
+            if (blocked) {
+                prefs[Keys.LICENSE_BLOCK_REASON] = blockReason
+            } else {
+                prefs.remove(Keys.LICENSE_BLOCK_REASON)
+            }
         }
     }
 
@@ -1015,12 +1028,65 @@ class UserPreferencesRepository(
         }
     }
 
+    /**
+     * Gate H.5.1 - records a successful server validation.
+     *
+     * This is the ONLY writer of a non-zero `lastValidatedAt`. Activation deliberately writes 0 so an
+     * activation can never be mistaken for a validation (H.5.1 section 7).
+     */
+    suspend fun markLicenseValidated(
+        validatedAt: Long,
+        status: String = "ACTIVE",
+        ownerEmail: String? = null
+    ) {
+        dataStore.edit { prefs ->
+            if (!ownerEmail.isNullOrBlank()) {
+                prefs[Keys.LICENSE_OWNER_EMAIL] = ownerEmail
+            }
+            prefs[Keys.LICENSE_STATUS] = status
+            prefs[Keys.LICENSE_LAST_VALIDATED_AT] = validatedAt
+            prefs[Keys.LICENSE_BLOCKED] = false
+            prefs.remove(Keys.LICENSE_BLOCK_REASON)
+        }
+    }
+
+    /**
+     * Gate H.5.1 - records a definitive server rejection.
+     *
+     * The owner email is RETAINED so the merchant can be offered the Task 7A recovery flow straight
+     * from the gate. The encrypted licence code is intentionally left untouched by this method; the
+     * caller decides whether the credential survives (DEVICE_MISMATCH: it does).
+     */
+    suspend fun blockLicenseEntitlement(blockReason: String, status: String = "BLOCKED") {
+        dataStore.edit { prefs ->
+            prefs[Keys.LICENSE_STATUS] = status
+            prefs[Keys.LICENSE_BLOCKED] = true
+            prefs[Keys.LICENSE_BLOCK_REASON] = blockReason
+        }
+    }
+
+    /**
+     * Gate H.5.1 - the local licence aged past the grace window.
+     *
+     * The credential is deliberately kept so the merchant can re-activate with the same code; the
+     * entitlement is dropped so the gate is shown and no further validation is attempted.
+     */
+    suspend fun expireLicenseEntitlement() {
+        dataStore.edit { prefs ->
+            prefs[Keys.LICENSE_STATUS] = "UNLICENSED"
+            prefs[Keys.LICENSE_BLOCKED] = false
+            prefs[Keys.LICENSE_BLOCK_REASON] = BLOCK_REASON_GRACE_EXPIRED
+        }
+    }
+
     suspend fun clearLicenseEntitlement() {
         dataStore.edit { prefs ->
             prefs.remove(Keys.LICENSE_STATUS)
             prefs.remove(Keys.LICENSE_OWNER_EMAIL)
             prefs.remove(Keys.LICENSE_ACTIVATED_AT)
             prefs.remove(Keys.LICENSE_LAST_VALIDATED_AT)
+            prefs.remove(Keys.LICENSE_BLOCKED)
+            prefs.remove(Keys.LICENSE_BLOCK_REASON)
         }
     }
 
@@ -1032,6 +1098,33 @@ class UserPreferencesRepository(
             activatedAt = prefs[Keys.LICENSE_ACTIVATED_AT] ?: 0L,
             lastValidatedAt = prefs[Keys.LICENSE_LAST_VALIDATED_AT] ?: 0L
         )
+    }
+
+    /** Gate H.5.1: the persisted definitive-rejection marker, if any. */
+    suspend fun isLicenseBlocked(): Boolean {
+        val prefs = dataStore.data.first()
+        return prefs[Keys.LICENSE_BLOCKED] ?: false
+    }
+
+    /**
+     * Gate H.5.1: the persisted definitive-rejection / expiry reason.
+     *
+     * Returned independently of [isLicenseBlocked] so a GRACE_EXPIRED marker survives the transition
+     * to an UNLICENSED record and the gate can still explain why.
+     */
+    suspend fun getLicenseBlockReason(): String {
+        val prefs = dataStore.data.first()
+        return prefs[Keys.LICENSE_BLOCK_REASON] ?: BLOCK_REASON_NONE
+    }
+
+    companion object {
+        const val BLOCK_REASON_NONE = "NONE"
+        const val BLOCK_REASON_NEVER_ACTIVATED = "NEVER_ACTIVATED"
+        const val BLOCK_REASON_GRACE_EXPIRED = "GRACE_EXPIRED"
+        const val BLOCK_REASON_REVOKED = "REVOKED"
+        const val BLOCK_REASON_DEVICE_MISMATCH = "DEVICE_MISMATCH"
+        const val BLOCK_REASON_EMAIL_MISMATCH = "EMAIL_MISMATCH"
+        const val BLOCK_REASON_INVALID = "INVALID"
     }
 }
 

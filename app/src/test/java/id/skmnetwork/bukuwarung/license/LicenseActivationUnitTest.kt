@@ -341,11 +341,11 @@ class LicenseActivationUnitTest {
     fun testC4_16_TransientNetworkFailureDoesNotEraseLocalEntitlement() = runBlocking {
         simulateNetworkFailure = true
         val validationResult = apiClient.validateLicense(validLicenseCode, validOwnerEmail, firstDeviceId)
-        assertTrue(validationResult is ValidationResult.NetworkError)
+        assertTrue(validationResult is ValidationResult.Transient.NetworkError)
 
         // Local entitlement remains ACTIVE despite validation network failure
         var localStatus = "ACTIVE"
-        if (validationResult !is ValidationResult.NetworkError && validationResult !is ValidationResult.ServerError) {
+        if (validationResult !is ValidationResult.Transient.NetworkError && validationResult !is ValidationResult.Transient.ServerError) {
             localStatus = "UNLICENSED"
         }
         assertEquals("Local entitlement must remain ACTIVE on network failure", "ACTIVE", localStatus)

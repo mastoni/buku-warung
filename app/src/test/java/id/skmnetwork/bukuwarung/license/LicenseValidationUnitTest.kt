@@ -225,10 +225,16 @@ class LicenseValidationUnitTest {
     }
 
     // ==========================================
-    // Test 5: validateOnline with no license code returns Invalid, NO HTTP
+    // Test 5: validateOnline with no readable credential does not call HTTP and
+    //         reports CredentialUnavailable (Gate H.5.1).
+    //
+    // Gate H.5.0 finding P2-3: a blank credential used to be reported as Invalid, i.e. as a licence
+    // rejection, while the entitlement was left untouched - the merchant saw "your licence was not
+    // found" and stayed inside the app. A local credential read failure is an availability problem,
+    // not a verdict, so it is now reported as CredentialUnavailable and remains transient.
     // ==========================================
     @Test
-    fun testValidateOnline_WithNoLicenseCode_ReturnsInvalid_NoHTTP() = runBlocking {
+    fun testValidateOnline_WithNoLicenseCode_ReturnsCredentialUnavailable_NoHTTP() = runBlocking {
         testRepo.saveLicenseEntitlement(
             status = "ACTIVE",
             ownerEmail = testOwnerEmail,
@@ -239,9 +245,11 @@ class LicenseValidationUnitTest {
         val manager = createTestManager(storedLicenseCode = "")
         val result = manager.validateOnline()
 
-        assertTrue("Expected Invalid when licenseCode blank, got: $result",
-            result is ValidationResult.Invalid)
+        assertTrue("Expected CredentialUnavailable when licenseCode unreadable, got: $result",
+            result is ValidationResult.CredentialUnavailable)
         assertEquals(0, httpCallCount.get())
+        assertTrue("A local credential failure must not delete the entitlement",
+            testRepo.getLicenseEntitlement().isEntitled)
     }
 
     // ==========================================
@@ -260,7 +268,7 @@ class LicenseValidationUnitTest {
         val manager = createTestManager(storedLicenseCode = testLicenseCode)
         val result = manager.validateOnline()
 
-        assertTrue("Expected NetworkError", result is ValidationResult.NetworkError)
+        assertTrue("Expected NetworkError", result is ValidationResult.Transient.NetworkError)
         assertEquals(1, httpCallCount.get())
 
         val entitlementAfter = testRepo.getLicenseEntitlement()
@@ -285,7 +293,9 @@ class LicenseValidationUnitTest {
         val manager = createTestManager(storedLicenseCode = testLicenseCode)
         val result = manager.validateOnline()
 
-        assertTrue("Expected NetworkError for timeout", result is ValidationResult.NetworkError)
+        // Gate H.5.1: a timeout is now its own transient kind so it is distinguishable from a plain
+        // "no connectivity", while both remain transient and preserve the entitlement.
+        assertTrue("Expected Timeout", result is ValidationResult.Transient.Timeout)
         assertEquals(1, httpCallCount.get())
 
         val entitlementAfter = testRepo.getLicenseEntitlement()
@@ -309,7 +319,13 @@ class LicenseValidationUnitTest {
         val manager = createTestManager(storedLicenseCode = testLicenseCode)
         val result = manager.validateOnline()
 
-        assertTrue("Expected ServerError", result is ValidationResult.ServerError)
+        // Gate H.5.1: a 5xx carries no recognised licence status, so it is a transient HTTP
+        // rejection rather than a licence verdict. The entitlement must survive either way.
+        assertTrue("Expected a transient server failure, got: $result", result is ValidationResult.Transient)
+        assertEquals(
+            TransientReason.HTTP_SERVER_ERROR,
+            (result as ValidationResult.Transient).reason
+        )
         assertEquals(1, httpCallCount.get())
 
         val entitlementAfter = testRepo.getLicenseEntitlement()
