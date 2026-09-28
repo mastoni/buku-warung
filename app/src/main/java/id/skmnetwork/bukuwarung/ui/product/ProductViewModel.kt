@@ -19,6 +19,46 @@ import id.skmnetwork.bukuwarung.util.loadingFlag
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+/**
+ * Step 11 - why a product could not be saved, as a semantic value rather than a bare sentence.
+ *
+ * The form previously received its failures as `onError(String)` and then worked out which field
+ * was at fault by comparing that sentence against hardcoded Indonesian literals. That made the
+ * user-facing copy load-bearing: reword a message and the field silently stopped being marked,
+ * with no other signal. Carrying the reason as a typed variant lets the screen ask "was this the
+ * name?" and keeps the text free to change in one place.
+ *
+ * This mirrors the shape the project already uses for the same job - `license.ValidationResult`,
+ * `domain.stock.StockAdjustmentValidation` and `backup.BackupValidationResult` are all sealed
+ * hierarchies whose variants carry their own message, and the UI renders `result.message`. Every
+ * message below is the exact text the screen showed before, unchanged.
+ */
+sealed class ProductFormError(open val message: String) {
+    /** The name field was empty. */
+    data class NameRequired(override val message: String = "Tulis nama produk") : ProductFormError(message)
+
+    /** The selling price was missing, unparseable, or not positive. */
+    data class SellingPriceRequired(override val message: String = "Masukkan harga jual") :
+        ProductFormError(message)
+
+    /** A numeric field could not be parsed, or was negative. */
+    data class InvalidNumber(override val message: String = "Tulis angka yang valid") :
+        ProductFormError(message)
+
+    /** The digital provider id is required for provider-fulfilsed digital items. */
+    data class DigitalProviderIdRequired(
+        override val message: String = "ID provider digital wajib diisi"
+    ) : ProductFormError(message)
+
+    /** The digital provider product code is required for provider-fulfilment. */
+    data class DigitalProductCodeRequired(
+        override val message: String = "Kode produk digital wajib diisi"
+    ) : ProductFormError(message)
+
+    /** A repository operation failed, carrying its existing explanation. */
+    data class OperationFailed(val detail: String) : ProductFormError(detail)
+}
+
 class ProductViewModel(
     private val repository: ProductRepository,
     private val checkoutOrchestrator: CheckoutOrchestrator? = null
@@ -209,35 +249,35 @@ class ProductViewModel(
         digitalProviderId: String? = null,
         digitalProductCode: String? = null,
         onSuccess: () -> Unit,
-        onError: (String) -> Unit
+        onError: (ProductFormError) -> Unit
     ) {
         val trimmedName = name.trim()
         if (trimmedName.isEmpty()) {
-            onError("Tulis nama produk")
+            onError(ProductFormError.NameRequired())
             return
         }
 
         val sellingPrice = sellingPriceStr.trim().toLongOrNull()
         if (sellingPrice == null || sellingPrice <= 0) {
-            onError("Masukkan harga jual")
+            onError(ProductFormError.SellingPriceRequired())
             return
         }
 
         val purchasePrice = purchasePriceStr.trim().ifEmpty { "0" }.toLongOrNull()
         if (purchasePrice == null || purchasePrice < 0) {
-            onError("Tulis angka yang valid")
+            onError(ProductFormError.InvalidNumber())
             return
         }
 
         val stock = stockStr.trim().ifEmpty { "0" }.toDoubleOrNull()
         if (stock == null || stock < 0) {
-            onError("Tulis angka yang valid")
+            onError(ProductFormError.InvalidNumber())
             return
         }
 
         val minimumStock = minimumStockStr.trim().ifEmpty { "0" }.toDoubleOrNull()
         if (minimumStock == null || minimumStock < 0) {
-            onError("Tulis angka yang valid")
+            onError(ProductFormError.InvalidNumber())
             return
         }
 
@@ -245,11 +285,11 @@ class ProductViewModel(
 
         if (fulfillmentMode == FulfillmentMode.PROVIDER) {
             if (digitalProviderId.isNullOrBlank()) {
-                onError("ID provider digital wajib diisi")
+                onError(ProductFormError.DigitalProviderIdRequired())
                 return
             }
             if (digitalProductCode.isNullOrBlank()) {
-                onError("Kode produk digital wajib diisi")
+                onError(ProductFormError.DigitalProductCodeRequired())
                 return
             }
         }
@@ -277,7 +317,7 @@ class ProductViewModel(
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    onError("Gagal menyimpan produk: ${e.localizedMessage ?: "Terjadi kesalahan"}")
+                    onError(ProductFormError.OperationFailed("Gagal menyimpan produk: ${e.localizedMessage ?: "Terjadi kesalahan"}"))
                 }
             }
         }
@@ -299,23 +339,23 @@ class ProductViewModel(
         digitalProviderId: String? = null,
         digitalProductCode: String? = null,
         onSuccess: () -> Unit,
-        onError: (String) -> Unit
+        onError: (ProductFormError) -> Unit
     ) {
         val trimmedName = name.trim()
         if (trimmedName.isEmpty()) {
-            onError("Tulis nama produk")
+            onError(ProductFormError.NameRequired())
             return
         }
 
         val sellingPrice = sellingPriceStr.trim().toLongOrNull()
         if (sellingPrice == null || sellingPrice <= 0) {
-            onError("Masukkan harga jual")
+            onError(ProductFormError.SellingPriceRequired())
             return
         }
 
         val purchasePrice = purchasePriceStr.trim().ifEmpty { "0" }.toLongOrNull()
         if (purchasePrice == null || purchasePrice < 0) {
-            onError("Tulis angka yang valid")
+            onError(ProductFormError.InvalidNumber())
             return
         }
 
@@ -323,7 +363,7 @@ class ProductViewModel(
         // able to rewrite live stock - see ProductRepository.adjustStock.
         val minimumStock = minimumStockStr.trim().ifEmpty { "0" }.toDoubleOrNull()
         if (minimumStock == null || minimumStock < 0) {
-            onError("Tulis angka yang valid")
+            onError(ProductFormError.InvalidNumber())
             return
         }
 
@@ -331,11 +371,11 @@ class ProductViewModel(
 
         if (fulfillmentMode == FulfillmentMode.PROVIDER) {
             if (digitalProviderId.isNullOrBlank()) {
-                onError("ID provider digital wajib diisi")
+                onError(ProductFormError.DigitalProviderIdRequired())
                 return
             }
             if (digitalProductCode.isNullOrBlank()) {
-                onError("Kode produk digital wajib diisi")
+                onError(ProductFormError.DigitalProductCodeRequired())
                 return
             }
         }
@@ -363,7 +403,7 @@ class ProductViewModel(
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    onError("Gagal memperbarui produk: ${e.localizedMessage ?: "Terjadi kesalahan"}")
+                    onError(ProductFormError.OperationFailed("Gagal memperbarui produk: ${e.localizedMessage ?: "Terjadi kesalahan"}"))
                 }
             }
         }

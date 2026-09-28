@@ -141,7 +141,10 @@ fun AddProductScreen(
     var barcode by remember { mutableStateOf("") }
     var imageUri by remember { mutableStateOf<String?>(null) }
 
-    var errorMessage by remember { mutableStateOf<String?>(null) }
+    // Step 11: the failure is kept as a semantic value so the screen can tell WHICH field is at
+    // fault without matching the displayed sentence. The sentence itself is still what the
+    // merchant reads, and it is unchanged.
+    var formError by remember { mutableStateOf<ProductFormError?>(null) }
     var isSaving by remember { mutableStateOf(false) }
 
     // Step 2 (F): the selected business type suggests a sensible starting product type. It is only a
@@ -309,7 +312,7 @@ fun AddProductScreen(
                                                 selectedCategoryId = null
                                                 category = suggestedCat
                                             }
-                                            errorMessage = null
+                                            formError = null
                                             showCategorySelectionDialog = false
                                         },
                                         label = { Text(suggestedCat, fontSize = 12.sp) },
@@ -368,7 +371,7 @@ fun AddProductScreen(
                                         .clickable {
                                             selectedCategoryId = cat.id
                                             category = cat.name
-                                            errorMessage = null
+                                            formError = null
                                             showCategorySelectionDialog = false
                                         }
                                         .padding(horizontal = AppSpacing.md, vertical = AppSpacing.sm),
@@ -518,7 +521,7 @@ fun AddProductScreen(
                         showStockAdjustmentDialog = false
                         stockAdjustmentError = null
                         currentStock = result.newStock
-                        errorMessage = null
+                        formError = null
                     },
                     onError = { error ->
                         isSaving = false
@@ -547,7 +550,7 @@ fun AddProductScreen(
                             },
                             onError = { error ->
                                 isSaving = false
-                                errorMessage = error
+                                formError = ProductFormError.OperationFailed(error)
                             }
                         )
                     }
@@ -597,9 +600,9 @@ fun AddProductScreen(
                 .padding(horizontal = AppSpacing.lg, vertical = AppSpacing.sm),
             verticalArrangement = Arrangement.spacedBy(AppSpacing.md),
         ) {
-            if (errorMessage != null) {
+            if (formError != null) {
                  Text(
-                     text = errorMessage!!,
+                     text = formError!!.message,
                      color = MaterialTheme.colorScheme.error,
                      style = MaterialTheme.typography.bodyMedium,
                      fontWeight = FontWeight.SemiBold,
@@ -781,19 +784,19 @@ fun AddProductScreen(
                                 value = providerId,
                                 onValueChange = {
                                     providerId = it
-                                    errorMessage = null
+                                    formError = null
                                 },
                                 label = "ID Provider (contoh: DIGIFLAZZ) *",
-                                isError = errorMessage == "ID Provider wajib diisi untuk mode Otomatis"
+                                isError = formError is ProductFormError.DigitalProviderIdRequired
                             )
                             AppTextField(
                                 value = providerProductCode,
                                 onValueChange = {
                                     providerProductCode = it
-                                    errorMessage = null
+                                    formError = null
                                 },
                                 label = "Kode Produk Provider (SKU) *",
-                                isError = errorMessage == "Kode Produk wajib diisi untuk mode Otomatis"
+                                isError = formError is ProductFormError.DigitalProductCodeRequired
                             )
                         }
                     }
@@ -804,10 +807,10 @@ fun AddProductScreen(
                 value = name,
                 onValueChange = {
                     name = it
-                    errorMessage = null
+                    formError = null
                 },
                 label = "Nama $productLabel *",
-                isError = errorMessage == "Tulis nama produk"
+                isError = formError is ProductFormError.NameRequired
             )
 
             Row(
@@ -818,7 +821,7 @@ fun AddProductScreen(
                     value = barcode,
                     onValueChange = {
                         barcode = it
-                        errorMessage = null
+                        formError = null
                     },
                     label = "Barcode (opsional)",
                     modifier = Modifier.weight(1f)
@@ -873,7 +876,7 @@ fun AddProductScreen(
                 value = purchasePrice,
                 onValueChange = {
                     purchasePrice = it
-                    errorMessage = null
+                    formError = null
                 },
                 label = "Harga Beli (Rp)",
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
@@ -883,10 +886,10 @@ fun AddProductScreen(
                 value = sellingPrice,
                 onValueChange = {
                     sellingPrice = it
-                    errorMessage = null
+                    formError = null
                 },
                 label = "Harga Jual (Rp) *",
-                isError = errorMessage == "Masukkan harga jual",
+                isError = formError is ProductFormError.SellingPriceRequired,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
             )
 
@@ -942,7 +945,7 @@ fun AddProductScreen(
                         value = stock,
                         onValueChange = {
                             stock = it
-                            errorMessage = null
+                            formError = null
                         },
                         label = "Stok Awal",
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
@@ -953,7 +956,7 @@ fun AddProductScreen(
                     value = minimumStock,
                     onValueChange = {
                         minimumStock = it
-                        errorMessage = null
+                        formError = null
                     },
                     label = "Stok Minimum",
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
@@ -988,7 +991,7 @@ fun AddProductScreen(
                                 selected = isSelected,
                                 onClick = {
                                     unit = unitSuggestion
-                                    errorMessage = null
+                                    formError = null
                                 },
                                 label = { Text(unitSuggestion, fontSize = 12.sp) },
                                 colors = FilterChipDefaults.filterChipColors(
@@ -1004,7 +1007,7 @@ fun AddProductScreen(
                     value = unit,
                     onValueChange = {
                         unit = it
-                        errorMessage = null
+                        formError = null
                     },
                     label = "Satuan (misal: pcs, kg, porsi, dsb.)"
                 )
@@ -1017,17 +1020,17 @@ fun AddProductScreen(
                 onClick = {
                     if (isSaving) return@PrimaryButton
                     isSaving = true
-                    errorMessage = null
+                    formError = null
 
 
                     if (selectedItemType == ItemType.DIGITAL && selectedFulfillmentMode == FulfillmentMode.PROVIDER) {
                         if (providerId.trim().isEmpty()) {
-                            errorMessage = "ID Provider wajib diisi untuk mode Otomatis"
+                            formError = ProductFormError.DigitalProviderIdRequired("ID Provider wajib diisi untuk mode Otomatis")
                             isSaving = false
                             return@PrimaryButton
                         }
                         if (providerProductCode.trim().isEmpty()) {
-                            errorMessage = "Kode Produk wajib diisi untuk mode Otomatis"
+                            formError = ProductFormError.DigitalProductCodeRequired("Kode Produk wajib diisi untuk mode Otomatis")
                             isSaving = false
                             return@PrimaryButton
                         }
@@ -1058,7 +1061,7 @@ fun AddProductScreen(
                             },
                             onError = { error ->
                                 isSaving = false
-                                errorMessage = error
+                                formError = error
                             }
                         )
                     } else {
@@ -1083,7 +1086,7 @@ fun AddProductScreen(
                             },
                             onError = { error ->
                                 isSaving = false
-                                errorMessage = error
+                                formError = error
                             }
                         )
                     }
