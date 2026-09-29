@@ -3,7 +3,7 @@ import { ShoppingCart, Menu, X, ArrowRight, Download } from 'lucide-react';
 import { LANDING_CONFIG } from '../data/landingData';
 import { usePricing } from '../hooks/usePricingPromo';
 import { useDocsRouter } from '../hooks/useDocsRouter';
-import { trackBuyClick, trackWhatsAppClick, trackDownloadClick } from '../tracking';
+import { trackBuyClick, trackWhatsAppClick, trackDownloadClick, getOrderUrl } from '../tracking';
 
 export const Navbar: React.FC = () => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -73,7 +73,7 @@ export const Navbar: React.FC = () => {
             <span>Download APK</span>
           </a>
           <a
-            href={LANDING_CONFIG.publicOrderUrl}
+            href={getOrderUrl(LANDING_CONFIG.publicOrderUrl)}
             onClick={() => trackBuyClick('navbar')}
             className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm px-4 py-2 rounded-xl shadow-xs hover:shadow-md transition-all active:scale-95"
           >
@@ -148,10 +148,10 @@ export const Navbar: React.FC = () => {
                <Download className="w-4 h-4" />
                <span>Download APK Buku Warung</span>
              </a>
-             <a
-               href={LANDING_CONFIG.publicOrderUrl}
-               onClick={() => {
-                 trackBuyClick('navbar_mobile');
+              <a
+                href={getOrderUrl(LANDING_CONFIG.publicOrderUrl)}
+                onClick={() => {
+                  trackBuyClick('navbar_mobile');
                  setMobileMenuOpen(false);
                }}
                className="flex items-center justify-center gap-2 bg-emerald-600 text-white font-bold py-3 rounded-xl shadow-xs text-sm"

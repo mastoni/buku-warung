@@ -190,7 +190,7 @@ export const DocsPortalHome: React.FC<DocsPortalHomeProps> = ({ onOpenSearch }) 
           </div>
           <div>
             <h3 className="font-bold text-sm text-slate-900">
-              Buku Manual PDF Resmi — Buku Warung v0.2.0
+              Buku Manual PDF Resmi — Buku Warung
             </h3>
             <p className="text-xs text-slate-500 mt-0.5 max-w-md">
               Versi cetak A4 dan offline manual lengkap sedang disiapkan sesuai struktur kanonikal 24 bab panduan di atas.

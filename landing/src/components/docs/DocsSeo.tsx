@@ -10,7 +10,7 @@ export const DocsSeo: React.FC<DocsSeoProps> = ({ article }) => {
     const defaultTitle =
       'Panduan Lengkap Buku Warung — Petunjuk Penggunaan Kasir & Pembukuan UMKM';
     const defaultDesc =
-      'Panduan resmi penggunaan Buku Warung v0.2.0. Pelajari cara mengelola kasir POS, stok barang, hutang piutang, pembelian, Purchase Order, laporan, backup, dan printer thermal.';
+      'Panduan resmi penggunaan Buku Warung. Pelajari cara mengelola kasir POS, stok barang, hutang piutang, pembelian, Purchase Order, laporan, backup, dan printer thermal.';
     const baseUrl = 'https://bukuwarung.skmnetwork.com';
 
     const pageTitle = article

@@ -125,9 +125,9 @@ export const DOC_CATEGORIES: DocCategoryMeta[] = [
   },
 ];
 
-export const DOC_VERSION = 'Buku Warung v0.2.0 (Build 2)';
+export const DOC_VERSION = 'Buku Warung v0.2.1';
 export const DOC_LAST_UPDATED = '18 September 2026';
-export const OFFICIAL_APK_SHA256 = '9f2b282f924cd2c5388759c4c0f6feef5ec52a5bd55cd434f128b28b15a05d2b';
+export const OFFICIAL_APK_SHA256 = 'dfa10471a78b9d54c4535a27b3dd90d959d081bcd531543583fb5bcf2a09379e';
 
 export const DOC_ARTICLES: DocArticle[] = [
   // =========================================================================
@@ -146,7 +146,7 @@ export const DOC_ARTICLES: DocArticle[] = [
     updatedAt: DOC_LAST_UPDATED,
     readTime: '4 menit baca',
     summary:
-      'Buku Warung v0.2.0 didistribusikan secara langsung dalam format paket APK Android resmi melalui website SKMNetwork. Ikuti panduan mudah ini untuk memasang dan mengaktifkan aplikasi di HP Anda.',
+      'Buku Warung v0.2.1 didistribusikan secara langsung dalam format paket APK Android resmi melalui website SKMNetwork. Ikuti panduan mudah ini untuk memasang dan mengaktifkan aplikasi di HP Anda.',
     targetAudience:
       'Semua pengguna baru Buku Warung yang baru saja membeli lisensi atau ingin menginstal aplikasi di HP Android.',
     features: [
@@ -189,8 +189,9 @@ export const DOC_ARTICLES: DocArticle[] = [
       {
         title: '3. Verifikasi Keamanan File APK (Opsional untuk Pengguna Mahir)',
         paragraphs: [
-          'Untuk memastikan file APK yang Anda pasang asli dan tidak dimodifikasi oleh pihak lain, Anda dapat mencocokkan nilai SHA-256 Checksum file:',
-          `SHA-256 Resmi: ${OFFICIAL_APK_SHA256}`,
+          'Untuk memastikan file APK yang Anda pasang asli dan tidak dimodifikasi oleh pihak lain, Anda dapat mencocokkan nilai SHA-256 Checksum file dengan nilai resmi yang berlaku untuk versi APK terbaru:',
+          `SHA-256 Resmi (APK terbaru): ${OFFICIAL_APK_SHA256}`,
+          'Nilai ini berlaku untuk file APK resmi yang sedang diunduh. Verifikasi juga dilakukan otomatis oleh endpoint resmi saat Anda mengunduh.',
           'Pengecekan ini bersifat opsional bagi pengguna tingkat lanjut dan tidak wajib bagi pengguna awam.',
         ],
       },
@@ -246,7 +247,7 @@ export const DOC_ARTICLES: DocArticle[] = [
     },
     screenshot: {
       src: '/img/screenshots/01_welcome.png',
-      caption: 'Layar Selamat Datang & Pemasangan Lisensi Resmi Buku Warung v0.2.0',
+      caption: 'Layar Selamat Datang & Pemasangan Lisensi Resmi Buku Warung v0.2.1',
     },
     limitations: [
       'Satu kode lisensi hanya dapat diaktifkan pada 1 perangkat HP Android aktif.',
@@ -971,11 +972,11 @@ export const DOC_ARTICLES: DocArticle[] = [
       {
         type: 'warning',
         title: 'Batasan Fitur di Buku Warung v0.2.0',
-        text: 'Pada versi v0.2.0, fitur Terima Barang mencatat penerimaan seluruh item pesanan sekaligus (full receipt). Penerimaan barang parsial/bertahap dialokasikan pada pembaruan berikutnya (G13.7).',
+        text: 'Fitur Terima Barang mencatat penerimaan seluruh item pesanan sekaligus (full receipt). Penerimaan barang parsial/bertahap belum tersedia dan direncanakan pada pembaruan berikutnya (G13.7).',
       },
     ],
     limitations: [
-      'Penerimaan parsial (sebagian barang datang dulu) belum didukung di v0.2.0.',
+      'Penerimaan parsial (sebagian barang datang dulu) belum tersedia saat ini.',
       'Penyesuaian selisih harga faktur saat barang tiba dialokasikan pada pembaruan G13.7.',
       'Pembuatan draf PO otomatis saat stok menipis merupakan rencana masa depan.',
     ],
@@ -1079,7 +1080,7 @@ export const DOC_ARTICLES: DocArticle[] = [
       },
     ],
     limitations: [
-      'Penerimaan parsial (sebagian barang diterima lebih dulu) belum tersedia di v0.2.0.',
+      'Penerimaan parsial (sebagian barang diterima lebih dulu) belum tersedia saat ini.',
       'Penyesuaian harga faktur otomatis / selisih harga saat penerimaan dialokasikan pada rilis berikutnya (G13.7).',
     ],
     relatedSlugs: ['purchase-order', 'pembelian', 'produk', 'kas'],
@@ -1462,7 +1463,7 @@ export const DOC_ARTICLES: DocArticle[] = [
     categoryName: 'Bantuan & Kustomisasi',
     order: 23,
     chapterLabel: 'BAB 23',
-    description: 'Jawaban atas pertanyaan paling sering diajukan mengenai penggunaan Buku Warung v0.2.0.',
+    description: 'Jawaban atas pertanyaan paling sering diajukan mengenai penggunaan Buku Warung v0.2.1.',
     version: DOC_VERSION,
     updatedAt: DOC_LAST_UPDATED,
     readTime: '4 menit baca',

@@ -95,7 +95,7 @@ export const PricingSection: React.FC = () => {
                 </li>
                 <li className="flex items-start gap-2.5">
                   <Check className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
-                  <span>Tanpa Iuran Bulanan / Tahunan (Rp 0 selamanya)</span>
+                  <span>Tanpa iuran bulanan maupun tahunan</span>
                 </li>
                 <li className="flex items-start gap-2.5">
                   <Check className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />

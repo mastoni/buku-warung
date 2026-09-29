@@ -96,7 +96,7 @@ export const DocsSidebar: React.FC<DocsSidebarProps> = ({ isOpen, onClose }) => 
         >
           <span className="flex items-center gap-2">
             <BookOpen className="w-4 h-4" />
-            <span>Pusat Panduan v0.2.0</span>
+            <span>Pusat Panduan</span>
           </span>
           <ChevronRight className={`w-3.5 h-3.5 ${currentPath === '/panduan' ? 'text-white' : 'text-slate-400'}`} />
         </button>

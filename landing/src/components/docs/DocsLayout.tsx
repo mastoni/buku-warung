@@ -48,7 +48,7 @@ export const DocsLayout: React.FC = () => {
       {/* Docs Footer */}
       <footer className="bg-white border-t border-slate-200 py-8 text-center text-xs text-slate-500">
         <div className="max-w-7xl mx-auto px-4">
-          <p>© 2026 SKMNetwork — Dokumentasi Resmi Aplikasi Buku Warung v0.2.0.</p>
+          <p>© 2026 SKMNetwork — Dokumentasi Resmi Aplikasi Buku Warung.</p>
           <p className="mt-1 text-slate-400">
             Dibuat untuk membantu jutaan UMKM dan pemilik warung di seluruh Indonesia.
           </p>

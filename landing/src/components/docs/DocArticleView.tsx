@@ -234,7 +234,7 @@ export const DocArticleView: React.FC<DocArticleViewProps> = ({ article }) => {
           <div className="p-4 rounded-xl bg-slate-100 border border-slate-300/80 text-slate-700">
             <h4 className="font-bold text-xs text-slate-800 uppercase tracking-wider mb-1 flex items-center gap-1.5">
               <Info className="w-4 h-4 text-slate-500" />
-              <span>Batasan Fitur Buku Warung v0.2.0</span>
+              <span>Batasan Fitur Buku Warung Saat Ini</span>
             </h4>
             <ul className="list-disc list-inside text-xs text-slate-600 space-y-1 mt-2">
               {article.limitations.map((lim, lIdx) => (

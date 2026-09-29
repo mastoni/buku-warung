@@ -3,6 +3,7 @@ import {
   DOC_ARTICLES,
   DOC_CATEGORIES,
   DOC_VERSION,
+  OFFICIAL_APK_SHA256,
   getDocArticleBySlug,
   getAdjacentDocArticles,
   searchDocArticles,
@@ -34,7 +35,7 @@ describe('Documentation Content Full Implementation (G2) Tests', () => {
       expect(bab0.category).toBe('instalasi');
       expect(
         bab0.sections.some((s) =>
-          s.paragraphs.some((p) => p.includes('9f2b282f924cd2c5388759c4c0f6feef5ec52a5bd55cd434f128b28b15a05d2b'))
+          s.paragraphs.some((p) => p.includes(OFFICIAL_APK_SHA256))
         )
       ).toBe(true);
       expect(
@@ -53,10 +54,10 @@ describe('Documentation Content Full Implementation (G2) Tests', () => {
       });
     });
 
-    it('enforces official documentation version metadata as v0.2.0 (Build 2)', () => {
-      expect(DOC_VERSION).toBe('Buku Warung v0.2.0 (Build 2)');
+    it('enforces official documentation version metadata matches the current release', () => {
+      expect(DOC_VERSION).toBe('Buku Warung v0.2.1');
       DOC_ARTICLES.forEach((art) => {
-        expect(art.version).toBe('Buku Warung v0.2.0 (Build 2)');
+        expect(art.version).toBe('Buku Warung v0.2.1');
       });
     });
   });

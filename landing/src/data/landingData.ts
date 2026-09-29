@@ -99,9 +99,9 @@ export const TEST_CAMPAIGN_CONFIG = {
   headline: 'Coba Buku Warung Sebelum Membeli',
   sectionTitle: '🧪 Program Test Buku Warung',
   sectionBody:
-    'Coba Buku Warung dalam aktivitas usaha Anda sebelum memutuskan untuk membeli.',
+    'Coba Buku Warung dalam aktivitas usaha Anda sebelum memutuskan untuk membeli. Peserta yang lolos akan mendapat akses lewat Google Play Closed Testing.',
   batchLabel: 'Batch 1 — Maksimal 50 Usaha',
-  primaryCta: 'TEST DULU — KUOTA 50 USAHA',
+  primaryCta: 'DAFTAR TEST DULU — KUOTA 50 USAHA',
   secondaryCta: 'BELI LANGSUNG',
   fullTitle: 'Batch Test 1 Sudah Penuh',
   fullBody: 'Kuota 50 usaha untuk batch testing ini telah terpenuhi.',
@@ -224,7 +224,7 @@ export const HOW_TO_BUY_STEPS: HowToBuyStep[] = [
   {
     id: '3',
     title: 'Bayar Lisensi',
-    description: 'Scan QRIS atau transfer ke rekening KIOS KIARA sesuai total.',
+    description: 'Scan QRIS resmi atau transfer ke rekening yang tertera pada halaman pembayaran.',
   },
   {
     id: '4',
@@ -269,7 +269,7 @@ export const TRUST_ITEMS: TrustItem[] = [
     id: 'payment',
     icon: 'CheckCircle2',
     title: 'Pembelian melalui QRIS aman',
-    description: 'Pembayaran melalui QRIS (KIOS KIARA) yang terpercaya.',
+    description: 'Pembayaran melalui QRIS resmi yang terverifikasi.',
   },
 ];
 
@@ -490,7 +490,7 @@ export const COMPARISON_POINTS = [
   {
     feature: 'Model Pembayaran',
     bukuWarung: 'Pembelian sekali, tanpa langganan bulanan',
-    others: 'Rp 50.000 – Rp 150.000 / BULAN (Berlangganan)',
+    others: 'Aplikasi kasir/Android lain umumnya berlangganan bulanan',
     highlight: true,
   },
   {
@@ -542,7 +542,7 @@ export const FAQS: FaqItem[] = [
     id: 'faq-3',
     question: 'Berapa harga lisensi resmi Buku Warung?',
     answer:
-      'Lisensi resmi Buku Warung berharga {price} (promo peluncuran aktif) atau {priceNormal} (harga normal). Pembayaran bersifat sekali beli untuk selamanya (lifetime) tanpa iuran bulanan, tahunan, maupun potongan komisi transaksi.',
+      'Lisensi resmi Buku Warung berharga {price} saat promo peluncuran aktif, atau {priceNormal} setelah promo berakhir. Pembayaran bersifat sekali beli untuk satu perangkat Android, tanpa iuran bulanan maupun tahunan, dan tanpa potongan komisi transaksi.',
   },
   {
     id: 'faq-4',
@@ -554,7 +554,7 @@ export const FAQS: FaqItem[] = [
     id: 'faq-5',
     question: 'Bagaimana cara pembayaran lisensi?',
     answer:
-      'Pembayaran dilakukan melalui QRIS resmi (KIOS KIARA) yang mendukung BCA, Mandiri, BRI, GoPay, OVO, Dana, ShopeePay, atau transfer bank.',
+      'Pembayaran dilakukan melalui QRIS resmi yang mendukung BCA, Mandiri, BRI, GoPay, OVO, Dana, ShopeePay, atau transfer bank.',
   },
   {
     id: 'faq-6',
