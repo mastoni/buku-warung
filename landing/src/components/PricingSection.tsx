@@ -62,10 +62,10 @@ export const PricingSection: React.FC = () => {
             <div>
               {/* Header Badge */}
               <div className="flex items-center justify-between gap-2 mb-6">
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 text-xs font-extrabold">
-                  <Sparkles className="w-3.5 h-3.5" />
-                  {isPromoActive ? (promoName || 'Promo Peluncuran') : 'Lisensi Komersial'}
-                </span>
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 text-xs font-extrabold">
+                    <Sparkles className="w-3.5 h-3.5" />
+                    {isPromoActive ? (promoName || 'Promo Berjalan') : 'Lisensi Komersial'}
+                  </span>
                 {isPromoActive && normalPrice > effectivePrice && (
                   <span className="text-xs text-emerald-300/80 font-semibold line-through">
                     {normalPriceFormatted}
@@ -74,13 +74,20 @@ export const PricingSection: React.FC = () => {
               </div>
 
               {/* Title & Price */}
-              <h3 className="text-2xl font-extrabold text-white">Lisensi Seumur Hidup (1 Perangkat)</h3>
+              <h3 className="text-2xl font-extrabold text-white">Lisensi Sekali Bayar (1 Perangkat)</h3>
               <p className="text-xs text-emerald-200/80 mt-1">1 Lisensi = 1 Email Pemilik = 1 HP Android</p>
 
+              {/* Price: effective (payable) amount, with the normal price shown struck through
+                  only while the server reports the promo active. */}
               <div className="mt-6 mb-4 flex items-baseline gap-2">
                 <span className="text-4xl sm:text-5xl font-extrabold text-white tracking-tight">
                   {effectivePriceFormatted}
                 </span>
+                {isPromoActive && normalPrice > effectivePrice && (
+                  <span className="text-sm sm:text-base text-emerald-300/70 line-through font-semibold">
+                    {normalPriceFormatted}
+                  </span>
+                )}
                 <span className="text-xs sm:text-sm font-semibold text-emerald-300">/ sekali beli</span>
               </div>
 

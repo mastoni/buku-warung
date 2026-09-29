@@ -12,7 +12,8 @@ import {
 import { getOrderUrl } from '../tracking';
 
 export const Hero: React.FC = () => {
-  const { isPromoActive, effectivePriceFormatted, normalPriceFormatted, showCountdown } = usePricing();
+  const { isPromoActive, effectivePriceFormatted, normalPriceFormatted, showCountdown, promoName } =
+    usePricing();
 
   return (
     <section id="beranda" className="pt-28 pb-16 md:pt-36 md:pb-24 relative overflow-hidden">
@@ -31,17 +32,20 @@ export const Hero: React.FC = () => {
             Buku Warung membantu mencatat penjualan kasir, stok barang, kas masuk/keluar, pelanggan, hutang/piutang, dan laporan usaha dalam satu aplikasi Android.
           </p>
 
-          {/* Promo/Pricing Message */}
+          {/* Promo/Pricing Message - always mirrors the server-authoritative pricing state.
+              No "seumur hidup": the licence is a one-time purchase bound to one device and is
+              transferable by admin, so a permanence claim would be inaccurate. */}
           <p className="text-sm sm:text-base text-slate-600 max-w-2xl mx-auto">
             {isPromoActive
-              ? `Tanpa langganan bulanan. Selama promo peluncuran, cukup ${effectivePriceFormatted} sekali beli seumur hidup.`
-              : `Tanpa langganan bulanan. Harga ${normalPriceFormatted}, sekali beli seumur hidup.`}
+              ? `Tanpa langganan bulanan maupun tahunan. Selama ${promoName || 'promo'} berlangsung, cukup ${effectivePriceFormatted} sekali beli.`
+              : 'Tanpa langganan bulanan maupun tahunan. Sekali beli untuk satu perangkat Android.'}
           </p>
 
-          {/* Price Display */}
+          {/* Price Display - effective price is the server-authoritative payable amount.
+              The crossed-out reference only renders while the server says the promo runs. */}
           <div className="flex items-baseline justify-center gap-2">
             <span className="text-2xl sm:text-3xl font-extrabold text-slate-900">{effectivePriceFormatted}</span>
-            {isPromoActive && normalPriceFormatted && (
+            {isPromoActive && normalPriceFormatted && normalPriceFormatted !== effectivePriceFormatted && (
               <span className="text-base sm:text-lg text-slate-400 line-through font-semibold">{normalPriceFormatted}</span>
             )}
             <span className="text-xs sm:text-sm font-semibold text-slate-500">/ sekali beli</span>
@@ -101,7 +105,7 @@ export const Hero: React.FC = () => {
           <div className="pt-6 flex flex-wrap items-center justify-center gap-y-2 gap-x-6 text-xs sm:text-sm font-semibold text-slate-600">
             <div className="flex items-center gap-1.5">
               <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-              <span>Sekali Beli Seumur Hidup</span>
+              <span>Sekali Bayar, Tanpa Langganan</span>
             </div>
             <div className="flex items-center gap-1.5">
               <Zap className="w-4 h-4 text-emerald-600 shrink-0" />

@@ -5,7 +5,7 @@ import { usePricing } from '../hooks/usePricingPromo';
 import { trackDownloadClick, trackWhatsAppClick, trackBuyClick, getOrderUrl } from '../tracking';
 
 export const FinalCta: React.FC = () => {
-  const { isPromoActive, effectivePriceFormatted } = usePricing();
+  const { isPromoActive, effectivePriceFormatted, promoName } = usePricing();
 
   return (
     <section id="cta" className="py-16 md:py-24 bg-slate-900 border-t border-slate-800 reveal-on-scroll">
@@ -15,8 +15,8 @@ export const FinalCta: React.FC = () => {
         </h2>
         <p className="text-base sm:text-lg text-slate-300 max-w-2xl mx-auto">
           {isPromoActive
-            ? `Tanpa langganan bulanan. Promo peluncuran hanya ${effectivePriceFormatted} sekali beli seumur hidup.`
-            : `Tanpa langganan bulanan. Cukup ${effectivePriceFormatted} sekali beli seumur hidup.`}
+            ? `Tanpa langganan bulanan maupun tahunan. Selama ${promoName || 'promo'} berlangsung, cukup ${effectivePriceFormatted} sekali beli.`
+            : 'Tanpa langganan bulanan maupun tahunan. Sekali beli untuk satu perangkat Android.'}
         </p>
 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3.5 pt-2">

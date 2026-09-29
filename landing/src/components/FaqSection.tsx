@@ -37,7 +37,8 @@ export const FaqSection: React.FC = () => {
         <div className="space-y-3">
           {FAQS.map((faq: FaqItem) => {
             const isOpen = openId === faq.id;
-            const question = faq.question.replace(/Rp 50\.000/g, effectivePriceFormatted);
+            // Any price mentioned in a question follows the authoritative effective price.
+            const question = faq.question.replace(/Rp [\d.]+/g, effectivePriceFormatted);
             const answer = formatAnswer(faq.answer);
 
             return (

@@ -152,7 +152,7 @@ export const DOC_ARTICLES: DocArticle[] = [
     features: [
       'Download paket APK resmi langsung dari website https://bukuwarung.skmnetwork.com',
       'Panduan perizinan instalasi untuk berbagai merek HP Android (Samsung, Xiaomi, Oppo, Vivo, Realme, Infinix)',
-      'Aktivasi lisensi resmi seumur hidup (Lifetime 1 Perangkat)',
+      'Aktivasi lisensi resmi (1 Lisensi = 1 Perangkat)',
       'Verifikasi keamanan berkas APK (SHA-256 Checksum)',
     ],
     sections: [
@@ -164,7 +164,7 @@ export const DOC_ARTICLES: DocArticle[] = [
         listItems: [
           'Website: Kunjungi https://bukuwarung.skmnetwork.com',
           'Beli Lisensi: Buka formulir pemesanan resmi (Public Order)',
-          'Pembayaran: Bayar sekali seumur hidup (Rp 50.000 selama promo)',
+          'Pembayaran: Bayar sekali untuk satu perangkat (hanya berlaku selama promo aktif, harga promo mengikuti pengumuman resmi)',
           'Terima Lisensi: Dapatkan Kode Lisensi resmi (format: BW-XXXX-XXXX-XXXX) via layar dan email konfirmasi',
           'Download APK: Unduh file app-release.apk resmi dari tautan unduhan',
           'Install APK: Pasang file aplikasi di smartphone Android Anda',
@@ -242,7 +242,7 @@ export const DOC_ARTICLES: DocArticle[] = [
         'Email Terdaftar: slamet.sembako@gmail.com',
         'Kode Lisensi: BW-ET72-CCPY-ZAYN',
         'Langkah: Pak Slamet memasang APK -> Membuka aplikasi -> Memasukkan email & kode -> Tekan Aktivasi.',
-        'Hasil: Layar menampilkan status "Lisensi Aktif Seumur Hidup", dan aplikasi langsung masuk ke Beranda.',
+        'Hasil: Layar menampilkan status "Lisensi Aktif", dan aplikasi langsung masuk ke Beranda.',
       ],
     },
     screenshot: {
@@ -1393,15 +1393,15 @@ export const DOC_ARTICLES: DocArticle[] = [
     categoryName: 'Keamanan & Lisensi',
     order: 21,
     chapterLabel: 'BAB 21',
-    description: 'Ketentuan lisensi resmi sekali beli seumur hidup dan prosedur resmi jika berganti HP baru.',
+    description: 'Ketentuan lisensi resmi sekali bayar dan prosedur resmi jika berganti HP baru.',
     version: DOC_VERSION,
     updatedAt: DOC_LAST_UPDATED,
     readTime: '3 menit baca',
     summary:
-      'Lisensi Buku Warung berlaku 1 Lisensi = 1 Email Pemilik = 1 HP Android Aktif Selamanya. Tidak ada biaya langganan bulanan maupun potongan per transaksi.',
+      'Lisensi Buku Warung berlaku 1 Lisensi = 1 Email Pemilik = 1 HP Android. Tidak ada biaya langganan bulanan maupun potongan per transaksi.',
     targetAudience: 'Semua pemilik lisensi resmi Buku Warung.',
     features: [
-      'Sekali beli untuk seumur hidup (Lifetime One-Time Purchase)',
+      'Sekali bayar untuk satu perangkat (One-Time Purchase)',
       'Tanpa biaya bulanan / tahunan (No recurring fee)',
       'Prosedur resmi pemindahan lisensi saat ganti HP baru melalui Admin CS',
     ],
@@ -1486,7 +1486,7 @@ export const DOC_ARTICLES: DocArticle[] = [
       {
         title: 'Apakah ada biaya perpanjangan langganan bulanan?',
         paragraphs: [
-          'Tidak ada. Pembelian lisensi Buku Warung adalah sekali bayar seumur hidup (Lifetime One-Time Purchase).',
+          'Tidak ada. Pembelian lisensi Buku Warung adalah sekali bayar untuk satu perangkat (One-Time Purchase).',
         ],
       },
       {

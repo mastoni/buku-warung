@@ -82,24 +82,33 @@ export function calculateCountdown(expiresAt: number, currentServerTime: number)
   };
 }
 
-const DEFAULT_PRICING_STATE: PricingPromoState = {
+/**
+ * Safe presentation used before the pricing API answers, and if it fails.
+ *
+ * Deliberately claims NO promo: an unverified discount must never be advertised. The fallback
+ * price is the normal price so a failed request cannot show a promo price as if it were
+ * authoritative, and no strikethrough, countdown, or promo copy renders.
+ *
+ * Exported so tests can assert the exact safe state the UI renders on failure/loading.
+ */
+export const DEFAULT_PRICING_STATE: PricingPromoState = {
   isLoading: false,
-  isPromoActive: true,
-  effectivePrice: 50000,
+  isPromoActive: false,
+  effectivePrice: 100000,
   normalPrice: 100000,
-  promoPrice: 50000,
+  promoPrice: 100000,
   currency: 'IDR',
-  promoName: 'Promo Peluncuran',
+  promoName: '',
   startsAt: 0,
   expiresAt: 0,
   timezone: 'Asia/Jakarta',
-  showCountdown: false, // Never show fake countdown if unverified
-  effectivePriceFormatted: 'Rp 50.000',
+  showCountdown: false,
+  effectivePriceFormatted: 'Rp 100.000',
   normalPriceFormatted: 'Rp 100.000',
-  promoPriceFormatted: 'Rp 50.000',
-  savingsFormatted: 'Rp 50.000',
-  savingsPercent: 50,
-  discountBadge: 'Hemat 50% — Pembelian Sekali',
+  promoPriceFormatted: 'Rp 100.000',
+  savingsFormatted: 'Rp 0',
+  savingsPercent: 0,
+  discountBadge: 'Pembelian Sekali',
   countdown: {
     days: 0,
     hours: 0,
@@ -218,21 +227,26 @@ export const PricingProvider: React.FC<PricingProviderProps> = ({
     return () => clearInterval(intervalId);
   }, [pricingData, fetchPricing]);
 
-  // Derived state calculations
-  const effectivePrice = pricingData ? pricingData.effectivePrice : 50000;
-  const normalPrice = pricingData ? pricingData.normalPrice : 100000;
-  const promoPrice = pricingData ? pricingData.promoPrice : 50000;
+  // Derived state calculations.
+  // Before the API answers there is no server verdict, so the UI must not claim a promo.
+  // This mirrors DEFAULT_PRICING_STATE and keeps loading/error presentation promo-free.
+  const effectivePrice = pricingData ? pricingData.effectivePrice : DEFAULT_PRICING_STATE.effectivePrice;
+  const normalPrice = pricingData ? pricingData.normalPrice : DEFAULT_PRICING_STATE.normalPrice;
+  const promoPrice = pricingData ? pricingData.promoPrice : DEFAULT_PRICING_STATE.promoPrice;
   const isPromoActive = pricingData ? pricingData.isPromoActive && !countdown.isExpired : false;
   const showCountdown = pricingData ? pricingData.showCountdown && isPromoActive && !countdown.isExpired : false;
-  const promoName = pricingData?.promoName || 'Promo Peluncuran';
+  const promoName = pricingData?.promoName || '';
   const currency = pricingData?.currency || 'IDR';
   const startsAt = pricingData?.startsAt || 0;
   const expiresAt = pricingData?.expiresAt || 0;
   const timezone = pricingData?.timezone || 'Asia/Jakarta';
 
   const savings = Math.max(0, normalPrice - effectivePrice);
-  const savingsPercent = normalPrice > 0 && savings > 0 ? Math.round((savings / normalPrice) * 100) : 0;
-  const discountBadge = isPromoActive && savingsPercent > 0
+  // Savings only exist when the server says the promo is running; a stale pricingData must
+  // never leave a "Hemat 50%" badge on screen.
+  const hasRealSavings = isPromoActive && normalPrice > 0 && savings > 0;
+  const savingsPercent = hasRealSavings ? Math.round((savings / normalPrice) * 100) : 0;
+  const discountBadge = hasRealSavings
     ? `Hemat ${savingsPercent}% — Pembelian Sekali`
     : 'Pembelian Sekali';
 
