@@ -7,8 +7,10 @@ import id.skmnetwork.bukuwarung.data.local.entity.SupplierEntity
 import id.skmnetwork.bukuwarung.data.local.entity.SupplierPayableEntity
 import id.skmnetwork.bukuwarung.data.local.entity.SupplierPaymentEntity
 import id.skmnetwork.bukuwarung.data.repository.SupplierRepository
+import id.skmnetwork.bukuwarung.util.loadingFlag
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -24,13 +26,34 @@ class SupplierViewModel(
 
     val searchQuery = MutableStateFlow("")
 
-    val suppliers: StateFlow<List<SupplierEntity>> = searchQuery
+    // Step 21: the raw flow behind `suppliers`, held separately so the loading flag can be
+    // attached to it BEFORE stateIn, exactly as ProductViewModel does for its own list. That is
+    // what stops the `initialValue = emptyList()` below from being read as a real answer.
+    private val suppliersFlow: Flow<List<SupplierEntity>> = searchQuery
         .flatMapLatest { query ->
             repository.searchSuppliers(query)
         }
+
+    // The flag resolves on the first emission and never returns to true, so a later search keeps
+    // showing the previous list instead of flashing a spinner, and an empty first result ends it
+    // too - no state here can spin forever.
+    val isLoading: StateFlow<Boolean> = suppliersFlow.loadingFlag(viewModelScope)
+
+    // Step 21. The flag has to be attached to the RAW flow, before stateIn, so the
+    // `initialValue = emptyList()` below is never read as a real answer.
+    //
+    // `Eagerly` matters here and is the fix, not a detail. This ViewModel is created at the app
+    // root (AppNavigation), long before the merchant opens Suppliers, so with `WhileSubscribed` the
+    // query had not run when the screen appeared: the flag - which resolves against the raw flow
+    // the moment the ViewModel is built - had already gone false while `suppliers` still held its
+    // initial empty list, so the screen showed "Belum Ada Supplier" for the whole query and the
+    // loading branch was unreachable. Starting the upstream eagerly resolves the list before anyone
+    // can observe it unresolved, which is the behaviour the app already has for products and the
+    // other app-root lists. It changes when the query runs, not what it returns.
+    val suppliers: StateFlow<List<SupplierEntity>> = suppliersFlow
         .stateIn(
             scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
+            started = SharingStarted.Eagerly,
             initialValue = emptyList()
         )
 

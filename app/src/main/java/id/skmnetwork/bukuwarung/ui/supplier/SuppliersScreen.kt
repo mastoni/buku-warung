@@ -65,6 +65,7 @@ import id.skmnetwork.bukuwarung.data.local.entity.SupplierEntity
 import id.skmnetwork.bukuwarung.data.local.entity.SupplierPayableEntity
 import id.skmnetwork.bukuwarung.data.preferences.UserSettings
 import id.skmnetwork.bukuwarung.domain.business.BusinessTaxonomyRegistry
+import id.skmnetwork.bukuwarung.ui.components.AppLoadingState
 import id.skmnetwork.bukuwarung.ui.components.AppTextField
 import id.skmnetwork.bukuwarung.ui.theme.AppColors
 import id.skmnetwork.bukuwarung.ui.theme.rememberAppWindowSize
@@ -89,6 +90,7 @@ fun SuppliersScreen(
     val debtLabel = terminology.debtLabel
 
     val suppliers by supplierViewModel.suppliers.collectAsStateWithLifecycle()
+    val isLoading by supplierViewModel.isLoading.collectAsStateWithLifecycle()
     var query by remember { mutableStateOf("") }
 
     var showSupplierDialog by remember { mutableStateOf(false) }
@@ -808,7 +810,12 @@ fun SuppliersScreen(
             Spacer(Modifier.height(4.dp))
 
             // Supplier List Content
-            if (suppliers.isEmpty()) {
+            // Step 21: three distinct states. Before the first repository emission the list is
+            // still unresolved, so it must not be reported as "Belum Ada Supplier" - that told a
+            // merchant with thousands of suppliers to go and add one, for as long as the query took.
+            if (isLoading) {
+                AppLoadingState()
+            } else if (suppliers.isEmpty()) {
                 SuppliersEmptyState(
                     isSearching = query.isNotBlank(),
                     supplierLabel = supplierLabel,
