@@ -76,6 +76,4 @@ featuregrafic*.png
 bukuwarung-512x512.png
 
 # Server public release artifacts (served via Docker build context, not git)
-server/public/*
-# The admin console shell is source, not a release artifact, and must be versioned.
-!server/public/admin/
+server/public/

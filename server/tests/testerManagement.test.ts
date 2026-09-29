@@ -128,14 +128,13 @@ describe('Tester Management (admin only)', () => {
       expect(JSON.stringify(data)).not.toContain('@example.com');
     });
 
-    it('admin console HTML embeds no tester data', async () => {
+    it('serves no admin console page from the license server', async () => {
+      // The standalone /admin/testers page was removed. The UI lives in the Admin App Session
+      // BFF (admin/ on port 3001); the license server must expose API only, so nothing here
+      // could become a data path for an unauthenticated browser.
       registerTestCampaign(detailsFor(1), leadToken(1));
       const res = await app.inject({ method: 'GET', url: '/admin/testers' });
-      expect(res.statusCode).toBe(200);
-      expect(res.body).not.toContain('tester1@example.com');
-      expect(res.body).not.toContain('081234567801');
-      // It must be a shell that fetches with the admin token at runtime.
-      expect(res.body).toContain('/v1/admin/testers');
+      expect(res.statusCode).toBe(404);
     });
   });
 

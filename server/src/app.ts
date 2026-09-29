@@ -6,7 +6,6 @@ import { config } from './config/index.js';
 import { registerHealthRoutes } from './controllers/healthController.js';
 import { registerLicenseRoutes } from './controllers/licenseController.js';
 import { registerAdminRoutes } from './controllers/adminController.js';
-import { registerAdminConsoleRoutes } from './controllers/adminConsoleController.js';
 import { registerLandingRoutes } from './controllers/landingController.js';
 import { registerDownloadRoutes } from './controllers/downloadController.js';
 import { registerPublicOrderRoutes } from './controllers/publicOrderController.js';
@@ -56,7 +55,6 @@ export function buildApp(): FastifyInstance {
   app.register(registerHealthRoutes);
   app.register(registerLicenseRoutes);
   app.register(registerAdminRoutes);
-  app.register(registerAdminConsoleRoutes);
   app.register(registerLandingRoutes);
   app.register(registerDownloadRoutes);
   app.register(registerPublicOrderRoutes);

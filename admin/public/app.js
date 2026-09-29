@@ -35,6 +35,33 @@ function setupEventListeners() {
     });
   });
 
+  // Tester Management controls
+  const testersRefreshBtn = document.getElementById('testersRefreshBtn');
+  if (testersRefreshBtn) testersRefreshBtn.addEventListener('click', refreshTesterTable);
+  const testersStatusFilter = document.getElementById('testersStatusFilter');
+  if (testersStatusFilter) testersStatusFilter.addEventListener('change', refreshTesterTable);
+  const testersSearchInput = document.getElementById('testersSearchInput');
+  if (testersSearchInput) {
+    testersSearchInput.addEventListener('keyup', (e) => { if (e.key === 'Enter') refreshTesterTable(); });
+  }
+  const testerSaveBtn = document.getElementById('testerSaveBtn');
+  if (testerSaveBtn) testerSaveBtn.addEventListener('click', saveTester);
+  const testerCopyEmailBtn = document.getElementById('testerCopyEmailBtn');
+  if (testerCopyEmailBtn) {
+    testerCopyEmailBtn.addEventListener('click', () => {
+      const v = (document.getElementById('testerDetailEmail') || {}).value || '';
+      navigator.clipboard.writeText(v).then(() => showToast('Email Google Play disalin.', 'success'));
+    });
+  }
+  const testerCopyOptInBtn = document.getElementById('testerCopyOptInBtn');
+  if (testerCopyOptInBtn) {
+    testerCopyOptInBtn.addEventListener('click', () => {
+      const v = (document.getElementById('testerOptInUrlInput') || {}).value || '';
+      if (!v) { showToast('Belum ada opt-in link yang dikonfigurasi.', 'error'); return; }
+      navigator.clipboard.writeText(v).then(() => showToast('Opt-in link disalin.', 'success'));
+    });
+  }
+
   // License Filter buttons
   document.querySelectorAll('.filter-btn').forEach((btn) => {
     btn.addEventListener('click', () => {
@@ -42,8 +69,7 @@ function setupEventListeners() {
       btn.classList.add('active');
       currentFilter = btn.getAttribute('data-filter');
       renderLicensesTable();
-    });
-  });
+    });  });
 
   // Order Filter buttons
   document.querySelectorAll('.order-filter-btn').forEach((btn) => {
@@ -307,7 +333,8 @@ function switchTab(tab) {
     licenses: 'Daftar Lisensi Komersial',
     pricing: 'Konfigurasi Promosi & Harga Komersial',
     recovery: 'Permintaan Recovery & Rebind Perangkat',
-    audit: 'Audit Trail Log'
+    audit: 'Audit Trail Log',
+    testers: 'Tester Management (Test Dulu — Closed Testing)'
   };
   document.getElementById('pageTitle').textContent = titles[tab] || 'Dashboard';
 
@@ -318,6 +345,214 @@ function switchTab(tab) {
   if (tab === 'pricing') loadPricing();
   if (tab === 'recovery') loadRecoveries();
   if (tab === 'audit') loadAuditLogs();
+  if (tab === 'testers') loadTesters();
+}
+
+// ============================================================================
+// TESTER MANAGEMENT - Buku Warung "Test Dulu" (Google Play Closed Testing)
+//
+// All calls go through the Admin App session BFF at /api/testers*. The license server
+// credential is never handled here and never reaches the browser.
+// A registration is NOT a Google Play tester: the Play invite is a manual step.
+// ============================================================================
+let testerStatuses = [];
+let currentTesterId = null;
+
+async function loadTesters() {
+  try {
+    const [summaryRes, listRes] = await Promise.all([
+      fetch('/api/testers/summary'),
+      buildTesterListUrl()
+    ]);
+
+    if (summaryRes.ok) {
+      const s = await summaryRes.json();
+      const d = s.data || s;
+      setText('testersCapacity', d.capacity != null ? d.capacity : '-');
+      setText('testersRegistered', d.registered != null ? d.registered : '-');
+      setText('testersRemaining', d.remaining != null ? d.remaining : '-');
+      setText('testersCampaignId', d.campaignId || '-');
+      setText('testersStatusBadge', d.status || '-');
+      setText('testersPlayIntegrated', d.googlePlayIntegrated === false ? 'Manual' : (d.googlePlayIntegrated ? 'Terhubung' : '-'));
+
+      const bd = document.getElementById('testersBreakdown');
+      if (bd && Array.isArray(d.breakdown)) {
+        bd.innerHTML = d.breakdown
+          .map((b) => '<span class="badge badge-info">' + escapeHtml(b.status) + ': ' + b.count + '</span>')
+          .join(' ');
+      }
+    }
+
+    // Status filter options come from the authoritative allowlist, never hardcoded here.
+    if (testerStatuses.length === 0) {
+      const metaRes = await fetch('/api/testers/meta/statuses');
+      if (metaRes.ok) {
+        const m = await metaRes.json();
+        testerStatuses = (m.data && m.data.statuses) || [];
+        const filter = document.getElementById('testersStatusFilter');
+        const sel = document.getElementById('testerStatusSelect');
+        if (filter) {
+          filter.innerHTML = '<option value="">Semua status</option>' +
+            testerStatuses.map((s) => '<option value="' + escapeHtml(s) + '">' + escapeHtml(s) + '</option>').join('');
+        }
+        if (sel) {
+          sel.innerHTML = testerStatuses.map((s) => '<option value="' + escapeHtml(s) + '">' + escapeHtml(s) + '</option>').join('');
+        }
+      }
+    }
+
+    const listJson = await listRes.json();
+    renderTestersTable(listJson);
+  } catch (err) {
+    showToast('Gagal memuat data tester: ' + err.message, 'error');
+  }
+}
+
+async function buildTesterListUrl() {
+  const status = (document.getElementById('testersStatusFilter') || {}).value || '';
+  const search = ((document.getElementById('testersSearchInput') || {}).value || '').trim();
+  const params = new URLSearchParams();
+  if (status) params.append('status', status);
+  if (search) params.append('search', search);
+  const qs = params.toString();
+  return fetch('/api/testers' + (qs ? '?' + qs : ''));
+}
+
+async function refreshTesterTable() {
+  try {
+    const res = await buildTesterListUrl();
+    renderTestersTable(await res.json());
+  } catch (err) {
+    showToast('Gagal memuat daftar tester: ' + err.message, 'error');
+  }
+}
+
+function renderTestersTable(payload) {
+  const tbody = document.getElementById('testersTbody');
+  if (!tbody) return;
+  const testers = (payload && payload.data && payload.data.testers) || [];
+
+  if (testers.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="9" class="text-center text-muted">Belum ada pendaftar pada campaign ini.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = testers
+    .map((t) => (
+      '<tr>' +
+      '<td>' + t.slotNumber + '</td>' +
+      '<td>' + escapeHtml(t.name) + '</td>' +
+      '<td>' + escapeHtml(t.googlePlayEmail) + '</td>' +
+      '<td>' + escapeHtml(t.whatsapp) + '</td>' +
+      '<td>' + escapeHtml(t.businessType) + '</td>' +
+      '<td>' + escapeHtml(t.androidDevice) + '</td>' +
+      '<td>' + new Date(t.registeredAt).toLocaleString('id-ID') + '</td>' +
+      '<td><span class="badge badge-info">' + escapeHtml(t.status) + '</span></td>' +
+      '<td><button type="button" class="btn btn-secondary" data-tester-id="' + t.id + '">Detail</button></td>' +
+      '</tr>'
+    ))
+    .join('');
+
+  tbody.querySelectorAll('button[data-tester-id]').forEach((btn) => {
+    btn.addEventListener('click', () => openTesterDetail(Number(btn.dataset.testerId)));
+  });
+}
+
+async function openTesterDetail(id) {
+  try {
+    const res = await fetch('/api/testers/' + id);
+    const payload = await res.json();
+    if (!res.ok || payload.success === false) {
+      showToast((payload.error && payload.error.message) || 'Gagal memuat detail tester', 'error');
+      return;
+    }
+    const t = payload.data;
+    currentTesterId = id;
+
+    setValue('testerDetailTitle', 'Detail Tester #' + t.id + ' — Slot ' + t.slotNumber);
+    setValue('testerDetailSlot', t.slotNumber);
+    setValue('testerDetailStatusDisplay', t.status);
+    setValue('testerDetailName', t.name);
+    setValue('testerDetailBusinessType', t.businessType);
+    setValue('testerDetailEmail', t.googlePlayEmail);
+    setValue('testerDetailWhatsapp', t.whatsapp);
+    setValue('testerDetailDaily', t.dailyTransactions);
+    setValue('testerDetailDevice', t.androidDevice);
+    setValue('testerDetailRegisteredAt', new Date(t.registeredAt).toLocaleString('id-ID'));
+    setValue(
+      'testerDetailPlayDates',
+      (t.playInvitedAt ? new Date(t.playInvitedAt).toLocaleString('id-ID') : 'Belum diinvite') +
+      ' / ' +
+      (t.playOptedInAt ? new Date(t.playOptedInAt).toLocaleString('id-ID') : 'Belum opt-in')
+    );
+    setValue('testerOptInUrlInput', t.playOptInUrl || '');
+    setValue('testerNotesInput', t.adminNotes || '');
+
+    const sel = document.getElementById('testerStatusSelect');
+    if (sel && testerStatuses.length > 0) {
+      sel.innerHTML = testerStatuses.map((s) => '<option value="' + escapeHtml(s) + '"' + (s === t.status ? ' selected' : '') + '>' + escapeHtml(s) + '</option>').join('');
+    }
+
+    const tbody = document.getElementById('testerHistoryTbody');
+    if (tbody) {
+      tbody.innerHTML = (t.history && t.history.length)
+        ? t.history.map((h) => (
+          '<tr>' +
+          '<td>' + new Date(h.createdAt).toLocaleString('id-ID') + '</td>' +
+          '<td>' + escapeHtml(h.fromStatus || '-') + '</td>' +
+          '<td>' + escapeHtml(h.toStatus) + '</td>' +
+          '<td>' + escapeHtml(h.actor) + '</td>' +
+          '<td>' + escapeHtml(h.note || '-') + '</td>' +
+          '</tr>'
+        )).join('')
+        : '<tr><td colspan="5" class="text-center text-muted">Belum ada transisi status.</td></tr>';
+    }
+
+    openModal('testerDetailModal');
+  } catch (err) {
+    showToast('Gagal memuat detail tester: ' + err.message, 'error');
+  }
+}
+
+async function saveTester() {
+  if (!currentTesterId) return;
+  const status = (document.getElementById('testerStatusSelect') || {}).value;
+  const adminNotes = (document.getElementById('testerNotesInput') || {}).value || null;
+  const playOptInUrl = (document.getElementById('testerOptInUrlInput') || {}).value || null;
+
+  try {
+    const res = await fetch('/api/testers/' + currentTesterId, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: status, adminNotes: adminNotes, playOptInUrl: playOptInUrl })
+    });
+    const payload = await res.json();
+    if (!res.ok || payload.success === false) {
+      showToast((payload.error && payload.error.message) || 'Gagal menyimpan perubahan tester', 'error');
+      return;
+    }
+    closeModal('testerDetailModal');
+    showToast('Perubahan tester tersimpan.', 'success');
+    await loadTesters();
+  } catch (err) {
+    showToast('Gagal menyimpan perubahan: ' + err.message, 'error');
+  }
+}
+
+function escapeHtml(value) {
+  return String(value == null ? '' : value).replace(/[&<>"']/g, (c) => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+  ));
+}
+
+function setText(id, value) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = String(value);
+}
+
+function setValue(id, value) {
+  const el = document.getElementById(id);
+  if (el) el.value = value == null ? '' : String(value);
 }
 
 // Data Fetching: Sales (Penjualan Buku Warung)

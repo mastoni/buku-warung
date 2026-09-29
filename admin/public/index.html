@@ -73,6 +73,10 @@
           <span>Permintaan Recovery</span>
           <span id="recoveryBadge" class="nav-badge hidden">0</span>
         </button>
+        <button class="nav-item" data-tab="testers">
+          <span class="nav-icon">🧪</span>
+          <span>Tester Management</span>
+        </button>
         <button class="nav-item" data-tab="audit">
           <span class="nav-icon">📜</span>
           <span>Audit Log</span>
@@ -575,6 +579,86 @@
           </div>
         </div>
       </section>
+
+      <!-- ============================================================
+           TESTER MANAGEMENT - Buku Warung "Test Dulu" (Closed Testing)
+           ============================================================ -->
+      <section id="tab-testers" class="tab-view hidden">
+        <div class="alert-banner mb-4">
+          <strong>Terdaftar di Test Dulu bukan berarti sudah menjadi tester Google Play.</strong>
+          Undangan Google Play Closed Testing tetap dilakukan manual oleh admin melalui Google Play
+          Console. Sistem ini belum terintegrasi dengan Google Play API, sehingga status Play
+          dicatat secara manual oleh admin.
+        </div>
+
+        <div class="metrics-grid mb-4">
+          <div class="metric-card">
+            <span class="metric-label">Capacity</span>
+            <span class="metric-value" id="testersCapacity">-</span>
+            <span class="metric-desc" id="testersCampaignId">-</span>
+          </div>
+          <div class="metric-card">
+            <span class="metric-label">Registered</span>
+            <span class="metric-value" id="testersRegistered">-</span>
+            <span class="metric-desc" id="testersStatusBadge">-</span>
+          </div>
+          <div class="metric-card">
+            <span class="metric-label">Remaining</span>
+            <span class="metric-value text-success" id="testersRemaining">-</span>
+            <span class="metric-desc">Slot masih tersedia</span>
+          </div>
+          <div class="metric-card">
+            <span class="metric-label">Google Play API</span>
+            <span class="metric-value" id="testersPlayIntegrated">-</span>
+            <span class="metric-desc">Undangan Closed Testing manual</span>
+          </div>
+        </div>
+
+        <div class="card mb-4">
+          <div class="card-header">
+            <h3>Status Breakdown</h3>
+            <span class="badge badge-info">Authoritative Campaign Service</span>
+          </div>
+          <div class="card-body">
+            <div id="testersBreakdown" class="form-row">
+              <span class="text-muted">Memuat breakdown status...</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h3>Daftar Tester</h3>
+            <div class="form-row">
+              <select id="testersStatusFilter" class="input-readonly">
+                <option value="">Semua status</option>
+              </select>
+              <input type="text" id="testersSearchInput" placeholder="Cari nama / email / WhatsApp / jenis usaha">
+              <button type="button" class="btn btn-secondary" id="testersRefreshBtn">Muat Ulang</button>
+            </div>
+          </div>
+          <div class="table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Slot</th>
+                  <th>Nama</th>
+                  <th>Google Play Email</th>
+                  <th>WhatsApp</th>
+                  <th>Jenis Usaha</th>
+                  <th>Perangkat</th>
+                  <th>Terdaftar</th>
+                  <th>Status</th>
+                  <th>Aksi</th>
+                </tr>
+              </thead>
+              <tbody id="testersTbody">
+                <tr><td colspan="9" class="text-center text-muted">Memuat tester...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
     </main>
   </div>
 
@@ -1020,6 +1104,111 @@
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-close-modal="deliveryPreparationModal">Tutup</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Tester Detail (Test Dulu) -->
+  <div id="testerDetailModal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="testerDetailTitle">Detail Tester</h3>
+        <button type="button" class="modal-close" data-close-modal="testerDetailModal">×</button>
+      </div>
+      <div class="modal-body">
+        <div id="testerDetailAlert" class="alert-banner hidden mb-3"></div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Slot</label>
+            <input type="text" id="testerDetailSlot" class="input-readonly" readonly>
+          </div>
+          <div class="form-group">
+            <label>Status Saat Ini</label>
+            <input type="text" id="testerDetailStatusDisplay" class="input-readonly" readonly>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Nama Usaha</label>
+            <input type="text" id="testerDetailName" readonly>
+          </div>
+          <div class="form-group">
+            <label>Jenis Usaha</label>
+            <input type="text" id="testerDetailBusinessType" readonly>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Email Google Play</label>
+            <input type="text" id="testerDetailEmail" readonly>
+            <small class="text-muted">
+              <button type="button" class="btn btn-secondary" id="testerCopyEmailBtn">Salin Email</button>
+            </small>
+          </div>
+          <div class="form-group">
+            <label>WhatsApp</label>
+            <input type="text" id="testerDetailWhatsapp" readonly>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Perkiraan Transaksi Harian</label>
+            <input type="text" id="testerDetailDaily" readonly>
+          </div>
+          <div class="form-group">
+            <label>Perangkat Android</label>
+            <input type="text" id="testerDetailDevice" readonly>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Tanggal Daftar</label>
+            <input type="text" id="testerDetailRegisteredAt" readonly>
+          </div>
+          <div class="form-group">
+            <label>Play Invited / Opted-In</label>
+            <input type="text" id="testerDetailPlayDates" readonly>
+          </div>
+        </div>
+
+        <hr>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="testerStatusSelect">Ubah Status</label>
+            <select id="testerStatusSelect"></select>
+            <small class="text-muted">
+              INVITED = admin sudah Invite di Play Console. OPTED_IN = tester sudah mengikuti opt-in link.
+            </small>
+          </div>
+          <div class="form-group">
+            <label for="testerOptInUrlInput">Google Play Opt-in Link (opsional)</label>
+            <input type="text" id="testerOptInUrlInput" placeholder="https://play.google.com/apps/testing/join/...">
+            <small class="text-muted">
+              <button type="button" class="btn btn-secondary" id="testerCopyOptInBtn">Salin Link</button>
+            </small>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="testerNotesInput">Catatan Admin</label>
+          <textarea id="testerNotesInput" rows="3" placeholder="Catatan internal mengenai tester ini..."></textarea>
+        </div>
+
+        <h4 class="mt-3 mb-2">Riwayat Transisi Status</h4>
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr><th>Waktu</th><th>Dari</th><th>Ke</th><th>Pelaksana</th><th>Catatan</th></tr>
+            </thead>
+            <tbody id="testerHistoryTbody">
+              <tr><td colspan="5" class="text-center text-muted">-</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-close-modal="testerDetailModal">Tutup</button>
+        <button type="button" class="btn btn-primary" id="testerSaveBtn">Simpan Perubahan</button>
       </div>
     </div>
   </div>

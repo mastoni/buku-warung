@@ -11,6 +11,7 @@ import { config } from './config/index.js';
 import { registerAuthRoutes } from './controllers/authController.js';
 import { registerDashboardRoutes } from './controllers/dashboardController.js';
 import { registerLicenseProxyRoutes } from './controllers/licenseProxyController.js';
+import { registerTesterProxyRoutes } from './controllers/testerProxyController.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -73,6 +74,7 @@ export function buildAdminApp(): FastifyInstance {
   app.register(registerAuthRoutes);
   app.register(registerDashboardRoutes);
   app.register(registerLicenseProxyRoutes);
+  app.register(registerTesterProxyRoutes);
 
   // Fallback to index.html for SPA
   app.setNotFoundHandler((_req, reply) => {

@@ -224,6 +224,54 @@ export class LicenseClient {
       body: JSON.stringify(payload)
     });
   }
+
+  /* =========================================================================
+   * TESTER MANAGEMENT - Buku Warung "Test Dulu" closed-testing campaign.
+   *
+   * The ADMIN_API_KEY is injected server-side by request(); it is never returned to the
+   * browser and must not appear in any BFF response.
+   * ========================================================================= */
+
+  async getTestersSummary() {
+    return this.request('/v1/admin/testers/summary', {
+      method: 'GET'
+    });
+  }
+
+  async listTesters(status?: string, search?: string) {
+    const params = new URLSearchParams();
+    if (status) params.append('status', status);
+    if (search) params.append('search', search);
+    const query = params.toString() ? `?${params.toString()}` : '';
+    return this.request(`/v1/admin/testers${query}`, {
+      method: 'GET'
+    });
+  }
+
+  async getTesterDetail(id: number) {
+    return this.request(`/v1/admin/testers/${id}`, {
+      method: 'GET'
+    });
+  }
+
+  async updateTester(id: number, payload: UpdateTesterPayload) {
+    return this.request(`/v1/admin/testers/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload)
+    });
+  }
+
+  async getTesterStatuses() {
+    return this.request('/v1/admin/testers/meta/statuses', {
+      method: 'GET'
+    });
+  }
+}
+
+export interface UpdateTesterPayload {
+  status?: string;
+  adminNotes?: string | null;
+  playOptInUrl?: string | null;
 }
 
 export interface UpdatePromotionPayload {
