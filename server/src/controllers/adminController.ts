@@ -1,6 +1,15 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { AdminService } from '../services/adminService.js';
 import { PricingService } from '../services/pricingService.js';
+import {
+  getTestCampaignState,
+  listTesters,
+  getTester,
+  updateTester,
+  getTesterStatusBreakdown,
+  TESTER_STATUSES,
+  TesterStatus
+} from '../services/testCampaignService.js';
 import { adminAuthMiddleware } from '../middleware/auth.js';
 import {
   AdminCreateLicenseRequest,
@@ -457,5 +466,132 @@ export async function registerAdminRoutes(fastify: FastifyInstance) {
       return reply.status(200).send(result);
     }
   );
+
+  /* ==========================================================================
+   * TESTER MANAGEMENT - Buku Warung "Test Dulu" closed-testing campaign.
+   *
+   * These routes sit under /v1/admin/* and are therefore already covered by the
+   * adminAuthMiddleware preHandler hook above. They decrypt registration PII, so they must
+   * never be registered outside /v1/admin.
+   *
+   * Note: a registration is NOT a Google Play tester. Moving a tester through
+   * READY_FOR_PLAY -> INVITED -> OPTED_IN is a manual Play Console action recorded by the
+   * admin. Google Play is not integrated and this API does not read Play state.
+   * ========================================================================== */
+
+  const TESTER_UPDATE_SCHEMA = {
+    type: 'object',
+    properties: {
+      status: { type: 'string', enum: [...TESTER_STATUSES] },
+      adminNotes: { anyOf: [{ type: 'string' }, { type: 'null' }] },
+      playOptInUrl: { anyOf: [{ type: 'string' }, { type: 'null' }] }
+    }
+  };
+
+  const TESTER_UPDATE_FIELDS = ['status', 'adminNotes', 'playOptInUrl'];
+
+  // GET /v1/admin/testers/summary - capacity + status breakdown for the dashboard
+  fastify.get('/v1/admin/testers/summary', async (_request: FastifyRequest, reply: FastifyReply) => {
+    const state = getTestCampaignState();
+    const breakdown = getTesterStatusBreakdown();
+    return reply.status(200).send({
+      success: true,
+      data: {
+        campaignId: state.campaignId,
+        capacity: state.capacity,
+        registered: state.registered,
+        remaining: state.remaining,
+        status: state.status,
+        breakdown,
+        googlePlayIntegrated: false
+      }
+    });
+  });
+
+  // GET /v1/admin/testers?status=&search=
+  fastify.get(
+    '/v1/admin/testers',
+    {
+      schema: {
+        querystring: {
+          type: 'object',
+          properties: {
+            status: { type: 'string', enum: [...TESTER_STATUSES] },
+            search: { type: 'string', maxLength: 120 }
+          }
+        }
+      }
+    },
+    async (request: FastifyRequest<{ Querystring: { status?: TesterStatus; search?: string } }>, reply: FastifyReply) => {
+      const { status, search } = request.query ?? {};
+      const result = listTesters({ status, search });
+      return reply.status(200).send({ success: true, data: result });
+    }
+  );
+
+  // GET /v1/admin/testers/:id
+  fastify.get(
+    '/v1/admin/testers/:id',
+    {
+      schema: {
+        params: { type: 'object', properties: { id: { type: 'integer', minimum: 1 } } }
+      }
+    },
+    async (request: FastifyRequest<{ Params: { id: number } }>, reply: FastifyReply) => {
+      const tester = getTester(request.params.id);
+      if (!tester) {
+        return reply.status(404).send({
+          success: false,
+          error: { code: 'TESTER_NOT_FOUND', message: 'Tester registration not found.' }
+        });
+      }
+      return reply.status(200).send({ success: true, data: tester });
+    }
+  );
+
+  // PUT /v1/admin/testers/:id - status transition, admin notes, opt-in link
+  fastify.put(
+    '/v1/admin/testers/:id',
+    {
+      schema: {
+        params: { type: 'object', properties: { id: { type: 'integer', minimum: 1 } } },
+        body: TESTER_UPDATE_SCHEMA
+      }
+    },
+    async (
+      request: FastifyRequest<{ Params: { id: number }; Body: { status?: TesterStatus; adminNotes?: string | null; playOptInUrl?: string | null } }>,
+      reply: FastifyReply
+    ) => {
+      // Fastify's ajv instance strips unknown keys by default, which would silently swallow an
+      // admin typo such as "adminNote". Reject explicitly instead.
+      const unknown = Object.keys(request.body ?? {}).filter((k) => !TESTER_UPDATE_FIELDS.includes(k));
+      if (unknown.length > 0) {
+        return reply.status(400).send({
+          success: false,
+          error: { code: 'VALIDATION_ERROR', message: `Unknown field(s): ${unknown.join(', ')}` }
+        });
+      }
+
+      const result = updateTester(request.params.id, request.body || {}, 'ADMIN_API');
+      if (!result.ok) {
+        if (result.code === 'NOT_FOUND') {
+          return reply.status(404).send({
+            success: false,
+            error: { code: 'TESTER_NOT_FOUND', message: 'Tester registration not found.' }
+          });
+        }
+        return reply.status(400).send({
+          success: false,
+          error: { code: 'STATUS_UNCHANGED', message: 'Tester is already in that status.' }
+        });
+      }
+      return reply.status(200).send({ success: true, data: result.tester });
+    }
+  );
+
+  // GET /v1/admin/testers/meta/statuses - the allowed lifecycle, for UI menus
+  fastify.get('/v1/admin/testers/meta/statuses', async (_request: FastifyRequest, reply: FastifyReply) => {
+    return reply.status(200).send({ success: true, data: { statuses: TESTER_STATUSES } });
+  });
 }
 

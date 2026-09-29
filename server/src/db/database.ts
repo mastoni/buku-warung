@@ -203,25 +203,106 @@ function initSchema(db: Database.Database): void {
   // details_encrypted holds AES-256-GCM ciphertext (see utils/crypto.ts, domain-separated
   // key). Raw name/WhatsApp/email are never written in plaintext and never enter
   // funnel_events. contact_hash is a peppered HMAC used only for exact-match lookups.
+  //
+  // TESTER-MGMT: the original CHECK allowed only REGISTERED/ACTIVATED/REVOKED, which cannot
+  // express the Closed Testing workflow. SQLite cannot alter a CHECK constraint, so an existing
+  // table is rebuilt once - copying every row and restoring the exact same UNIQUE indexes. A
+  // fresh database simply creates the new shape directly.
+  const campaignColumns = db
+    .prepare("PRAGMA table_info(test_campaign_registrations)")
+    .all() as Array<{ name: string }>;
+  const hasTesterColumns = campaignColumns.some((c) => c.name === 'admin_notes');
+
+  if (campaignColumns.length > 0 && !hasTesterColumns) {
+    db.exec(`
+      BEGIN;
+      CREATE TABLE test_campaign_registrations_v2 (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        campaign_id TEXT NOT NULL,
+        slot_number INTEGER NOT NULL,
+        lead_token TEXT NOT NULL,
+        contact_hash TEXT,
+        details_encrypted TEXT,
+        status TEXT NOT NULL DEFAULT 'REGISTERED' CHECK (status IN (
+          'REGISTERED','REVIEWED','READY_FOR_PLAY','INVITED','OPTED_IN',
+          'TESTING','FEEDBACK_RECEIVED','COMPLETED','REJECTED'
+        )),
+        admin_notes TEXT,
+        play_opt_in_url TEXT,
+        play_invited_at INTEGER,
+        play_opted_in_at INTEGER,
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER
+      );
+      INSERT INTO test_campaign_registrations_v2
+        (id, campaign_id, slot_number, lead_token, contact_hash, details_encrypted,
+         status, created_at)
+      SELECT id, campaign_id, slot_number, lead_token, contact_hash, details_encrypted,
+             'REGISTERED', created_at
+      FROM test_campaign_registrations;
+      DROP TABLE test_campaign_registrations;
+      ALTER TABLE test_campaign_registrations_v2 RENAME TO test_campaign_registrations;
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_test_campaign_slot
+        ON test_campaign_registrations(campaign_id, slot_number);
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_test_campaign_lead
+        ON test_campaign_registrations(campaign_id, lead_token);
+      CREATE INDEX IF NOT EXISTS idx_test_campaign_contact
+        ON test_campaign_registrations(campaign_id, contact_hash);
+      CREATE INDEX IF NOT EXISTS idx_test_campaign_status
+        ON test_campaign_registrations(campaign_id, status);
+      COMMIT;
+    `);
+  } else {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS test_campaign_registrations (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        campaign_id TEXT NOT NULL,
+        slot_number INTEGER NOT NULL,
+        lead_token TEXT NOT NULL,
+        contact_hash TEXT,
+        details_encrypted TEXT,
+        status TEXT NOT NULL DEFAULT 'REGISTERED' CHECK (status IN (
+          'REGISTERED','REVIEWED','READY_FOR_PLAY','INVITED','OPTED_IN',
+          'TESTING','FEEDBACK_RECEIVED','COMPLETED','REJECTED'
+        )),
+        admin_notes TEXT,
+        play_opt_in_url TEXT,
+        play_invited_at INTEGER,
+        play_opted_in_at INTEGER,
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER
+      );
+
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_test_campaign_slot
+        ON test_campaign_registrations(campaign_id, slot_number);
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_test_campaign_lead
+        ON test_campaign_registrations(campaign_id, lead_token);
+      CREATE INDEX IF NOT EXISTS idx_test_campaign_contact
+        ON test_campaign_registrations(campaign_id, contact_hash);
+      CREATE INDEX IF NOT EXISTS idx_test_campaign_status
+        ON test_campaign_registrations(campaign_id, status);
+    `);
+  }
+
+  // Explicit Closed Testing workflow history. audit_logs is deliberately reused elsewhere but is
+  // license-scoped (license_id REFERENCES licenses(id)); putting tester events there would either
+  // break that FK or corrupt the license audit semantics, so testers get their own trail.
   db.exec(`
-    CREATE TABLE IF NOT EXISTS test_campaign_registrations (
+    CREATE TABLE IF NOT EXISTS tester_status_history (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       campaign_id TEXT NOT NULL,
-      slot_number INTEGER NOT NULL,
-      lead_token TEXT NOT NULL,
-      contact_hash TEXT,
-      details_encrypted TEXT,
-      status TEXT NOT NULL DEFAULT 'REGISTERED' CHECK (status IN ('REGISTERED', 'ACTIVATED', 'REVOKED')),
-      created_at INTEGER NOT NULL,
-      activated_at INTEGER
+      tester_id INTEGER NOT NULL REFERENCES test_campaign_registrations(id) ON DELETE CASCADE,
+      from_status TEXT,
+      to_status TEXT NOT NULL,
+      note TEXT,
+      actor TEXT NOT NULL,
+      created_at INTEGER NOT NULL
     );
 
-    CREATE UNIQUE INDEX IF NOT EXISTS idx_test_campaign_slot
-      ON test_campaign_registrations(campaign_id, slot_number);
-    CREATE UNIQUE INDEX IF NOT EXISTS idx_test_campaign_lead
-      ON test_campaign_registrations(campaign_id, lead_token);
-    CREATE INDEX IF NOT EXISTS idx_test_campaign_contact
-      ON test_campaign_registrations(campaign_id, contact_hash);
+    CREATE INDEX IF NOT EXISTS idx_tester_history_tester
+      ON tester_status_history(tester_id);
+    CREATE INDEX IF NOT EXISTS idx_tester_history_campaign
+      ON tester_status_history(campaign_id, created_at);
   `);
 
   // FUNNEL-FIX: additive, idempotent, non-destructive migration.
