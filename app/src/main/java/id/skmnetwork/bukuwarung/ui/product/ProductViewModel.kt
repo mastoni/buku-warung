@@ -103,10 +103,18 @@ class ProductViewModel(
             initialValue = 0L
         )
 
+    // Step 25. `Eagerly`, and scoped to this one flow, for the same reason as suppliers (STEP 21)
+    // and customers (STEP 23). `ProductViewModel` is created at the app root and CashScreen is the
+    // only collector of this list, so with WhileSubscribed the query had not run when the ledger
+    // opened: the screen showed "Belum Ada Transaksi Kas" for ~200 ms while its own header already
+    // showed the balance from those same rows - on device it read "Belum Ada Transaksi Kas" next to
+    // "Saldo Kas Rp 34.000.000". Starting the upstream eagerly resolves the list before anyone can
+    // observe it pending. It changes when the query runs, not what it returns: the balance, the
+    // write path and the other ProductViewModel flows are untouched.
     val cashTransactions: StateFlow<List<CashTransactionEntity>> = repository.allCashTransactions
         .stateIn(
             scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
+            started = SharingStarted.Eagerly,
             initialValue = emptyList()
         )
 
