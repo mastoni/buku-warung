@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { Navbar } from './components/Navbar';
 import { Hero } from './components/Hero';
+import { TestProgramSection } from './components/TestProgramSection';
 import { ProblemSolution } from './components/ProblemSolution';
 import { ScreenshotShowcase } from './components/ScreenshotShowcase';
 import { WhatYouGet } from './components/WhatYouGet';
@@ -34,6 +35,7 @@ const AppContent: React.FC = () => {
       <Navbar />
       <main className="flex-1">
         <Hero />
+        <TestProgramSection />
         <ProblemSolution />
         <ScreenshotShowcase />
         <WhatYouGet />

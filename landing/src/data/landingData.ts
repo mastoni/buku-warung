@@ -85,6 +85,48 @@ export const LANDING_CONFIG = {
   privacyPolicyUrl: 'https://bukuwarung.skmnetwork.com/privacy-policy',
 };
 
+/**
+ * Closed-testing campaign ("Test Dulu"). The capacity below is the campaign's design constant
+ * and is used for copy only - never for the "X dari 50 slot" number, which always comes from
+ * the server. See useTestCampaign.
+ */
+export const TEST_CAMPAIGN_CONFIG = {
+  campaignId: 'BUKU_WARUNG_TEST_BATCH_1',
+  capacity: 50,
+  statusEndpoint: 'https://license.skmnetwork.com/v1/landing/test-campaign',
+  registerEndpoint: 'https://license.skmnetwork.com/v1/landing/test-campaign/register',
+  anchorId: 'program-test',
+  headline: 'Coba Buku Warung Sebelum Membeli',
+  sectionTitle: '🧪 Program Test Buku Warung',
+  sectionBody:
+    'Coba Buku Warung dalam aktivitas usaha Anda sebelum memutuskan untuk membeli.',
+  batchLabel: 'Batch 1 — Maksimal 50 Usaha',
+  primaryCta: 'TEST DULU — KUOTA 50 USAHA',
+  secondaryCta: 'BELI LANGSUNG',
+  fullTitle: 'Batch Test 1 Sudah Penuh',
+  fullBody: 'Kuota 50 usaha untuk batch testing ini telah terpenuhi.',
+  waitingListCta: 'DAFTAR WAITING LIST',
+  waitingListBody:
+    'Pendaftaran batch test berikutnya belum dibuka. Konsultasikan jadwal batch berikutnya langsung ke tim kami.',
+  businessTypes: [
+    'Warung Sembako',
+    'Warung Makan',
+    'Toko Kelontong',
+    'Toko Elektronik',
+    'Laundry / Jasa',
+    'Lainnya'
+  ],
+  dailyTransactionOptions: ['< 10 transaksi', '10–30 transaksi', '30–100 transaksi', '> 100 transaksi'],
+  androidDeviceOptions: [
+    'Samsung',
+    'Xiaomi / Redmi',
+    'Oppo / Realme',
+    'Vivo',
+    'Honor / Huawei',
+    'Merek lain'
+  ]
+} as const;
+
 export const PROBLEMS: ProblemItem[] = [
   {
     id: 'manual',

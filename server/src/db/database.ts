@@ -188,6 +188,42 @@ function initSchema(db: Database.Database): void {
     CREATE UNIQUE INDEX IF NOT EXISTS idx_promotions_product ON promotions(product);
   `);
 
+  // CAMPAIGN-FIX: additive, idempotent, non-destructive.
+  // Closed-testing campaign registrations. Unlike funnel_events (an append-only analytics
+  // log with no uniqueness), this table is a counted, constrained resource ledger, so the
+  // database itself - not the client and not an analytics count - is the authority for
+  // "how many of the 50 slots are taken".
+  //
+  //   UNIQUE(campaign_id, slot_number) -> a slot can be taken at most once
+  //   UNIQUE(campaign_id, lead_token)  -> one lead can never consume a second slot
+  //
+  // Both constraints are enforced by SQLite inside the registration transaction, which is
+  // what makes concurrent registration unable to oversubscribe capacity.
+  //
+  // details_encrypted holds AES-256-GCM ciphertext (see utils/crypto.ts, domain-separated
+  // key). Raw name/WhatsApp/email are never written in plaintext and never enter
+  // funnel_events. contact_hash is a peppered HMAC used only for exact-match lookups.
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS test_campaign_registrations (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      campaign_id TEXT NOT NULL,
+      slot_number INTEGER NOT NULL,
+      lead_token TEXT NOT NULL,
+      contact_hash TEXT,
+      details_encrypted TEXT,
+      status TEXT NOT NULL DEFAULT 'REGISTERED' CHECK (status IN ('REGISTERED', 'ACTIVATED', 'REVOKED')),
+      created_at INTEGER NOT NULL,
+      activated_at INTEGER
+    );
+
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_test_campaign_slot
+      ON test_campaign_registrations(campaign_id, slot_number);
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_test_campaign_lead
+      ON test_campaign_registrations(campaign_id, lead_token);
+    CREATE INDEX IF NOT EXISTS idx_test_campaign_contact
+      ON test_campaign_registrations(campaign_id, contact_hash);
+  `);
+
   // FUNNEL-FIX: additive, idempotent, non-destructive migration.
   // Adds installation_id so app-originated events can be counted per installation.
   // Historical rows keep installation_id = NULL and are never backfilled or rewritten.

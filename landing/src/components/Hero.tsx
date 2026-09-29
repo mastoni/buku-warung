@@ -1,9 +1,15 @@
 import React from 'react';
-import { Download, MessageCircle, CheckCircle2, ShieldCheck, Zap } from 'lucide-react';
-import { LANDING_CONFIG } from '../data/landingData';
+import { Download, MessageCircle, CheckCircle2, ShieldCheck, Zap, Beaker, ShoppingBag } from 'lucide-react';
+import { LANDING_CONFIG, TEST_CAMPAIGN_CONFIG } from '../data/landingData';
 import { usePricing } from '../hooks/usePricingPromo';
 import { PromoCountdown } from './PromoCountdown';
-import { trackDownloadClick, trackWhatsAppClick } from '../tracking';
+import {
+  trackBuyClick,
+  trackDownloadClick,
+  trackTestRegistrationStarted,
+  trackWhatsAppClick
+} from '../tracking';
+import { getOrderUrl } from '../tracking';
 
 export const Hero: React.FC = () => {
   const { isPromoActive, effectivePriceFormatted, normalPriceFormatted, showCountdown } = usePricing();
@@ -17,7 +23,7 @@ export const Hero: React.FC = () => {
         <div className="text-center max-w-3xl mx-auto space-y-6">
           {/* Headline */}
           <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-slate-900 leading-[1.15]">
-            Kelola Jualan dan Keuangan Warung Lebih Mudah
+            {TEST_CAMPAIGN_CONFIG.headline}
           </h1>
 
           {/* Description */}
@@ -48,25 +54,46 @@ export const Hero: React.FC = () => {
             </div>
           )}
 
-          {/* Action Buttons */}
+          {/* Action Buttons — two clearly separated commercial paths */}
           <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3.5">
             <a
-              href={LANDING_CONFIG.downloadApkUrl}
-              onClick={() => trackDownloadClick('hero')}
+              href={`#${TEST_CAMPAIGN_CONFIG.anchorId}`}
+              onClick={trackTestRegistrationStarted}
               className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white font-extrabold text-base px-7 py-4 rounded-2xl shadow-lg shadow-emerald-600/25 hover:shadow-xl hover:shadow-emerald-600/30 transition-all group"
             >
-              <Download className="w-5 h-5 group-hover:-translate-y-0.5 transition-transform" />
-              <span>Download Buku Warung (APK)</span>
+              <Beaker className="w-5 h-5 group-hover:-translate-y-0.5 transition-transform" />
+              <span>{TEST_CAMPAIGN_CONFIG.primaryCta}</span>
             </a>
+            <a
+              href={getOrderUrl(LANDING_CONFIG.publicOrderUrl)}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => trackBuyClick('hero')}
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 bg-white hover:bg-slate-50 text-slate-900 border border-slate-300/80 font-extrabold text-base px-7 py-4 rounded-2xl shadow-xs transition-colors"
+            >
+              <ShoppingBag className="w-5 h-5 text-emerald-600" />
+              <span>{TEST_CAMPAIGN_CONFIG.secondaryCta}</span>
+            </a>
+          </div>
+
+          <div className="pt-1 flex flex-col sm:flex-row items-center justify-center gap-3.5">
             <a
               href={LANDING_CONFIG.whatsappConsultationUrl}
               target="_blank"
               rel="noopener noreferrer"
               onClick={() => trackWhatsAppClick('hero')}
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300/80 font-bold text-sm px-6 py-4 rounded-2xl shadow-xs transition-colors"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300/80 font-bold text-sm px-6 py-3 rounded-2xl shadow-xs transition-colors"
             >
               <MessageCircle className="w-4 h-4 text-emerald-600" />
               <span>Tanya Paket via WhatsApp</span>
+            </a>
+            <a
+              href={LANDING_CONFIG.downloadApkUrl}
+              onClick={() => trackDownloadClick('hero')}
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 text-slate-600 font-bold text-sm px-6 py-3 rounded-2xl transition-colors hover:text-slate-900"
+            >
+              <Download className="w-4 h-4" />
+              <span>Download Buku Warung (APK)</span>
             </a>
           </div>
 

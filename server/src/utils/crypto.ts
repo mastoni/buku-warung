@@ -72,6 +72,66 @@ export function timingSafeCompare(a: string, b: string): boolean {
 const DELIVERY_CIPHER_ALGORITHM = 'aes-256-gcm';
 const DELIVERY_KEY_DOMAIN = 'license_delivery_v1';
 
+const TEST_CAMPAIGN_CIPHER_ALGORITHM = 'aes-256-gcm';
+const TEST_CAMPAIGN_KEY_DOMAIN = 'test_campaign_v1';
+
+/**
+ * Derives a 32-byte AES-256 key from SERVER_PEPPER with domain separation, independent of the
+ * license-delivery key so a compromise in one domain never decrypts the other.
+ */
+function getTestCampaignDerivedKey(): Buffer {
+  const pepper = getServerPepper();
+  return crypto.createHash('sha256').update(`${pepper}:${TEST_CAMPAIGN_KEY_DOMAIN}`).digest();
+}
+
+/**
+ * Encrypts closed-testing registration PII for storage at rest.
+ * Uses the same AES-256-GCM envelope as license delivery: base64url(IV[12] + AuthTag[16] + Ciphertext)
+ * with a fresh 96-bit random IV per call. Plaintext is never logged.
+ */
+export function encryptTestRegistrationDetails(details: unknown): string {
+  const plaintext = JSON.stringify(details ?? null);
+  if (!plaintext) {
+    throw new Error('Valid details payload is required for campaign registration encryption.');
+  }
+
+  const key = getTestCampaignDerivedKey();
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv(TEST_CAMPAIGN_CIPHER_ALGORITHM, key, iv);
+  const ciphertext = Buffer.concat([cipher.update(plaintext, 'utf8'), cipher.final()]);
+  const authTag = cipher.getAuthTag();
+
+  return Buffer.concat([iv, authTag, ciphertext]).toString('base64url');
+}
+
+/**
+ * Decrypts registration PII, verifying the GCM auth tag.
+ * Returns null when missing, malformed, or tampered - never throws on untrusted input.
+ */
+export function decryptTestRegistrationDetails(encryptedData: string | null | undefined): unknown {
+  if (!encryptedData || typeof encryptedData !== 'string') {
+    return null;
+  }
+
+  try {
+    const combined = Buffer.from(encryptedData, 'base64url');
+    if (combined.length < 29) {
+      return null;
+    }
+
+    const iv = combined.subarray(0, 12);
+    const authTag = combined.subarray(12, 28);
+    const ciphertext = combined.subarray(28);
+
+    const decipher = crypto.createDecipheriv(TEST_CAMPAIGN_CIPHER_ALGORITHM, getTestCampaignDerivedKey(), iv);
+    decipher.setAuthTag(authTag);
+
+    return JSON.parse(Buffer.concat([decipher.update(ciphertext), decipher.final()]).toString('utf8'));
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Derives a 32-byte AES-256 key from SERVER_PEPPER with domain separation.
  * NOTE: Changing SERVER_PEPPER in the environment invalidates existing encrypted delivery values.

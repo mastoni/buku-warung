@@ -1,11 +1,99 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { AttributionService } from '../services/attributionService.js';
+import {
+  getTestCampaignState,
+  registerTestCampaign,
+  TestRegistrationDetails
+} from '../services/testCampaignService.js';
 import { LandingTrackRequest } from '../types/index.js';
 import { validateUtm, validateFunnelEvent, ALLOWED_UTM_PARAMS } from '../utils/attribution.js';
 import { adminAuthMiddleware } from '../middleware/auth.js';
 
 export async function registerLandingRoutes(fastify: FastifyInstance) {
   const attributionService = new AttributionService();
+
+  const TEST_REGISTRATION_SCHEMA = {
+    type: 'object',
+    properties: {
+      name: { type: 'string', minLength: 2, maxLength: 120 },
+      whatsapp: { type: 'string', minLength: 8, maxLength: 24, pattern: '^[0-9+() -]{8,24}$' },
+      googlePlayEmail: { type: 'string', minLength: 3, maxLength: 254 },
+      businessType: { type: 'string', minLength: 2, maxLength: 80 },
+      dailyTransactions: { type: 'string', minLength: 1, maxLength: 40 },
+      androidDevice: { type: 'string', minLength: 1, maxLength: 80 },
+      consent: { type: 'boolean' },
+      leadToken: { type: 'string', pattern: '^LW-[2-9A-HJ-NP-Z]{6}$' }
+    },
+    required: [
+      'name',
+      'whatsapp',
+      'googlePlayEmail',
+      'businessType',
+      'dailyTransactions',
+      'androidDevice',
+      'consent'
+    ],
+    additionalProperties: false
+  };
+
+  // -------------------------------------------------------------------------------------------
+  // Closed-testing campaign. Capacity is authoritative on the server; the client never counts.
+  // -------------------------------------------------------------------------------------------
+
+  fastify.get('/v1/landing/test-campaign', async (_request: FastifyRequest, reply: FastifyReply) => {
+    return reply.status(200).send({ success: true, data: getTestCampaignState() });
+  });
+
+  fastify.post(
+    '/v1/landing/test-campaign/register',
+    { schema: { body: TEST_REGISTRATION_SCHEMA } },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const body = request.body as unknown as TestRegistrationDetails & { leadToken?: string };
+
+      if (body.consent !== true) {
+        return reply.status(400).send({
+          success: false,
+          error: { code: 'CONSENT_REQUIRED', message: 'Consent is required to join the test program.' }
+        });
+      }
+
+      try {
+        const outcome = registerTestCampaign(
+          {
+            name: body.name,
+            whatsapp: body.whatsapp,
+            googlePlayEmail: body.googlePlayEmail,
+            businessType: body.businessType,
+            dailyTransactions: body.dailyTransactions,
+            androidDevice: body.androidDevice,
+            consent: true
+          },
+          body.leadToken
+        );
+
+        if (outcome.kind === 'FULL') {
+          return reply.status(409).send({ success: false, code: 'CAMPAIGN_FULL', data: outcome.state });
+        }
+
+        if (outcome.kind === 'DUPLICATE') {
+          return reply.status(200).send({
+            success: true,
+            data: { ...outcome.state, slotNumber: outcome.slotNumber, alreadyRegistered: true }
+          });
+        }
+
+        return reply.status(201).send({
+          success: true,
+          data: { ...outcome.state, slotNumber: outcome.slotNumber, alreadyRegistered: false }
+        });
+      } catch {
+        return reply.status(500).send({
+          success: false,
+          error: { code: 'INTERNAL_ERROR', message: 'Could not record the test registration.' }
+        });
+      }
+    }
+  );
 
   const ALLOWED_FIELDS = new Set(['eventType', 'leadToken', 'installationId', ...ALLOWED_UTM_PARAMS]);
 

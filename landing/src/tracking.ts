@@ -9,6 +9,17 @@ const CTA_THROTTLE_PREFIX = 'lw_cta_';
 
 const UTM_PARAM_NAMES = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content'] as const;
 
+/**
+ * Attribution for the closed-testing campaign. Uses the existing UTM convention and its own
+ * utm_campaign value, so launch_v020 purchase attribution stays completely untouched and the
+ * two funnels remain separable in reporting.
+ */
+export const TEST_CAMPAIGN_UTM = {
+  utm_source: 'bukuwarung_landing',
+  utm_medium: 'test_cta',
+  utm_campaign: 'bukuwarung_test_batch_1'
+} as const;
+
 function getUtmFromUrl(): Record<string, string> {
   const params = new URLSearchParams(window.location.search);
   const utm: Record<string, string> = {};
@@ -137,6 +148,46 @@ export function getOrderUrl(baseUrl: string): string {
     return `${baseUrl}${separator}leadToken=${encodeURIComponent(token)}`;
   } catch {
     return baseUrl;
+  }
+}
+
+/* =========================================================================
+ * Closed-testing campaign events.
+ * Registered in the server's ALLOWED_FUNNEL_EVENTS allowlist; these go through the
+ * exact same validator and leadToken path as the existing funnel, so campaign
+ * reporting never bypasses attribution.
+ * ========================================================================= */
+
+const TEST_PROGRAM_VIEWED_KEY = 'lw_tp_viewed';
+
+export function trackTestProgramView(): void {
+  if (sessionStorage.getItem(TEST_PROGRAM_VIEWED_KEY)) return;
+  sessionStorage.setItem(TEST_PROGRAM_VIEWED_KEY, '1');
+  sendTrackEvent('TEST_PROGRAM_VIEW', TEST_CAMPAIGN_UTM);
+}
+
+export function trackTestRegistrationStarted(): void {
+  sendTrackEvent('TEST_REGISTRATION_STARTED', TEST_CAMPAIGN_UTM);
+}
+
+export function trackTestRegistrationSubmitted(): void {
+  sendTrackEvent('TEST_REGISTRATION_SUBMITTED', TEST_CAMPAIGN_UTM);
+}
+
+export function trackTestProgramFull(): void {
+  sendTrackEvent('TEST_PROGRAM_FULL', TEST_CAMPAIGN_UTM);
+}
+
+/**
+ * Returns the attribution token this session has been given, if any, so the campaign form can
+ * identify the lead server-side. Never a client-generated id: the server only accepts a token
+ * it minted itself, and rejects anything else.
+ */
+export function getCurrentLeadToken(): string | undefined {
+  try {
+    return sessionStorage.getItem(LEAD_TOKEN_KEY) || undefined;
+  } catch {
+    return undefined;
   }
 }
 
