@@ -37,10 +37,19 @@ class CustomerViewModel(
     // finished, which was indistinguishable from a genuinely empty customer book.
     val isLoading: StateFlow<Boolean> = customerSource.loadingFlag(viewModelScope)
 
+    // Step 23. `Eagerly` is the fix, and it is the same change STEP 21 made for suppliers.
+    // This ViewModel is created at the app root, and nothing on Home subscribes to `customers`,
+    // so with WhileSubscribed the query had not run when CustomersScreen appeared: the flag -
+    // which resolves against the raw flow the moment the ViewModel is built - had already gone
+    // false while `customers` still held its initial empty list, and the screen showed
+    // "Belum Ada Pelanggan" for the whole query. On device that was ~200-230 ms on every first
+    // entry, with 4000 customers already in the database. Starting the upstream eagerly resolves
+    // the list before anyone can observe it unresolved, which is the behaviour the app already has
+    // for products. It changes when the query runs, not what it returns.
     val customers: StateFlow<List<CustomerEntity>> = customerSource
         .stateIn(
             scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
+            started = SharingStarted.Eagerly,
             initialValue = emptyList()
         )
 
