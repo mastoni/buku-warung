@@ -64,9 +64,14 @@ export interface TrustItem {
 export const LANDING_CONFIG = {
   appName: 'Buku Warung',
   tagline: 'Aplikasi Kasir POS & Pembukuan UMKM',
-  headline: 'Kelola Jualan dan Keuangan Warung Lebih Mudah',
-  subheadline:
-    'Buku Warung membantu mencatat penjualan, stok, kas, pelanggan, hutang/piutang, dan laporan usaha dalam satu aplikasi Android. Tanpa biaya langganan bulanan.',
+  // Hero hierarchy: badge -> H1 (headline) -> H2 (subheadline) -> description -> CTAs.
+  headline: 'Stop Bayar Bulanan untuk Aplikasi Kasir',
+  subheadline: 'Pakai Buku Warung. Cukup Sekali Beli, Tanpa Bayar Bulanan.',
+  heroBadge: 'Coba Dulu Sebelum Membeli',
+  heroDescription:
+    'Aplikasi sederhana namun lengkap untuk pembukuan dan penjualan. Cocok untuk berbagai macam usaha dari warung Kelontong sampai toko Material. Catat penjualan, stok, kas, pelanggan, hutang/piutang, dan laporan usaha tercatat rapi dalam satu aplikasi Android.',
+  heroPrimaryCta: 'Coba Buku Warung Sebelum Membeli',
+  heroSecondaryCta: 'Beli Lisensi Buku Warung',
   priceNormal: 100000,
   pricePromo: 50000,
   priceFormatted: 'Rp 50.000',

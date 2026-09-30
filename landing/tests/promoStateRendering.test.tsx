@@ -10,7 +10,7 @@ import { Hero } from '../src/components/Hero';
 import { FinalCta } from '../src/components/FinalCta';
 import { PricingSection } from '../src/components/PricingSection';
 import { PromoCountdown } from '../src/components/PromoCountdown';
-import { LANDING_CONFIG } from '../src/data/landingData';
+import { LANDING_CONFIG, TEST_CAMPAIGN_CONFIG } from '../src/data/landingData';
 
 const SERVER_NOW = 1740000000000;
 const HOUR = 3600 * 1000;
@@ -223,8 +223,10 @@ describe('Promo state rendering follows the server-authoritative pricing respons
       // Compare the order URL with HTML entity escaping applied (& renders as &amp;).
       const expected = LANDING_CONFIG.publicOrderUrl.replace(/&/g, '&amp;');
       expect(html).toContain(expected);
-      expect(html).toContain('DAFTAR TEST DULU');
-      expect(html).toContain('BELI LANGSUNG');
+      // Test Dulu path anchors to the campaign section; the buy path goes to Public Order.
+      expect(html).toContain(LANDING_CONFIG.heroPrimaryCta);
+      expect(html).toContain(LANDING_CONFIG.heroSecondaryCta);
+      expect(html).toContain(`#${TEST_CAMPAIGN_CONFIG.anchorId}`);
     });
 
     it('PricingSection order CTA still points at Public Order', () => {

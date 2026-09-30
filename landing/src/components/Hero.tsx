@@ -22,14 +22,27 @@ export const Hero: React.FC = () => {
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
         <div className="text-center max-w-3xl mx-auto space-y-6">
-          {/* Headline */}
-          <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-slate-900 leading-[1.15]">
-            {TEST_CAMPAIGN_CONFIG.headline}
+          {/* Badge - small eyebrow that frames the two commercial paths below */}
+          <div className="pt-1">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 text-emerald-800 px-3.5 py-1.5 text-xs sm:text-sm font-extrabold">
+              <Zap className="w-3.5 h-3.5" />
+              {LANDING_CONFIG.heroBadge}
+            </span>
+          </div>
+
+          {/* H1 - the primary message */}
+          <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-slate-900 leading-[1.12] text-balance">
+            {LANDING_CONFIG.headline}
           </h1>
 
-          {/* Description */}
+          {/* H2 - explains the solution and price model */}
+          <h2 className="text-lg sm:text-2xl font-bold tracking-tight text-slate-700 leading-snug text-balance">
+            {LANDING_CONFIG.subheadline}
+          </h2>
+
+          {/* Description - what the product actually does */}
           <p className="text-base sm:text-lg text-slate-600 leading-relaxed max-w-2xl mx-auto font-normal">
-            Buku Warung membantu mencatat penjualan kasir, stok barang, kas masuk/keluar, pelanggan, hutang/piutang, dan laporan usaha dalam satu aplikasi Android.
+            {LANDING_CONFIG.heroDescription}
           </p>
 
           {/* Promo/Pricing Message - always mirrors the server-authoritative pricing state.
@@ -48,7 +61,9 @@ export const Hero: React.FC = () => {
             {isPromoActive && normalPriceFormatted && normalPriceFormatted !== effectivePriceFormatted && (
               <span className="text-base sm:text-lg text-slate-400 line-through font-semibold">{normalPriceFormatted}</span>
             )}
-            <span className="text-xs sm:text-sm font-semibold text-slate-500">/ sekali beli</span>
+            <span className="text-xs sm:text-sm font-semibold text-slate-500">
+              &bull; Sekali beli &bull; 1 perangkat Android
+            </span>
           </div>
 
           {/* Hero Countdown if active */}
@@ -66,7 +81,7 @@ export const Hero: React.FC = () => {
               className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white font-extrabold text-base px-7 py-4 rounded-2xl shadow-lg shadow-emerald-600/25 hover:shadow-xl hover:shadow-emerald-600/30 transition-all group"
             >
               <Beaker className="w-5 h-5 group-hover:-translate-y-0.5 transition-transform" />
-              <span>{TEST_CAMPAIGN_CONFIG.primaryCta}</span>
+              <span>{LANDING_CONFIG.heroPrimaryCta}</span>
             </a>
             <a
               href={getOrderUrl(LANDING_CONFIG.publicOrderUrl)}
@@ -76,7 +91,7 @@ export const Hero: React.FC = () => {
               className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 bg-white hover:bg-slate-50 text-slate-900 border border-slate-300/80 font-extrabold text-base px-7 py-4 rounded-2xl shadow-xs transition-colors"
             >
               <ShoppingBag className="w-5 h-5 text-emerald-600" />
-              <span>{TEST_CAMPAIGN_CONFIG.secondaryCta}</span>
+              <span>{LANDING_CONFIG.heroSecondaryCta}</span>
             </a>
           </div>
 
