@@ -53,49 +53,55 @@ export const PricingSection: React.FC = () => {
           </p>
         </div>
 
-        {/* Pricing Card */}
-        <div className="max-w-2xl mx-auto">
-          <div className="bg-gradient-to-b from-emerald-900 via-emerald-900 to-slate-900 rounded-3xl p-6 sm:p-8 text-white shadow-2xl relative flex flex-col justify-between overflow-hidden border border-emerald-700">
+        {/* Pricing Card - spans the same content width as the sections above and below it */}
+        <div className="w-full">
+          <div className="bg-gradient-to-b from-emerald-900 via-emerald-900 to-slate-900 rounded-3xl p-6 sm:p-8 lg:p-10 text-white shadow-2xl relative overflow-hidden border border-emerald-700">
             {/* Background Glow */}
             <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
 
-            <div>
-              {/* Header Badge */}
-              <div className="flex items-center justify-between gap-2 mb-6">
+            <div className="relative grid gap-8 lg:grid-cols-2 lg:gap-12 items-start">
+              <div>
+                {/* Header Badge */}
+                <div className="flex items-center justify-between gap-2 mb-6">
                   <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 text-xs font-extrabold">
                     <Sparkles className="w-3.5 h-3.5" />
                     {isPromoActive ? (promoName || 'Promo Berjalan') : 'Lisensi Komersial'}
                   </span>
-                {isPromoActive && normalPrice > effectivePrice && (
-                  <span className="text-xs text-emerald-300/80 font-semibold line-through">
-                    {normalPriceFormatted}
+                  {isPromoActive && normalPrice > effectivePrice && (
+                    <span className="text-xs text-emerald-300/80 font-semibold line-through">
+                      {normalPriceFormatted}
+                    </span>
+                  )}
+                </div>
+
+                {/* Title & Price */}
+                <h3 className="text-2xl font-extrabold text-white">Lisensi Sekali Bayar (1 Perangkat)</h3>
+                <p className="text-xs text-emerald-200/80 mt-1">1 Lisensi = 1 Email Pemilik = 1 HP Android</p>
+
+                {/* Price: effective (payable) amount, with the normal price shown struck through
+                    only while the server reports the promo active. */}
+                <div className="mt-6 flex flex-wrap items-baseline gap-2">
+                  <span className="text-4xl sm:text-5xl font-extrabold text-white tracking-tight">
+                    {effectivePriceFormatted}
                   </span>
+                  {isPromoActive && normalPrice > effectivePrice && (
+                    <span className="text-sm sm:text-base text-emerald-300/70 line-through font-semibold">
+                      {normalPriceFormatted}
+                    </span>
+                  )}
+                  <span className="text-xs sm:text-sm font-semibold text-emerald-300">/ sekali beli</span>
+                </div>
+
+                {/* Dynamic Countdown Display */}
+                {isPromoActive && showCountdown && (
+                  <div className="mt-4">
+                    <PromoCountdown variant="card" />
+                  </div>
                 )}
               </div>
-
-              {/* Title & Price */}
-              <h3 className="text-2xl font-extrabold text-white">Lisensi Sekali Bayar (1 Perangkat)</h3>
-              <p className="text-xs text-emerald-200/80 mt-1">1 Lisensi = 1 Email Pemilik = 1 HP Android</p>
-
-              {/* Price: effective (payable) amount, with the normal price shown struck through
-                  only while the server reports the promo active. */}
-              <div className="mt-6 mb-4 flex items-baseline gap-2">
-                <span className="text-4xl sm:text-5xl font-extrabold text-white tracking-tight">
-                  {effectivePriceFormatted}
-                </span>
-                {isPromoActive && normalPrice > effectivePrice && (
-                  <span className="text-sm sm:text-base text-emerald-300/70 line-through font-semibold">
-                    {normalPriceFormatted}
-                  </span>
-                )}
-                <span className="text-xs sm:text-sm font-semibold text-emerald-300">/ sekali beli</span>
-              </div>
-
-              {/* Dynamic Countdown Display */}
-              {isPromoActive && showCountdown && <PromoCountdown variant="card" />}
 
               {/* Feature Highlights */}
-              <ul className="space-y-3 text-sm text-emerald-100/90 font-medium mt-6">
+              <ul className="space-y-3 text-sm text-emerald-100/90 font-medium lg:border-l lg:border-emerald-800/70 lg:pl-12">
                 <li className="flex items-start gap-2.5">
                   <Check className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
                   <span>Offline-First (Jualan kasir tanpa perlu paket data internet)</span>
@@ -124,7 +130,7 @@ export const PricingSection: React.FC = () => {
             </div>
 
             {/* Card CTA */}
-            <div className="mt-8 pt-6 border-t border-emerald-800/80 space-y-3">
+            <div className="relative mt-8 pt-6 border-t border-emerald-800/80 space-y-3">
               <a
                 href={getOrderUrl(LANDING_CONFIG.publicOrderPricingUrl)}
                 onClick={() => trackBuyClick('pricing')}

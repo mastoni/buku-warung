@@ -85,20 +85,26 @@ export const ScreenshotShowcase: React.FC = () => {
             })}
           </div>
 
-          {/* Active Screenshot Display */}
+          {/* Active Screenshot Display - the frame takes the size of the screenshot itself, so the picture is
+                never letterboxed against a black plate. */}
           <div className="lg:col-span-5">
-            <div className="relative rounded-2xl md:rounded-3xl p-2 sm:p-4 bg-gradient-to-b from-slate-200 to-slate-100 shadow-2xl border border-slate-200">
-              <div className="relative rounded-xl md:rounded-2xl overflow-hidden bg-slate-900 aspect-[9/16] sm:aspect-[9/16] max-w-[280px] w-full flex items-center justify-center">
-                <img
-                  src={activeScreenshot.imageSrc}
-                  alt={activeScreenshot.title}
-                  className="w-full h-full object-contain object-center"
-                  loading="lazy"
-                />
+            <div className="mx-auto w-full max-w-[300px]">
+              <div className="relative rounded-[2.25rem] bg-slate-900 p-2 shadow-2xl ring-1 ring-slate-300/70">
+                <div className="relative overflow-hidden rounded-[1.75rem] bg-white">
+                  <div className="absolute inset-x-0 top-0 z-10 flex justify-center pt-2" aria-hidden="true">
+                    <span className="h-1.5 w-14 rounded-full bg-slate-900/80" />
+                  </div>
+                  <img
+                    src={activeScreenshot.imageSrc}
+                    alt={activeScreenshot.title}
+                    width={738}
+                    height={1600}
+                    className="block w-full h-auto"
+                    loading="lazy"
+                  />
+                </div>
               </div>
-              <div className="mt-3 text-center">
-                <p className="text-xs font-semibold text-slate-500">{activeScreenshot.title}</p>
-              </div>
+              <p className="mt-4 text-center text-xs font-semibold text-slate-500">{activeScreenshot.title}</p>
             </div>
           </div>
         </div>

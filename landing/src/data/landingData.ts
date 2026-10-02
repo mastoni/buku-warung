@@ -21,6 +21,13 @@ export interface FaqItem {
   answer: string;
 }
 
+export interface HeroSlide {
+  id: string;
+  businessLabel: string;
+  artworkSrc: string;
+  artworkAlt: string;
+}
+
 export interface AdaptiveBusinessProfile {
   id: string;
   name: string;
@@ -66,10 +73,11 @@ export const LANDING_CONFIG = {
   tagline: 'Aplikasi Kasir POS & Pembukuan UMKM',
   // Hero hierarchy: badge -> H1 (headline) -> H2 (subheadline) -> description -> CTAs.
   headline: 'Stop Bayar Bulanan untuk Aplikasi Kasir',
-  subheadline: 'Pakai Buku Warung. Cukup Sekali Beli, Tanpa Bayar Bulanan.',
+  subheadline:
+    'Catat penjualan, pantau stok, kelola kas, pelanggan, hutang/piutang, pembelian, dan laporan usaha langsung dari HP Android.',
   heroBadge: 'Coba Dulu Sebelum Membeli',
   heroDescription:
-    'Aplikasi sederhana namun lengkap untuk pembukuan dan penjualan. Cocok untuk berbagai macam usaha dari warung Kelontong sampai toko Material. Catat penjualan, stok, kas, pelanggan, hutang/piutang, dan laporan usaha tercatat rapi dalam satu aplikasi Android.',
+    'Istilah di dalam aplikasi menyesuaikan jenis usaha Anda: produk untuk warung, obat dan alkes untuk apotek, material untuk toko bangunan, sampai barang dan jasa untuk usaha lain.',
   heroPrimaryCta: 'Coba Buku Warung Sebelum Membeli',
   heroSecondaryCta: 'Beli Lisensi Buku Warung',
   priceNormal: 100000,
@@ -89,6 +97,51 @@ export const LANDING_CONFIG = {
     'https://wa.me/6285157056604?text=Halo%20Admin%20SKMNetwork,%20saya%20ingin%20tanya%20tentang%20paket%20aplikasi%20Buku%20Warung%20Android',
   privacyPolicyUrl: 'https://bukuwarung.skmnetwork.com/privacy-policy',
 };
+
+/**
+ * The hero rotates through the business types the app actually supports. `artworkSrc` points at the
+ * finished hero banner (1672x941) for that business type, and it is rendered whole: width 100%,
+ * height auto, original aspect ratio, no cropping and no overlay on top of it. The banner is the
+ * hero message - it already carries the business context, headline, benefits, owner photo, app
+ * screen and positioning - so no headline or feature copy is repeated above or around it here.
+ */
+export const HERO_CAROUSEL_SLIDES: HeroSlide[] = [
+  {
+    id: 'warung',
+    businessLabel: 'Warung & Kelontong',
+    artworkSrc: '/img/hero/1.png',
+    artworkAlt:
+      'Poster hero Buku Warung untuk warung dan kelontong: judul, daftar modul usaha, dan foto pemilik warung memakai aplikasi sambil mencetak struk',
+  },
+  {
+    id: 'material',
+    businessLabel: 'Toko Material',
+    artworkSrc: '/img/hero/2.png',
+    artworkAlt:
+      'Poster hero Buku Warung untuk toko material: judul, daftar modul usaha, dan foto pemilik toko material memakai aplikasi di depan stok bahan',
+  },
+  {
+    id: 'atk',
+    businessLabel: 'ATK & Percetakan',
+    artworkSrc: '/img/hero/3.png',
+    artworkAlt:
+      'Poster hero Buku Warung untuk toko ATK dan percetakan: judul, daftar modul usaha, daftar layanan cetak, dan foto pemilik usaha memakai aplikasi di dekat mesin fotokopi',
+  },
+  {
+    id: 'apotek',
+    businessLabel: 'Apotek & Toko Obat',
+    artworkSrc: '/img/hero/4.png',
+    artworkAlt:
+      'Poster hero Buku Warung untuk apotek dan toko obat: judul, daftar modul usaha, daftar jenis obat, dan foto pegawai apotek memakai aplikasi di depan rak obat',
+  },
+  {
+    id: 'laundry',
+    businessLabel: 'Laundry Kiloan',
+    artworkSrc: '/img/hero/5.png',
+    artworkAlt:
+      'Poster hero Buku Warung untuk laundry kiloan: judul, daftar modul usaha, daftar layanan laundry, dan foto pemilik usaha memakai aplikasi saat melipat laundry',
+  },
+];
 
 /**
  * Closed-testing campaign ("Test Dulu"). The capacity below is the campaign's design constant
@@ -134,38 +187,43 @@ export const TEST_CAMPAIGN_CONFIG = {
 
 export const PROBLEMS: ProblemItem[] = [
   {
-    id: 'manual',
-    icon: 'FileText',
-    title: 'Pencatatan penjualan masih manual',
-    description: 'Mencatat transaksi dengan buku, kalkulator, atau nota kertas yang mudah hilang.',
-    solution: 'Buku Warung mencatat transaksi kasir secara digital dalam hitungan detik.',
-  },
-  {
     id: 'stok',
     icon: 'Package',
-    title: 'Stok barang sering selisih atau habis mendadak',
-    description: 'Barang habis tanpa sadar, atau stok fisik tidak cocok dengan catatan.',
+    title: 'Stok sering selisih dan jualan terhenti',
+    description:
+      'Barang habis tanpa disadari, atau stok fisik tidak cocok dengan catatan karena masih dihitung sendiri.',
     solution: 'Stok otomatis terpotong saat penjualan dan bertambah saat kulakan dari supplier.',
-  },
-  {
-    id: 'kas',
-    icon: 'Wallet',
-    title: 'Uang kas tercampur dengan keuangan pribadi',
-    description: 'Modal usaha, omzet harian, dan uang belanja rumah tangga bercampur aduk.',
-    solution: 'Buku kas terpisah mencatat arus kas masuk & keluar usaha secara transparan setiap hari.',
   },
   {
     id: 'piutang',
     icon: 'BookOpen',
-    title: 'Hutang & piutang pelanggan lupa ditagih',
-    description: 'Buku catatan bon pelanggan tercecer dan sulit memantau siapa saja yang belum lunas.',
+    title: 'Hutang piutang pelanggan sulit dilacak',
+    description:
+      'Catatan bon tercecer, lalu tidak tahu pelanggan mana yang sudah bayar dan mana yang belum.',
     solution: 'Buku piutang mencatat batas tempo dan riwayat cicilan bertahap hingga lunas.',
+  },
+  {
+    id: 'kas',
+    icon: 'Wallet',
+    title: 'Uang usaha bercampur uang pribadi',
+    description:
+      'Modal dan omzet harian bercampur dengan uang belanja rumah tangga, sehingga sulit tahu sisa uang usaha.',
+    solution: 'Buku kas terpisah mencatat arus kas masuk & keluar usaha secara transparan setiap hari.',
+  },
+  {
+    id: 'manual',
+    icon: 'FileText',
+    title: 'Pencatatan manual makan waktu',
+    description:
+      'Transaksi dicatat di buku, kalkulator, atau nota kertas yang mudah hilang dan harus dihitung ulang saat tutup toko.',
+    solution: 'Buku Warung mencatat transaksi kasir secara digital dalam hitungan detik.',
   },
   {
     id: 'laporan',
     icon: 'BarChart3',
-    title: 'Laporan keuangan sulit dan makan waktu',
-    description: 'Menghitung omzet bulanan dan estimasi keuntungan memakan waktu lama.',
+    title: 'Laporan omzet sulit dirangkum',
+    description:
+      'Rekap satu bulan harus dijumlahkan manual dari kertas, sering tidak sempat dibuat tepat waktu.',
     solution: 'Laporan omzet, estimasi laba, dan produk terlaris tersedia dalam satu klik siap ekspor PDF.',
   },
 ];
@@ -212,6 +270,13 @@ export const BENEFITS: BenefitItem[] = [
     icon: 'Share2',
     title: 'Katalog Produk untuk WhatsApp',
     description: 'Bagikan daftar harga & produk langsung ke WhatsApp pelanggan hanya sekali klik.',
+  },
+  {
+    id: 'backup',
+    icon: 'Cloud',
+    title: 'Backup Manual ke Google Sheets',
+    description:
+      'Simpan salinan data usaha ke Google Sheets pribadi Anda sendiri kapan pun Anda ingin mencadangkan data.',
   },
 ];
 

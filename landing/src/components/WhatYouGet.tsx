@@ -1,5 +1,5 @@
 import React from 'react';
-import { ShoppingCart, Package, BookOpen, Wallet, BarChart3, Printer, Share2 } from 'lucide-react';
+import { ShoppingCart, Package, BookOpen, Wallet, BarChart3, Printer, Share2, Cloud } from 'lucide-react';
 import { BENEFITS, BenefitItem } from '../data/landingData';
 
 const iconMap: Record<string, React.ElementType> = {
@@ -10,6 +10,7 @@ const iconMap: Record<string, React.ElementType> = {
   BarChart3,
   Printer,
   Share2,
+  Cloud,
 };
 
 export const WhatYouGet: React.FC = () => {

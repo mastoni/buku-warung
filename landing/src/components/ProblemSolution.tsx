@@ -1,5 +1,5 @@
 import React from 'react';
-import { FileText, Package, Wallet, BarChart3 } from 'lucide-react';
+import { FileText, Package, Wallet, BarChart3, BookOpen } from 'lucide-react';
 import { PROBLEMS, ProblemItem } from '../data/landingData';
 
 const iconMap: Record<string, React.ElementType> = {
@@ -7,6 +7,7 @@ const iconMap: Record<string, React.ElementType> = {
   Package,
   Wallet,
   BarChart3,
+  BookOpen,
 };
 
 export const ProblemSolution: React.FC = () => {
@@ -18,10 +19,11 @@ export const ProblemSolution: React.FC = () => {
             Masalah & Solusi
           </div>
           <h2 className="text-2xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
-            Warung Anda Masih Dicatat Manual?
+            Capek Memantau Stok, Hutang, dan Uang Kas?
           </h2>
           <p className="text-sm sm:text-base text-slate-600">
-            Buku Warung dirancang untuk pemilik usaha kecil yang ingin pencatatan lebih rapi tanpa ribet.
+            Bukan karena Anda kurang teliti, tetapi karena pencatatan manual membuat angka-angka sulit dipercaya. Buku Warung
+            membantu pencatatan usaha kecil tetap rapi tanpa harus ribet setiap hari.
           </p>
         </div>
 
