@@ -81,7 +81,10 @@ import id.skmnetwork.bukuwarung.ui.components.ALL_CATEGORIES_LABEL
 import id.skmnetwork.bukuwarung.ui.components.ProductCategoryChips
 import id.skmnetwork.bukuwarung.ui.components.ProductFilterEmptyState
 import id.skmnetwork.bukuwarung.ui.components.ProductFilterState
+import id.skmnetwork.bukuwarung.ui.components.ProductImageFrameSize
+import id.skmnetwork.bukuwarung.ui.components.ProductImagePlaceholderIconSize
 import id.skmnetwork.bukuwarung.ui.components.ProductImageThumbnail
+import id.skmnetwork.bukuwarung.ui.theme.AppShapes
 import id.skmnetwork.bukuwarung.ui.components.ProductSearchField
 import id.skmnetwork.bukuwarung.ui.components.buildCategoryChipNames
 import id.skmnetwork.bukuwarung.ui.components.filterProductsBySearch
@@ -1263,15 +1266,20 @@ private fun PurchaseItemCard(
             verticalAlignment = Alignment.CenterVertically
         ) {
             // Product Image Thumbnail
+            // Gate 1.6: the plate was Color(0xFFF4F7F4), a light-only near-white that did not adapt to
+            // the dark surface - a ~14:1 white block on the purchase row. It now uses the same
+            // surfaceVariant plate as the product list, and the same 16dp card radius, so one product
+            // looks identical wherever it appears.
             Box(
                 modifier = Modifier
-                    .size(54.dp)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(Color(0xFFF4F7F4)),
+                    .size(ProductImageFrameSize)
+                    .clip(AppShapes.CardShape)
+                    .background(MaterialTheme.colorScheme.surfaceVariant),
                 contentAlignment = Alignment.Center
             ) {
                 ProductImageThumbnail(
                     imageUri = product.imageUri,
+                    placeholderIconSize = ProductImagePlaceholderIconSize,
                     modifier = Modifier.fillMaxSize()
                 )
             }

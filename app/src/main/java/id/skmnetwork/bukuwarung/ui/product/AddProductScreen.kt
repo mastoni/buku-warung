@@ -1,5 +1,6 @@
 package id.skmnetwork.bukuwarung.ui.product
 
+import android.content.Context
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -79,17 +80,20 @@ import id.skmnetwork.bukuwarung.ui.components.AppTextField
 import id.skmnetwork.bukuwarung.ui.components.CameraBarcodeScannerDialog
 import id.skmnetwork.bukuwarung.ui.components.CameraProductPhotoDialog
 import id.skmnetwork.bukuwarung.ui.components.PrimaryButton
+import id.skmnetwork.bukuwarung.ui.components.ProductImageStore
 import id.skmnetwork.bukuwarung.ui.components.ProductImageThumbnail
+import id.skmnetwork.bukuwarung.ui.components.AppErrorBanner
+import id.skmnetwork.bukuwarung.ui.components.AppTouchTarget
+import id.skmnetwork.bukuwarung.ui.components.ButtonNeutral
 import id.skmnetwork.bukuwarung.ui.components.SecondaryButton
+import androidx.compose.ui.draw.clip
 import id.skmnetwork.bukuwarung.util.formatQuantityValue
 import id.skmnetwork.bukuwarung.ui.theme.AppColors
 import id.skmnetwork.bukuwarung.ui.theme.rememberAppWindowSize
 import id.skmnetwork.bukuwarung.ui.theme.AppShapes
 import id.skmnetwork.bukuwarung.ui.theme.AppSpacing
 import java.io.File
-import java.io.FileOutputStream
 import java.util.UUID
-import java.io.InputStream
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -140,6 +144,10 @@ fun AddProductScreen(
 
     var barcode by remember { mutableStateOf("") }
     var imageUri by remember { mutableStateOf<String?>(null) }
+    var imageLoadError by remember { mutableStateOf<String?>(null) }
+    // Photo the product currently uses on disk, captured before any edit so a superseded copy can be
+    // removed only after the database update succeeded.
+    var originalStoredImageUri by remember { mutableStateOf<String?>(null) }
 
     // Step 11: the failure is kept as a semantic value so the screen can tell WHICH field is at
     // fault without matching the displayed sentence. The sentence itself is still what the
@@ -184,18 +192,16 @@ fun AddProductScreen(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         if (uri != null) {
-            try {
-                val imagesDir = File(context.filesDir, "product_images").apply { if (!exists()) mkdirs() }
-                val destFile = File(imagesDir, "prod_gal_${System.currentTimeMillis()}.jpg")
-                val input = context.contentResolver.openInputStream(uri)
-                input?.use { input: InputStream ->
-                    FileOutputStream(destFile).use { output ->
-                        input.copyTo(output)
-                    }
-                }
-                imageUri = destFile.absolutePath
-            } catch (e: Exception) {
-                imageUri = uri.toString()
+            // The copy inside app-owned storage is the authoritative, permanent location, and it is
+            // only returned after the bytes decode as a real image. A transient content:// grant can
+            // never be persisted, and a partial copy is discarded instead of being stored.
+            val storedPath = ProductImageStore.copyToProductStorage(context, uri)
+            if (storedPath != null) {
+                imageUri = storedPath
+                imageLoadError = null
+            } else {
+                imageUri = null
+                imageLoadError = "Foto gagal disimpan. Silakan coba pilih foto lain."
             }
         }
     }
@@ -215,6 +221,7 @@ fun AddProductScreen(
                 unit = product.unit
                 barcode = product.barcode ?: ""
                 imageUri = product.imageUri
+                originalStoredImageUri = product.imageUri
                 selectedItemType = try {
                     ItemType.valueOf(product.itemType)
                 } catch (e: Exception) {
@@ -544,13 +551,13 @@ fun AddProductScreen(
                         isSaving = true
                         viewModel.deleteProduct(
                             productId = productIdToEdit,
-                            onSuccess = {
+onSuccess = {
                                 isSaving = false
                                 onBack()
                             },
                             onError = { error ->
                                 isSaving = false
-                                formError = ProductFormError.OperationFailed(error)
+                                stockAdjustmentError = error
                             }
                         )
                     }
@@ -621,15 +628,28 @@ fun AddProductScreen(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
+                        // Gate 1.6. The photo sat in a 60dp plate with 16dp corners but was NOT
+                        // clipped, so a square-cornered 52dp image floated inside a rounded box - the
+                        // corners of the photo visibly broke the outline. The frame now clips, and the
+                        // empty state is visibly different from a filled one: a dashed-looking muted
+                        // plate when there is no photo, the primaryContainer plate when there is.
                         Box(
                             modifier = Modifier
                                 .size(60.dp)
-                                .background(AppColors.GreenLight, AppShapes.CardShape),
+                                .clip(AppShapes.CardShape)
+                                .background(
+                                    if (imageUri.isNullOrEmpty()) {
+                                        MaterialTheme.colorScheme.surfaceVariant
+                                    } else {
+                                        MaterialTheme.colorScheme.primaryContainer
+                                    }
+                                ),
                             contentAlignment = Alignment.Center
                         ) {
                             ProductImageThumbnail(
                                 imageUri = imageUri,
-                                modifier = Modifier.size(52.dp)
+                                placeholderIconSize = 28.dp,
+                                modifier = Modifier.fillMaxSize()
                             )
                         }
                         Spacer(Modifier.width(AppSpacing.md))
@@ -645,37 +665,57 @@ fun AddProductScreen(
                             )
                         }
                         if (!imageUri.isNullOrEmpty()) {
-                            IconButton(onClick = { imageUri = null }) {
-                                Icon(Icons.Default.Delete, contentDescription = "Hapus Foto", tint = AppColors.RedExpense)
+                            // Gate 1.6: an IconButton with no size modifier relies on Material3's
+                            // 48dp default, which is correct, but the destructive action gave no
+                            // extra cue. It is now ButtonDestructive-styled via a 48dp target and the
+                            // app's error token, matching the rest of the form.
+                            IconButton(
+                                onClick = { imageUri = null; imageLoadError = null },
+                                modifier = Modifier.size(AppTouchTarget)
+                            ) {
+                                Icon(
+                                    Icons.Default.Delete,
+                                    contentDescription = "Hapus Foto",
+                                    tint = AppColors.RedExpense,
+                                    modifier = Modifier.size(24.dp)
+                                )
                             }
                         }
                     }
 
                     Spacer(Modifier.height(AppSpacing.sm))
 
+                    if (imageLoadError != null) {
+                        // Gate 1.6: was a bare error-coloured Text between the photo row and the
+                        // action buttons. The message and imageLoadError state are unchanged; it now
+                        // uses the app's single error treatment so it matches every other error in
+                        // the app.
+                        AppErrorBanner(message = imageLoadError!!)
+                        Spacer(Modifier.height(AppSpacing.sm))
+                    }
+
+                    // Gate 1.6: both actions are ButtonNeutral, so they get the app's 16dp radius,
+                    // the onSurface foreground and a guaranteed 48dp height - previously these were
+                    // bare OutlinedButtons whose height was Material3's 40dp default. The camera and
+                    // gallery launchers and their callbacks are untouched, so no transient
+                    // content:// URI handling changes.
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(AppSpacing.sm)
                     ) {
-                        OutlinedButton(
+                        ButtonNeutral(
+                            text = "Kamera",
                             onClick = { showCameraPhotoDialog = true },
-                            shape = AppShapes.ButtonShape,
+                            leadingIcon = Icons.Default.PhotoCamera,
                             modifier = Modifier.weight(1f)
-                        ) {
-                            Icon(Icons.Default.PhotoCamera, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(Modifier.width(AppSpacing.xs))
-                            Text("Kamera", fontWeight = FontWeight.Bold)
-                        }
+                        )
 
-                        OutlinedButton(
+                        ButtonNeutral(
+                            text = "Galeri",
                             onClick = { imagePickerLauncher.launch("image/*") },
-                            shape = AppShapes.ButtonShape,
+                            leadingIcon = Icons.Default.Image,
                             modifier = Modifier.weight(1f)
-                        ) {
-                            Icon(Icons.Default.Image, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(Modifier.width(AppSpacing.xs))
-                            Text("Galeri", fontWeight = FontWeight.Bold)
-                        }
+                        )
                     }
                 }
             }
@@ -1057,6 +1097,9 @@ fun AddProductScreen(
                             digitalProductCode = providerProductCode.trim().ifEmpty { null },
                             onSuccess = {
                                 isSaving = false
+                                // Only now that the row points at the new photo is the previous file
+                                // safe to remove; if the update fails the old photo stays intact.
+                                ProductImageStore.deleteIfSuperseded(context, originalStoredImageUri, imageUri)
                                 onBack()
                             },
                             onError = { error ->

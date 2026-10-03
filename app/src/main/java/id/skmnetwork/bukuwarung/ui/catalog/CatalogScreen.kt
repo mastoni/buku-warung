@@ -2,6 +2,7 @@ package id.skmnetwork.bukuwarung.ui.catalog
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -344,15 +345,20 @@ fun CatalogProductItemRow(
 
             Spacer(Modifier.width(AppSpacing.sm))
 
+            // Gate 1.6: the plate was a CircleShape but the image inside was a bare 32dp square with
+            // no clip, so a square photo sat visibly inside a round plate with its corners breaking
+            // the circle. The frame now clips, and the placeholder icon is sized explicitly.
             Box(
                 Modifier
                     .size(46.dp)
-                    .background(AppColors.GreenLight, CircleShape),
+                    .clip(CircleShape)
+                    .background(AppColors.GreenLight),
                 contentAlignment = Alignment.Center
             ) {
                 ProductImageThumbnail(
                     imageUri = product.imageUri,
-                    modifier = Modifier.size(32.dp)
+                    placeholderIconSize = 20.dp,
+                    modifier = Modifier.fillMaxSize()
                 )
             }
 

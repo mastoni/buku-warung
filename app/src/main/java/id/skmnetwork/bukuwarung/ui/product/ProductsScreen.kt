@@ -63,7 +63,10 @@ import id.skmnetwork.bukuwarung.data.local.entity.ProductEntity
 import id.skmnetwork.bukuwarung.data.preferences.UserSettings
 import id.skmnetwork.bukuwarung.domain.business.BusinessCapability
 import id.skmnetwork.bukuwarung.domain.business.BusinessTaxonomyRegistry
+import id.skmnetwork.bukuwarung.ui.components.ProductImageFrameSize
+import id.skmnetwork.bukuwarung.ui.components.ProductImagePlaceholderIconSize
 import id.skmnetwork.bukuwarung.ui.components.ProductImageThumbnail
+import id.skmnetwork.bukuwarung.ui.theme.AppShapes
 import id.skmnetwork.bukuwarung.util.formatQuantityValue
 import id.skmnetwork.bukuwarung.ui.components.AppLoadingState
 import id.skmnetwork.bukuwarung.ui.components.ProductCategoryChips
@@ -427,15 +430,19 @@ private fun ProductItemCard(
             verticalAlignment = Alignment.CenterVertically
         ) {
             // Product Thumbnail Image
+            // Gate 1.6: this frame becomes the shared definition. It was 54dp at a 10dp radius with a
+            // surfaceVariant plate - a third radius used nowhere else in the design system. The
+            // placeholder icon is now sized explicitly rather than inheriting this modifier.
             Box(
                 modifier = Modifier
-                    .size(54.dp)
-                    .clip(RoundedCornerShape(10.dp))
+                    .size(ProductImageFrameSize)
+                    .clip(AppShapes.CardShape)
                     .background(MaterialTheme.colorScheme.surfaceVariant),
                 contentAlignment = Alignment.Center
             ) {
                 ProductImageThumbnail(
                     imageUri = product.imageUri,
+                    placeholderIconSize = ProductImagePlaceholderIconSize,
                     modifier = Modifier.fillMaxSize()
                 )
             }
