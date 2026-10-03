@@ -48,10 +48,20 @@ class PosFractionalQuantityInputTest {
         val text = source(measuredLayout)
         val dialog = body(text, "fun PosQuantityInputDialog(", "// ====")
 
-        assertTrue("The editor must reuse the app's existing text field", dialog.contains("AppTextField("))
+        // Gate 1.2 replaced AppTextField with FieldAmount, which delegates to the shared
+        // FieldDefault. The contract is therefore "the app's shared quantity field", asserted
+        // through the component and the flag that selects it - a stronger statement than one
+        // literal component name.
+        assertTrue(
+            "The editor must reuse the app's shared quantity field",
+            dialog.contains("FieldAmount(") && dialog.contains("quantity = true")
+        )
+        // The decimal keyboard moved into FieldAmount together with the quantity flag, so it is
+        // asserted where the decision now lives rather than as a literal this file no longer owns.
+        val foundation = source(File("src/main/java/id/skmnetwork/bukuwarung/ui/components/FoundationComponents.kt"))
         assertTrue(
             "The editor must use the decimal keyboard the rest of the app uses",
-            dialog.contains("KeyboardType.Decimal")
+            foundation.contains("if (quantity) KeyboardType.Decimal else KeyboardType.Number")
         )
         assertTrue(
             "The editor must use the one shared parser, not a private copy",
@@ -147,13 +157,22 @@ class PosFractionalQuantityInputTest {
     @Test
     fun theLockedStep3bQuantityControlMeasurementsAreUnchanged() {
         // Step 3B locked these; the precise entry was added inside the control, not by resizing it.
+        // Gate 1.3 replaced the non-compact 96dp literal with a named token: 96dp could not contain
+        // the control's own children (a 48dp decrement target, the value column and a 48dp increment
+        // target is 132dp), so Compose coerced the trailing "+" down to roughly 12dp. The compact
+        // width and the height below are still the Step 3B values and are still asserted unchanged.
         assertEquals(112.dp, PosMetrics.CartQtyControlWidth)
         assertEquals(56.dp, PosMetrics.CartQtyControlHeight)
+        // Pin the replacement numerically as well as structurally, so editing the token's value
+        // fails here instead of silently changing the control's geometry.
+        assertEquals(136.dp, PosMetrics.ProductQtyControlWidth)
         val text = source(measuredLayout)
         val control = body(text, "fun PosQuantityControl(", "fun PosQuantityInputDialog(")
         assertTrue(
             "The control must keep its locked width rule",
-            control.contains("val width = if (compact) PosMetrics.CartQtyControlWidth else 96.dp")
+            control.contains(
+                "val width = if (compact) PosMetrics.CartQtyControlWidth else PosMetrics.ProductQtyControlWidth"
+            )
         )
         assertTrue(
             "The control must keep its locked height",
