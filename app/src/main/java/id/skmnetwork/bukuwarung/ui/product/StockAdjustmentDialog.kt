@@ -1,18 +1,15 @@
-package id.skmnetwork.bukuwarung.ui.product
+﻿package id.skmnetwork.bukuwarung.ui.product
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -21,9 +18,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.dp
+import id.skmnetwork.bukuwarung.ui.components.AppErrorBanner
 import id.skmnetwork.bukuwarung.ui.components.AppTextField
-import id.skmnetwork.bukuwarung.ui.components.SecondaryButton
+import id.skmnetwork.bukuwarung.ui.components.ButtonGhost
+import id.skmnetwork.bukuwarung.ui.components.ButtonPrimary
+import id.skmnetwork.bukuwarung.ui.components.CardVariant
+import id.skmnetwork.bukuwarung.ui.components.FieldAmount
+import id.skmnetwork.bukuwarung.ui.components.SectionCard
+import id.skmnetwork.bukuwarung.ui.components.SegmentedControl
 import id.skmnetwork.bukuwarung.ui.theme.AppColors
 import id.skmnetwork.bukuwarung.ui.theme.AppSpacing
 import id.skmnetwork.bukuwarung.util.formatQuantityValue
@@ -81,15 +84,13 @@ fun StockAdjustmentDialog(
                     fontWeight = FontWeight.SemiBold
                 )
 
-                Surface(
-                    shape = MaterialTheme.shapes.medium,
-                    color = MaterialTheme.colorScheme.surfaceVariant,
+                SectionCard(
+                    variant = CardVariant.Muted,
+                    contentPadding = PaddingValues(AppSpacing.md),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(AppSpacing.md),
+                        modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -115,21 +116,21 @@ fun StockAdjustmentDialog(
                         color = AppColors.TextSecondary
                     )
                 } else {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(AppSpacing.sm),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        SecondaryButton(
-                            text = "Stok Opname",
-                            onClick = { isStockCount = true },
-                            modifier = Modifier.weight(1f)
-                        )
-                        SecondaryButton(
-                            text = "Penyesuaian",
-                            onClick = { isStockCount = false },
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
+                    // Gate 1.2 (audit P0 #12): this was two SecondaryButtons.
+                    //
+                    // SecondaryButton's default content colour was destructive red, so BOTH halves
+                    // rendered red and neither showed which mode was active - `isStockCount` only
+                    // ever reached a helper paragraph. A merchant could not tell an opname from an
+                    // adjustment. SegmentedControl renders the selected state explicitly.
+                    //
+                    // State, callback and validation below are untouched.
+                    SegmentedControl(
+                        options = STOCK_ADJUSTMENT_MODES,
+                        selected = if (isStockCount) StockAdjustmentMode.Opname else StockAdjustmentMode.Adjustment,
+                        onSelect = { mode -> isStockCount = mode == StockAdjustmentMode.Opname },
+                        label = { it.label },
+                        enabled = !isSaving
+                    )
                     Text(
                         text = if (isStockCount) {
                             "Opname: Anda menghitung ulang stok di rak dan memasukkan angka sebenarnya."
@@ -140,7 +141,10 @@ fun StockAdjustmentDialog(
                         color = AppColors.TextSecondary
                     )
 
-                    AppTextField(
+                    // Gate 1.2: quantity entry, so the "Rp" prefix is suppressed and the decimal
+                    // keyboard is used. parseQuantityInput still receives the raw text unchanged -
+                    // FieldAmount deliberately applies no visual transformation.
+                    FieldAmount(
                         value = actualStockText,
                         onValueChange = {
                             actualStockText = it
@@ -148,7 +152,8 @@ fun StockAdjustmentDialog(
                         },
                         label = "Stok aktual ($unit)",
                         isError = errorText != null,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
+                        quantity = true,
+                        enabled = !isSaving
                     )
 
                     if (delta != null && delta != 0.0) {
@@ -169,11 +174,11 @@ fun StockAdjustmentDialog(
                     )
 
                     if (errorText != null) {
-                        Text(
-                            text = errorText,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.error
-                        )
+                        // Gate 1.2: was a detached `Text(color = colorScheme.error)` sitting between
+                        // the note field and the warning, i.e. not next to the field it belongs to.
+                        // The message, and the state behind it, are unchanged; only the presentation
+                        // is now the app's single error treatment.
+                        AppErrorBanner(message = errorText)
                     }
 
                     Text(
@@ -186,32 +191,43 @@ fun StockAdjustmentDialog(
         },
         confirmButton = {
             if (isStockable) {
-                TextButton(
+                // Gate 1.2: was a TextButton - the only committing action in the dialog, and the
+                // least prominent element in it, while the file's own KDoc claimed "both actions at
+                // full 48dp height".
+                ButtonPrimary(
+                    text = if (isSaving) "Menyimpan..." else "Simpan",
                     onClick = {
                         val parsed = parseQuantityInput(actualStockText)
                         if (parsed == null) {
                             localError = "Masukkan angka stok yang valid"
-                            return@TextButton
+                            return@ButtonPrimary
                         }
                         if (parsed < 0) {
                             localError = "Stok tidak boleh kurang dari 0"
-                            return@TextButton
+                            return@ButtonPrimary
                         }
                         onSave(parsed, note.trim().ifEmpty { null }, isStockCount)
                     },
-                    enabled = !isSaving
-                ) {
-                    Text(
-                        text = if (isSaving) "Menyimpan..." else "Simpan",
-                        fontWeight = FontWeight.Bold
-                    )
-                }
+                    enabled = !isSaving,
+                    loading = isSaving,
+                    fillMaxWidth = false
+                )
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss, enabled = !isSaving) {
-                Text("Batal")
-            }
+            ButtonGhost(
+                text = "Batal",
+                onClick = onDismiss,
+                enabled = !isSaving
+            )
         }
     )
 }
+
+/** The two mutually exclusive ways stock can be corrected. Presentation vocabulary only. */
+private enum class StockAdjustmentMode(val label: String) {
+    Opname("Stok Opname"),
+    Adjustment("Penyesuaian")
+}
+
+private val STOCK_ADJUSTMENT_MODES = listOf(StockAdjustmentMode.Opname, StockAdjustmentMode.Adjustment)

@@ -1,6 +1,5 @@
 package id.skmnetwork.bukuwarung.ui.components
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -34,12 +33,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import id.skmnetwork.bukuwarung.data.local.entity.CategoryEntity
 import id.skmnetwork.bukuwarung.data.local.entity.ProductEntity
 import id.skmnetwork.bukuwarung.ui.theme.AppColors
+import id.skmnetwork.bukuwarung.ui.theme.AppSpacing
 
 /**
  * Step 6 - the product search and category filter, shared by the screens that let a merchant pick
@@ -118,52 +117,27 @@ fun ProductCategoryChips(
     onToggle: (() -> Unit)? = null
 ) {
     LazyRow(
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        contentPadding = PaddingValues(horizontal = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(AppSpacing.sm),
+        contentPadding = PaddingValues(horizontal = AppSpacing.lg),
         modifier = modifier.fillMaxWidth()
     ) {
         items(categoryNames.distinct()) { catName ->
             val isSelected = catName == selectedCategoryName
-            ProductFilterChip(
+            FilterChipRow(
                 label = catName,
-                isActive = isSelected,
+                selected = isSelected,
                 onClick = { onSelectCategory(catName) }
             )
         }
         if (toggleLabel != null && onToggle != null) {
             item(key = "__toggle__") {
-                ProductFilterChip(
+                FilterChipRow(
                     label = toggleLabel,
-                    isActive = isToggleActive,
+                    selected = isToggleActive,
                     onClick = onToggle
                 )
             }
         }
-    }
-}
-
-@Composable
-private fun ProductFilterChip(
-    label: String,
-    isActive: Boolean,
-    onClick: () -> Unit
-) {
-    androidx.compose.material3.Surface(
-        shape = RoundedCornerShape(20.dp),
-        color = if (isActive) AppColors.GreenPrimary else MaterialTheme.colorScheme.surface,
-        border = if (isActive) null else BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-        shadowElevation = if (isActive) 1.dp else 0.dp,
-        onClick = onClick
-    ) {
-        Text(
-            text = label,
-            color = if (isActive) Color.White else AppColors.TextSecondary,
-            fontWeight = if (isActive) FontWeight.Bold else FontWeight.Medium,
-            fontSize = 13.sp,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp)
-        )
     }
 }
 
@@ -236,8 +210,8 @@ fun ProductFilterEmptyState(
                 onClick = onResetFilter,
                 shape = RoundedCornerShape(10.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFFE8F5E9),
-                    contentColor = AppColors.GreenPrimary
+                    containerColor = AppColors.GreenLight,
+                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
                 ),
                 elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp),
                 modifier = Modifier.height(38.dp)

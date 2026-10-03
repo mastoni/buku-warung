@@ -116,6 +116,7 @@ import id.skmnetwork.bukuwarung.ui.components.AppTextField
 import id.skmnetwork.bukuwarung.ui.components.CameraQrisPhotoDialog
 import id.skmnetwork.bukuwarung.ui.components.PrimaryButton
 import id.skmnetwork.bukuwarung.ui.components.SecondaryButton
+import id.skmnetwork.bukuwarung.ui.components.SectionHeader
 import id.skmnetwork.bukuwarung.ui.theme.AppColors
 import id.skmnetwork.bukuwarung.ui.theme.AppShapes
 import id.skmnetwork.bukuwarung.ui.theme.AppSpacing
@@ -235,7 +236,7 @@ fun SettingsScreen(
     var debtReminderEnabled by remember { mutableStateOf(false) }
 
     // 7. Tampilan
-    var themeMode by remember { mutableStateOf("SYSTEM") }
+    var themeMode by remember { mutableStateOf("LIGHT") }
 
     // 8. Keamanan & PIN
     var showSetPinDialog by remember { mutableStateOf(false) }
@@ -437,14 +438,9 @@ fun SettingsScreen(
             // 0. TIPE USAHA & MODEL OPERASIONAL
             // ==========================================
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(
-                    text = "TIPE USAHA & MODEL OPERASIONAL",
-                    style = MaterialTheme.typography.labelSmall.copy(
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 11.sp,
-                        color = AppColors.GreenPrimary,
-                        letterSpacing = 0.5.sp
-                    )
+                SectionHeader(
+                    title = "TIPE USAHA & MODEL OPERASIONAL",
+                    modifier = Modifier.padding(top = AppSpacing.xs)
                 )
                 Surface(
                     shape = RoundedCornerShape(14.dp),
@@ -579,14 +575,12 @@ fun SettingsScreen(
             // 1. PROFIL USAHA
             // ==========================================
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(
-                    text = "PROFIL ${shopLabel.uppercase()}",
-                    style = MaterialTheme.typography.labelSmall.copy(
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 11.sp,
-                        color = AppColors.GreenPrimary,
-                        letterSpacing = 0.5.sp
-                    )
+                // Gate 1.2: was a hand-inlined 11sp Bold green labelSmall.copy(...). Text and the
+                // interpolated shop label are unchanged; only the presentation now comes from the
+                // shared header.
+                SectionHeader(
+                    title = "PROFIL ${shopLabel.uppercase()}",
+                    modifier = Modifier.padding(top = AppSpacing.xs)
                 )
                 Surface(
                     shape = RoundedCornerShape(14.dp),
@@ -643,14 +637,9 @@ fun SettingsScreen(
             // 1.5 PAJAK / PPN
             // ==========================================
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(
-                    text = "PAJAK / PPN",
-                    style = MaterialTheme.typography.labelSmall.copy(
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 11.sp,
-                        color = AppColors.GreenPrimary,
-                        letterSpacing = 0.5.sp
-                    )
+                SectionHeader(
+                    title = "PAJAK / PPN",
+                    modifier = Modifier.padding(top = AppSpacing.xs)
                 )
                 Surface(
                     shape = RoundedCornerShape(14.dp),
@@ -1410,7 +1399,7 @@ fun SettingsScreen(
                                                 text = "🟡 Perlu Otorisasi Ulang",
                                                 style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
                                                 fontWeight = FontWeight.Bold,
-                                                color = Color(0xFFE65100)
+                                                color = MaterialTheme.colorScheme.tertiary
                                             )
                                         }
                                         else -> {
@@ -2669,28 +2658,16 @@ private fun ChangeBusinessProfileDialog(
     }
 }
 
-@Composable
-private fun SectionHeader(icon: ImageVector, title: String) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.padding(top = AppSpacing.xs)
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = AppColors.GreenPrimary,
-            modifier = Modifier.size(20.dp)
-        )
-        Spacer(Modifier.width(AppSpacing.xs))
-        Text(
-            text = title,
-            fontWeight = FontWeight.Bold,
-            style = MaterialTheme.typography.titleMedium,
-            color = AppColors.TextPrimary
-        )
-    }
-}
-
+/**
+ * Gate 1.2 removed this file's private `SectionHeader(icon, title)`.
+ *
+ * It had ZERO call sites - verified by symbol count across the whole of app/src/main, where the only
+ * other match is the shared `SectionHeader` in ui/components/FoundationComponents.kt. It had been
+ * dead since it was introduced, and it is the reason the audit found a conflict: it styled the
+ * header with stock `titleMedium` (22sp before Gate 1.1, 18sp after), while the 17 headers actually
+ * in this screen were all hand-inlined at 11sp. So the one implementation that existed was louder
+ * than every real usage and none of the real usages used it.
+ */
 @Composable
 private fun SettingSwitchRow(
     label: String,

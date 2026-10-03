@@ -92,6 +92,8 @@ import id.skmnetwork.bukuwarung.domain.money.MoneyCalculator
 import id.skmnetwork.bukuwarung.domain.receipt.ReceiptPaperWidth
 import id.skmnetwork.bukuwarung.printer.PrinterService
 import id.skmnetwork.bukuwarung.purchase.PurchaseOrderReceiptFormatter
+import id.skmnetwork.bukuwarung.ui.components.StatusBadge
+import id.skmnetwork.bukuwarung.ui.components.StatusBadgeVariant
 import id.skmnetwork.bukuwarung.ui.theme.AppColors
 import id.skmnetwork.bukuwarung.ui.theme.AppResponsive
 import id.skmnetwork.bukuwarung.util.formatRupiah
@@ -288,6 +290,53 @@ fun PurchaseOrderTabContent(
 }
 
 /**
+ * Gate 1.2 - the ONE place a Purchase Order status becomes a label and a colour.
+ *
+ * The audit found this `when` block duplicated VERBATIM at two sites (the order card and the order
+ * detail dialog), each feeding its own hand-rolled badge. The two badges had already drifted: 11sp
+ * in the card and 11.5sp in the dialog, same pill. Between them the file introduced five colours
+ * that appear in no theme - #FFF3E0, #E3F2FD, #E8F5E9, #FFEBEE, #F5F5F5 backgrounds and #E65100,
+ * #1565C0, #2E7D32, #C62828, #616161 foregrounds - all light-only, so every one of them was a
+ * 12:1+ white slab on the dark surface.
+ *
+ * Each existing pair already matched a semantic slot, so this is a faithful remap, not a
+ * re-design:
+ *
+ *   DRAFT     "Draft"      #FFF3E0 / #E65100  -> Warning
+ *   ORDERED   "Dipesan"    #E3F2FD / #1565C0  -> Info
+ *   RECEIVED  "Diterima"   #E8F5E9 / #2E7D32  -> Success
+ *   CANCELLED "Dibatalkan" #FFEBEE / #C62828  -> Error
+ *   otherwise raw status   #F5F5F5 / #616161  -> Neutral
+ *
+ * Every label string is preserved verbatim, and the badge keeps carrying the status as TEXT - the
+ * audit's rule that status is never signalled by colour alone. No purchase behaviour is touched:
+ * this reads a status string and draws it.
+ */
+@Composable
+private fun PurchaseOrderStatusBadge(status: String) {
+    val label: String
+    val variant: StatusBadgeVariant
+    when (status) {
+        PurchaseOrderStatus.DRAFT.name -> {
+            label = "Draft"; variant = StatusBadgeVariant.Warning
+        }
+        PurchaseOrderStatus.ORDERED.name -> {
+            label = "Dipesan"; variant = StatusBadgeVariant.Info
+        }
+        PurchaseOrderStatus.RECEIVED.name -> {
+            label = "Diterima"; variant = StatusBadgeVariant.Success
+        }
+        PurchaseOrderStatus.CANCELLED.name -> {
+            label = "Dibatalkan"; variant = StatusBadgeVariant.Error
+        }
+        else -> {
+            label = status; variant = StatusBadgeVariant.Neutral
+        }
+    }
+    StatusBadge(label = label, variant = variant)
+}
+
+/**
  * Gate G13.5 — Card component displaying summary of a Purchase Order item in the list.
  */
 @Composable
@@ -297,14 +346,6 @@ fun PurchaseOrderCard(
 ) {
     val dateFormat = remember { SimpleDateFormat("dd MMM yyyy, HH:mm", Locale("id", "ID")) }
     val formattedDate = remember(order.createdAt) { dateFormat.format(Date(order.createdAt)) }
-
-    val (statusLabel, statusBg, statusColor) = when (order.status) {
-        PurchaseOrderStatus.DRAFT.name -> Triple("Draft", Color(0xFFFFF3E0), Color(0xFFE65100))
-        PurchaseOrderStatus.ORDERED.name -> Triple("Dipesan", Color(0xFFE3F2FD), Color(0xFF1565C0))
-        PurchaseOrderStatus.RECEIVED.name -> Triple("Diterima", Color(0xFFE8F5E9), Color(0xFF2E7D32))
-        PurchaseOrderStatus.CANCELLED.name -> Triple("Dibatalkan", Color(0xFFFFEBEE), Color(0xFFC62828))
-        else -> Triple(order.status, Color(0xFFF5F5F5), Color(0xFF616161))
-    }
 
     Surface(
         shape = RoundedCornerShape(14.dp),
@@ -338,18 +379,7 @@ fun PurchaseOrderCard(
                     )
                 }
 
-                Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = statusBg
-                ) {
-                    Text(
-                        text = statusLabel,
-                        color = statusColor,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 11.sp,
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-                    )
-                }
+                PurchaseOrderStatusBadge(order.status)
             }
 
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
@@ -436,14 +466,6 @@ fun PurchaseOrderDetailDialog(
 
     val (order, items) = orderData!!
 
-    val (statusLabel, statusBg, statusColor) = when (order.status) {
-        PurchaseOrderStatus.DRAFT.name -> Triple("Draft", Color(0xFFFFF3E0), Color(0xFFE65100))
-        PurchaseOrderStatus.ORDERED.name -> Triple("Dipesan", Color(0xFFE3F2FD), Color(0xFF1565C0))
-        PurchaseOrderStatus.RECEIVED.name -> Triple("Diterima", Color(0xFFE8F5E9), Color(0xFF2E7D32))
-        PurchaseOrderStatus.CANCELLED.name -> Triple("Dibatalkan", Color(0xFFFFEBEE), Color(0xFFC62828))
-        else -> Triple(order.status, Color(0xFFF5F5F5), Color(0xFF616161))
-    }
-
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false)
@@ -481,18 +503,7 @@ fun PurchaseOrderDetailDialog(
                         )
                     }
 
-                    Surface(
-                        shape = RoundedCornerShape(12.dp),
-                        color = statusBg
-                    ) {
-                        Text(
-                            text = statusLabel,
-                            color = statusColor,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 11.5.sp,
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-                        )
-                    }
+                    PurchaseOrderStatusBadge(order.status)
                 }
 
                 HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = MaterialTheme.colorScheme.outlineVariant)
@@ -570,13 +581,13 @@ fun PurchaseOrderDetailDialog(
                         item {
                             Surface(
                                 shape = RoundedCornerShape(10.dp),
-                                color = Color(0xFFFFFDE7),
-                                border = BorderStroke(1.dp, Color(0xFFFFF59D)),
+color = MaterialTheme.colorScheme.surfaceVariant,
+                                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 Column(modifier = Modifier.padding(10.dp)) {
-                                    Text("Catatan:", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFFF57F17))
-                                    Text(order.notes, fontSize = 12.sp, color = Color(0xFF424242))
+Text("Catatan:", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.tertiary)
+                                     Text(order.notes, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
                             }
                         }
@@ -703,7 +714,7 @@ fun PurchaseOrderDetailDialog(
                             onClick = { showCancelConfirmDialog = true },
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Text("Batalkan Pesanan", color = Color(0xFFC62828), fontWeight = FontWeight.SemiBold, fontSize = 12.5.sp)
+                            Text("Batalkan Pesanan", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.SemiBold, fontSize = 12.5.sp)
                         }
                     } else if (order.status == PurchaseOrderStatus.ORDERED.name) {
                         Button(
@@ -721,7 +732,7 @@ fun PurchaseOrderDetailDialog(
                             onClick = { showCancelConfirmDialog = true },
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Text("Batalkan Pesanan", color = Color(0xFFC62828), fontWeight = FontWeight.SemiBold, fontSize = 12.5.sp)
+                            Text("Batalkan Pesanan", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.SemiBold, fontSize = 12.5.sp)
                         }
                     }
 

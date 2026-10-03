@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+        Gate 1.1 - DARK platform theme.
+
+        Fixes audit P0 #1. Before this file existed, the platform theme stayed
+        Theme.Material.Light.NoActionBar with white status/navigation bars in BOTH themes, so the
+        dark Compose theme (#111827) rendered a white strip above and below the app, and
+        windowLightStatusBar=true asked for dark icons on that white bar.
+
+        This is the pre-frame fallback for the SYSTEM-driven case. The authoritative control is
+        BwSystemBars, because the merchant can select DARK while the device is in light mode (or the
+        reverse) and only the app knows which is actually being painted.
+
+        Colours mirror AppTokens.SurfaceSunkenDark.
+    -->
+    <style name="Theme.BukuWarung" parent="android:style/Theme.Material.NoActionBar">
+        <item name="android:fontFamily">sans</item>
+        <!-- false = light icons, required on a dark bar. -->
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:statusBarColor">#111827</item>
+        <item name="android:navigationBarColor">#111827</item>
+    </style>
+</resources>

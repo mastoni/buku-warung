@@ -1,4 +1,4 @@
-package id.skmnetwork.bukuwarung.ui.home
+﻿package id.skmnetwork.bukuwarung.ui.home
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -73,6 +73,7 @@ import id.skmnetwork.bukuwarung.ui.components.AppLoadingState
 import id.skmnetwork.bukuwarung.ui.theme.AppColors
 import id.skmnetwork.bukuwarung.ui.theme.AppResponsive
 import id.skmnetwork.bukuwarung.ui.theme.AppSpacing
+import id.skmnetwork.bukuwarung.ui.theme.BwTheme
 import id.skmnetwork.bukuwarung.ui.theme.AppWindowSize
 import id.skmnetwork.bukuwarung.ui.theme.rememberAppWindowSize
 import id.skmnetwork.bukuwarung.util.formatRupiah
@@ -82,7 +83,7 @@ import java.util.Date
 import java.util.Locale
 
 /**
- * Gate I.2-R1 & G6 — Home / Beranda Screen (Adaptive Design Master)
+ * Gate I.2-R1 & G6 â€” Home / Beranda Screen (Adaptive Design Master)
  *
  * Visual & Structural Hierarchy:
  * 1. Store Identity Header (Branding, Shop Name, Subtitle, Active Badge & Initial Avatar)
@@ -330,7 +331,7 @@ fun HomeScreen(
                     )
                     Spacer(Modifier.height(2.dp))
                     Text(
-                        text = "$effectiveShopName 👋",
+                        text = "$effectiveShopName ðŸ‘‹",
                         fontSize = 24.sp,
                         fontWeight = FontWeight.ExtraBold,
                         color = AppColors.GreenDark
@@ -473,7 +474,7 @@ fun HomeScreen(
             // 5. MOTIVATIONAL VALUE BANNER (DESIGN MASTER ALIGNED)
             // ==========================================
             item {
-                val isDark = MaterialTheme.colorScheme.background == Color(0xFF111827)
+                val isDark = BwTheme.isDark
                 Card(
                     shape = RoundedCornerShape(16.dp),
                     colors = CardDefaults.cardColors(containerColor = if (isDark) MaterialTheme.colorScheme.surfaceVariant else Color(0xFFE8F7EF)),
@@ -507,7 +508,7 @@ fun HomeScreen(
                                 color = AppColors.GreenDark
                             )
                             Text(
-                                text = "Data Anda, Aset Anda, Masa Depan Anda 💚",
+                                text = "Data Anda, Aset Anda, Masa Depan Anda ðŸ’š",
                                 fontSize = 11.5.sp,
                                 color = AppColors.GreenPrimary
                             )
@@ -602,10 +603,13 @@ fun SummaryCard(
     borderColor: Color,
     modifier: Modifier = Modifier
 ) {
-    val isDark = MaterialTheme.colorScheme.background == Color(0xFF111827)
+    val isDark = BwTheme.isDark
     val effectiveCardBg = if (isDark) MaterialTheme.colorScheme.surface else cardBg
     val effectiveBorderColor = if (isDark) MaterialTheme.colorScheme.outline else borderColor
     val effectiveIconBg = if (isDark) MaterialTheme.colorScheme.surfaceVariant else iconBg
+    // The card, border and icon plate follow the theme in dark mode, so a fixed brand tint would
+    // end up dark-on-dark. Keep the brand tint in light theme and use the theme foreground in dark.
+    val effectiveIconTint = if (isDark) MaterialTheme.colorScheme.onSurfaceVariant else iconTint
 
     Card(
         shape = RoundedCornerShape(16.dp),
@@ -629,7 +633,7 @@ fun SummaryCard(
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
-                    tint = iconTint,
+                    tint = effectiveIconTint,
                     modifier = Modifier.size(20.dp)
                 )
             }
@@ -757,7 +761,7 @@ fun MenuGrid(
     onNavigate: (AppScreen) -> Unit,
     columnCount: Int = 4
 ) {
-    val isDark = MaterialTheme.colorScheme.background == Color(0xFF111827)
+    val isDark = BwTheme.isDark
     val menus = homeMenuItems(terminology)
 
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {

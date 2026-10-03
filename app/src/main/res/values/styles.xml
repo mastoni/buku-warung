@@ -1,7 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!--
+        Gate 1.1 - LIGHT platform theme.
+
+        The bar colours here are the pre-frame fallback only. The authoritative control is
+        BwSystemBars, which runs from MainActivity and uses the app's own resolved theme
+        (LIGHT / DARK / SYSTEM chosen in Settings) rather than the system UI mode.
+
+        Values mirror AppTokens: SurfaceLight #FFFFFF for the bars, so light mode is unchanged.
+        See values-night/styles.xml for the dark counterpart.
+    -->
     <style name="Theme.BukuWarung" parent="android:style/Theme.Material.Light.NoActionBar">
         <item name="android:fontFamily">sans</item>
+        <!-- true = dark icons, correct for a white bar. -->
         <item name="android:windowLightStatusBar">true</item>
         <item name="android:statusBarColor">#FFFFFF</item>
         <item name="android:navigationBarColor">#FFFFFF</item>
