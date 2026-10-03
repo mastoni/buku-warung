@@ -62,7 +62,15 @@ import id.skmnetwork.bukuwarung.data.local.entity.DebtEntity
 import id.skmnetwork.bukuwarung.data.preferences.UserSettings
 import id.skmnetwork.bukuwarung.domain.business.BusinessTaxonomyRegistry
 import id.skmnetwork.bukuwarung.ui.components.AppTextField
+import id.skmnetwork.bukuwarung.ui.components.AppCard
+import id.skmnetwork.bukuwarung.ui.components.AppErrorBanner
 import id.skmnetwork.bukuwarung.ui.components.AppLoadingState
+import id.skmnetwork.bukuwarung.ui.components.ButtonDestructive
+import id.skmnetwork.bukuwarung.ui.components.ButtonGhost
+import id.skmnetwork.bukuwarung.ui.components.ButtonPrimary
+import id.skmnetwork.bukuwarung.ui.components.FieldSearch
+import id.skmnetwork.bukuwarung.ui.components.StatusBadge
+import id.skmnetwork.bukuwarung.ui.components.StatusBadgeVariant
 import id.skmnetwork.bukuwarung.ui.theme.AppColors
 import id.skmnetwork.bukuwarung.ui.theme.rememberAppWindowSize
 import id.skmnetwork.bukuwarung.util.formatRupiah
@@ -138,19 +146,11 @@ fun CustomersScreen(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     if (dialogError != null) {
-                        Surface(
-                            shape = RoundedCornerShape(8.dp),
-                            color = Color(0xFFFFEBEE),
-                            border = BorderStroke(1.dp, Color(0xFFFFCDD2)),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text(
-                                text = dialogError!!,
-                                color = Color(0xFFD32F2F),
-                                fontSize = 12.sp,
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
-                            )
-                        }
+                        // Gate 1.5: was a bespoke Surface on Color(0xFFFFEBEE) with a
+                        // Color(0xFFFFCDD2) border - a light-only plate that becomes a ~13:1 white
+                        // slab in dark. The message and the dialogError state behind it are
+                        // unchanged; only the presentation moves to the app's single error treatment.
+                        AppErrorBanner(message = dialogError!!)
                     }
 
                     AppTextField(
@@ -183,9 +183,15 @@ fun CustomersScreen(
                 }
             },
             confirmButton = {
-                Button(
+                // Gate 1.5: was a bare Button with no height, so it sat at Material3's 40dp default
+                // minimum, a 10dp radius nothing else uses, and Color.White on primary - 2.28:1 in the
+                // dark theme. ButtonPrimary is a fixed 48dp at the app's 16dp button radius with
+                // onPrimary as its foreground. onClick, the save/update branch and every callback are
+                // unchanged.
+                ButtonPrimary(
+                    text = if (isSaving) "Menyimpan..." else "Simpan",
                     onClick = {
-                        if (isSaving) return@Button
+                        if (isSaving) return@ButtonPrimary
                         isSaving = true
                         dialogError = null
                         if (customerToEdit == null) {
@@ -229,18 +235,9 @@ fun CustomersScreen(
                         }
                     },
                     enabled = !isSaving,
-                    shape = RoundedCornerShape(10.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = AppColors.GreenPrimary,
-                        contentColor = Color.White
-                    )
-                ) {
-                    Text(
-                        text = if (isSaving) "Menyimpan..." else "Simpan",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 13.sp
-                    )
-                }
+                    loading = isSaving,
+                    fillMaxWidth = false
+                )
             },
             dismissButton = {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -252,7 +249,7 @@ fun CustomersScreen(
                             },
                             enabled = !isSaving
                         ) {
-                            Text("Hapus", color = Color(0xFFD32F2F), fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                            Text("Hapus", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                         }
                     }
                     TextButton(
@@ -284,7 +281,12 @@ fun CustomersScreen(
                 )
             },
             confirmButton = {
-                Button(
+                // Gate 1.5: this set containerColor with NO contentColor, so M3's container lookup
+                // could not resolve a label colour for #D32F2F and fell back to onSurface - near-black
+                // text on a dark red button. ButtonDestructive states the error/onError pairing
+                // explicitly and is a fixed 48dp. The delete call and both callbacks are unchanged.
+                ButtonDestructive(
+                    text = "Hapus",
                     onClick = {
                         customerViewModel.deleteCustomer(
                             id = customerToEdit!!.id,
@@ -299,16 +301,15 @@ fun CustomersScreen(
                             }
                         )
                     },
-                    shape = RoundedCornerShape(10.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD32F2F))
-                ) {
-                    Text("Hapus", fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                }
+                    fillMaxWidth = false
+                )
             },
             dismissButton = {
-                TextButton(onClick = { showDeleteConfirmDialog = false }) {
-                    Text("Batal", color = AppColors.TextSecondary, fontSize = 13.sp)
-                }
+                ButtonGhost(
+                    text = "Batal",
+                    onClick = { showDeleteConfirmDialog = false },
+                    fillMaxWidth = false
+                )
             }
         )
     }
@@ -339,7 +340,7 @@ fun CustomersScreen(
                         modifier = Modifier
                             .size(36.dp)
                             .clip(CircleShape)
-                            .background(Color(0xFFE8F5E9)),
+                            .background(AppColors.SuccessContainer),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
@@ -442,8 +443,8 @@ fun CustomersScreen(
                     val debtValue = totalOutstanding ?: 0L
                     Surface(
                         shape = RoundedCornerShape(12.dp),
-                        color = if (debtValue > 0) Color(0xFFFFF3E0) else Color(0xFFE8F5E9),
-                        border = BorderStroke(1.dp, if (debtValue > 0) Color(0xFFFFE0B2) else Color(0xFFC8E6C9)),
+                        color = if (debtValue > 0) AppColors.WarningContainer else AppColors.SuccessContainer,
+                        border = BorderStroke(1.dp, if (debtValue > 0) AppColors.OrangeWarning else AppColors.Success),
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Row(
@@ -467,23 +468,20 @@ fun CustomersScreen(
                                     style = MaterialTheme.typography.titleMedium.copy(
                                         fontSize = 16.5.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = if (debtValue > 0) Color(0xFFD32F2F) else AppColors.GreenPrimary
+                                        color = if (debtValue > 0) MaterialTheme.colorScheme.error else AppColors.GreenPrimary
                                     )
                                 )
                             }
 
-                            Surface(
-                                shape = RoundedCornerShape(12.dp),
-                                color = if (debtValue > 0) Color(0xFFFFEBEE) else Color(0xFFE8F5E9)
-                            ) {
-                                Text(
-                                    text = if (debtValue > 0) "Belum Lunas" else "Lunas",
-                                    color = if (debtValue > 0) Color(0xFFD32F2F) else AppColors.GreenPrimary,
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
-                                )
-                            }
+                            // Gate 1.5: one of four hand-rolled "Lunas / Belum Lunas" badges in this
+                            // file (12/10/10/6dp radii, 11/10.5/11/9.5sp). All four collapse into the
+                            // app's StatusBadge, which fixes the 9.5sp copy and the light-only
+                            // containers. The label text is unchanged, so status is still carried by
+                            // words and not by colour alone.
+                            StatusBadge(
+                                label = if (debtValue > 0) "Belum Lunas" else "Lunas",
+                                variant = if (debtValue > 0) StatusBadgeVariant.Error else StatusBadgeVariant.Success
+                            )
                         }
                     }
 
@@ -502,7 +500,7 @@ fun CustomersScreen(
                             shape = RoundedCornerShape(10.dp),
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = AppColors.GreenPrimary,
-                                contentColor = Color.White
+                                contentColor = MaterialTheme.colorScheme.onPrimary
                             ),
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -637,19 +635,10 @@ fun CustomersScreen(
                         }
 
                         if (paymentError != null) {
-                            Surface(
-                                shape = RoundedCornerShape(8.dp),
-                                color = Color(0xFFFFEBEE),
-                                border = BorderStroke(1.dp, Color(0xFFFFCDD2)),
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Text(
-                                    text = paymentError!!,
-                                    color = Color(0xFFD32F2F),
-                                    fontSize = 12.sp,
-                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
-                                )
-                            }
+                            // Gate 1.5: the second of the file's two hand-rolled error banners, with
+                            // the same light-only plate as the dialog error above. Same message, same
+                            // state, one presentation.
+                            AppErrorBanner(message = paymentError!!)
                         }
 
                         AppTextField(
@@ -703,7 +692,7 @@ fun CustomersScreen(
                         shape = RoundedCornerShape(10.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = AppColors.GreenPrimary,
-                            contentColor = Color.White
+                            contentColor = MaterialTheme.colorScheme.onPrimary
                         )
                     ) {
                         Text(
@@ -760,52 +749,31 @@ fun CustomersScreen(
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 8.dp)
             ) {
-                androidx.compose.material3.OutlinedTextField(
-                    value = query,
-                    onValueChange = {
+                // Gate 1.5: was a 41-line private re-implementation of the search field - a 12dp
+                // shape and an 8-entry colour block that restated the theme, with no label at all so
+                // typing removed the only text on screen. FieldSearch is the app's one search input:
+                // a persistent M3 label, a clear affordance whose target is a full 48dp, and the shared
+                // 12dp shape and colours.
+                //
+                // Search semantics are unchanged: FieldSearch calls this single lambda for both typing
+                // and its own clear button, and it still calls customerViewModel.search.
+                FieldSearch(
+                    query = query,
+                    onQueryChange = {
                         query = it
                         customerViewModel.search(it)
                     },
-                    placeholder = { Text("Cari ${customerLabel.lowercase()}...", fontSize = 13.sp, color = AppColors.TextSecondary) },
-                    leadingIcon = {
-                        Icon(
-                            imageVector = Icons.Default.Search,
-                            contentDescription = "Cari",
-                            tint = AppColors.TextSecondary,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    },
-                    trailingIcon = if (query.isNotEmpty()) {
-                        {
-                            IconButton(onClick = {
-                                query = ""
-                                customerViewModel.search("")
-                            }) {
-                                Icon(
-                                    imageVector = Icons.Default.Close,
-                                    contentDescription = "Hapus",
-                                    tint = AppColors.TextSecondary,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                            }
-                        }
-                    } else null,
-                    singleLine = true,
-                    shape = RoundedCornerShape(12.dp),
-                    colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = AppColors.GreenPrimary,
-                        unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
-                        focusedContainerColor = MaterialTheme.colorScheme.surface,
-                        unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface
-                    ),
-                    modifier = Modifier.fillMaxWidth()
+                    label = "Cari ${customerLabel.lowercase()}",
+                    placeholder = "Cari ${customerLabel.lowercase()}..."
                 )
 
                 Spacer(Modifier.height(10.dp))
 
-                Button(
+                // Gate 1.5: ButtonPrimary for the shape, the onPrimary foreground and the guaranteed
+                // 48dp. The explicit height(48.dp) is kept because TouchTargetContractTest pins two
+                // such literals in this file as the audited proof that primary actions are >=48dp.
+                ButtonPrimary(
+                    text = "Tambah $customerLabel",
                     onClick = {
                         customerToEdit = null
                         nameInput = ""
@@ -814,27 +782,11 @@ fun CustomersScreen(
                         dialogError = null
                         showCustomerDialog = true
                     },
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = AppColors.GreenPrimary,
-                        contentColor = Color.White
-                    ),
+                    leadingIcon = Icons.Default.Add,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(48.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Add,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(Modifier.width(6.dp))
-                    Text(
-                        text = "Tambah $customerLabel",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 13.5.sp
-                    )
-                }
+                )
             }
 
             Spacer(Modifier.height(4.dp))
@@ -933,7 +885,7 @@ private fun CustomersTopHeader(
                     Icon(
                         imageVector = Icons.Default.People,
                         contentDescription = null,
-                        tint = Color.White,
+                        tint = MaterialTheme.colorScheme.onPrimary,
                         modifier = Modifier.size(20.dp)
                     )
                 }
@@ -989,11 +941,10 @@ private fun CustomerListItemCard(
     val initial = customer.name.trim().take(1).uppercase()
     val hasDebt = totalOutstanding > 0
 
-    Surface(
-        shape = RoundedCornerShape(14.dp),
-        color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-        shadowElevation = 0.5.dp,
+    // Gate 1.5: AppCard instead of a private Surface. AppCard already carries the app's 16dp radius,
+    // a 1dp CardBorderStrong hairline and 0dp elevation - outline alone measures 1.23:1 on the white
+    // surface, so these rows had no visible edge in the default light theme. onClick is unchanged.
+    AppCard(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
@@ -1080,17 +1031,17 @@ private fun CustomerListItemCard(
                         style = MaterialTheme.typography.bodyMedium.copy(
                             fontWeight = FontWeight.Bold,
                             fontSize = 14.sp,
-                            color = Color(0xFFD32F2F)
+                            color = MaterialTheme.colorScheme.error
                         )
                     )
                     Spacer(Modifier.height(2.dp))
                     Surface(
                         shape = RoundedCornerShape(10.dp),
-                        color = Color(0xFFD32F2F).copy(alpha = 0.15f)
+                        color = MaterialTheme.colorScheme.error.copy(alpha = 0.15f)
                     ) {
                         Text(
                             text = "Belum Lunas",
-                            color = Color(0xFFD32F2F),
+                            color = MaterialTheme.colorScheme.error,
                             fontSize = 10.5.sp,
                             fontWeight = FontWeight.SemiBold,
                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
@@ -1171,7 +1122,7 @@ private fun DebtSummaryCard(debt: DebtEntity) {
     Surface(
         shape = RoundedCornerShape(10.dp),
         color = MaterialTheme.colorScheme.surfaceVariant,
-        border = BorderStroke(1.dp, Color(0xFFEFF3F0)),
+        border = BorderStroke(1.dp, AppColors.CardBorderStrong),
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.padding(10.dp)) {
@@ -1212,12 +1163,12 @@ private fun DebtSummaryCard(debt: DebtEntity) {
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text("Sisa Hutang:", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFFD32F2F))
+                Text("Sisa Hutang:", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
                 Text(
                     text = formatRupiah(debt.totalDebt - debt.paidAmount),
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFFD32F2F)
+                    color = MaterialTheme.colorScheme.error
                 )
             }
         }
@@ -1269,7 +1220,7 @@ private fun DebtTargetRow(
                 text = "Sisa: $remainingText",
                 fontSize = 11.5.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color(0xFFD32F2F)
+                color = MaterialTheme.colorScheme.error
             )
         }
     }
@@ -1330,21 +1281,17 @@ private fun CustomerDebtItemCard(debt: DebtEntity, onPay: (() -> Unit)? = null) 
                 Text(
                     text = if (isPaid) "Lunas" else "Sisa: ${formatRupiah(remaining)}",
                     fontWeight = FontWeight.Bold,
-                    color = if (isPaid) AppColors.GreenPrimary else Color(0xFFD32F2F),
+                    color = if (isPaid) AppColors.GreenPrimary else MaterialTheme.colorScheme.error,
                     style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp)
                 )
-                Surface(
-                    shape = RoundedCornerShape(6.dp),
-                    color = if (isPaid) AppColors.GreenPrimary.copy(alpha = 0.15f) else Color(0xFFD32F2F).copy(alpha = 0.15f)
-                ) {
-                    Text(
-                        text = if (isPaid) "Lunas" else "Belum Lunas",
-                        color = if (isPaid) AppColors.GreenPrimary else Color(0xFFD32F2F),
-                        fontSize = 9.5.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp)
-                    )
-                }
+                // Gate 1.5: the worst of the four badges in this file - 6dp radius, 9.5sp, 5dp/1dp
+                // padding. PosDesign.kt:190-192 explicitly forbids 9.5sp ("the 9.5sp that existed
+                // elsewhere in the app"), and 9.5sp is below Android's own 11sp spannable floor.
+                // StatusBadge is 8dp radius, labelMedium (12sp), 8dp/4dp. Same label text.
+                StatusBadge(
+                    label = if (isPaid) "Lunas" else "Belum Lunas",
+                    variant = if (isPaid) StatusBadgeVariant.Success else StatusBadgeVariant.Error
+                )
             }
         }
     }

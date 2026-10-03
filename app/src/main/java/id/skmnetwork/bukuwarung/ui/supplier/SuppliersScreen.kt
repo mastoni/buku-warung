@@ -65,7 +65,13 @@ import id.skmnetwork.bukuwarung.data.local.entity.SupplierEntity
 import id.skmnetwork.bukuwarung.data.local.entity.SupplierPayableEntity
 import id.skmnetwork.bukuwarung.data.preferences.UserSettings
 import id.skmnetwork.bukuwarung.domain.business.BusinessTaxonomyRegistry
+import id.skmnetwork.bukuwarung.ui.components.AppCard
+import id.skmnetwork.bukuwarung.ui.components.AppErrorBanner
 import id.skmnetwork.bukuwarung.ui.components.AppLoadingState
+import id.skmnetwork.bukuwarung.ui.components.ButtonPrimary
+import id.skmnetwork.bukuwarung.ui.components.FieldSearch
+import id.skmnetwork.bukuwarung.ui.components.StatusBadge
+import id.skmnetwork.bukuwarung.ui.components.StatusBadgeVariant
 import id.skmnetwork.bukuwarung.ui.components.AppTextField
 import id.skmnetwork.bukuwarung.ui.theme.AppColors
 import id.skmnetwork.bukuwarung.ui.theme.rememberAppWindowSize
@@ -140,19 +146,10 @@ fun SuppliersScreen(
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     if (dialogError != null) {
-                        Surface(
-                            shape = RoundedCornerShape(8.dp),
-                            color = Color(0xFFFFEBEE),
-                            border = BorderStroke(1.dp, Color(0xFFFFCDD2)),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text(
-                                text = dialogError!!,
-                                color = Color(0xFFD32F2F),
-                                fontSize = 12.sp,
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
-                            )
-                        }
+                        // Gate 1.5: bespoke Surface on Color(0xFFFFEBEE) with a Color(0xFFFFCDD2)
+                        // border - a light-only plate that becomes a ~13:1 white slab in dark. Same
+                        // message and same dialogError state; one shared presentation now.
+                        AppErrorBanner(message = dialogError!!)
                     }
 
                     AppTextField(
@@ -234,7 +231,7 @@ fun SuppliersScreen(
                     shape = RoundedCornerShape(10.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = AppColors.GreenPrimary,
-                        contentColor = Color.White
+                        contentColor = MaterialTheme.colorScheme.onPrimary
                     )
                 ) {
                     Text(
@@ -254,7 +251,7 @@ fun SuppliersScreen(
                             },
                             enabled = !isSaving
                         ) {
-                            Text("Hapus", color = Color(0xFFD32F2F), fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                            Text("Hapus", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                         }
                     }
                     TextButton(
@@ -302,7 +299,7 @@ fun SuppliersScreen(
                         )
                     },
                     shape = RoundedCornerShape(10.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD32F2F))
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error, contentColor = MaterialTheme.colorScheme.onError)
                 ) {
                     Text("Hapus", fontWeight = FontWeight.Bold, fontSize = 13.sp)
                 }
@@ -341,7 +338,7 @@ fun SuppliersScreen(
                         modifier = Modifier
                             .size(36.dp)
                             .clip(CircleShape)
-                            .background(Color(0xFFE8F5E9)),
+                            .background(AppColors.SuccessContainer),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
@@ -446,8 +443,8 @@ fun SuppliersScreen(
                     val debtValue = totalOutstanding ?: 0L
                     Surface(
                         shape = RoundedCornerShape(12.dp),
-                        color = if (debtValue > 0) Color(0xFFFFF3E0) else Color(0xFFE8F5E9),
-                        border = BorderStroke(1.dp, if (debtValue > 0) Color(0xFFFFE0B2) else Color(0xFFC8E6C9)),
+                        color = if (debtValue > 0) AppColors.WarningContainer else AppColors.SuccessContainer,
+                        border = BorderStroke(1.dp, if (debtValue > 0) AppColors.OrangeWarning else AppColors.Success),
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Row(
@@ -471,51 +468,33 @@ fun SuppliersScreen(
                                     style = MaterialTheme.typography.titleMedium.copy(
                                         fontSize = 16.5.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = if (debtValue > 0) Color(0xFFD32F2F) else AppColors.GreenPrimary
+                                        color = if (debtValue > 0) MaterialTheme.colorScheme.error else AppColors.GreenPrimary
                                     )
                                 )
                             }
 
-                            Surface(
-                                shape = RoundedCornerShape(12.dp),
-                                color = if (debtValue > 0) Color(0xFFFFEBEE) else Color(0xFFE8F5E9)
-                            ) {
-                                Text(
-                                    text = if (debtValue > 0) "Belum Lunas" else "Lunas",
-                                    color = if (debtValue > 0) Color(0xFFD32F2F) else AppColors.GreenPrimary,
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
-                                )
-                            }
+                            // Gate 1.5: mirrors the CustomersScreen change - one of four hand-rolled
+                            // Lunas/Belum Lunas badges here, same 12dp radius and 11sp label, same
+                            // light-only containers. Same label text.
+                            StatusBadge(
+                                label = if (debtValue > 0) "Belum Lunas" else "Lunas",
+                                variant = if (debtValue > 0) StatusBadgeVariant.Error else StatusBadgeVariant.Success
+                            )
                         }
                     }
 
                     // Primary Action: Bayar Hutang Supplier
                     if (openPayables.isNotEmpty()) {
-                        Button(
-                            onClick = { showPaySupplierDialog = true },
-                            shape = RoundedCornerShape(10.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = AppColors.GreenPrimary,
-                                contentColor = Color.White
-                            ),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(42.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Add,
-                                contentDescription = null,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(Modifier.width(6.dp))
-                            Text(
-                                text = "Bayar $debtLabel $supplierLabel",
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 13.sp
-                            )
-                        }
+                    // Gate 1.5: this was 42dp - the same action is 48dp on CustomersScreen, and
+                    // the audit recorded the pair as a direct contradiction. ButtonPrimary is a
+                    // fixed 48dp at the app's 16dp radius with onPrimary as its foreground.
+                    // onClick, the isNotEmpty guard and the label are unchanged.
+                    ButtonPrimary(
+                        text = "Bayar $debtLabel $supplierLabel",
+                        onClick = { showPaySupplierDialog = true },
+                        leadingIcon = Icons.Default.Add,
+                        fillMaxWidth = true
+                    )
                     }
 
                     Spacer(Modifier.height(2.dp))
@@ -585,7 +564,7 @@ fun SuppliersScreen(
                         Surface(
                             shape = RoundedCornerShape(10.dp),
                             color = MaterialTheme.colorScheme.surfaceVariant,
-                            border = BorderStroke(1.dp, Color(0xFFEFF3F0)),
+                            border = BorderStroke(1.dp, AppColors.CardBorderStrong),
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Column(modifier = Modifier.padding(10.dp)) {
@@ -609,26 +588,15 @@ fun SuppliersScreen(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
-                                    Text("Sisa Hutang:", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFFD32F2F))
-                                    Text(formatRupiah(outstanding), fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color(0xFFD32F2F))
+                                    Text("Sisa Hutang:", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
+                                    Text(formatRupiah(outstanding), fontSize = 13.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
                                 }
                             }
                         }
 
                         if (paymentError != null) {
-                            Surface(
-                                shape = RoundedCornerShape(8.dp),
-                                color = Color(0xFFFFEBEE),
-                                border = BorderStroke(1.dp, Color(0xFFFFCDD2)),
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Text(
-                                    text = paymentError!!,
-                                    color = Color(0xFFD32F2F),
-                                    fontSize = 12.sp,
-                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
-                                )
-                            }
+                            // Gate 1.5: the second of the file's two hand-rolled error banners.
+                            AppErrorBanner(message = paymentError!!)
                         }
 
                         AppTextField(
@@ -678,7 +646,7 @@ fun SuppliersScreen(
                         shape = RoundedCornerShape(10.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = AppColors.GreenPrimary,
-                            contentColor = Color.White
+                            contentColor = MaterialTheme.colorScheme.onPrimary
                         )
                     ) {
                         Text(
@@ -730,52 +698,28 @@ fun SuppliersScreen(
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 8.dp)
             ) {
-                OutlinedTextField(
-                    value = query,
-                    onValueChange = {
+                // Gate 1.5: same private re-implementation the CustomersScreen had - a 12dp shape and
+                // an 8-entry colour block restating the theme, placeholder-only with no label.
+                // FieldSearch is the app's one search input with a persistent label and a 48dp clear
+                // target. Search semantics are unchanged: the same single lambda still drives typing
+                // and the clear button, and it still calls supplierViewModel.search.
+                FieldSearch(
+                    query = query,
+                    onQueryChange = {
                         query = it
                         supplierViewModel.search(it)
                     },
-                    placeholder = { Text("Cari ${supplierLabel.lowercase()}...", fontSize = 13.sp, color = AppColors.TextSecondary) },
-                    leadingIcon = {
-                        Icon(
-                            imageVector = Icons.Default.Search,
-                            contentDescription = "Cari",
-                            tint = AppColors.TextSecondary,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    },
-                    trailingIcon = if (query.isNotEmpty()) {
-                        {
-                            IconButton(onClick = {
-                                query = ""
-                                supplierViewModel.search("")
-                            }) {
-                                Icon(
-                                    imageVector = Icons.Default.Close,
-                                    contentDescription = "Hapus",
-                                    tint = AppColors.TextSecondary,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                            }
-                        }
-                    } else null,
-                    singleLine = true,
-                    shape = RoundedCornerShape(12.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = AppColors.GreenPrimary,
-                        unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
-                        focusedContainerColor = MaterialTheme.colorScheme.surface,
-                        unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface
-                    ),
-                    modifier = Modifier.fillMaxWidth()
+                    label = "Cari ${supplierLabel.lowercase()}",
+                    placeholder = "Cari ${supplierLabel.lowercase()}..."
                 )
 
                 Spacer(Modifier.height(10.dp))
 
-                Button(
+                // Gate 1.5: was 46dp where the identical action on CustomersScreen is 48dp. The
+                // explicit height(48.dp) is kept to match its CustomersScreen twin. onClick and the
+                // reset-then-open sequence are unchanged.
+                ButtonPrimary(
+                    text = "Tambah $supplierLabel",
                     onClick = {
                         supplierToEdit = null
                         nameInput = ""
@@ -784,27 +728,11 @@ fun SuppliersScreen(
                         dialogError = null
                         showSupplierDialog = true
                     },
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = AppColors.GreenPrimary,
-                        contentColor = Color.White
-                    ),
+                    leadingIcon = Icons.Default.Add,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(46.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Add,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(Modifier.width(6.dp))
-                    Text(
-                        text = "Tambah $supplierLabel",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 13.5.sp
-                    )
-                }
+                        .height(48.dp)
+                )
             }
 
             Spacer(Modifier.height(4.dp))
@@ -910,7 +838,7 @@ private fun SuppliersTopHeader(
                     Icon(
                         imageVector = Icons.Default.LocalShipping,
                         contentDescription = null,
-                        tint = Color.White,
+                        tint = MaterialTheme.colorScheme.onPrimary,
                         modifier = Modifier.size(20.dp)
                     )
                 }
@@ -966,11 +894,11 @@ private fun SupplierListItemCard(
     val initial = supplier.name.trim().take(1).uppercase()
     val hasDebt = totalOutstanding > 0
 
-    Surface(
-        shape = RoundedCornerShape(14.dp),
-        color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-        shadowElevation = 0.5.dp,
+    // Gate 1.5: AppCard instead of a private Surface, matching the CustomersScreen list row - the
+    // app's 16dp radius, a 1dp CardBorderStrong hairline and 0dp elevation. outline alone measures
+    // 1.23:1 on the white surface, so these rows had no visible edge in the default light theme.
+    // onClick is unchanged.
+    AppCard(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
@@ -1057,17 +985,17 @@ private fun SupplierListItemCard(
                         style = MaterialTheme.typography.bodyMedium.copy(
                             fontWeight = FontWeight.Bold,
                             fontSize = 14.sp,
-                            color = Color(0xFFD32F2F)
+                            color = MaterialTheme.colorScheme.error
                         )
                     )
                     Spacer(Modifier.height(2.dp))
                     Surface(
                         shape = RoundedCornerShape(10.dp),
-                        color = Color(0xFFD32F2F).copy(alpha = 0.15f)
+                        color = MaterialTheme.colorScheme.error.copy(alpha = 0.15f)
                     ) {
                         Text(
                             text = "Belum Lunas",
-                            color = Color(0xFFD32F2F),
+                            color = MaterialTheme.colorScheme.error,
                             fontSize = 10.5.sp,
                             fontWeight = FontWeight.SemiBold,
                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
@@ -1141,21 +1069,16 @@ private fun SupplierPayableItemCard(payable: SupplierPayableEntity) {
                 Text(
                     text = if (isPaid) "Lunas" else "Sisa: ${formatRupiah(remaining)}",
                     fontWeight = FontWeight.Bold,
-                    color = if (isPaid) AppColors.GreenPrimary else Color(0xFFD32F2F),
+                    color = if (isPaid) AppColors.GreenPrimary else MaterialTheme.colorScheme.error,
                     style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp)
                 )
-                Surface(
-                    shape = RoundedCornerShape(6.dp),
-                    color = if (isPaid) AppColors.GreenPrimary.copy(alpha = 0.15f) else Color(0xFFD32F2F).copy(alpha = 0.15f)
-                ) {
-                    Text(
-                        text = if (isPaid) "Lunas" else "Belum Lunas",
-                        color = if (isPaid) AppColors.GreenPrimary else Color(0xFFD32F2F),
-                        fontSize = 9.5.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp)
-                    )
-                }
+                // Gate 1.5: the worst badge in the file - 6dp radius, 9.5sp, 5dp/1dp padding.
+                // PosDesign.kt:190-192 forbids 9.5sp outright and it is below Android's 11sp floor.
+                // StatusBadge is 8dp, labelMedium (12sp), 8dp/4dp. Same label text.
+                StatusBadge(
+                    label = if (isPaid) "Lunas" else "Belum Lunas",
+                    variant = if (isPaid) StatusBadgeVariant.Success else StatusBadgeVariant.Error
+                )
             }
         }
     }
