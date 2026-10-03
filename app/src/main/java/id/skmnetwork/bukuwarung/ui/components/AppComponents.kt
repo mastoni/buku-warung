@@ -1,4 +1,4 @@
-﻿package id.skmnetwork.bukuwarung.ui.components
+package id.skmnetwork.bukuwarung.ui.components
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Box

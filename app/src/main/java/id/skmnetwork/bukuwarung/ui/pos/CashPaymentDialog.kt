@@ -1,4 +1,4 @@
-﻿package id.skmnetwork.bukuwarung.ui.pos
+package id.skmnetwork.bukuwarung.ui.pos
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement

@@ -1,4 +1,4 @@
-﻿package id.skmnetwork.bukuwarung.ui.pos
+package id.skmnetwork.bukuwarung.ui.pos
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -626,7 +626,7 @@ fun MeasuredProductCard(
     }
 }
 
-private fun terminologyStockLabel(isStockable: Boolean): String = if (isStockable) "Stok" else "â€”"
+private fun terminologyStockLabel(isStockable: Boolean): String = if (isStockable) "Stok" else "—"
 
 // =====================================================================================
 // 13. CART QUANTITY CONTROL - 112 x 56, minimum 48dp touch targets, never 22/26dp

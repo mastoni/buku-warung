@@ -1,4 +1,4 @@
-﻿package id.skmnetwork.bukuwarung.ui.pos
+package id.skmnetwork.bukuwarung.ui.pos
 
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility

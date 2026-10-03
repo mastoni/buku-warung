@@ -1,4 +1,4 @@
-﻿package id.skmnetwork.bukuwarung.ui.product
+package id.skmnetwork.bukuwarung.ui.product
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column

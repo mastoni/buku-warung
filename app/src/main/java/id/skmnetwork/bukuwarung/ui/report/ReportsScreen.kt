@@ -1211,7 +1211,10 @@ fun ReportsScreen(
             icon = {
                 Surface(
                     shape = CircleShape,
-                    color = Color(0xFFE8F5E9),
+                    // Gate 1.8: was Color(0xFFE8F5E9), a light-only tint that became a ~13:1
+                    // white disc on the dark success dialog. SuccessContainer is the app's own
+                    // token for this and inverts with the theme.
+                    color = AppColors.SuccessContainer,
                     modifier = Modifier.size(48.dp)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
@@ -1271,8 +1274,10 @@ fun ReportsScreen(
                         val viewIntent = PdfShareManager.createViewPdfIntent(context, file)
                         context.startActivity(viewIntent)
                     },
+                    // Gate 1.8: was Color(0xFFE0E0E0) - a Material grey400 that belongs to neither
+                    // Buku Warung palette. CardBorderStrong is the app's own hairline step.
                     shape = RoundedCornerShape(10.dp),
-                    border = BorderStroke(1.dp, Color(0xFFE0E0E0))
+                    border = BorderStroke(1.dp, AppColors.CardBorderStrong)
                 ) {
                     Text("Buka PDF", fontSize = 13.sp)
                 }
@@ -1470,11 +1475,16 @@ private fun TopProductItemRow(
     ) {
         Surface(
             shape = CircleShape,
+            // Gate 1.8: the rank disc was four hardcoded colours, three of which (gold #FFD700,
+            // silver #C0C0C0, bronze #CD7F32) are decorative literals in no theme, and the fourth
+            // (#F0F4F0) is a near-white that disappeared against the dark surface. The top three
+            // keep their medal colours deliberately - they encode rank, not state - but the
+            // fallback now uses the theme's surfaceVariant so an unranked row is visible in dark.
             color = when (rank) {
                 1 -> Color(0xFFFFD700)
                 2 -> Color(0xFFC0C0C0)
                 3 -> Color(0xFFCD7F32)
-                else -> Color(0xFFF0F4F0)
+                else -> MaterialTheme.colorScheme.surfaceVariant
             },
             modifier = Modifier.size(24.dp)
         ) {

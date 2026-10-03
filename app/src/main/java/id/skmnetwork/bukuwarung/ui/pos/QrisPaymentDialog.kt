@@ -1,4 +1,4 @@
-﻿package id.skmnetwork.bukuwarung.ui.pos
+package id.skmnetwork.bukuwarung.ui.pos
 
 import android.graphics.BitmapFactory
 import androidx.compose.foundation.Image

@@ -187,7 +187,7 @@ fun PurchaseScreen(
                         modifier = Modifier
                             .size(34.dp)
                             .clip(RoundedCornerShape(8.dp))
-                            .background(Color(0xFFE8F5E9)),
+                            .background(AppColors.SuccessContainer),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
@@ -229,8 +229,8 @@ fun PurchaseScreen(
 
                                 Surface(
                                     shape = RoundedCornerShape(12.dp),
-                                    color = if (isSelected) Color(0xFFE8F5E9) else Color(0xFFF8FAF8),
-                                    border = BorderStroke(1.dp, if (isSelected) AppColors.GreenPrimary else Color(0xFFE2E8F0)),
+                                    color = if (isSelected) AppColors.SuccessContainer else MaterialTheme.colorScheme.surfaceVariant,
+                                    border = BorderStroke(1.dp, if (isSelected) AppColors.GreenPrimary else MaterialTheme.colorScheme.outline),
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .clickable {
@@ -387,7 +387,7 @@ fun PurchaseScreen(
                         modifier = Modifier
                             .size(34.dp)
                             .clip(CircleShape)
-                            .background(Color(0xFFE8F5E9)),
+                            .background(AppColors.SuccessContainer),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
@@ -414,7 +414,8 @@ fun PurchaseScreen(
                     shape = RoundedCornerShape(10.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = AppColors.GreenPrimary,
-                        contentColor = Color.White
+                        // Gate 1.8: was Color.White - 2.28:1 against the dark-theme green.
+                        contentColor = MaterialTheme.colorScheme.onPrimary
                     )
                 ) {
                     Text("Selesai", fontWeight = FontWeight.Bold)
@@ -459,11 +460,11 @@ fun PurchaseScreen(
                     }
                     Surface(
                         shape = RoundedCornerShape(6.dp),
-                        color = if (purchase.paymentMethod == "CREDIT") Color(0xFFFFEBEE) else Color(0xFFE8F5E9)
+                        color = if (purchase.paymentMethod == "CREDIT") MaterialTheme.colorScheme.errorContainer else AppColors.SuccessContainer
                     ) {
                         Text(
                             text = if (purchase.paymentMethod == "CREDIT") debtLabel.uppercase() else "TUNAI",
-                            color = if (purchase.paymentMethod == "CREDIT") Color(0xFFD32F2F) else AppColors.GreenPrimary,
+                            color = if (purchase.paymentMethod == "CREDIT") MaterialTheme.colorScheme.error else AppColors.GreenPrimary,
                             fontWeight = FontWeight.Bold,
                             fontSize = 11.sp,
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
@@ -493,7 +494,7 @@ fun PurchaseScreen(
                         Text(supplierName, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodySmall)
                     }
 
-                    HorizontalDivider(Modifier.padding(vertical = 4.dp), color = Color(0xFFE2E8F0))
+                    HorizontalDivider(Modifier.padding(vertical = 4.dp), color = MaterialTheme.colorScheme.outline)
 
                     Text("Rincian $productLabel:", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelMedium)
 
@@ -531,7 +532,7 @@ fun PurchaseScreen(
                         }
                     }
 
-                    HorizontalDivider(Modifier.padding(vertical = 4.dp), color = Color(0xFFE2E8F0))
+                    HorizontalDivider(Modifier.padding(vertical = 4.dp), color = MaterialTheme.colorScheme.outline)
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -591,7 +592,7 @@ fun PurchaseScreen(
                     Surface(
                         shape = RoundedCornerShape(12.dp),
                         color = MaterialTheme.colorScheme.surface,
-                        border = BorderStroke(1.dp, Color(0xFFEFF3F0)),
+                        border = BorderStroke(1.dp, AppColors.CardBorderStrong),
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp, vertical = 8.dp)
@@ -618,7 +619,7 @@ fun PurchaseScreen(
                             }
                             Surface(
                                 shape = RoundedCornerShape(20.dp),
-                                color = Color(0xFFF1F5F2)
+                                color = MaterialTheme.colorScheme.surfaceVariant
                             ) {
                                 Text(
                                     text = "Periode $purchaseLabel",
@@ -727,7 +728,7 @@ fun PurchaseScreen(
                         shape = RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp),
                         color = MaterialTheme.colorScheme.surface,
                         shadowElevation = 8.dp,
-                        border = BorderStroke(1.dp, Color(0xFFE8EFEA)),
+                        border = BorderStroke(1.dp, AppColors.CardBorderStrong),
                         modifier = Modifier
                             .align(Alignment.BottomCenter)
                             .fillMaxWidth()
@@ -773,7 +774,7 @@ fun PurchaseScreen(
                                 // Cash Button
                                 Surface(
                                     shape = RoundedCornerShape(12.dp),
-                                    color = if (paymentMethod == "CASH") AppColors.GreenPrimary else Color(0xFFF1F4F2),
+                                    color = if (paymentMethod == "CASH") AppColors.GreenPrimary else MaterialTheme.colorScheme.surfaceVariant,
                                     modifier = Modifier
                                         .weight(1f)
                                         .height(48.dp)
@@ -782,7 +783,8 @@ fun PurchaseScreen(
                                     Box(contentAlignment = Alignment.Center) {
                                         Text(
                                             text = "Tunai (CASH)",
-                                            color = if (paymentMethod == "CASH") Color.White else AppColors.TextSecondary,
+                                            // Gate 1.8: was Color.White - 2.28:1 on the dark-theme green.
+                                            color = if (paymentMethod == "CASH") MaterialTheme.colorScheme.onPrimary else AppColors.TextSecondary,
                                             fontWeight = FontWeight.Bold,
                                             fontSize = 13.sp
                                         )
@@ -792,7 +794,7 @@ fun PurchaseScreen(
                                 // Credit Button
                                 Surface(
                                     shape = RoundedCornerShape(12.dp),
-                                    color = if (paymentMethod == "CREDIT") Color(0xFFD32F2F) else Color(0xFFF1F4F2),
+                                    color = if (paymentMethod == "CREDIT") MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.surfaceVariant,
                                     modifier = Modifier
                                         .weight(1f)
                                         .height(48.dp)
@@ -801,7 +803,9 @@ fun PurchaseScreen(
                                     Box(contentAlignment = Alignment.Center) {
                                         Text(
                                             text = "$debtLabel $supplierLabel",
-                                            color = if (paymentMethod == "CREDIT") Color.White else AppColors.TextSecondary,
+                                            // Gate 1.8: was Color.White. error is #FF8A85 in the
+                                            // dark theme, and white on it measures 2.09:1.
+                                            color = if (paymentMethod == "CREDIT") MaterialTheme.colorScheme.onError else AppColors.TextSecondary,
                                             fontWeight = FontWeight.Bold,
                                             fontSize = 13.sp
                                         )
@@ -812,10 +816,10 @@ fun PurchaseScreen(
                             // Supplier Selector Pill
                             Surface(
                                 shape = RoundedCornerShape(12.dp),
-                                color = Color(0xFFF8FAF8),
+                                color = MaterialTheme.colorScheme.surfaceVariant,
                                 border = BorderStroke(
                                     1.dp,
-                                    if (paymentMethod == "CREDIT" && selectedSupplierForCredit == null) Color(0xFFFFCDD2) else Color(0xFFE2E8F0)
+                                    if (paymentMethod == "CREDIT" && selectedSupplierForCredit == null) MaterialTheme.colorScheme.outlineVariant else MaterialTheme.colorScheme.outline
                                 ),
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -831,7 +835,7 @@ fun PurchaseScreen(
                                     Icon(
                                         imageVector = if (paymentMethod == "CREDIT") Icons.Default.People else Icons.Default.LocalShipping,
                                         contentDescription = null,
-                                        tint = if (paymentMethod == "CREDIT" && selectedSupplierForCredit == null) Color(0xFFD32F2F) else AppColors.GreenPrimary,
+                                        tint = if (paymentMethod == "CREDIT" && selectedSupplierForCredit == null) MaterialTheme.colorScheme.error else AppColors.GreenPrimary,
                                         modifier = Modifier.size(20.dp)
                                     )
                                     Spacer(Modifier.width(10.dp))
@@ -844,7 +848,7 @@ fun PurchaseScreen(
                                         fontWeight = FontWeight.SemiBold,
                                         fontSize = 13.sp,
                                         color = when {
-                                            paymentMethod == "CREDIT" && selectedSupplierForCredit == null -> Color(0xFFD32F2F)
+                                            paymentMethod == "CREDIT" && selectedSupplierForCredit == null -> MaterialTheme.colorScheme.error
                                             paymentMethod == "CASH" && selectedSupplierForCash == null -> AppColors.TextSecondary
                                             else -> AppColors.TextPrimary
                                         },
@@ -895,8 +899,16 @@ fun PurchaseScreen(
                                 enabled = !isSaving,
                                 shape = RoundedCornerShape(12.dp),
                                 colors = ButtonDefaults.buttonColors(
-                                    containerColor = if (paymentMethod == "CREDIT") Color(0xFFD32F2F) else AppColors.GreenPrimary,
-                                    contentColor = Color.White
+                                    containerColor = if (paymentMethod == "CREDIT") MaterialTheme.colorScheme.error else AppColors.GreenPrimary,
+                                    // Gate 1.8: was Color.White. The container is conditional, so a
+                                    // fixed white foreground is only correct on the green branch:
+                                    // error is #FF8A85 in the dark theme and white on it measures
+                                    // 2.09:1. The foreground now tracks the container it sits on.
+                                    contentColor = if (paymentMethod == "CREDIT") {
+                                        MaterialTheme.colorScheme.onError
+                                    } else {
+                                        MaterialTheme.colorScheme.onPrimary
+                                    }
                                 ),
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -1084,7 +1096,8 @@ private fun PurchaseHeader(
                                 else -> Icons.Default.History
                             },
                             contentDescription = null,
-                            tint = Color.White,
+                            // Gate 1.8: was Color.White on the GreenPrimary badge - 2.28:1 in dark.
+                            tint = MaterialTheme.colorScheme.onPrimary,
                             modifier = Modifier.size(22.dp)
                         )
                     }
@@ -1117,7 +1130,7 @@ private fun PurchaseHeader(
 
                 Surface(
                     shape = RoundedCornerShape(20.dp),
-                    color = Color(0xFFE8F5E9)
+                    color = AppColors.SuccessContainer
                 ) {
                     Text(
                         text = when (selectedTab) {
@@ -1167,13 +1180,13 @@ private fun PurchaseHeader(
                             Icon(
                                 imageVector = Icons.Default.ShoppingCart,
                                 contentDescription = null,
-                                tint = if (selectedTab == 0) Color.White else AppColors.TextSecondary,
+                                tint = if (selectedTab == 0) MaterialTheme.colorScheme.onPrimary else AppColors.TextSecondary,
                                 modifier = Modifier.size(15.dp)
                             )
                             Spacer(Modifier.width(4.dp))
                             Text(
                                 text = "$purchaseLabel Baru",
-                                color = if (selectedTab == 0) Color.White else AppColors.TextSecondary,
+                                color = if (selectedTab == 0) MaterialTheme.colorScheme.onPrimary else AppColors.TextSecondary,
                                 fontWeight = if (selectedTab == 0) FontWeight.Bold else FontWeight.Medium,
                                 fontSize = 11.5.sp,
                                 maxLines = 1
@@ -1199,13 +1212,13 @@ private fun PurchaseHeader(
                             Icon(
                                 imageVector = Icons.Default.ReceiptLong,
                                 contentDescription = null,
-                                tint = if (selectedTab == 1) Color.White else AppColors.TextSecondary,
+                                tint = if (selectedTab == 1) MaterialTheme.colorScheme.onPrimary else AppColors.TextSecondary,
                                 modifier = Modifier.size(15.dp)
                             )
                             Spacer(Modifier.width(4.dp))
                             Text(
                                 text = "Pesanan $supplierLabel",
-                                color = if (selectedTab == 1) Color.White else AppColors.TextSecondary,
+                                color = if (selectedTab == 1) MaterialTheme.colorScheme.onPrimary else AppColors.TextSecondary,
                                 fontWeight = if (selectedTab == 1) FontWeight.Bold else FontWeight.Medium,
                                 fontSize = 11.5.sp,
                                 maxLines = 1
@@ -1231,13 +1244,13 @@ private fun PurchaseHeader(
                             Icon(
                                 imageVector = Icons.Default.History,
                                 contentDescription = null,
-                                tint = if (selectedTab == 2) Color.White else AppColors.TextSecondary,
+                                tint = if (selectedTab == 2) MaterialTheme.colorScheme.onPrimary else AppColors.TextSecondary,
                                 modifier = Modifier.size(15.dp)
                             )
                             Spacer(Modifier.width(4.dp))
                             Text(
                                 text = "Riwayat",
-                                color = if (selectedTab == 2) Color.White else AppColors.TextSecondary,
+                                color = if (selectedTab == 2) MaterialTheme.colorScheme.onPrimary else AppColors.TextSecondary,
                                 fontWeight = if (selectedTab == 2) FontWeight.Bold else FontWeight.Medium,
                                 fontSize = 11.5.sp,
                                 maxLines = 1
@@ -1267,7 +1280,7 @@ private fun PurchaseItemCard(
     Surface(
         shape = RoundedCornerShape(14.dp),
         color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, if (isSelected) AppColors.GreenPrimary.copy(alpha = 0.4f) else Color(0xFFEFF3F0)),
+        border = BorderStroke(1.dp, if (isSelected) AppColors.GreenPrimary.copy(alpha = 0.4f) else AppColors.CardBorderStrong),
         shadowElevation = if (isSelected) 1.dp else 0.5.dp,
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -1328,7 +1341,7 @@ private fun PurchaseItemCard(
                 // Capsule Stepper
                 Surface(
                     shape = RoundedCornerShape(18.dp),
-                    color = Color(0xFFF1F5F2)
+                    color = MaterialTheme.colorScheme.surfaceVariant
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -1440,7 +1453,7 @@ private fun PurchaseHistoryCard(
                 modifier = Modifier
                     .size(44.dp)
                     .background(
-                        if (isCredit) Color(0xFFFFEBEE) else Color(0xFFE8F5E9),
+                        if (isCredit) MaterialTheme.colorScheme.errorContainer else AppColors.SuccessContainer,
                         CircleShape
                     ),
                 contentAlignment = Alignment.Center
@@ -1448,7 +1461,7 @@ private fun PurchaseHistoryCard(
                 Icon(
                     imageVector = Icons.Default.Receipt,
                     contentDescription = null,
-                    tint = if (isCredit) Color(0xFFD32F2F) else AppColors.GreenPrimary,
+                    tint = if (isCredit) MaterialTheme.colorScheme.error else AppColors.GreenPrimary,
                     modifier = Modifier.size(22.dp)
                 )
             }
@@ -1471,11 +1484,11 @@ private fun PurchaseHistoryCard(
                     )
                     Surface(
                         shape = RoundedCornerShape(4.dp),
-                        color = if (isCredit) Color(0xFFFFEBEE) else Color(0xFFE8F5E9)
+                        color = if (isCredit) MaterialTheme.colorScheme.errorContainer else AppColors.SuccessContainer
                     ) {
                         Text(
                             text = if (isCredit) debtLabel.uppercase() else "TUNAI",
-                            color = if (isCredit) Color(0xFFD32F2F) else AppColors.GreenPrimary,
+                            color = if (isCredit) MaterialTheme.colorScheme.error else AppColors.GreenPrimary,
                             fontSize = 10.5.sp,
                             fontWeight = FontWeight.Bold,
                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
@@ -1503,7 +1516,7 @@ private fun PurchaseHistoryCard(
                 text = formatRupiah(purchase.totalAmount),
                 fontWeight = FontWeight.Bold,
                 fontSize = 14.sp,
-                color = if (isCredit) Color(0xFFD32F2F) else AppColors.GreenPrimary,
+                color = if (isCredit) MaterialTheme.colorScheme.error else AppColors.GreenPrimary,
                 modifier = Modifier.padding(start = 6.dp)
             )
         }
@@ -1531,7 +1544,7 @@ private fun PurchaseEmptyProductsState(
             Box(
                 modifier = Modifier
                     .size(72.dp)
-                    .background(Color(0xFFE8F5E9), CircleShape),
+                    .background(AppColors.SuccessContainer, CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
@@ -1572,7 +1585,8 @@ private fun PurchaseEmptyProductsState(
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = AppColors.GreenPrimary,
-                    contentColor = Color.White
+                    // Gate 1.8: was Color.White - 2.28:1 against the dark-theme green.
+                    contentColor = MaterialTheme.colorScheme.onPrimary
                 ),
                 modifier = Modifier.height(48.dp)
             ) {
@@ -1613,7 +1627,7 @@ private fun PurchaseEmptyHistoryState(
             Box(
                 modifier = Modifier
                     .size(72.dp)
-                    .background(Color(0xFFF1F5F2), CircleShape),
+                    .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
@@ -1654,7 +1668,8 @@ private fun PurchaseEmptyHistoryState(
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = AppColors.GreenPrimary,
-                    contentColor = Color.White
+                    // Gate 1.8: was Color.White - 2.28:1 against the dark-theme green.
+                    contentColor = MaterialTheme.colorScheme.onPrimary
                 ),
                 modifier = Modifier.height(48.dp)
             ) {

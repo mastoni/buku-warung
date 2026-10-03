@@ -151,13 +151,13 @@ fun PurchaseOrderTabContent(
                     val isSelected = activeFilter == key
                     Surface(
                         shape = RoundedCornerShape(16.dp),
-                        color = if (isSelected) AppColors.GreenPrimary else Color(0xFFF1F5F2),
-                        border = BorderStroke(1.dp, if (isSelected) AppColors.GreenPrimary else Color(0xFFE2E8F0)),
+                        color = if (isSelected) AppColors.GreenPrimary else MaterialTheme.colorScheme.surfaceVariant,
+                        border = BorderStroke(1.dp, if (isSelected) AppColors.GreenPrimary else MaterialTheme.colorScheme.outline),
                         modifier = Modifier.clickable { poViewModel.setFilter(key) }
                     ) {
                         Text(
                             text = label,
-                            color = if (isSelected) Color.White else AppColors.TextPrimary,
+                            color = if (isSelected) MaterialTheme.colorScheme.onPrimary else AppColors.TextPrimary,
                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                             fontSize = 12.sp,
                             modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
@@ -174,7 +174,7 @@ fun PurchaseOrderTabContent(
                 shape = RoundedCornerShape(12.dp),
                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
             ) {
-                Icon(Icons.Default.Add, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
+                Icon(Icons.Default.Add, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(16.dp))
                 Spacer(Modifier.width(4.dp))
                 Text("Buat Pesanan", fontSize = 12.5.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.surface)
             }
@@ -195,7 +195,7 @@ fun PurchaseOrderTabContent(
                         modifier = Modifier
                             .size(64.dp)
                             .clip(CircleShape)
-                            .background(Color(0xFFE8F5E9)),
+                            .background(AppColors.SuccessContainer),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
@@ -350,7 +350,7 @@ fun PurchaseOrderCard(
     Surface(
         shape = RoundedCornerShape(14.dp),
         color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, Color(0xFFE8EDE9)),
+        border = BorderStroke(1.dp, AppColors.CardBorderStrong),
         shadowElevation = 0.5.dp,
         modifier = Modifier
             .fillMaxWidth()
@@ -520,7 +520,7 @@ fun PurchaseOrderDetailDialog(
                         Surface(
                             shape = RoundedCornerShape(12.dp),
                             color = MaterialTheme.colorScheme.surfaceVariant,
-                            border = BorderStroke(1.dp, Color(0xFFE8EDE9)),
+                            border = BorderStroke(1.dp, AppColors.CardBorderStrong),
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -547,7 +547,7 @@ fun PurchaseOrderDetailDialog(
                         Surface(
                             shape = RoundedCornerShape(10.dp),
                             color = MaterialTheme.colorScheme.surfaceVariant,
-                            border = BorderStroke(1.dp, Color(0xFFEFF3F0)),
+                            border = BorderStroke(1.dp, AppColors.CardBorderStrong),
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Row(
@@ -597,7 +597,7 @@ Text("Catatan:", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Materia
                     item {
                         Surface(
                             shape = RoundedCornerShape(12.dp),
-                            color = Color(0xFFE8F5E9),
+                            color = AppColors.SuccessContainer,
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Row(
@@ -702,9 +702,9 @@ Text("Catatan:", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Materia
                                 onClick = { showMarkOrderedConfirmDialog = true },
                                 modifier = Modifier.weight(1f),
                                 shape = RoundedCornerShape(10.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1565C0))
+                                colors = ButtonDefaults.buttonColors(containerColor = AppColors.Info)
                             ) {
-                                Icon(Icons.Default.Send, contentDescription = null, modifier = Modifier.size(16.dp), tint = Color.White)
+                                Icon(Icons.Default.Send, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onPrimary)
                                 Spacer(Modifier.width(4.dp))
                                 Text("Sudah Dipesan", fontSize = 12.5.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.surface)
                             }
@@ -723,7 +723,7 @@ Text("Catatan:", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Materia
                             shape = RoundedCornerShape(10.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = AppColors.GreenPrimary)
                         ) {
-                            Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(16.dp), tint = Color.White)
+                            Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onPrimary)
                             Spacer(Modifier.width(6.dp))
                             Text("Terima Barang", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.surface)
                         }
@@ -769,7 +769,7 @@ Text("Catatan:", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Materia
                             }
                         }
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1565C0))
+                    colors = ButtonDefaults.buttonColors(containerColor = AppColors.Info)
                 ) {
                     Text("Ya, Sudah Dipesan", fontWeight = FontWeight.Bold)
                 }
@@ -804,7 +804,13 @@ Text("Catatan:", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Materia
                             }
                         }
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFC62828))
+                    // Gate 1.8: containerColor with no contentColor, so M3's container lookup could
+                    // not resolve a label colour and fell back to onSurface - near-black text on a
+                    // dark red confirm button. The error/onError pairing is now explicit.
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error,
+                        contentColor = MaterialTheme.colorScheme.onError
+                    )
                 ) {
                     Text("Ya, Batalkan", fontWeight = FontWeight.Bold)
                 }
@@ -839,7 +845,7 @@ Text("Catatan:", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Materia
                     Surface(
                         shape = RoundedCornerShape(10.dp),
                         color = MaterialTheme.colorScheme.surfaceVariant,
-                        border = BorderStroke(1.dp, Color(0xFFE8EDE9)),
+                        border = BorderStroke(1.dp, AppColors.CardBorderStrong),
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -863,8 +869,8 @@ Text("Catatan:", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Materia
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Surface(
                             shape = RoundedCornerShape(8.dp),
-                            color = if (receivePaymentMethod == "CASH") AppColors.GreenPrimary.copy(alpha = 0.12f) else Color.White,
-                            border = BorderStroke(1.dp, if (receivePaymentMethod == "CASH") AppColors.GreenPrimary else Color(0xFFE0E0E0)),
+                            color = if (receivePaymentMethod == "CASH") AppColors.GreenPrimary.copy(alpha = 0.12f) else MaterialTheme.colorScheme.surfaceVariant,
+                            border = BorderStroke(1.dp, if (receivePaymentMethod == "CASH") AppColors.GreenPrimary else AppColors.CardBorderStrong),
                             modifier = Modifier
                                 .weight(1f)
                                 .clickable { receivePaymentMethod = "CASH" }
@@ -877,14 +883,14 @@ Text("Catatan:", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Materia
 
                         Surface(
                             shape = RoundedCornerShape(8.dp),
-                            color = if (receivePaymentMethod == "CREDIT") Color(0xFFE65100).copy(alpha = 0.12f) else Color.White,
-                            border = BorderStroke(1.dp, if (receivePaymentMethod == "CREDIT") Color(0xFFE65100) else Color(0xFFE0E0E0)),
+                            color = if (receivePaymentMethod == "CREDIT") AppColors.OrangeWarning.copy(alpha = 0.12f) else MaterialTheme.colorScheme.surfaceVariant,
+                            border = BorderStroke(1.dp, if (receivePaymentMethod == "CREDIT") AppColors.OrangeWarning else AppColors.CardBorderStrong),
                             modifier = Modifier
                                 .weight(1f)
                                 .clickable { receivePaymentMethod = "CREDIT" }
                         ) {
                             Column(modifier = Modifier.padding(8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                                Text("Hutang (CREDIT)", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = if (receivePaymentMethod == "CREDIT") Color(0xFFE65100) else AppColors.TextPrimary)
+                                Text("Hutang (CREDIT)", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = if (receivePaymentMethod == "CREDIT") AppColors.OrangeWarning else AppColors.TextPrimary)
                                 Text("Catat hutang", fontSize = 10.sp, color = AppColors.TextSecondary)
                             }
                         }
@@ -892,13 +898,13 @@ Text("Catatan:", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Materia
 
                     Surface(
                         shape = RoundedCornerShape(8.dp),
-                        color = Color(0xFFE8F5E9),
+                        color = AppColors.SuccessContainer,
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text(
                             text = "✓ Stok produk fisik/BBM akan otomatis bertambah.\n✓ Transaksi belanja akan tercatat resmi di laporan.",
                             fontSize = 11.sp,
-                            color = Color(0xFF2E7D32),
+                            color = AppColors.GreenDark,
                             modifier = Modifier.padding(8.dp)
                         )
                     }
@@ -1056,8 +1062,8 @@ fun CreateEditPurchaseOrderDialog(
 
                             Surface(
                                 shape = RoundedCornerShape(12.dp),
-                                color = if (selectedSupplier != null) Color(0xFFF0FDF4) else Color(0xFFF8FAF8),
-                                border = BorderStroke(1.dp, if (selectedSupplier != null) AppColors.GreenPrimary else Color(0xFFE2E8F0)),
+                                color = if (selectedSupplier != null) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surfaceVariant,
+                                border = BorderStroke(1.dp, if (selectedSupplier != null) AppColors.GreenPrimary else MaterialTheme.colorScheme.outline),
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clickable { showSupplierPicker = true }
@@ -1124,7 +1130,7 @@ fun CreateEditPurchaseOrderDialog(
                                 shape = RoundedCornerShape(10.dp),
                                 contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
                             ) {
-                                Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(14.dp), tint = Color.White)
+                                Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(14.dp), tint = MaterialTheme.colorScheme.onPrimary)
                                 Spacer(Modifier.width(4.dp))
                                 Text("Tambah Produk", fontSize = 11.5.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.surface)
                             }
@@ -1136,7 +1142,7 @@ fun CreateEditPurchaseOrderDialog(
                             Surface(
                                 shape = RoundedCornerShape(10.dp),
                                 color = MaterialTheme.colorScheme.surfaceVariant,
-                                border = BorderStroke(1.dp, Color(0xFFEFF3F0)),
+                                border = BorderStroke(1.dp, AppColors.CardBorderStrong),
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 Box(
@@ -1169,7 +1175,7 @@ fun CreateEditPurchaseOrderDialog(
                             Surface(
                                 shape = RoundedCornerShape(12.dp),
                                 color = MaterialTheme.colorScheme.surfaceVariant,
-                                border = BorderStroke(1.dp, Color(0xFFE8EDE9)),
+                                border = BorderStroke(1.dp, AppColors.CardBorderStrong),
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -1191,7 +1197,7 @@ fun CreateEditPurchaseOrderDialog(
                                             // glyph stays 18dp. The "Hapus" label is unchanged.
                                             modifier = Modifier.size(48.dp)
                                         ) {
-                                            Icon(Icons.Default.Delete, contentDescription = "Hapus", tint = Color(0xFFC62828), modifier = Modifier.size(18.dp))
+                                            Icon(Icons.Default.Delete, contentDescription = "Hapus", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp))
                                         }
                                     }
 
@@ -1275,7 +1281,7 @@ fun CreateEditPurchaseOrderDialog(
                     item {
                         Surface(
                             shape = RoundedCornerShape(12.dp),
-                            color = Color(0xFFE8F5E9),
+                            color = AppColors.SuccessContainer,
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Row(
@@ -1366,7 +1372,7 @@ fun CreateEditPurchaseOrderDialog(
                             Surface(
                                 shape = RoundedCornerShape(10.dp),
                                 color = MaterialTheme.colorScheme.surfaceVariant,
-                                border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clickable {
@@ -1464,8 +1470,8 @@ fun ProductPickerForPoDialog(
                             val isAlreadyAdded = existingSelectedProductIds.contains(prod.id)
                             Surface(
                                 shape = RoundedCornerShape(10.dp),
-                                color = if (isAlreadyAdded) Color(0xFFF1F5F2) else Color(0xFFFAFCFA),
-                                border = BorderStroke(1.dp, Color(0xFFE8EDE9)),
+                                color = if (isAlreadyAdded) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.surfaceVariant,
+                                border = BorderStroke(1.dp, AppColors.CardBorderStrong),
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clickable(enabled = !isAlreadyAdded) {

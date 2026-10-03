@@ -1,4 +1,4 @@
-﻿package id.skmnetwork.bukuwarung.ui.pos
+package id.skmnetwork.bukuwarung.ui.pos
 
 import android.content.Context
 import android.net.ConnectivityManager
@@ -636,7 +636,7 @@ fun PosScreen(
                                 ) {
                                     Column(Modifier.weight(1f)) {
                                         Text(prod.name, fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.bodySmall)
-                                        Text("${formatQuantityValue(qty)} Ã— ${formatRupiah(prod.sellingPrice)}", color = AppColors.TextSecondary, style = MaterialTheme.typography.labelSmall)
+                                        Text("${formatQuantityValue(qty)} × ${formatRupiah(prod.sellingPrice)}", color = AppColors.TextSecondary, style = MaterialTheme.typography.labelSmall)
                                     }
                                     Text(formatRupiah(MoneyCalculator.lineSubtotal(prod.sellingPrice, qty)), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodySmall)
                                 }
@@ -929,7 +929,7 @@ fun PosScreen(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.CheckCircle, null, tint = AppColors.GreenPrimary)
                     Spacer(Modifier.width(AppSpacing.xs))
-                    Text("âœ“ TRANSAKSI BERHASIL!", fontWeight = FontWeight.Bold, color = AppColors.GreenPrimary)
+                    Text("✓ TRANSAKSI BERHASIL!", fontWeight = FontWeight.Bold, color = AppColors.GreenPrimary)
                 }
             },
             text = {
@@ -946,7 +946,7 @@ fun PosScreen(
                             Column(Modifier.padding(AppSpacing.sm)) {
                                 data.items.forEach { (itemName, qty) ->
                                     Row(modifier = Modifier.fillMaxWidth()) {
-                                        Text("${formatQuantityValue(qty)} Ã— $itemName", style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
+                                        Text("${formatQuantityValue(qty)} × $itemName", style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
                                     }
                                 }
                             }

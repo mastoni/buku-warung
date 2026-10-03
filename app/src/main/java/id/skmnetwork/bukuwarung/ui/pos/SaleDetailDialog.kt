@@ -1,4 +1,4 @@
-﻿package id.skmnetwork.bukuwarung.ui.pos
+package id.skmnetwork.bukuwarung.ui.pos
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -245,7 +245,7 @@ fun SaleDetailDialog(
                                     Column(Modifier.weight(1f)) {
                                         Text(item.productName, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
                                         Text(
-                                            "${formatQuantityValue(item.quantity)} Ã— ${formatRupiah(item.price)}",
+                                            "${formatQuantityValue(item.quantity)} × ${formatRupiah(item.price)}",
                                             style = MaterialTheme.typography.bodySmall,
                                             color = AppColors.TextSecondary
                                         )
@@ -401,7 +401,7 @@ fun SaleDetailDialog(
                                         HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), color = MaterialTheme.colorScheme.outlineVariant)
                                         itemsForThisReturn.forEach { retItem ->
                                             Row(modifier = Modifier.fillMaxWidth()) {
-                                                Text("â€¢ ${retItem.productName} (${formatQuantityValue(retItem.quantity)} item)", style = MaterialTheme.typography.labelSmall, color = AppColors.TextPrimary, modifier = Modifier.weight(1f))
+                                                Text("• ${retItem.productName} (${formatQuantityValue(retItem.quantity)} item)", style = MaterialTheme.typography.labelSmall, color = AppColors.TextPrimary, modifier = Modifier.weight(1f))
                                                 Text(formatRupiah(retItem.subtotal), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold)
                                             }
                                         }

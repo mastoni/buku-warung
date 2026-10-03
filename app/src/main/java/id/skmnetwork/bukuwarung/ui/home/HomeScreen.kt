@@ -1,4 +1,4 @@
-﻿package id.skmnetwork.bukuwarung.ui.home
+package id.skmnetwork.bukuwarung.ui.home
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -83,7 +83,7 @@ import java.util.Date
 import java.util.Locale
 
 /**
- * Gate I.2-R1 & G6 â€” Home / Beranda Screen (Adaptive Design Master)
+ * Gate I.2-R1 & G6 — Home / Beranda Screen (Adaptive Design Master)
  *
  * Visual & Structural Hierarchy:
  * 1. Store Identity Header (Branding, Shop Name, Subtitle, Active Badge & Initial Avatar)
@@ -331,7 +331,7 @@ fun HomeScreen(
                     )
                     Spacer(Modifier.height(2.dp))
                     Text(
-                        text = "$effectiveShopName ðŸ‘‹",
+                        text = "$effectiveShopName 👋",
                         fontSize = 24.sp,
                         fontWeight = FontWeight.ExtraBold,
                         color = AppColors.GreenDark
@@ -508,7 +508,7 @@ fun HomeScreen(
                                 color = AppColors.GreenDark
                             )
                             Text(
-                                text = "Data Anda, Aset Anda, Masa Depan Anda ðŸ’š",
+                                text = "Data Anda, Aset Anda, Masa Depan Anda 💚",
                                 fontSize = 11.5.sp,
                                 color = AppColors.GreenPrimary
                             )
