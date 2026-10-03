@@ -203,7 +203,13 @@ class PosDesignContractTest {
             // Section 11 / 12 - cart and customer
             64, 72, 14, 40,
             // Section 13 - cart items
-            112, 56,
+            // 136 is the Gate 1.3 addition: PosMetrics.ProductQtyControlWidth, the product-card width
+            // of the same quantity stepper. It is named by the contract because it is a computed
+            // sum of contract values rather than a free choice - two 48dp touch targets (section 24)
+            // plus the 36dp value column (section 7/8) plus the 1dp border allowance (section 4). The
+            // 96dp literal it replaced was narrower than its own contents, which collapsed the
+            // trailing "+" into roughly 12dp. Do not "round this down" to 132dp or back to 96dp.
+            112, 56, 136,
             // Section 15 - CTA
             56, 12,
             // Section 24 - touch targets

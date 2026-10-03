@@ -1,4 +1,4 @@
-package id.skmnetwork.bukuwarung.ui.pos
+﻿package id.skmnetwork.bukuwarung.ui.pos
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -32,6 +32,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.width
 import id.skmnetwork.bukuwarung.ui.components.AppCard
+import id.skmnetwork.bukuwarung.ui.components.FilterChipRow
 import id.skmnetwork.bukuwarung.ui.components.AppTextField
 import id.skmnetwork.bukuwarung.ui.theme.AppColors
 import id.skmnetwork.bukuwarung.ui.theme.AppShapes
@@ -106,25 +107,20 @@ fun CashPaymentDialog(
                 )
 
                 if (quickTenderAmounts.isNotEmpty()) {
-                    LazyRow(horizontalArrangement = Arrangement.spacedBy(AppSpacing.xs)) {
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(AppSpacing.sm)) {
                         items(quickTenderAmounts) { (label, amount) ->
-                            Surface(
-                                shape = AppShapes.ChipShape,
-                                color = AppColors.SurfaceGray,
-                                modifier = Modifier.clickable {
-                                    cashReceivedInput = amount.toString()
-                                }
-                            ) {
-                                Box(
-                                    modifier = Modifier.padding(horizontal = AppSpacing.md, vertical = AppSpacing.sm)
-                                ) {
-                                    Text(
-                                        text = if (label == "Uang Pas") "Uang Pas" else formatRupiah(amount),
-                                        style = MaterialTheme.typography.labelSmall,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
-                            }
+                            // Gate 1.3: this was a Surface with `Modifier.clickable` and only 8dp of
+                            // vertical padding - roughly a 32dp target on the fastest path in the whole
+                            // POS: the exact-figure buttons a merchant taps during a queue.
+                            //
+                            // FilterChipRow is a fixed 48dp and the row's 48dp target is preserved. The
+                            // callback, the `quickTenderAmounts` list and the "Uang Pas" label logic are
+                            // unchanged, and the selected state is now visible rather than implied.
+                            FilterChipRow(
+                                label = if (label == "Uang Pas") "Uang Pas" else formatRupiah(amount),
+                                selected = cashReceivedInput.trim().toDoubleOrNull() == amount.toDouble(),
+                                onClick = { cashReceivedInput = amount.toString() }
+                            )
                         }
                     }
                 }

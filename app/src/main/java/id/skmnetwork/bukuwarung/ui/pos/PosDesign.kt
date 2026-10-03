@@ -137,6 +137,21 @@ object PosMetrics {
     val CartQtyControlHeight: Dp = 56.dp
     val CartQtyControlRadius: Dp = 12.dp
 
+    /**
+     * Gate 1.3 - the product-card width of the same quantity stepper.
+     *
+     * Previously an inline `96.dp` in PosMeasuredLayout, which contradicted this file's own header
+     * rule that every dimension comes from a token here. It was also narrower than the stepper's
+     * own contents: two 48dp touch targets plus a 36dp value is 132dp, so the trailing "+" was
+     * measured into the 12dp that remained.
+     *
+     * 136dp is that 132dp plus the 2dp the 1dp border adds on each side. CartQtyControlWidth (112dp)
+     * is deliberately left alone: the cart control is the compact variant, where the touch targets
+     * are the same 48dp and the value column is narrower, and changing it would move the measured
+     * cart layout that PosDesignContractTest pins.
+     */
+    val ProductQtyControlWidth: Dp = 136.dp
+
     // ---- 15. Payment CTA -------------------------------------------------------
 
     val PaymentCtaHeight: Dp = 56.dp

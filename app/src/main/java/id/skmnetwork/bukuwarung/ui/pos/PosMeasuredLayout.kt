@@ -1,4 +1,4 @@
-package id.skmnetwork.bukuwarung.ui.pos
+﻿package id.skmnetwork.bukuwarung.ui.pos
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -62,7 +63,10 @@ import id.skmnetwork.bukuwarung.data.local.entity.CustomerEntity
 import id.skmnetwork.bukuwarung.data.local.entity.ItemType
 import id.skmnetwork.bukuwarung.data.local.entity.ProductEntity
 import id.skmnetwork.bukuwarung.domain.checkout.CartLine
-import id.skmnetwork.bukuwarung.ui.components.AppTextField
+import id.skmnetwork.bukuwarung.ui.components.AppErrorBanner
+import id.skmnetwork.bukuwarung.ui.components.ButtonGhost
+import id.skmnetwork.bukuwarung.ui.components.ButtonPrimary
+import id.skmnetwork.bukuwarung.ui.components.FieldAmount
 import id.skmnetwork.bukuwarung.ui.components.ProductImageThumbnail
 import id.skmnetwork.bukuwarung.ui.theme.AppColors
 import id.skmnetwork.bukuwarung.util.formatQuantityValue
@@ -90,6 +94,60 @@ object PosPalette {
     val TextSecondary: Color @Composable get() = AppColors.TextSecondary
     val Border: Color @Composable get() = MaterialTheme.colorScheme.outline
     val Destructive: Color @Composable get() = AppColors.RedExpense
+
+    // ---------------------------------------------------------------------------
+    // Gate 1.3. Four roles the POS needed and did not have. Each one replaces a
+    // hardcoded literal or a wrong pairing, and every pair below was measured.
+    // ---------------------------------------------------------------------------
+
+    /**
+     * The ONLY correct foreground on a [Primary] fill.
+     *
+     * The POS used `Color.White` on its top bar, its add button and - worst of all - its payment CTA.
+     * `primary` is #16A34A in light but #22C55E in dark, so white measures 3.30:1 in light and
+     * **2.28:1 in dark**. `onPrimary` is white in light and #052E16 in dark (6.54:1), so light mode is
+     * unchanged and the dark POS becomes readable. This is audit P0 #2; the payment CTA is the single
+     * most-pressed control in the app.
+     */
+    val OnPrimary: Color @Composable get() = MaterialTheme.colorScheme.onPrimary
+
+    /**
+     * The green that is legible as TEXT on [Surface].
+     *
+     * [Primary] as text measures 3.30:1 on white and fails AA at the POS's own 16sp price. The POS
+     * puts a price on every product card, a total on the cart summary and a total on the phone bar -
+     * the three things a merchant scans hardest. [PrimaryDark] is #087A43 (4.93:1 light) and
+     * #22C55E (6.44:1 dark). Same green family, no new hue.
+     */
+    val PrimaryText: Color @Composable get() = AppColors.GreenDark
+
+    /**
+     * A muted panel fill for information blocks inside POS dialogs.
+     *
+     * The payment, return and detail dialogs each hardcoded their own near-white: #F9FBFA, #FFF1F5,
+     * #F9FBFA again, #FFFFF5F5. In dark each is a ~13:1 white slab on a dark dialog. This is the
+     * theme's own `surfaceVariant`, so it inverts correctly.
+     */
+    val PanelSurface: Color @Composable get() = MaterialTheme.colorScheme.surfaceVariant
+
+    /** Foreground for text sitting on [PanelSurface]. */
+    val OnPanel: Color @Composable get() = MaterialTheme.colorScheme.onSurfaceVariant
+
+    /**
+     * The 1dp hairline that defines a card or panel edge.
+     *
+     * `outline` is #E2E8F0, which measures 1.23:1 on the white surface - not enough to separate a
+     * card from the page it sits on. `AppColors.CardBorderStrong` is the step the Gate 1.1 tokens
+     * reserve for exactly this.
+     */
+    val CardBorder: Color @Composable get() = AppColors.CardBorderStrong
+
+    /** Error container + its foreground, as a pair. 7.96:1 light, 11.06:1 dark. */
+    val DestructiveContainer: Color @Composable get() = AppColors.ErrorContainer
+    val OnDestructiveContainer: Color @Composable get() = AppColors.OnErrorContainer
+
+    /** Disabled foreground. Was `Color.Gray` / `Color.LightGray` in the return dialog. */
+    val Disabled: Color @Composable get() = MaterialTheme.colorScheme.outlineVariant
 }
 
 // =====================================================================================
@@ -133,7 +191,7 @@ fun PosTopBar(
                     Icon(
                         imageVector = Icons.Default.Menu,
                         contentDescription = "Menu",
-                        tint = Color.White,
+                        tint = PosPalette.OnPrimary,
                         modifier = Modifier.size(PosMetrics.TopBarIconSize)
                     )
                 }
@@ -143,7 +201,7 @@ fun PosTopBar(
                 text = title,
                 fontSize = PosType.AppTitle,
                 fontWeight = FontWeight.SemiBold,
-                color = Color.White,
+                color = PosPalette.OnPrimary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
@@ -166,11 +224,15 @@ fun PosTopBar(
                 onClick = onSettingsClick
             )
             Spacer(Modifier.width(PosMetrics.TopBarActionGap))
-            // 56 x 56 rounded refresh action, white on green per the reference.
+            // 56 x 56 rounded refresh action, drawn as an inverse chip on the primary bar.
+            // Gate 1.3: the fill was Color.White. That is still right in light, but in dark the bar
+            // is the bright #22C55E and a white block on it glared while its green icon fell to
+            // 3.30:1. OnPrimary inverts with the bar instead: white in light (unchanged) and
+            // #052E16 in dark, which measures 6.54:1 against the #22C55E icon.
             Surface(
                 onClick = onRefreshClick,
                 shape = PosMetrics.CtaShape,
-                color = Color.White,
+                color = PosPalette.OnPrimary,
                 modifier = Modifier.size(PosMetrics.TopBarRefreshButton)
             ) {
                 Box(contentAlignment = Alignment.Center) {
@@ -205,7 +267,7 @@ private fun PosTopBarAction(
         Icon(
             imageVector = icon,
             contentDescription = contentDescription,
-            tint = Color.White,
+            tint = PosPalette.OnPrimary,
             modifier = Modifier.size(PosMetrics.TopBarIconSize)
         )
     }
@@ -358,31 +420,67 @@ fun PosCategoryRow(
     }
 }
 
+/**
+ * Gate 1.3.
+ *
+ * Two changes, both visual, neither touching the contract:
+ *
+ * 1. SELECTED STATE CONTRAST. The selected chip was `primary` with `Color.White`. `primary` is
+ *    #16A34A in light but #22C55E in dark, so the selected chip label measured 3.30:1 light and
+ *    **2.28:1 dark** - the merchant literally could not read which category was active at night.
+ *    Selection now uses the same pairing as the app's one `FilterChipRow`: `primaryContainer` +
+ *    `onPrimaryContainer`, which measures 8.30:1 light and 11.43:1 dark, plus a 1dp `primary`
+ *    border so the state is signalled by fill AND border rather than by fill alone.
+ *
+ * 2. TOUCH TARGET. `PosMetrics.CategoryChipHeight` is pinned at 42dp by PosDesignContractTest
+ *    (lines 82 and 101), so the token is untouched and the 42dp chip stays exactly 42dp. The CLICK
+ *    area moves out to the full 48dp `CategoryRowHeight`, which is the same separation the file
+ *    already applies to `ProductAddButtonSize` 36dp on `ProductAddTouchTarget` 48dp. Nothing about
+ *    the layout moves; the chip simply becomes as tappable as the row it sits in.
+ */
 @Composable
 private fun PosCategoryChip(
     label: String,
     isSelected: Boolean,
     onClick: () -> Unit
 ) {
-    Surface(
-        shape = PosMetrics.CategoryChipShape,
-        color = if (isSelected) PosPalette.Primary else PosPalette.Surface,
-        border = if (isSelected) null else BorderStroke(PosMetrics.SearchBorderWidth, PosPalette.Border),
+    Box(
         modifier = Modifier
-            .height(PosMetrics.CategoryChipHeight)
-            .clickable { onClick() }
+            .height(PosMetrics.CategoryRowHeight)
+            .clickable { onClick() },
+        contentAlignment = Alignment.Center
     ) {
-        Box(
-            modifier = Modifier.padding(horizontal = PosMetrics.CategoryChipPaddingHorizontal),
-            contentAlignment = Alignment.Center
+        Surface(
+            shape = PosMetrics.CategoryChipShape,
+            color = if (isSelected) {
+                MaterialTheme.colorScheme.primaryContainer
+            } else {
+                PosPalette.Surface
+            },
+            contentColor = if (isSelected) {
+                MaterialTheme.colorScheme.onPrimaryContainer
+            } else {
+                PosPalette.TextSecondary
+            },
+            border = if (isSelected) {
+                BorderStroke(PosMetrics.SearchBorderWidth, PosPalette.Primary)
+            } else {
+                BorderStroke(PosMetrics.SearchBorderWidth, PosPalette.Border)
+            },
+            modifier = Modifier.height(PosMetrics.CategoryChipHeight)
         ) {
-            Text(
-                text = label,
-                fontSize = PosType.Category,
-                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                color = if (isSelected) Color.White else PosPalette.TextPrimary,
-                maxLines = 1
-            )
+            Box(
+                modifier = Modifier.padding(horizontal = PosMetrics.CategoryChipPaddingHorizontal),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = label,
+                    fontSize = PosType.Category,
+                    fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
         }
     }
 }
@@ -413,7 +511,11 @@ fun MeasuredProductCard(
         border = if (isSelected) {
             BorderStroke(PosMetrics.ProductSelectedBorder, PosPalette.Primary)
         } else {
-            BorderStroke(PosMetrics.SearchBorderWidth, PosPalette.Border)
+            // Gate 1.3: `outline` measures 1.23:1 on the white surface, which is why the POS product
+            // cards did not read as cards. CardBorderStrong is the token the app reserves for exactly
+            // this edge. The SELECTED border is deliberately untouched - a product already in the
+            // cart must stay the most obvious thing on the grid.
+            BorderStroke(PosMetrics.SearchBorderWidth, PosPalette.CardBorder)
         },
         modifier = modifier
             .heightIn(min = PosMetrics.ProductCardMinHeight)
@@ -426,14 +528,14 @@ fun MeasuredProductCard(
             // TOP - stock badge
             Surface(
                 shape = PosMetrics.ChipShape,
-                color = if (isOutOfStock) PosPalette.Destructive.copy(alpha = 0.12f) else PosPalette.ProductAreaBackground,
+                color = if (isOutOfStock) PosPalette.DestructiveContainer else PosPalette.ProductAreaBackground,
                 modifier = Modifier.heightIn(min = PosMetrics.ProductBadgeHeight)
             ) {
                 Text(
                     text = if (isOutOfStock) "Habis" else "${terminologyStockLabel(isStockable)}: ${formatQuantityValue(product.stock)}",
                     fontSize = PosType.ProductCode,
                     fontWeight = FontWeight.Medium,
-                    color = if (isOutOfStock) PosPalette.Destructive else PosPalette.TextSecondary,
+                    color = if (isOutOfStock) PosPalette.OnDestructiveContainer else PosPalette.TextSecondary,
                     maxLines = 1,
                     modifier = Modifier.padding(horizontal = PosMetrics.RadiusSmall, vertical = 2.dp)
                 )
@@ -478,7 +580,7 @@ fun MeasuredProductCard(
                 text = formatRupiah(product.sellingPrice),
                 fontSize = PosType.ProductPrice,
                 fontWeight = FontWeight.SemiBold,
-                color = PosPalette.Primary
+                color = PosPalette.PrimaryText
             )
 
             Spacer(Modifier.weight(1f))
@@ -512,7 +614,7 @@ fun MeasuredProductCard(
                                 Icon(
                                     imageVector = Icons.Default.Add,
                                     contentDescription = "Tambah",
-                                    tint = Color.White,
+                                    tint = PosPalette.OnPrimary,
                                     modifier = Modifier.size(20.dp)
                                 )
                             }
@@ -524,7 +626,7 @@ fun MeasuredProductCard(
     }
 }
 
-private fun terminologyStockLabel(isStockable: Boolean): String = if (isStockable) "Stok" else "—"
+private fun terminologyStockLabel(isStockable: Boolean): String = if (isStockable) "Stok" else "â€”"
 
 // =====================================================================================
 // 13. CART QUANTITY CONTROL - 112 x 56, minimum 48dp touch targets, never 22/26dp
@@ -544,7 +646,18 @@ fun PosQuantityControl(
     maxQuantity: Double? = null,
     onQuantityInput: ((Double) -> Unit)? = null
 ) {
-    val width = if (compact) PosMetrics.CartQtyControlWidth else 96.dp
+    // Gate 1.3: was `if (compact) CartQtyControlWidth else 96.dp`.
+    //
+    // The non-compact branch was an un-tokenised literal - in a file whose own header states "every
+    // dimension in here comes from PosMetrics / PosType" - AND it was simply too narrow for its own
+    // contents: 48dp touch target + 36dp value + 48dp touch target = 132dp of children inside a
+    // 96dp Surface. Row measures children against the space left, so the trailing "+" box was
+    // coerced from 48dp down to 12dp: the control that adds a product, on the screen a merchant
+    // uses all day, had a 12dp target.
+    //
+    // The compact (cart) width is unchanged at 112dp. The product-card width is now a token that
+    // actually fits: 136dp.
+    val width = if (compact) PosMetrics.CartQtyControlWidth else PosMetrics.ProductQtyControlWidth
     var showInput by remember { mutableStateOf(false) }
     Surface(
         shape = PosMetrics.QtyControlShape,
@@ -658,7 +771,11 @@ fun PosQuantityInputDialog(
                     fontWeight = FontWeight.SemiBold,
                     color = PosPalette.TextPrimary
                 )
-                AppTextField(
+                // Gate 1.3: AppTextField -> FieldAmount(quantity = true). Same Decimal keyboard, same
+                // raw text handed to parseQuantityInput, so no fractional-quantity behaviour changes -
+                // the difference is the app's one input treatment plus an imePadding so the keyboard
+                // cannot cover the field or the confirm button.
+                FieldAmount(
                     value = text,
                     onValueChange = {
                         text = it
@@ -666,7 +783,8 @@ fun PosQuantityInputDialog(
                     },
                     label = "Jumlah ($unit)",
                     isError = errorText != null,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
+                    quantity = true,
+                    modifier = Modifier.imePadding()
                 )
                 if (maxQuantity != null) {
                     Text(
@@ -676,40 +794,38 @@ fun PosQuantityInputDialog(
                     )
                 }
                 if (errorText != null) {
-                    Text(
-                        text = errorText,
-                        fontSize = PosType.Helper,
-                        color = PosPalette.Destructive
-                    )
+                    // Gate 1.3: was a detached `Text(color = Destructive)` below the hint. Same
+                    // message, same state; now the app's single error treatment.
+                    AppErrorBanner(message = errorText)
                 }
             }
         },
         confirmButton = {
-            TextButton(
+            // Gate 1.3: was a bare TextButton - the least prominent element in the dialog, and the
+            // only committing action in it.
+            ButtonPrimary(
+                text = "Simpan",
                 onClick = {
                     val parsed = parseQuantityInput(text)
                     if (parsed == null || parsed.isNaN() || parsed.isInfinite()) {
                         error = "Masukkan angka yang valid"
-                        return@TextButton
+                        return@ButtonPrimary
                     }
                     if (parsed < 0.0) {
                         error = "Jumlah tidak boleh kurang dari 0"
-                        return@TextButton
+                        return@ButtonPrimary
                     }
                     if (maxQuantity != null && parsed > maxQuantity) {
                         error = "Jumlah maksimal ${formatQuantityValue(maxQuantity)} $unit"
-                        return@TextButton
+                        return@ButtonPrimary
                     }
                     onConfirm(parsed)
-                }
-            ) {
-                Text("Simpan", fontWeight = FontWeight.Bold)
-            }
+                },
+                fillMaxWidth = false
+            )
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Batal")
-            }
+            ButtonGhost(text = "Batal", onClick = onDismiss)
         }
     )
 }
@@ -810,6 +926,7 @@ fun PosPaymentCta(
         enabled = enabled,
         shape = PosMetrics.CtaShape,
         color = if (enabled) PosPalette.Primary else PosPalette.Border,
+        contentColor = if (enabled) PosPalette.OnPrimary else PosPalette.TextSecondary,
         modifier = modifier
             .fillMaxWidth()
             .height(PosMetrics.PaymentCtaHeight)
@@ -819,7 +936,7 @@ fun PosPaymentCta(
                 text = label,
                 fontSize = PosType.PrimaryCta,
                 fontWeight = FontWeight.SemiBold,
-                color = if (enabled) Color.White else PosPalette.TextSecondary
+                color = if (enabled) PosPalette.OnPrimary else PosPalette.TextSecondary
             )
         }
     }
@@ -870,7 +987,7 @@ fun PosCartSummary(
                 text = totalValue,
                 fontSize = PosType.TotalValue,
                 fontWeight = FontWeight.Bold,
-                color = PosPalette.Primary
+                color = PosPalette.PrimaryText
             )
         }
     }
@@ -943,7 +1060,7 @@ fun PosBottomCartBar(
                     text = totalValue,
                     fontSize = PosType.ProductPrice,
                     fontWeight = FontWeight.SemiBold,
-                    color = PosPalette.Primary
+                    color = PosPalette.PrimaryText
                 )
             }
             PosPaymentCta(

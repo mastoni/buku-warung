@@ -1,4 +1,4 @@
-package id.skmnetwork.bukuwarung.ui.pos
+﻿package id.skmnetwork.bukuwarung.ui.pos
 
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
@@ -67,6 +67,8 @@ import id.skmnetwork.bukuwarung.data.local.entity.SaleItemEntity
 import id.skmnetwork.bukuwarung.data.local.entity.SaleTransactionEntity
 import id.skmnetwork.bukuwarung.domain.money.MoneyCalculator
 import id.skmnetwork.bukuwarung.ui.components.AppCard
+import id.skmnetwork.bukuwarung.ui.components.StatusBadge
+import id.skmnetwork.bukuwarung.ui.components.StatusBadgeVariant
 import id.skmnetwork.bukuwarung.ui.product.ProductViewModel
 import id.skmnetwork.bukuwarung.ui.theme.AppColors
 import id.skmnetwork.bukuwarung.ui.theme.AppResponsive
@@ -210,20 +212,20 @@ fun SaleReturnDialog(
 
                     Surface(
                         shape = AppShapes.CardShape,
-                        color = Color(0xFFFFF8E1),
-                        border = BorderStroke(1.dp, Color(0xFFFFD54F)),
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Row(
                             modifier = Modifier.padding(AppSpacing.sm),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(Icons.Default.Info, contentDescription = null, tint = Color(0xFFF57F17), modifier = Modifier.size(20.dp))
+                            Icon(Icons.Default.Info, contentDescription = null, tint = AppColors.OrangeWarning, modifier = Modifier.size(20.dp))
                             Spacer(Modifier.width(AppSpacing.xs))
                             Text(
                                 text = "Transaksi retur akan dicatat sebagai transaksi baru. Transaksi penjualan asli tidak diubah.",
                                 style = MaterialTheme.typography.labelSmall,
-                                color = Color(0xFF5D4037)
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
@@ -443,21 +445,31 @@ fun SaleReturnDialog(
                                         }
 
                                         if (maxReturnable <= 0.0) {
-                                            Surface(
-                                                shape = AppShapes.ChipShape,
-                                                color = Color(0xFFFFEBEE),
+                                            // Gate 1.3: was a bespoke chip on Color(0xFFFFEBEE) with
+                                            // RedExpense text - a light-only plate that became a ~13:1
+                                            // white slab in dark. The app's StatusBadge carries the same
+                                            // meaning and the same label, and inverts with the theme.
+                                            StatusBadge(
+                                                label = "Sudah diretur semua",
+                                                variant = StatusBadgeVariant.Error,
                                                 modifier = Modifier.padding(AppSpacing.xs)
-                                            ) {
-                                                Text(
-                                                    "Sudah diretur semua",
-                                                    style = MaterialTheme.typography.labelSmall,
-                                                    color = AppColors.RedExpense,
-                                                    fontWeight = FontWeight.SemiBold,
-                                                    modifier = Modifier.padding(horizontal = AppSpacing.sm, vertical = AppSpacing.xs)
-                                                )
-                                            }
+                                            )
                                         } else {
                                             // Stepper
+                                            //
+                                            // Gate 1.3. The click area moves from 32dp to 48dp;
+                                            // the 32dp coloured plate and 16dp glyph stay exactly as
+                                            // they were, which is the same visual-size / touch-target
+                                            // separation PosMeasuredLayout already applies to
+                                            // ProductAddButtonSize 36dp on ProductAddTouchTarget 48dp.
+                                            // Previously `.size(32.dp)` on an IconButton SHRANK
+                                            // Material3's 48dp minimum, so the control that adds a
+                                            // returned unit was a 32dp target.
+                                            //
+                                            // The disabled colours were Color.Gray and
+                                            // Color.LightGray - two literals in no theme, and
+                                            // Color.LightGray is LIGHTER than the dark surface it
+                                            // would sit on, so a disabled "+" glowed at night.
                                             Row(
                                                 verticalAlignment = Alignment.CenterVertically,
                                                 horizontalArrangement = Arrangement.spacedBy(AppSpacing.xs)
@@ -470,11 +482,24 @@ fun SaleReturnDialog(
                                                         }
                                                     },
                                                     enabled = currentReturnQty > 0.0,
-                                                    modifier = Modifier
-                                                        .size(32.dp)
-                                                        .background(if (currentReturnQty > 0.0) AppColors.GreenLight else Color.Transparent, CircleShape)
+                                                    modifier = Modifier.size(48.dp)
                                                 ) {
-                                                    Icon(Icons.Default.Remove, contentDescription = "Kurang", tint = if (currentReturnQty > 0.0) AppColors.GreenPrimary else Color.Gray, modifier = Modifier.size(16.dp))
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .size(32.dp)
+                                                            .background(
+                                                                if (currentReturnQty > 0.0) AppColors.GreenLight else Color.Transparent,
+                                                                CircleShape
+                                                            ),
+                                                        contentAlignment = Alignment.Center
+                                                    ) {
+                                                        Icon(
+                                                            Icons.Default.Remove,
+                                                            contentDescription = "Kurang",
+                                                            tint = if (currentReturnQty > 0.0) AppColors.GreenPrimary else AppColors.TextSecondary,
+                                                            modifier = Modifier.size(16.dp)
+                                                        )
+                                                    }
                                                 }
 
                                                 Text(
@@ -492,11 +517,30 @@ fun SaleReturnDialog(
                                                         }
                                                     },
                                                     enabled = currentReturnQty < maxReturnable,
-                                                    modifier = Modifier
-                                                        .size(32.dp)
-                                                        .background(if (currentReturnQty < maxReturnable) AppColors.GreenPrimary else Color.LightGray, CircleShape)
+                                                    modifier = Modifier.size(48.dp)
                                                 ) {
-                                                    Icon(Icons.Default.Add, contentDescription = "Tambah", tint = Color.White, modifier = Modifier.size(16.dp))
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .size(32.dp)
+                                                            .background(
+                                                                if (currentReturnQty < maxReturnable) AppColors.GreenPrimary else MaterialTheme.colorScheme.surfaceVariant,
+                                                                CircleShape
+                                                            ),
+                                                        contentAlignment = Alignment.Center
+                                                    ) {
+                                                        Icon(
+                                                            Icons.Default.Add,
+                                                            contentDescription = "Tambah",
+                                                            // Gate 1.3: was Color.White on a green
+                                                            // plate - 2.28:1 in dark.
+                                                            tint = if (currentReturnQty < maxReturnable) {
+                                                                MaterialTheme.colorScheme.onPrimary
+                                                            } else {
+                                                                AppColors.TextSecondary
+                                                            },
+                                                            modifier = Modifier.size(16.dp)
+                                                        )
+                                                    }
                                                 }
                                             }
                                         }

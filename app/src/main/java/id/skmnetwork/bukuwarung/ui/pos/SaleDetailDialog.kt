@@ -1,4 +1,4 @@
-package id.skmnetwork.bukuwarung.ui.pos
+﻿package id.skmnetwork.bukuwarung.ui.pos
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -56,6 +56,8 @@ import id.skmnetwork.bukuwarung.data.local.entity.SaleReturnItemEntity
 import id.skmnetwork.bukuwarung.data.local.entity.SaleReturnTransactionEntity
 import id.skmnetwork.bukuwarung.data.local.entity.SaleTransactionEntity
 import id.skmnetwork.bukuwarung.ui.components.AppCard
+import id.skmnetwork.bukuwarung.ui.components.StatusBadge
+import id.skmnetwork.bukuwarung.ui.components.StatusBadgeVariant
 import id.skmnetwork.bukuwarung.ui.product.ProductViewModel
 import id.skmnetwork.bukuwarung.util.formatQuantityValue
 import id.skmnetwork.bukuwarung.ui.theme.AppColors
@@ -195,31 +197,26 @@ fun SaleDetailDialog(
                                     Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                                         Text("Metode Pembayaran:", style = MaterialTheme.typography.bodySmall, color = AppColors.TextSecondary)
                                         Spacer(Modifier.weight(1f))
-                                        Surface(
-                                            shape = AppShapes.ChipShape,
-                                            color = when (sale.paymentMethod.uppercase()) {
-                                                "CASH" -> AppColors.GreenLight
-                                                "QRIS" -> Color(0xFFE1F5FE)
-                                                else -> Color(0xFFFFF3E0)
+                                        // Gate 1.3: was three hand-picked pairs - #E1F5FE/#0288D1 for
+                                        // QRIS and #FFF3E0/#E65100 for credit, both light-only plates
+                                        // that became ~13:1 white slabs in dark. The meaning is kept
+                                        // exactly (cash = settled = success, QRIS = informational,
+                                        // credit = attention) but the colours now come from the app's
+                                        // semantic set, and the method is still spelled out as text so
+                                        // it never depends on colour alone.
+                                        StatusBadge(
+                                            label = when (sale.paymentMethod.uppercase()) {
+                                                "CASH" -> "Tunai"
+                                                "QRIS" -> "QRIS"
+                                                "CREDIT" -> "Hutang"
+                                                else -> sale.paymentMethod
+                                            },
+                                            variant = when (sale.paymentMethod.uppercase()) {
+                                                "CASH" -> StatusBadgeVariant.Success
+                                                "QRIS" -> StatusBadgeVariant.Info
+                                                else -> StatusBadgeVariant.Warning
                                             }
-                                        ) {
-                                            Text(
-                                                text = when (sale.paymentMethod.uppercase()) {
-                                                    "CASH" -> "Tunai"
-                                                    "QRIS" -> "QRIS"
-                                                    "CREDIT" -> "Hutang"
-                                                    else -> sale.paymentMethod
-                                                },
-                                                color = when (sale.paymentMethod.uppercase()) {
-                                                    "CASH" -> AppColors.GreenPrimary
-                                                    "QRIS" -> Color(0xFF0288D1)
-                                                    else -> Color(0xFFE65100)
-                                                },
-                                                fontWeight = FontWeight.Bold,
-                                                style = MaterialTheme.typography.labelSmall,
-                                                modifier = Modifier.padding(horizontal = AppSpacing.sm, vertical = 2.dp)
-                                            )
-                                        }
+                                        )
                                     }
                                 }
                             }
@@ -248,7 +245,7 @@ fun SaleDetailDialog(
                                     Column(Modifier.weight(1f)) {
                                         Text(item.productName, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
                                         Text(
-                                            "${formatQuantityValue(item.quantity)} × ${formatRupiah(item.price)}",
+                                            "${formatQuantityValue(item.quantity)} Ã— ${formatRupiah(item.price)}",
                                             style = MaterialTheme.typography.bodySmall,
                                             color = AppColors.TextSecondary
                                         )
@@ -263,26 +260,19 @@ fun SaleDetailDialog(
                                                     color = AppColors.TextPrimary
                                                 )
                                                 Spacer(modifier = Modifier.width(8.dp))
-                                                Surface(
-                                                    shape = AppShapes.ChipShape,
-                                                    color = when (digitalTx.status) {
-                                                        DigitalTransactionStatus.SUCCESS.name -> AppColors.GreenLight
-                                                        DigitalTransactionStatus.PENDING.name, DigitalTransactionStatus.UNKNOWN.name -> Color(0xFFFFF3E0)
-                                                        else -> Color(0xFFFFEBEE)
+                                                // Gate 1.3: same light-only plate problem as the payment
+                                                // badge. Success / pending / failed map onto the app's
+                                                // three semantic variants, and the raw status string is
+                                                // still the label so nothing is lost.
+                                                StatusBadge(
+                                                    label = digitalTx.status,
+                                                    variant = when (digitalTx.status) {
+                                                        DigitalTransactionStatus.SUCCESS.name -> StatusBadgeVariant.Success
+                                                        DigitalTransactionStatus.PENDING.name,
+                                                        DigitalTransactionStatus.UNKNOWN.name -> StatusBadgeVariant.Warning
+                                                        else -> StatusBadgeVariant.Error
                                                     }
-                                                ) {
-                                                    Text(
-                                                        text = digitalTx.status,
-                                                        color = when (digitalTx.status) {
-                                                            DigitalTransactionStatus.SUCCESS.name -> AppColors.GreenDark
-                                                            DigitalTransactionStatus.PENDING.name, DigitalTransactionStatus.UNKNOWN.name -> Color(0xFFE65100)
-                                                            else -> AppColors.RedExpense
-                                                        },
-                                                        style = MaterialTheme.typography.labelSmall,
-                                                        fontWeight = FontWeight.Bold,
-                                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                                    )
-                                                }
+                                                )
                                             }
 
                                             if (digitalTx.status == DigitalTransactionStatus.PENDING.name || digitalTx.status == DigitalTransactionStatus.UNKNOWN.name) {
@@ -348,7 +338,7 @@ fun SaleDetailDialog(
                                             modifier = Modifier.fillMaxWidth(),
                                             verticalAlignment = Alignment.CenterVertically
                                         ) {
-                                            Text("Diskon", style = MaterialTheme.typography.bodyMedium, color = AppColors.RedExpense)
+                                            Text("Diskon", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onErrorContainer)
                                             Spacer(Modifier.weight(1f))
                                             Text("-${formatRupiah(sale.discountAmount)}", style = MaterialTheme.typography.bodyMedium, color = AppColors.RedExpense, fontWeight = FontWeight.SemiBold)
                                         }
@@ -388,15 +378,15 @@ fun SaleDetailDialog(
 
                                 Surface(
                                     shape = AppShapes.CardShape,
-                                    color = Color(0xFFFFF5F5),
-                                    border = BorderStroke(1.dp, Color(0xFFFFCDD2)),
+                                    color = MaterialTheme.colorScheme.errorContainer,
+                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                                     modifier = Modifier.fillMaxWidth()
                                 ) {
                                     Column(modifier = Modifier.padding(AppSpacing.md), verticalArrangement = Arrangement.spacedBy(AppSpacing.xs)) {
                                         Row(modifier = Modifier.fillMaxWidth()) {
-                                            Text(retTx.returnNumber, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium, color = AppColors.RedExpense)
+                                            Text(retTx.returnNumber, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onErrorContainer)
                                             Spacer(Modifier.weight(1f))
-                                            Text(formatRupiah(retTx.totalRefundAmount), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium, color = AppColors.RedExpense)
+                                            Text(formatRupiah(retTx.totalRefundAmount), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onErrorContainer)
                                         }
                                         Text("Waktu: $retDateStr", style = MaterialTheme.typography.labelSmall, color = AppColors.TextSecondary)
                                         Text("Metode: ${if (retTx.refundMethod == "CREDIT") "Pengurangan Piutang" else "Tunai"}", style = MaterialTheme.typography.labelSmall, color = AppColors.TextSecondary)
@@ -408,10 +398,10 @@ fun SaleDetailDialog(
                                         }
 
                                         // Item details
-                                        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), color = Color(0xFFFFCDD2))
+                                        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), color = MaterialTheme.colorScheme.outlineVariant)
                                         itemsForThisReturn.forEach { retItem ->
                                             Row(modifier = Modifier.fillMaxWidth()) {
-                                                Text("• ${retItem.productName} (${formatQuantityValue(retItem.quantity)} item)", style = MaterialTheme.typography.labelSmall, color = AppColors.TextPrimary, modifier = Modifier.weight(1f))
+                                                Text("â€¢ ${retItem.productName} (${formatQuantityValue(retItem.quantity)} item)", style = MaterialTheme.typography.labelSmall, color = AppColors.TextPrimary, modifier = Modifier.weight(1f))
                                                 Text(formatRupiah(retItem.subtotal), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold)
                                             }
                                         }
@@ -462,7 +452,7 @@ fun SaleDetailDialog(
                     if (!hasAnyReturnableItem) {
                         Surface(
                             shape = AppShapes.CardShape,
-                            color = Color(0xFFFFEBEE),
+                            color = MaterialTheme.colorScheme.errorContainer,
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Box(modifier = Modifier.padding(AppSpacing.md), contentAlignment = Alignment.Center) {

@@ -1,4 +1,4 @@
-package id.skmnetwork.bukuwarung.ui.pos
+﻿package id.skmnetwork.bukuwarung.ui.pos
 
 import android.graphics.BitmapFactory
 import androidx.compose.foundation.Image
@@ -40,6 +40,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.width
 import androidx.compose.ui.unit.sp
 import id.skmnetwork.bukuwarung.ui.components.AppCard
+import id.skmnetwork.bukuwarung.ui.components.ButtonGhost
+import id.skmnetwork.bukuwarung.ui.components.ButtonPrimary
 import id.skmnetwork.bukuwarung.ui.theme.AppColors
 import id.skmnetwork.bukuwarung.ui.theme.AppShapes
 import id.skmnetwork.bukuwarung.ui.theme.AppSpacing
@@ -103,18 +105,22 @@ fun QrisPaymentDialog(
                                 text = formatRupiah(totalPrice),
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
-                                color = AppColors.GreenPrimary
+                                color = MaterialTheme.colorScheme.onPrimary
                             )
                         }
                     }
 
-                    // Actual configured merchant QRIS image
+                    // Gate 1.3. The white plate is DELIBERATE and stays white: a QR code has to sit on
+                    // white to scan, in either theme, so this is the one surface in the app that must
+                    // not follow the scheme. What was wrong was the frame around it - #E0E0E0 is a
+                    // Material grey400 that belongs to neither Buku Warung palette, so in dark it left
+                    // a light grey outline floating on a dark dialog. The frame now follows the theme.
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(12.dp))
                             .background(Color.White)
-                            .border(1.dp, Color(0xFFE0E0E0), RoundedCornerShape(12.dp))
+                            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(12.dp))
                             .padding(AppSpacing.sm),
                         contentAlignment = Alignment.Center
                     ) {
@@ -137,18 +143,20 @@ fun QrisPaymentDialog(
                 }
             },
             confirmButton = {
-                Button(
+                // Gate 1.3: Material3 Button with a container but no contentColor, so the label
+                // colour was left to M3's container lookup. ButtonPrimary states the pairing
+                // explicitly - white on primary in light, #052E16 on #22C55E in dark - and is a
+                // fixed 48dp with a real loading state instead of a text swap. The label, the
+                // callback and the isCheckingOut guard are unchanged.
+                ButtonPrimary(
+                    text = if (isCheckingOut) "MEMPROSES..." else "SUDAH DIBAYAR",
                     onClick = onConfirmQrisPayment,
                     enabled = !isCheckingOut,
-                    colors = ButtonDefaults.buttonColors(containerColor = AppColors.GreenPrimary)
-                ) {
-                    Text(if (isCheckingOut) "MEMPROSES..." else "SUDAH DIBAYAR", fontWeight = FontWeight.Bold)
-                }
+                    fillMaxWidth = false
+                )
             },
             dismissButton = {
-                TextButton(onClick = onDismiss, enabled = !isCheckingOut) {
-                    Text("Batal")
-                }
+                ButtonGhost(text = "Batal", onClick = onDismiss, enabled = !isCheckingOut)
             }
         )
     } else {
@@ -169,9 +177,14 @@ fun QrisPaymentDialog(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier.fillMaxWidth()
                 ) {
+                    // Gate 1.3: the "belum dikonfigurasi" notice was on #F59E0B at 15% with a #D97706
+                    // icon - three literals in no theme, and a light amber slab that became a ~13:1
+                    // block in dark. It is a warning, so it now uses the app's warning pair, which
+                    // measures 6.88:1 light and 8.40:1 dark. Copy and icon are unchanged.
                     Surface(
                         shape = RoundedCornerShape(8.dp),
-                        color = Color(0xFFF59E0B).copy(alpha = 0.15f),
+                        color = AppColors.WarningContainer,
+                        contentColor = AppColors.OnWarningContainer,
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Row(
@@ -181,14 +194,14 @@ fun QrisPaymentDialog(
                             Icon(
                                 imageVector = Icons.Default.Info,
                                 contentDescription = null,
-                                tint = Color(0xFFD97706),
+                                tint = AppColors.OrangeWarning,
                                 modifier = Modifier.size(24.dp)
                             )
                             Spacer(Modifier.width(AppSpacing.sm))
                             Text(
                                 text = "Atur QRIS warung Anda di Pengaturan agar pelanggan dapat memindai QRIS dari aplikasi.",
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurface
+                                color = AppColors.OnWarningContainer
                             )
                         }
                     }
@@ -206,7 +219,7 @@ fun QrisPaymentDialog(
                                 text = formatRupiah(totalPrice),
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
-                                color = AppColors.GreenPrimary
+                                color = MaterialTheme.colorScheme.onPrimary
                             )
                         }
                     }

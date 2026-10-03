@@ -1,4 +1,4 @@
-package id.skmnetwork.bukuwarung.ui.pos
+﻿package id.skmnetwork.bukuwarung.ui.pos
 
 import android.content.Context
 import android.net.ConnectivityManager
@@ -103,6 +103,7 @@ import id.skmnetwork.bukuwarung.ui.components.AppEmptyState
 import id.skmnetwork.bukuwarung.ui.components.AppTextField
 import id.skmnetwork.bukuwarung.ui.components.CameraBarcodeScannerDialog
 import id.skmnetwork.bukuwarung.ui.components.ProductImageThumbnail
+import id.skmnetwork.bukuwarung.ui.components.SegmentedControl
 import id.skmnetwork.bukuwarung.ui.customer.CustomerViewModel
 import id.skmnetwork.bukuwarung.ui.navigation.CheckoutSuccessData
 import id.skmnetwork.bukuwarung.ui.product.ProductViewModel
@@ -635,7 +636,7 @@ fun PosScreen(
                                 ) {
                                     Column(Modifier.weight(1f)) {
                                         Text(prod.name, fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.bodySmall)
-                                        Text("${formatQuantityValue(qty)} × ${formatRupiah(prod.sellingPrice)}", color = AppColors.TextSecondary, style = MaterialTheme.typography.labelSmall)
+                                        Text("${formatQuantityValue(qty)} Ã— ${formatRupiah(prod.sellingPrice)}", color = AppColors.TextSecondary, style = MaterialTheme.typography.labelSmall)
                                     }
                                     Text(formatRupiah(MoneyCalculator.lineSubtotal(prod.sellingPrice, qty)), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodySmall)
                                 }
@@ -704,8 +705,8 @@ fun PosScreen(
                     // Financial Summary Breakdown
                     Surface(
                         shape = AppShapes.CardShape,
-                        color = Color(0xFFF9FBFA),
-                        border = BorderStroke(1.dp, Color(0xFFE2EBE5)),
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Column(
@@ -731,7 +732,7 @@ fun PosScreen(
                                 }
                             }
                             if (totalTaxAmount > 0) {
-                                HorizontalDivider(modifier = Modifier.padding(vertical = 2.dp), color = Color(0xFFE2EBE5))
+                                HorizontalDivider(modifier = Modifier.padding(vertical = 2.dp), color = MaterialTheme.colorScheme.outlineVariant)
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
                                     modifier = Modifier.fillMaxWidth()
@@ -749,7 +750,7 @@ fun PosScreen(
                                     Text(formatRupiah(totalTaxAmount), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold)
                                 }
                             }
-                            HorizontalDivider(modifier = Modifier.padding(vertical = 2.dp), color = Color(0xFFE2EBE5))
+                            HorizontalDivider(modifier = Modifier.padding(vertical = 2.dp), color = MaterialTheme.colorScheme.outlineVariant)
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
                                 modifier = Modifier.fillMaxWidth()
@@ -778,36 +779,28 @@ fun PosScreen(
 
                     Text("Metode Pembayaran:", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelLarge)
 
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(AppSpacing.xs),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        availablePaymentMethods.forEach { (methodCode, methodLabel) ->
-                            Surface(
-                                shape = AppShapes.ChipShape,
-                                color = if (selectedPaymentMethod == methodCode) AppColors.GreenPrimary else AppColors.SurfaceGray,
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .clickable { selectedPaymentMethod = methodCode }
-                            ) {
-                                Box(
-                                    modifier = Modifier.padding(vertical = AppSpacing.sm),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        text = methodLabel,
-                                        color = if (selectedPaymentMethod == methodCode) Color.White else AppColors.TextSecondary,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
-                            }
+                    // Gate 1.3: was a hand-rolled Row of weighted Surfaces with no height at all
+                    // (~36dp), so the three payment methods were the smallest touch targets in the
+                    // checkout dialog, and the selected one was `primary` + `Color.White` - 2.28:1 in
+                    // dark, i.e. the merchant could not see which method was chosen at night.
+                    //
+                    // SegmentedControl is a presentation wrapper: `selectedPaymentMethod` stays the
+                    // same String, `availablePaymentMethods` is still built from the same three
+                    // settings flags in the same order, and the LaunchedEffect above still coerces
+                    // the selection into the available set. No payment logic moves.
+                    SegmentedControl(
+                        options = availablePaymentMethods.map { it.first },
+                        selected = selectedPaymentMethod,
+                        onSelect = { selectedPaymentMethod = it },
+                        label = { code ->
+                            availablePaymentMethods.firstOrNull { it.first == code }?.second ?: code
                         }
-                    }
+                    )
 
                     if (selectedPaymentMethod == "CREDIT") {
                         Surface(
                             shape = AppShapes.CardShape,
-                            color = if (selectedCustomerForCredit == null) Color(0xFFFFE8E8) else AppColors.GreenLight,
+                            color = if (selectedCustomerForCredit == null) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.primaryContainer,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable { showCustomerPickerSheet = true }
@@ -816,12 +809,12 @@ fun PosScreen(
                                 Modifier.padding(AppSpacing.md),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Icon(Icons.Default.People, null, tint = AppColors.GreenPrimary)
+                                Icon(Icons.Default.People, null, tint = MaterialTheme.colorScheme.onPrimaryContainer)
                                 Spacer(Modifier.width(AppSpacing.sm))
                                 Text(
                                     text = selectedCustomerForCredit?.name ?: "Pilih ${terminology.customerLabel} *",
                                     fontWeight = FontWeight.Bold,
-                                    color = if (selectedCustomerForCredit == null) AppColors.RedExpense else AppColors.TextPrimary,
+                                    color = if (selectedCustomerForCredit == null) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onPrimaryContainer,
                                     modifier = Modifier.weight(1f)
                                 )
                                 Icon(Icons.Default.KeyboardArrowDown, null)
@@ -936,7 +929,7 @@ fun PosScreen(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.CheckCircle, null, tint = AppColors.GreenPrimary)
                     Spacer(Modifier.width(AppSpacing.xs))
-                    Text("✓ TRANSAKSI BERHASIL!", fontWeight = FontWeight.Bold, color = AppColors.GreenPrimary)
+                    Text("âœ“ TRANSAKSI BERHASIL!", fontWeight = FontWeight.Bold, color = AppColors.GreenPrimary)
                 }
             },
             text = {
@@ -953,7 +946,7 @@ fun PosScreen(
                             Column(Modifier.padding(AppSpacing.sm)) {
                                 data.items.forEach { (itemName, qty) ->
                                     Row(modifier = Modifier.fillMaxWidth()) {
-                                        Text("${formatQuantityValue(qty)} × $itemName", style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
+                                        Text("${formatQuantityValue(qty)} Ã— $itemName", style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
                                     }
                                 }
                             }
@@ -1138,29 +1131,16 @@ fun PosScreen(
                         )
                     }
                 } else if (dbProducts.isEmpty()) {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(PosMetrics.RadiusSmall)
-                        ) {
-                            Text(
-                                text = "Belum ada ${terminology.productLabel.lowercase()} jualan",
-                                fontSize = PosType.SectionTitle,
-                                fontWeight = FontWeight.SemiBold,
-                                color = PosPalette.TextPrimary
-                            )
-                            Text(
-                                text = "Tambahkan ${terminology.productLabel.lowercase()} untuk mulai berjualan",
-                                fontSize = PosType.Helper,
-                                color = PosPalette.TextSecondary
-                            )
-                            PosPaymentCta(
-                                label = "+ Tambah ${terminology.productLabel}",
-                                enabled = true,
-                                onClick = onNavigateToAddProduct
-                            )
-                        }
-                    }
+                    // Gate 1.3: the same bespoke title/body/CTA block, now the app's shared empty
+                    // state. The action and its callback are unchanged - only the presentation moved.
+                    AppEmptyState(
+                        icon = Icons.Default.Inventory2,
+                        title = "Belum ada ${terminology.productLabel.lowercase()} jualan",
+                        description = "Tambahkan ${terminology.productLabel.lowercase()} untuk mulai berjualan",
+                        actionText = "+ Tambah ${terminology.productLabel}",
+                        onActionClick = onNavigateToAddProduct,
+                        modifier = Modifier.fillMaxSize()
+                    )
                 } else {
                     LazyVerticalGrid(
                         columns = GridCells.Fixed(productGridColumns),
@@ -1214,18 +1194,17 @@ fun PosScreen(
 
             // Cart items
             if (cart.isEmpty()) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "Keranjang masih kosong",
-                        fontSize = PosType.Helper,
-                        color = PosPalette.TextSecondary
-                    )
-                }
+                // Gate 1.3: was a single centred sentence, "Keranjang masih kosong", at 12sp - the
+                // emptiest possible empty state on the busiest screen in the app. AppEmptyState is
+                // the app's existing treatment (icon, title, helper line). It is given NO action:
+                // there is nothing to restore, and inventing one would change navigation semantics.
+                // The visual direction the merchant gets is the product grid to the left.
+                AppEmptyState(
+                    icon = Icons.Default.ShoppingCart,
+                    title = "Keranjang masih kosong",
+                    description = "Pilih ${terminology.productLabel.lowercase()} di sebelah untuk memulai transaksi.",
+                    modifier = Modifier.weight(1f)
+                )
             } else {
                 LazyColumn(
                     modifier = Modifier.weight(1f),
@@ -1257,7 +1236,11 @@ fun PosScreen(
                                 Icon(
                                     imageVector = Icons.Default.Delete,
                                     contentDescription = "Hapus",
-                                    tint = PosPalette.TextSecondary,
+                                    // Gate 1.3: this removes a line and there is no undo, so it is
+                                    // destructive and says so. It was `TextSecondary`, which made it
+                                    // read as a caption. The 48dp touch target is unchanged and was
+                                    // already correct.
+                                    tint = PosPalette.Destructive,
                                     modifier = Modifier
                                         .size(PosMetrics.ProductAddTouchTarget)
                                         .clickable { cart.removeAt(index) }
