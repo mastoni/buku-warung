@@ -21,11 +21,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -116,7 +116,12 @@ import id.skmnetwork.bukuwarung.ui.components.AppTextField
 import id.skmnetwork.bukuwarung.ui.components.CameraQrisPhotoDialog
 import id.skmnetwork.bukuwarung.ui.components.PrimaryButton
 import id.skmnetwork.bukuwarung.ui.components.SecondaryButton
+import id.skmnetwork.bukuwarung.ui.components.AppErrorBanner
+import id.skmnetwork.bukuwarung.ui.components.AppTouchTarget
+import id.skmnetwork.bukuwarung.ui.components.SectionCard
 import id.skmnetwork.bukuwarung.ui.components.SectionHeader
+import id.skmnetwork.bukuwarung.ui.components.StatusBadge
+import id.skmnetwork.bukuwarung.ui.components.StatusBadgeVariant
 import id.skmnetwork.bukuwarung.ui.theme.AppColors
 import id.skmnetwork.bukuwarung.ui.theme.AppShapes
 import id.skmnetwork.bukuwarung.ui.theme.AppSpacing
@@ -389,7 +394,7 @@ fun SettingsScreen(
                         Icon(
                             imageVector = Icons.Default.Storefront,
                             contentDescription = null,
-                            tint = Color.White,
+                            tint = MaterialTheme.colorScheme.onPrimary,
                             modifier = Modifier.size(20.dp)
                         )
                     }
@@ -442,15 +447,10 @@ fun SettingsScreen(
                     title = "TIPE USAHA & MODEL OPERASIONAL",
                     modifier = Modifier.padding(top = AppSpacing.xs)
                 )
-                Surface(
-                    shape = RoundedCornerShape(14.dp),
-                    color = MaterialTheme.colorScheme.surface,
-                    border = BorderStroke(1.dp, Color(0xFFEFF3F0)),
-                    shadowElevation = 0.5.dp,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(
-                        modifier = Modifier.padding(14.dp),
+                SectionCard(
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                Column(
                         verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         Row(
@@ -582,15 +582,10 @@ fun SettingsScreen(
                     title = "PROFIL ${shopLabel.uppercase()}",
                     modifier = Modifier.padding(top = AppSpacing.xs)
                 )
-                Surface(
-                    shape = RoundedCornerShape(14.dp),
-                    color = MaterialTheme.colorScheme.surface,
-                    border = BorderStroke(1.dp, Color(0xFFEFF3F0)),
-                    shadowElevation = 0.5.dp,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(
-                        modifier = Modifier.padding(14.dp),
+                SectionCard(
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                Column(
                         verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         AppTextField(
@@ -641,15 +636,10 @@ fun SettingsScreen(
                     title = "PAJAK / PPN",
                     modifier = Modifier.padding(top = AppSpacing.xs)
                 )
-                Surface(
-                    shape = RoundedCornerShape(14.dp),
-                    color = MaterialTheme.colorScheme.surface,
-                    border = BorderStroke(1.dp, Color(0xFFEFF3F0)),
-                    shadowElevation = 0.5.dp,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(
-                        modifier = Modifier.padding(14.dp),
+                SectionCard(
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                Column(
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         SettingSwitchRow("Aktifkan Pajak / PPN", taxEnabled) {
@@ -715,24 +705,14 @@ fun SettingsScreen(
             // 2. PENJUALAN & KASIR (POS)
             // ==========================================
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(
-                    text = "${transactionLabel.uppercase()} & KASIR",
-                    style = MaterialTheme.typography.labelSmall.copy(
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 11.sp,
-                        color = AppColors.GreenPrimary,
-                        letterSpacing = 0.5.sp
+                SectionHeader(
+                        title = "${transactionLabel.uppercase()} & KASIR",
+                        modifier = Modifier.padding(top = AppSpacing.xs)
                     )
-                )
-                Surface(
-                    shape = RoundedCornerShape(14.dp),
-                    color = MaterialTheme.colorScheme.surface,
-                    border = BorderStroke(1.dp, Color(0xFFEFF3F0)),
-                    shadowElevation = 0.5.dp,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(
-                        modifier = Modifier.padding(14.dp),
+                SectionCard(
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                Column(
                         verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         SettingSwitchRow("Tampilkan Foto $productLabel di Kasir", showProductImage) {
@@ -770,24 +750,14 @@ fun SettingsScreen(
             // 3. METODE PEMBAYARAN
             // ==========================================
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(
-                    text = "METODE PEMBAYARAN",
-                    style = MaterialTheme.typography.labelSmall.copy(
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 11.sp,
-                        color = AppColors.GreenPrimary,
-                        letterSpacing = 0.5.sp
+                SectionHeader(
+                        title = "METODE PEMBAYARAN",
+                        modifier = Modifier.padding(top = AppSpacing.xs)
                     )
-                )
-                Surface(
-                    shape = RoundedCornerShape(14.dp),
-                    color = MaterialTheme.colorScheme.surface,
-                    border = BorderStroke(1.dp, Color(0xFFEFF3F0)),
-                    shadowElevation = 0.5.dp,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(
-                        modifier = Modifier.padding(14.dp),
+                SectionCard(
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                Column(
                         verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         SettingSwitchRow("Terima Pembayaran Tunai (Cash)", cashEnabled) {
@@ -862,24 +832,14 @@ fun SettingsScreen(
             // 4. QRIS WARUNG / USAHA
             // ==========================================
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(
-                    text = "QRIS STATIS ${shopLabel.uppercase()}",
-                    style = MaterialTheme.typography.labelSmall.copy(
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 11.sp,
-                        color = AppColors.GreenPrimary,
-                        letterSpacing = 0.5.sp
+                SectionHeader(
+                        title = "QRIS STATIS ${shopLabel.uppercase()}",
+                        modifier = Modifier.padding(top = AppSpacing.xs)
                     )
-                )
-                Surface(
-                    shape = RoundedCornerShape(14.dp),
-                    color = MaterialTheme.colorScheme.surface,
-                    border = BorderStroke(1.dp, Color(0xFFEFF3F0)),
-                    shadowElevation = 0.5.dp,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(
-                        modifier = Modifier.padding(14.dp),
+                SectionCard(
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                Column(
                         verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         val qrisBitmap = remember(settingsState.qrisImagePath) {
@@ -907,19 +867,14 @@ fun SettingsScreen(
                                 fontWeight = FontWeight.Bold,
                                 style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.5.sp, color = AppColors.TextPrimary)
                             )
-                            Surface(
-                                shape = RoundedCornerShape(12.dp),
-                                color = if (isConfigured) Color(0xFFE8F5E9) else Color(0xFFFFF7E6),
-                                border = BorderStroke(1.dp, if (isConfigured) Color(0xFFC8E6C9) else Color(0xFFFFE0B2))
-                            ) {
-                                Text(
-                                    text = if (isConfigured) "Sudah Diatur" else "Belum Diatur",
-                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
-                                    fontWeight = FontWeight.Bold,
-                                    color = if (isConfigured) AppColors.GreenDark else Color(0xFFD46B08),
-                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-                                )
-                            }
+                            // Gate 1.4: this was a hand-rolled status badge - a 12dp-radius Surface
+                            // with its own container/border/padding literals and an 11sp label. It is
+                            // now the app's StatusBadge, so the QRIS setup state uses the same
+                            // geometry and the same semantic colours as every other status in the app.
+                            StatusBadge(
+                                label = if (isConfigured) "Sudah Diatur" else "Belum Diatur",
+                                variant = if (isConfigured) StatusBadgeVariant.Success else StatusBadgeVariant.Warning
+                            )
                         }
 
                         if (isConfigured) {
@@ -934,8 +889,8 @@ fun SettingsScreen(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clip(RoundedCornerShape(10.dp))
-                                    .background(Color(0xFFF9FBF9))
-                                    .border(1.dp, Color(0xFFEFF3F0), RoundedCornerShape(10.dp))
+                                    .background(MaterialTheme.colorScheme.surface)
+                                    .border(1.dp, AppColors.CardBorderStrong, RoundedCornerShape(10.dp))
                                     .padding(8.dp),
                                 contentAlignment = Alignment.Center
                             ) {
@@ -1009,24 +964,14 @@ fun SettingsScreen(
             // 5. STOK & PERINGATAN
             // ==========================================
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(
-                    text = "${stockLabel.uppercase()} & PERINGATAN",
-                    style = MaterialTheme.typography.labelSmall.copy(
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 11.sp,
-                        color = AppColors.GreenPrimary,
-                        letterSpacing = 0.5.sp
+                SectionHeader(
+                        title = "${stockLabel.uppercase()} & PERINGATAN",
+                        modifier = Modifier.padding(top = AppSpacing.xs)
                     )
-                )
-                Surface(
-                    shape = RoundedCornerShape(14.dp),
-                    color = MaterialTheme.colorScheme.surface,
-                    border = BorderStroke(1.dp, Color(0xFFEFF3F0)),
-                    shadowElevation = 0.5.dp,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(
-                        modifier = Modifier.padding(14.dp),
+                SectionCard(
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                Column(
                         verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         SettingSwitchRow("Peringatan $productLabel Hampir Habis", lowStockAlertEnabled) {
@@ -1063,31 +1008,21 @@ fun SettingsScreen(
             // 6. STRUK & PRINTER THERMAL
             // ==========================================
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(
-                    text = "PRINTER & ${receiptLabel.uppercase()}",
-                    style = MaterialTheme.typography.labelSmall.copy(
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 11.sp,
-                        color = AppColors.GreenPrimary,
-                        letterSpacing = 0.5.sp
+                SectionHeader(
+                        title = "PRINTER & ${receiptLabel.uppercase()}",
+                        modifier = Modifier.padding(top = AppSpacing.xs)
                     )
-                )
-                Surface(
-                    shape = RoundedCornerShape(14.dp),
-                    color = MaterialTheme.colorScheme.surface,
-                    border = BorderStroke(1.dp, Color(0xFFEFF3F0)),
-                    shadowElevation = 0.5.dp,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(
-                        modifier = Modifier.padding(14.dp),
+                SectionCard(
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                Column(
                         verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         // Card status & tombol konfigurasi printer thermal
                         Surface(
                             shape = RoundedCornerShape(12.dp),
                             color = MaterialTheme.colorScheme.surfaceVariant,
-                            border = BorderStroke(1.dp, Color(0xFFEFF3F0)),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Row(
@@ -1202,24 +1137,14 @@ fun SettingsScreen(
             // 7. NOTIFIKASI
             // ==========================================
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(
-                    text = "NOTIFIKASI & PENGINGAT",
-                    style = MaterialTheme.typography.labelSmall.copy(
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 11.sp,
-                        color = AppColors.GreenPrimary,
-                        letterSpacing = 0.5.sp
+                SectionHeader(
+                        title = "NOTIFIKASI & PENGINGAT",
+                        modifier = Modifier.padding(top = AppSpacing.xs)
                     )
-                )
-                Surface(
-                    shape = RoundedCornerShape(14.dp),
-                    color = MaterialTheme.colorScheme.surface,
-                    border = BorderStroke(1.dp, Color(0xFFEFF3F0)),
-                    shadowElevation = 0.5.dp,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(
-                        modifier = Modifier.padding(14.dp),
+                SectionCard(
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                Column(
                         verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         SettingSwitchRow("Notifikasi $stockLabel Menipis", lowStockNotificationEnabled) {
@@ -1249,24 +1174,14 @@ fun SettingsScreen(
             // 8. KEAMANAN & PIN
             // ==========================================
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(
-                    text = "KEAMANAN & PIN PEMILIK",
-                    style = MaterialTheme.typography.labelSmall.copy(
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 11.sp,
-                        color = AppColors.GreenPrimary,
-                        letterSpacing = 0.5.sp
+                SectionHeader(
+                        title = "KEAMANAN & PIN PEMILIK",
+                        modifier = Modifier.padding(top = AppSpacing.xs)
                     )
-                )
-                Surface(
-                    shape = RoundedCornerShape(14.dp),
-                    color = MaterialTheme.colorScheme.surface,
-                    border = BorderStroke(1.dp, Color(0xFFEFF3F0)),
-                    shadowElevation = 0.5.dp,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(
-                        modifier = Modifier.padding(14.dp),
+                SectionCard(
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                Column(
                         verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         SettingSwitchRow("Kunci Aplikasi dengan PIN", settingsState.pinEnabled) { isChecked ->
@@ -1323,24 +1238,14 @@ fun SettingsScreen(
             // 9. CADANGAN & PEMULIHAN (GOOGLE SHEETS)
             // ==========================================
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(
-                    text = "CADANGAN & PEMULIHAN",
-                    style = MaterialTheme.typography.labelSmall.copy(
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 11.sp,
-                        color = AppColors.GreenPrimary,
-                        letterSpacing = 0.5.sp
+                SectionHeader(
+                        title = "CADANGAN & PEMULIHAN",
+                        modifier = Modifier.padding(top = AppSpacing.xs)
                     )
-                )
-                Surface(
-                    shape = RoundedCornerShape(14.dp),
-                    color = MaterialTheme.colorScheme.surface,
-                    border = BorderStroke(1.dp, Color(0xFFEFF3F0)),
-                    shadowElevation = 0.5.dp,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(
-                        modifier = Modifier.padding(14.dp),
+                SectionCard(
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                Column(
                         verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         Text(
@@ -1359,7 +1264,7 @@ fun SettingsScreen(
                         Surface(
                             shape = RoundedCornerShape(12.dp),
                             color = MaterialTheme.colorScheme.surfaceVariant,
-                            border = BorderStroke(1.dp, Color(0xFFEFF3F0)),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Column(
@@ -1399,7 +1304,7 @@ fun SettingsScreen(
                                                 text = "🟡 Perlu Otorisasi Ulang",
                                                 style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
                                                 fontWeight = FontWeight.Bold,
-                                                color = MaterialTheme.colorScheme.tertiary
+                                                color = AppColors.OrangeWarning
                                             )
                                         }
                                         else -> {
@@ -1510,7 +1415,7 @@ fun SettingsScreen(
                             Surface(
                                 shape = RoundedCornerShape(12.dp),
                                 color = MaterialTheme.colorScheme.surfaceVariant,
-                                border = BorderStroke(1.dp, Color(0xFFEFF3F0)),
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 Column(
@@ -1616,32 +1521,20 @@ fun SettingsScreen(
                             is BackupOpState.Success -> {
                                 Surface(
                                     shape = RoundedCornerShape(10.dp),
-                                    color = Color(0xFFE8F5E9),
-                                    border = BorderStroke(1.dp, Color(0xFFC8E6C9)),
+                                    color = AppColors.SuccessContainer,
+                                    border = BorderStroke(1.dp, AppColors.Success),
                                     modifier = Modifier.fillMaxWidth()
                                 ) {
                                     Text(
                                         text = state.message,
                                         style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.5.sp),
-                                        color = AppColors.GreenDark,
+                                        color = AppColors.OnSuccessContainer,
                                         modifier = Modifier.padding(10.dp)
                                     )
                                 }
                             }
                             is BackupOpState.Error -> {
-                                Surface(
-                                    shape = RoundedCornerShape(10.dp),
-                                    color = Color(0xFFFFECEC),
-                                    border = BorderStroke(1.dp, Color(0xFFFFCDD2)),
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    Text(
-                                        text = state.message,
-                                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.5.sp),
-                                        color = AppColors.RedExpense,
-                                        modifier = Modifier.padding(10.dp)
-                                    )
-                                }
+                                AppErrorBanner(message = state.message)
                             }
                             else -> {}
                         }
@@ -1668,32 +1561,20 @@ fun SettingsScreen(
                             is RestoreOpState.Success -> {
                                 Surface(
                                     shape = RoundedCornerShape(10.dp),
-                                    color = Color(0xFFE8F5E9),
-                                    border = BorderStroke(1.dp, Color(0xFFC8E6C9)),
+                                    color = AppColors.SuccessContainer,
+                                    border = BorderStroke(1.dp, AppColors.Success),
                                     modifier = Modifier.fillMaxWidth()
                                 ) {
                                     Text(
                                         text = state.message,
                                         style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.5.sp),
-                                        color = AppColors.GreenDark,
+                                        color = AppColors.OnSuccessContainer,
                                         modifier = Modifier.padding(10.dp)
                                     )
                                 }
                             }
                             is RestoreOpState.Error -> {
-                                Surface(
-                                    shape = RoundedCornerShape(10.dp),
-                                    color = Color(0xFFFFECEC),
-                                    border = BorderStroke(1.dp, Color(0xFFFFCDD2)),
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    Text(
-                                        text = state.message,
-                                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.5.sp),
-                                        color = AppColors.RedExpense,
-                                        modifier = Modifier.padding(10.dp)
-                                    )
-                                }
+                                AppErrorBanner(message = state.message)
                             }
                             else -> {}
                         }
@@ -1740,19 +1621,14 @@ fun SettingsScreen(
             // 10. LISENSI APLIKASI
             // ==========================================
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(
-                    text = "LISENSI APLIKASI",
-                    style = MaterialTheme.typography.labelSmall.copy(
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 11.sp,
-                        color = AppColors.GreenPrimary,
-                        letterSpacing = 0.5.sp
+                SectionHeader(
+                        title = "LISENSI APLIKASI",
+                        modifier = Modifier.padding(top = AppSpacing.xs)
                     )
-                )
                 Surface(
                     shape = RoundedCornerShape(14.dp),
-                    color = if (licenseState.grantsAccess) Color(0xFFE8F5E9) else Color(0xFFFFF7E6),
-                    border = BorderStroke(1.dp, if (licenseState.grantsAccess) Color(0xFFC8E6C9) else Color(0xFFFFE0B2)),
+                    color = if (licenseState.grantsAccess) AppColors.SuccessContainer else AppColors.WarningContainer,
+                    border = BorderStroke(1.dp, if (licenseState.grantsAccess) AppColors.Success else AppColors.OrangeWarning),
                     shadowElevation = 0.5.dp,
                     modifier = Modifier.fillMaxWidth()
                 ) {
@@ -1764,7 +1640,7 @@ fun SettingsScreen(
                             text = licenseTier.label,
                             fontWeight = FontWeight.Bold,
                             fontSize = 13.5.sp,
-                            color = if (licenseState.grantsAccess) AppColors.GreenDark else Color(0xFFD46B08)
+                            color = if (licenseState.grantsAccess) AppColors.OnSuccessContainer else AppColors.OnWarningContainer
                         )
                         Text(
                             text = "Status Lisensi: " + when (licenseState.phase) {
@@ -1835,19 +1711,18 @@ fun SettingsScreen(
             // 11. TAMPILAN & TEMA (THEME)
             // ==========================================
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(
-                    text = "TAMPILAN & TEMA",
-                    style = MaterialTheme.typography.labelSmall.copy(
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 11.sp,
-                        color = MaterialTheme.colorScheme.primary,
-                        letterSpacing = 0.5.sp
-                    )
+                // Gate 1.4: the last hand-inlined header. It used colorScheme.primary directly while
+                // the other 13 used AppColors.GreenPrimary - the same colour reached by two different
+                // paths, which is why this card also carried a different border treatment and read as
+                // a seam in the middle of one scroll list.
+                SectionHeader(
+                    title = "TAMPILAN & TEMA",
+                    modifier = Modifier.padding(top = AppSpacing.xs)
                 )
                 Surface(
                     shape = RoundedCornerShape(14.dp),
                     color = MaterialTheme.colorScheme.surface,
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)),
+                    border = BorderStroke(1.dp, AppColors.CardBorderStrong),
                     shadowElevation = 0.5.dp,
                     modifier = Modifier.fillMaxWidth()
                 ) {
@@ -1919,24 +1794,14 @@ fun SettingsScreen(
             // 12. TENTANG APLIKASI
             // ==========================================
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(
-                    text = "TENTANG APLIKASI",
-                    style = MaterialTheme.typography.labelSmall.copy(
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 11.sp,
-                        color = AppColors.GreenPrimary,
-                        letterSpacing = 0.5.sp
+                SectionHeader(
+                        title = "TENTANG APLIKASI",
+                        modifier = Modifier.padding(top = AppSpacing.xs)
                     )
-                )
-                Surface(
-                    shape = RoundedCornerShape(14.dp),
-                    color = MaterialTheme.colorScheme.surface,
-                    border = BorderStroke(1.dp, Color(0xFFEFF3F0)),
-                    shadowElevation = 0.5.dp,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(
-                        modifier = Modifier.padding(14.dp),
+                SectionCard(
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                Column(
                         verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         Text(
@@ -2468,7 +2333,7 @@ private fun ChangeBusinessProfileDialog(
                                 label = { Text("Semua (19)", fontSize = 11.sp) },
                                 colors = FilterChipDefaults.filterChipColors(
                                     selectedContainerColor = AppColors.GreenPrimary,
-                                    selectedLabelColor = Color.White
+                                    selectedLabelColor = MaterialTheme.colorScheme.onPrimary
                                 )
                             )
                             BusinessCategory.entries.forEach { cat ->
@@ -2478,7 +2343,7 @@ private fun ChangeBusinessProfileDialog(
                                     label = { Text(cat.displayName, fontSize = 11.sp) },
                                     colors = FilterChipDefaults.filterChipColors(
                                         selectedContainerColor = AppColors.GreenPrimary,
-                                        selectedLabelColor = Color.White
+                                        selectedLabelColor = MaterialTheme.colorScheme.onPrimary
                                     )
                                 )
                             }
@@ -2501,10 +2366,10 @@ private fun ChangeBusinessProfileDialog(
                             val isSelected = selectedType == type
                             Surface(
                                 shape = RoundedCornerShape(10.dp),
-                                color = if (isSelected) Color(0xFFF0FDF4) else Color(0xFFF8FAF8),
+                                color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
                                 border = BorderStroke(
                                     1.dp,
-                                    if (isSelected) AppColors.GreenPrimary else Color(0xFFE2E8F0)
+                                    if (isSelected) AppColors.GreenPrimary else MaterialTheme.colorScheme.outlineVariant
                                 ),
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -2527,9 +2392,9 @@ private fun ChangeBusinessProfileDialog(
                                             selectedActivities = preset.defaultActivities
                                         },
                                         colors = RadioButtonDefaults.colors(
-                                            selectedColor = AppColors.GreenPrimary
-                                        ),
-                                        modifier = Modifier.size(24.dp)
+                                            selectedColor = AppColors.GreenPrimary,
+                                            unselectedColor = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
                                     )
                                     Spacer(Modifier.width(8.dp))
                                     Column(modifier = Modifier.weight(1f)) {
@@ -2575,10 +2440,10 @@ private fun ChangeBusinessProfileDialog(
                             val isChecked = selectedActivities.contains(activity)
                             Surface(
                                 shape = RoundedCornerShape(8.dp),
-                                color = if (isChecked) Color(0xFFF9FCF9) else Color.White,
+                                color = if (isChecked) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
                                 border = BorderStroke(
                                     0.5.dp,
-                                    if (isChecked) AppColors.GreenPrimary.copy(alpha = 0.5f) else Color(0xFFE5E7EB)
+                                    if (isChecked) AppColors.GreenPrimary else AppColors.CardBorderStrong
                                 ),
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -2604,9 +2469,9 @@ private fun ChangeBusinessProfileDialog(
                                             }
                                         },
                                         colors = CheckboxDefaults.colors(
-                                            checkedColor = AppColors.GreenPrimary
-                                        ),
-                                        modifier = Modifier.size(20.dp)
+                                            checkedColor = AppColors.GreenPrimary,
+                                            uncheckedColor = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
                                     )
                                     Spacer(Modifier.width(8.dp))
                                     Column(modifier = Modifier.weight(1f)) {
@@ -2674,8 +2539,22 @@ private fun SettingSwitchRow(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit
 ) {
+    // Gate 1.4, two fixes on the one row implementation this file shares across all 17 switches:
+    //
+    // 1. TOUCH TARGET. The Row had no minimum height and the label Text was not clickable, so the
+    //    48dp Switch was the only target and tapping the words did nothing - even though the row is
+    //    visually one control. The row is now >= AppTouchTarget tall and toggles on tap, which is
+    //    the pattern BusinessTypeDialog already uses for its acknowledgement row.
+    //
+    // 2. COLOUR COMPLETENESS. Only checkedThumbColor/checkedTrackColor were overridden, so the
+    //    UNCHECKED thumb and track fell back to baseline Material3 - a neutral that belongs to
+    //    neither Buku Warung palette - because Theme.kt does not set surfaceContainerHighest. All
+    //    four roles are now specified.
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = AppTouchTarget)
+            .clickable { onCheckedChange(!checked) },
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
@@ -2688,8 +2567,12 @@ private fun SettingSwitchRow(
             checked = checked,
             onCheckedChange = onCheckedChange,
             colors = SwitchDefaults.colors(
-                checkedThumbColor = AppColors.GreenPrimary,
-                checkedTrackColor = AppColors.GreenLight
+                checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                checkedTrackColor = AppColors.GreenPrimary,
+                checkedBorderColor = AppColors.GreenPrimary,
+                uncheckedThumbColor = MaterialTheme.colorScheme.outline,
+                uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant,
+                uncheckedBorderColor = AppColors.CardBorderStrong
             )
         )
     }
