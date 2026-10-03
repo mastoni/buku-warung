@@ -88,7 +88,9 @@ data class UserSettings(
     val debtReminderEnabled: Boolean = false,
 
     // 7. Tampilan
-    val themeMode: String = "SYSTEM", // "SYSTEM", "LIGHT"
+    // Default Light: a fresh install must never inherit the system dark theme. "SYSTEM" stays
+    // available, but only when the user explicitly picks it - absence of the key means Light.
+    val themeMode: String = "LIGHT", // "LIGHT", "DARK", "SYSTEM"
     val productViewMode: String = "GRID", // "GRID", "LIST"
 
     // 8. Keamanan & PIN (NO PLAINTEXT PIN)
@@ -303,7 +305,7 @@ class UserPreferencesRepository(
             lowStockNotificationEnabled = prefs[Keys.LOW_STOCK_NOTIFICATION_ENABLED] ?: true,
             debtReminderEnabled = prefs[Keys.DEBT_REMINDER_ENABLED] ?: false,
 
-            themeMode = prefs[Keys.THEME_MODE] ?: "SYSTEM",
+            themeMode = prefs[Keys.THEME_MODE] ?: "LIGHT",
             productViewMode = prefs[Keys.PRODUCT_VIEW_MODE] ?: "GRID",
 
             pinEnabled = prefs[Keys.PIN_ENABLED] ?: (!legacyPin.isNullOrEmpty()),
