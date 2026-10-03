@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -740,7 +741,13 @@ fun CustomersScreen(
         ) {
         Column(
             modifier = Modifier
-                .fillMaxSize()
+                // Gate 1.7: was fillMaxSize() then widthIn(max = contentMaxWidth). fillMaxSize
+                // fixes the incoming width to the parent's, so the downstream widthIn could not
+                // narrow it and the tablet cap never applied - the list ran full-bleed on every
+                // width. fillMaxHeight keeps the full-height behaviour while leaving width free for
+                // the cap to do its job; the enclosing Box already centres with TopCenter.
+                // On a phone (parent < 640dp) this changes nothing at all.
+                .fillMaxHeight()
                 .widthIn(max = windowSize.contentMaxWidth)
         ) {
             // Search & Action Header

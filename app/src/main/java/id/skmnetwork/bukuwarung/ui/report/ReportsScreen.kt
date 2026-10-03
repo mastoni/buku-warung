@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -322,7 +323,11 @@ fun ReportsScreen(
         ) {
             LazyColumn(
                 modifier = Modifier
-                    .fillMaxSize()
+                    // Gate 1.7: was fillMaxSize() then widthIn(max = contentMaxWidth).
+                    // fillMaxSize fixes the incoming width, so widthIn could not narrow it and the
+                    // report ran full-bleed on every tablet width. fillMaxHeight keeps the full-height
+                    // behaviour and lets the cap apply; the enclosing Box centres with TopCenter.
+                    .fillMaxHeight()
                     .widthIn(max = windowSize.contentMaxWidth)
                     .padding(horizontal = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(6.dp)

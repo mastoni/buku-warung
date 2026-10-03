@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -581,7 +582,9 @@ fun PurchaseScreen(
                 // ==========================================
                 Column(
                     modifier = Modifier
-                        .fillMaxSize()
+                        // Gate 1.7: was fillMaxSize() then widthIn(max = contentMaxWidth) - the fixed
+                        // width defeated the cap, so this column ran full-bleed on tablets.
+                        .fillMaxHeight()
                         .widthIn(max = windowSize.contentMaxWidth)
                 ) {
                     // Month / Period Header Card
@@ -848,9 +851,12 @@ fun PurchaseScreen(
                                         modifier = Modifier.weight(1f)
                                     )
                                     if (paymentMethod == "CASH" && selectedSupplierForCash != null) {
+                                        // Gate 1.7: was size(24.dp), so the control that clears the
+                                        // chosen supplier - a destructive action on a primary checkout
+                                        // field - had a 24dp target. The glyph stays 16dp.
                                         IconButton(
                                             onClick = { selectedSupplierForCash = null },
-                                            modifier = Modifier.size(24.dp)
+                                            modifier = Modifier.size(48.dp)
                                         ) {
                                             Icon(
                                                 imageVector = Icons.Default.Close,
@@ -923,7 +929,10 @@ fun PurchaseScreen(
                 if (poViewModel != null) {
                     Box(
                         modifier = Modifier
-                            .fillMaxSize()
+                            // Gate 1.7: fillMaxSize() fixed the incoming width, so the widthIn cap
+                            // could not narrow it. fillMaxHeight keeps the full-height behaviour and
+                            // lets the cap apply on tablets; this Box already centres with TopCenter.
+                            .fillMaxHeight()
                             .widthIn(max = windowSize.contentMaxWidth),
                         contentAlignment = Alignment.TopCenter
                     ) {
@@ -941,7 +950,8 @@ fun PurchaseScreen(
                 } else {
                     Box(
                         modifier = Modifier
-                            .fillMaxSize()
+                            // Gate 1.7: same dead width cap - see the poViewModel branch above.
+                            .fillMaxHeight()
                             .widthIn(max = windowSize.contentMaxWidth),
                         contentAlignment = Alignment.TopCenter
                     ) {
@@ -959,7 +969,8 @@ fun PurchaseScreen(
                 if (purchases.isEmpty()) {
                     Box(
                         modifier = Modifier
-                            .fillMaxSize()
+                            // Gate 1.7: same dead width cap - see the poViewModel branch above.
+                            .fillMaxHeight()
                             .widthIn(max = windowSize.contentMaxWidth),
                         contentAlignment = Alignment.TopCenter
                     ) {
@@ -978,7 +989,8 @@ fun PurchaseScreen(
                             bottom = 88.dp
                         ),
                         modifier = Modifier
-                            .fillMaxSize()
+                            // Gate 1.7: same dead width cap - see the poViewModel branch above.
+                            .fillMaxHeight()
                             .widthIn(max = windowSize.contentMaxWidth)
                     ) {
                         items(purchases, key = { it.id }) { purchase ->
@@ -1324,7 +1336,9 @@ private fun PurchaseItemCard(
                     ) {
                         IconButton(
                             onClick = onDecrease,
-                            modifier = Modifier.size(26.dp)
+                            // Gate 1.7: was size(26.dp) - the primary quantity control for a purchase
+                            // line. 48dp target, glyph unchanged.
+                            modifier = Modifier.size(48.dp)
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Remove,
@@ -1344,7 +1358,8 @@ private fun PurchaseItemCard(
 
                         IconButton(
                             onClick = onIncrease,
-                            modifier = Modifier.size(26.dp)
+                            // Gate 1.7: was size(26.dp) - see the decrease button above.
+                            modifier = Modifier.size(48.dp)
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Add,

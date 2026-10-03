@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -689,7 +690,9 @@ fun SuppliersScreen(
         ) {
         Column(
             modifier = Modifier
-                .fillMaxSize()
+                // Gate 1.7: was fillMaxSize() then widthIn(max = contentMaxWidth) - the fixed width
+                // from fillMaxSize defeated the cap, so the list ran full-bleed on tablets.
+                .fillMaxHeight()
                 .widthIn(max = windowSize.contentMaxWidth)
         ) {
             // Search & Action Header

@@ -331,7 +331,9 @@ fun PrinterSettingsDialog(
                             fontSize = 13.sp,
                             color = AppColors.TextPrimary
                         )
-                        IconButton(onClick = { refreshDevices() }, modifier = Modifier.size(28.dp)) {
+                        // Gate 1.7: was size(28.dp). The glyph stays 18dp and the "Refresh"
+                        // contentDescription is already correct.
+                        IconButton(onClick = { refreshDevices() }, modifier = Modifier.size(48.dp)) {
                             Icon(Icons.Default.Refresh, contentDescription = "Refresh", modifier = Modifier.size(18.dp))
                         }
                     }

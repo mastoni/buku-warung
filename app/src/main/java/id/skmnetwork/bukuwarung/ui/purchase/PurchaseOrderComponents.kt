@@ -1004,7 +1004,13 @@ fun CreateEditPurchaseOrderDialog(
             modifier = Modifier
                 .fillMaxWidth(0.95f)
                 .widthIn(max = AppResponsive.DialogMaxWidth)
-                .heightIn(max = 720.dp)
+                // Gate 1.7: was a hard heightIn(max = 720.dp). That is taller than the whole viewport
+                // on a 640dp phone - the AVD this project actually ships - so the dialog frame
+                // overflowed the screen and the header and the "Simpan Draft" row below the
+                // weight(1f) list could be pushed out of reach. AppResponsive.DialogMaxHeight is the
+                // app's own declared dialog bound and was previously used by no dialog at all.
+                // The list absorbs the difference by scrolling; its height is unchanged.
+                .heightIn(max = AppResponsive.DialogMaxHeight)
         ) {
             Column(
                 modifier = Modifier
@@ -1023,8 +1029,10 @@ fun CreateEditPurchaseOrderDialog(
                         fontSize = 17.sp,
                         color = AppColors.TextPrimary
                     )
-                    IconButton(onClick = onDismiss, modifier = Modifier.size(28.dp)) {
-                        Icon(Icons.Default.Close, contentDescription = "Tutup", tint = AppColors.TextSecondary)
+                    // Gate 1.7: was size(28.dp) for the dialog's only close control. The "Tutup"
+                    // contentDescription was already correct.
+                    IconButton(onClick = onDismiss, modifier = Modifier.size(48.dp)) {
+                        Icon(Icons.Default.Close, contentDescription = "Tutup", tint = AppColors.TextSecondary, modifier = Modifier.size(24.dp))
                     }
                 }
 
@@ -1178,7 +1186,10 @@ fun CreateEditPurchaseOrderDialog(
                                         )
                                         IconButton(
                                             onClick = { draftItems.removeAt(index) },
-                                            modifier = Modifier.size(24.dp)
+                                            // Gate 1.7: was size(24.dp) on a destructive control that
+                                            // removes a purchase-order line with no undo. 48dp target,
+                                            // glyph stays 18dp. The "Hapus" label is unchanged.
+                                            modifier = Modifier.size(48.dp)
                                         ) {
                                             Icon(Icons.Default.Delete, contentDescription = "Hapus", tint = Color(0xFFC62828), modifier = Modifier.size(18.dp))
                                         }

@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -601,7 +602,9 @@ onSuccess = {
         ) {
         Column(
             modifier = Modifier
-                .fillMaxSize()
+                // Gate 1.7: was fillMaxSize() then widthIn(max = contentMaxWidth) - the fixed width
+                // defeated the cap, so the form ran full-bleed on tablets.
+                .fillMaxHeight()
                 .widthIn(max = windowSize.contentMaxWidth)
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = AppSpacing.lg, vertical = AppSpacing.sm),

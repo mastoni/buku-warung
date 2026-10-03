@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -207,7 +208,9 @@ fun ProductsScreen(
         ) {
         Column(
             modifier = Modifier
-                .fillMaxSize()
+                // Gate 1.7: was fillMaxSize() then widthIn(max = contentMaxWidth) - the fixed width
+                // defeated the cap, so the product list ran full-bleed on tablets.
+                .fillMaxHeight()
                 .widthIn(max = windowSize.contentMaxWidth)
         ) {
             // ==========================================
@@ -494,7 +497,9 @@ private fun ProductItemCard(
             Box {
                 IconButton(
                     onClick = { menuExpanded = true },
-                    modifier = Modifier.size(36.dp)
+                    // Gate 1.7: was size(36.dp), which shrank Material3's own 48dp minimum. The
+                    // glyph stays 24dp; only the target grows.
+                    modifier = Modifier.size(48.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.MoreVert,

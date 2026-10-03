@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -252,7 +253,9 @@ fun CashScreen(
         ) {
         Column(
             modifier = Modifier
-                .fillMaxSize()
+                // Gate 1.7: was fillMaxSize() then widthIn(max = contentMaxWidth) - the fixed width
+                // defeated the cap, so the cash ledger ran full-bleed on tablets.
+                .fillMaxHeight()
                 .widthIn(max = windowSize.contentMaxWidth)
         ) {
             // ==========================================

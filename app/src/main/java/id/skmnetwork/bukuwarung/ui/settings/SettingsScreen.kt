@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -433,7 +434,9 @@ fun SettingsScreen(
         ) {
             Column(
                 modifier = Modifier
-                    .fillMaxSize()
+                    // Gate 1.7: was fillMaxSize() then widthIn(max = contentMaxWidth) - the fixed
+                    // width defeated the cap, so settings ran full-bleed on tablets.
+                    .fillMaxHeight()
                     .widthIn(max = windowSize.contentMaxWidth)
                     .verticalScroll(rememberScrollState())
                     .padding(horizontal = 16.dp, vertical = 10.dp),
