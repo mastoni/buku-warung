@@ -518,13 +518,13 @@ fun LicenseGateScreen(
                                 )
 
                                 SecondaryButton(
-                                    text = "Beli Lisensi Resmi (Rp 50.000)",
+                                    text = "Beli Lisensi Resmi",
                                     onClick = {
                                         licenseManager.trackMarketingEvent(
                                             eventType = "LICENSE_PURCHASE_CLICKED",
                                             utmSource = "app_license_gate",
                                             utmMedium = "in_app",
-                                            utmCampaign = "buku_warung_v020"
+                                            utmCampaign = "buku_warung_v021"
                                         )
                                         try {
                                             val intent = Intent(
@@ -543,7 +543,7 @@ fun LicenseGateScreen(
                                             eventType = "LICENSE_WHATSAPP_CLICKED",
                                             utmSource = "app_license_gate",
                                             utmMedium = "in_app",
-                                            utmCampaign = "buku_warung_v020"
+                                            utmCampaign = "buku_warung_v021"
                                         )
                                         try {
                                             val waUrl = "https://wa.me/6285157056604?text=" + Uri.encode("Halo Admin SKMNetwork, saya sudah pasang aplikasi Buku Warung dan ingin beli kode lisensi")
