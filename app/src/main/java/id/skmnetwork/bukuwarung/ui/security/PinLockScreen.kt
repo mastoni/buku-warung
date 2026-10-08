@@ -16,7 +16,9 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Backspace
 import androidx.compose.material.icons.filled.Lock
@@ -35,13 +37,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import id.skmnetwork.bukuwarung.data.preferences.UserPreferencesRepository
 import id.skmnetwork.bukuwarung.ui.theme.AppColors
 import id.skmnetwork.bukuwarung.ui.theme.AppSpacing
+import id.skmnetwork.bukuwarung.ui.theme.BwTheme
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -104,147 +107,178 @@ fun PinLockScreen(
             .fillMaxSize()
             .statusBarsPadding()
             .navigationBarsPadding(),
-        color = AppColors.BackgroundLight
+        color = MaterialTheme.colorScheme.background
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(AppSpacing.xl),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.SpaceBetween
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.TopCenter
         ) {
             Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .widthIn(max = 380.dp)
+                    .padding(horizontal = AppSpacing.xl, vertical = AppSpacing.lg),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.padding(top = AppSpacing.xl)
+                verticalArrangement = Arrangement.SpaceBetween
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(72.dp)
-                        .clip(CircleShape)
-                        .background(AppColors.GreenLight),
-                    contentAlignment = Alignment.Center
+                // Top section: Lock icon, Title, Subtitle, and PIN indicators
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.padding(top = AppSpacing.md)
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Lock,
-                        contentDescription = "Keamanan PIN",
-                        tint = AppColors.GreenPrimary,
-                        modifier = Modifier.size(36.dp)
+                    val isDark = BwTheme.isDark
+
+                    // Lock Icon Badge
+                    Box(
+                        modifier = Modifier
+                            .size(68.dp)
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(
+                                if (isDark) MaterialTheme.colorScheme.surfaceVariant
+                                else AppColors.GreenLight
+                            )
+                            .border(
+                                width = 1.dp,
+                                color = MaterialTheme.colorScheme.outlineVariant,
+                                shape = RoundedCornerShape(20.dp)
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Lock,
+                            contentDescription = "Keamanan PIN",
+                            tint = if (isDark) AppColors.GreenPrimary else AppColors.GreenDark,
+                            modifier = Modifier.size(32.dp)
+                        )
+                    }
+
+                    Spacer(Modifier.height(AppSpacing.md))
+
+                    Text(
+                        text = "Buku Warung Terkunci",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = AppColors.TextPrimary
                     )
-                }
 
-                Spacer(Modifier.height(AppSpacing.lg))
+                    Spacer(Modifier.height(AppSpacing.xs))
 
-                Text(
-                    text = "Buku Warung Terkunci",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold
-                )
+                    Text(
+                        text = "Masukkan 4 angka PIN pemilik untuk membuka",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = AppColors.TextSecondary,
+                        textAlign = TextAlign.Center
+                    )
 
-                Spacer(Modifier.height(AppSpacing.xs))
+                    Spacer(Modifier.height(28.dp))
 
-                Text(
-                    text = "Masukkan 4 angka PIN pemilik untuk membuka",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = AppColors.TextSecondary
-                )
+                    // PIN 4-Dots Display (High Contrast)
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(18.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        repeat(4) { index ->
+                            val isFilled = index < enteredPin.length
+                            Box(
+                                modifier = Modifier
+                                    .size(16.dp)
+                                    .clip(CircleShape)
+                                    .background(
+                                        if (isFilled) AppColors.GreenPrimary
+                                        else MaterialTheme.colorScheme.surfaceVariant
+                                    )
+                                    .border(
+                                        width = 1.5.dp,
+                                        color = if (isFilled) AppColors.GreenDark
+                                        else MaterialTheme.colorScheme.outline,
+                                        shape = CircleShape
+                                    )
+                            )
+                        }
+                    }
 
-                Spacer(Modifier.height(AppSpacing.xl))
+                    Spacer(Modifier.height(AppSpacing.sm))
 
-                // PIN 4-Dots Display
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(20.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    repeat(4) { index ->
-                        val isFilled = index < enteredPin.length
-                        Box(
-                            modifier = Modifier
-                                .size(18.dp)
-                                .clip(CircleShape)
-                                .background(
-                                    if (isFilled) AppColors.GreenPrimary else Color.Transparent
-                                )
-                                .border(
-                                    width = 2.dp,
-                                    color = if (isFilled) AppColors.GreenPrimary else AppColors.CardBorder,
-                                    shape = CircleShape
-                                )
+                    AnimatedVisibility(visible = errorMessage != null) {
+                        Text(
+                            text = errorMessage ?: "",
+                            color = AppColors.RedExpense,
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.SemiBold,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+
+                    AnimatedVisibility(visible = lockCooldownSeconds > 0) {
+                        Text(
+                            text = "Terkunci sementara: $lockCooldownSeconds dtk",
+                            color = AppColors.RedExpense,
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.SemiBold
                         )
                     }
                 }
 
-                Spacer(Modifier.height(AppSpacing.md))
-
-                AnimatedVisibility(visible = errorMessage != null) {
-                    Text(
-                        text = errorMessage ?: "",
-                        color = AppColors.RedExpense,
-                        style = MaterialTheme.typography.bodySmall,
-                        fontWeight = FontWeight.Medium
+                // Keypad 1-9, Backspace, 0 (High Contrast Tactile Keys >= 48dp)
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .widthIn(max = 320.dp)
+                        .padding(bottom = AppSpacing.md),
+                    verticalArrangement = Arrangement.spacedBy(14.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    val keypadRows = listOf(
+                        listOf("1", "2", "3"),
+                        listOf("4", "5", "6"),
+                        listOf("7", "8", "9"),
+                        listOf("", "0", "DEL")
                     )
-                }
 
-                AnimatedVisibility(visible = lockCooldownSeconds > 0) {
-                    Text(
-                        text = "Terkunci sementara: $lockCooldownSeconds dtk",
-                        color = AppColors.RedExpense,
-                        style = MaterialTheme.typography.labelSmall
-                    )
-                }
-            }
-
-            // Keypad 1-9, Backspace, 0
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = AppSpacing.lg),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                val keypadRows = listOf(
-                    listOf("1", "2", "3"),
-                    listOf("4", "5", "6"),
-                    listOf("7", "8", "9"),
-                    listOf("", "0", "DEL")
-                )
-
-                keypadRows.forEach { row ->
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceEvenly
-                    ) {
-                        row.forEach { key ->
-                            if (key.isEmpty()) {
-                                Spacer(modifier = Modifier.size(72.dp))
-                            } else if (key == "DEL") {
-                                Box(
-                                    modifier = Modifier
-                                        .size(72.dp)
-                                        .clip(CircleShape)
-                                        .clickable(enabled = lockCooldownSeconds == 0) { handleBackspace() },
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.AutoMirrored.Filled.Backspace,
-                                        contentDescription = "Hapus",
-                                        tint = AppColors.TextSecondary
-                                    )
-                                }
-                            } else {
-                                Box(
-                                    modifier = Modifier
-                                        .size(72.dp)
-                                        .clip(CircleShape)
-                                        .background(Color.White)
-                                        .border(1.dp, AppColors.CardBorder, CircleShape)
-                                        .clickable(enabled = lockCooldownSeconds == 0) { handleDigitPress(key) },
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        text = key,
-                                        fontSize = 24.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = AppColors.TextPrimary
-                                    )
+                    keypadRows.forEach { row ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceEvenly
+                        ) {
+                            row.forEach { key ->
+                                if (key.isEmpty()) {
+                                    Spacer(modifier = Modifier.size(68.dp))
+                                } else if (key == "DEL") {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(68.dp)
+                                            .clip(CircleShape)
+                                            .clickable(enabled = lockCooldownSeconds == 0) { handleBackspace() },
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.AutoMirrored.Filled.Backspace,
+                                            contentDescription = "Hapus",
+                                            tint = AppColors.TextPrimary,
+                                            modifier = Modifier.size(24.dp)
+                                        )
+                                    }
+                                } else {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(68.dp)
+                                            .clip(CircleShape)
+                                            .background(MaterialTheme.colorScheme.surface)
+                                            .border(
+                                                width = 1.dp,
+                                                color = MaterialTheme.colorScheme.outlineVariant,
+                                                shape = CircleShape
+                                            )
+                                            .clickable(enabled = lockCooldownSeconds == 0) { handleDigitPress(key) },
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = key,
+                                            fontSize = 24.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = AppColors.TextPrimary
+                                        )
+                                    }
                                 }
                             }
                         }
