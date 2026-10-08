@@ -358,7 +358,7 @@ private fun ProductsHeader(
                         Text(
                             text = "Katalog & stok",
                             style = MaterialTheme.typography.bodySmall.copy(
-                                fontSize = 11.5.sp,
+                                fontSize = 12.sp,
                                 color = AppColors.TextSecondary
                             ),
                             maxLines = 1,
@@ -373,7 +373,7 @@ private fun ProductsHeader(
                                     text = "$productCount $productLabel",
                                     color = AppColors.GreenPrimary,
                                     fontWeight = FontWeight.SemiBold,
-                                    fontSize = 10.5.sp,
+                                    fontSize = 11.sp,
                                     modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
@@ -459,7 +459,7 @@ private fun ProductItemCard(
                     text = product.name,
                     style = MaterialTheme.typography.bodyMedium.copy(
                         fontWeight = FontWeight.SemiBold,
-                        fontSize = 14.5.sp,
+                        fontSize = 15.sp,
                         color = AppColors.TextPrimary
                     ),
                     maxLines = 2,
@@ -472,7 +472,7 @@ private fun ProductItemCard(
                     text = formatRupiah(product.sellingPrice),
                     style = MaterialTheme.typography.bodyMedium.copy(
                         fontWeight = FontWeight.Bold,
-                        fontSize = 14.sp,
+                        fontSize = 15.sp,
                         color = AppColors.GreenPrimary
                     )
                 )

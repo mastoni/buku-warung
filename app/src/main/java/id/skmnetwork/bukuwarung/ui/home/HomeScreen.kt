@@ -202,7 +202,7 @@ fun HomeScreen(
                             Text(
                                 text = effectiveShopName,
                                 fontWeight = FontWeight.Bold,
-                                fontSize = 15.5.sp,
+                                fontSize = 16.sp,
                                 color = AppColors.TextPrimary,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
@@ -314,14 +314,14 @@ fun HomeScreen(
                 ) {
                     Text(
                         text = greeting,
-                        fontSize = 13.5.sp,
+                        fontSize = 13.sp,
                         color = AppColors.TextSecondary,
                         fontWeight = FontWeight.Medium
                     )
                     Spacer(Modifier.height(2.dp))
                     Text(
                         text = "$effectiveShopName 👋",
-                        fontSize = 22.sp,
+                        fontSize = 20.sp,
                         fontWeight = FontWeight.ExtraBold,
                         color = AppColors.GreenDark
                     )
@@ -344,7 +344,7 @@ fun HomeScreen(
                             Spacer(Modifier.width(5.dp))
                             Text(
                                 text = currentDateStr,
-                                fontSize = 11.5.sp,
+                                fontSize = 11.sp,
                                 fontWeight = FontWeight.Medium,
                                 color = AppColors.TextSecondary
                             )
@@ -391,7 +391,7 @@ fun HomeScreen(
                     ) {
                         Text(
                             text = homeMenuFeatureCountLabel(terminology),
-                            fontSize = 11.5.sp,
+                            fontSize = 11.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = AppColors.TextSecondary,
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
@@ -444,18 +444,18 @@ fun HomeScreen(
                                 Text(
                                     text = "${terminology.productLabel} Hampir Habis",
                                     fontWeight = FontWeight.Bold,
-                                    fontSize = 13.5.sp,
+                                    fontSize = 14.sp,
                                     color = Color(0xFFD46B08)
                                 )
                                 Text(
                                     text = "$lowStockCount ${terminology.productLabel.lowercase()} mencapai batas minimum stok",
-                                    fontSize = 11.5.sp,
+                                    fontSize = 12.sp,
                                     color = AppColors.TextSecondary
                                 )
                             }
                             Text(
                                 text = "Lihat >",
-                                fontSize = 12.5.sp,
+                                fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = Color(0xFFD46B08)
                             )
@@ -503,7 +503,7 @@ fun HomeScreen(
                             )
                             Text(
                                 text = "Data Anda, Aset Anda, Masa Depan Anda 💚",
-                                fontSize = 11.5.sp,
+                                fontSize = 12.sp,
                                 color = AppColors.GreenPrimary
                             )
                         }
@@ -622,7 +622,7 @@ fun SummaryCard(
             Spacer(Modifier.height(2.dp))
             Text(
                 text = title,
-                fontSize = 11.sp,
+                fontSize = 12.sp,
                 fontWeight = FontWeight.Medium,
                 color = AppColors.TextSecondary,
                 maxLines = 1,
@@ -630,7 +630,7 @@ fun SummaryCard(
             )
             Text(
                 text = value,
-                fontSize = 15.sp,
+                fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
                 color = AppColors.TextPrimary,
                 maxLines = 1,
@@ -782,11 +782,11 @@ fun MenuGrid(
                             Spacer(Modifier.height(4.dp))
                             Text(
                                 text = item.label,
-                                fontSize = 10.sp,
+                                fontSize = 11.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 color = AppColors.TextPrimary,
                                 textAlign = TextAlign.Center,
-                                lineHeight = 11.sp,
+                                lineHeight = 13.sp,
                                 maxLines = 2
                             )
                         }
