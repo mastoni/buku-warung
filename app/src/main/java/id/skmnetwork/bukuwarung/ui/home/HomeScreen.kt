@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -39,6 +40,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -221,33 +223,31 @@ fun HomeScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.padding(end = 6.dp)
                     ) {
-                        // 1. Notification Bell
-                        Box(
-                            modifier = Modifier
-                                .size(34.dp)
-                                .clip(CircleShape)
-                                .clickable { onNavigate(AppScreen.NOTIFICATIONS) },
-                            contentAlignment = Alignment.Center
+                        // 1. Notification Bell (Clean icon action >= 48dp touch target, transparent container)
+                        IconButton(
+                            onClick = { onNavigate(AppScreen.NOTIFICATIONS) }
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.Notifications,
-                                contentDescription = "Notifikasi",
-                                tint = AppColors.TextPrimary,
-                                modifier = Modifier.size(20.dp)
-                            )
-                            if (unreadNotificationCount > 0) {
-                                Box(
-                                    modifier = Modifier
-                                        .align(Alignment.TopEnd)
-                                        .padding(top = 3.dp, end = 3.dp)
-                                        .size(7.dp)
-                                        .clip(CircleShape)
-                                        .background(Color(0xFFE53935))
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.Default.Notifications,
+                                    contentDescription = "Notifikasi",
+                                    tint = AppColors.TextPrimary,
+                                    modifier = Modifier.size(22.dp)
                                 )
+                                if (unreadNotificationCount > 0) {
+                                    Box(
+                                        modifier = Modifier
+                                            .align(Alignment.TopEnd)
+                                            .offset(x = 2.dp, y = (-2).dp)
+                                            .size(8.dp)
+                                            .clip(CircleShape)
+                                            .background(Color(0xFFE53935))
+                                    )
+                                }
                             }
                         }
 
-                        Spacer(Modifier.width(6.dp))
+                        Spacer(Modifier.width(2.dp))
 
                         // 2. Avatar with Active status dot badge
                         Box(

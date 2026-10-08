@@ -62,17 +62,7 @@ class PosDesignContractTest {
         assertEquals(16.dp, PosMetrics.SearchPadding)
         assertEquals(24.dp, PosMetrics.SearchLeadingIconSize)
         assertEquals(24.dp, PosMetrics.SearchTrailingIconSize)
-        assertEquals("Cari produk atau paket...", readSearchPlaceholder())
-    }
-
-    @Test
-    fun s04_modeTabsMatchTheContract() {
-        assertEquals(48.dp, PosMetrics.ModeTabsHeight)
-        assertEquals(3.dp, PosMetrics.ModeTabIndicatorHeight)
-        assertEquals(1.dp, PosMetrics.ModeTabDividerHeight)
-        val source = readSource("ui/pos/PosScreen.kt")
-        assertTrue("The two contract mode tabs must exist", source.contains("Produk Satuan"))
-        assertTrue("The two contract mode tabs must exist", source.contains("Paket Hemat"))
+        assertEquals("Cari produk...", readSearchPlaceholder())
     }
 
     @Test
@@ -93,17 +83,13 @@ class PosDesignContractTest {
 
     @Test
     fun s05b_productAreaVerticalRhythmMatchesTheContract() {
-        // Section 6 states the product area as a stack, so each gap is its own value.
         assertEquals(54.dp, PosMetrics.SearchHeight)
         assertEquals(12.dp, PosMetrics.SearchToTabsGap)
-        assertEquals(48.dp, PosMetrics.ModeTabsHeight)
-        assertEquals(8.dp, PosMetrics.TabsToCategoryGap)
         assertEquals(42.dp, PosMetrics.CategoryChipHeight)
         assertEquals(16.dp, PosMetrics.CategoryToGridGap)
 
         val source = readSource("ui/pos/PosScreen.kt")
-        assertTrue("The search -> tabs gap must be applied", source.contains("PosMetrics.SearchToTabsGap"))
-        assertTrue("The tabs -> category gap must be applied", source.contains("PosMetrics.TabsToCategoryGap"))
+        assertTrue("The search -> category gap must be applied", source.contains("PosMetrics.SearchToTabsGap"))
         assertTrue("The category -> grid gap must be applied", source.contains("PosMetrics.CategoryToGridGap"))
     }
 

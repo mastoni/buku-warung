@@ -34,8 +34,8 @@ import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.material.icons.filled.StarBorder
-import androidx.compose.material.icons.filled.ReceiptLong
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -159,9 +159,7 @@ fun PosTopBar(
     title: String,
     onMenuClick: () -> Unit,
     onHistoryClick: () -> Unit,
-    onAddProductClick: () -> Unit,
     onSettingsClick: () -> Unit,
-    onRefreshClick: () -> Unit,
     showMenuAction: Boolean
 ) {
     Surface(
@@ -195,54 +193,32 @@ fun PosTopBar(
                         modifier = Modifier.size(PosMetrics.TopBarIconSize)
                     )
                 }
+                Spacer(Modifier.width(PosMetrics.TopBarTitleGap))
             }
-            Spacer(Modifier.width(PosMetrics.TopBarTitleGap))
             Text(
                 text = title,
                 fontSize = PosType.AppTitle,
                 fontWeight = FontWeight.SemiBold,
                 color = PosPalette.OnPrimary,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f, fill = false)
             )
             Spacer(Modifier.weight(1f))
-            PosTopBarAction(
-                icon = Icons.Default.ReceiptLong,
-                contentDescription = "Riwayat",
-                onClick = onHistoryClick
-            )
-            Spacer(Modifier.width(PosMetrics.TopBarActionGap))
-            PosTopBarAction(
-                icon = Icons.Default.StarBorder,
-                contentDescription = "Paket",
-                onClick = onAddProductClick
-            )
-            Spacer(Modifier.width(PosMetrics.TopBarActionGap))
-            PosTopBarAction(
-                icon = Icons.Default.Settings,
-                contentDescription = "Pengaturan",
-                onClick = onSettingsClick
-            )
-            Spacer(Modifier.width(PosMetrics.TopBarActionGap))
-            // 56 x 56 rounded refresh action, drawn as an inverse chip on the primary bar.
-            // Gate 1.3: the fill was Color.White. That is still right in light, but in dark the bar
-            // is the bright #22C55E and a white block on it glared while its green icon fell to
-            // 3.30:1. OnPrimary inverts with the bar instead: white in light (unchanged) and
-            // #052E16 in dark, which measures 6.54:1 against the #22C55E icon.
-            Surface(
-                onClick = onRefreshClick,
-                shape = PosMetrics.CtaShape,
-                color = PosPalette.OnPrimary,
-                modifier = Modifier.size(PosMetrics.TopBarRefreshButton)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        imageVector = Icons.Default.Refresh,
-                        contentDescription = "Muat ulang",
-                        tint = PosPalette.Primary,
-                        modifier = Modifier.size(PosMetrics.TopBarIconSize)
-                    )
-                }
+                PosTopBarAction(
+                    icon = Icons.AutoMirrored.Filled.ReceiptLong,
+                    contentDescription = "Riwayat",
+                    onClick = onHistoryClick
+                )
+                PosTopBarAction(
+                    icon = Icons.Default.Settings,
+                    contentDescription = "Pengaturan",
+                    onClick = onSettingsClick
+                )
             }
         }
     }
@@ -292,7 +268,7 @@ fun PosSearchBar(
             .height(PosMetrics.SearchHeight),
         placeholder = {
             Text(
-                text = "Cari produk atau paket...",
+                text = "Cari produk...",
                 fontSize = PosMetrics.SearchPlaceholderSize,
                 color = PosPalette.TextSecondary
             )

@@ -148,9 +148,6 @@ fun PosScreen(
 
     var selectedTab by remember { mutableStateOf(0) } // 0: Kasir, 1: Riwayat Penjualan
 
-    // Step 3 section 5 - product mode. 0: Produk Satuan, 1: Paket Hemat.
-    var productMode by remember { mutableStateOf(0) }
-
     var query by remember { mutableStateOf("") }
     var salesHistoryQuery by remember { mutableStateOf("") }
     // Step 9 - sale history discoverability. The period chips reuse the reports screen's
@@ -1036,22 +1033,10 @@ fun PosScreen(
         topBar = {
             PosTopBar(
                 title = "KASIR",
-                // The hamburger is the drawer's trigger. It is shown only where the drawer is the
-                // app navigation. On a phone the bottom navigation bar is permanently visible and is
-                // the app navigation, so the header shows page identity and POS actions only - no
-                // second navigation affordance competing with it.
                 showMenuAction = !windowSize.isCompact,
                 onMenuClick = onOpenNavigation,
                 onHistoryClick = { selectedTab = 1 },
-                onAddProductClick = onNavigateToAddProduct,
-                onSettingsClick = onNavigateToSettings,
-                onRefreshClick = {
-                    // The product list is a live Room flow, so it is always current. Refresh means
-                    // "start the register again": clear the search and the category filter.
-                    query = ""
-                    selectedCategoryId = null
-                    productMode = 0
-                }
+                onSettingsClick = onNavigateToSettings
             )
         },
         containerColor = PosPalette.ProductAreaBackground
@@ -1092,9 +1077,6 @@ fun PosScreen(
                         bottom = PosMetrics.ContentPaddingBottom
                     )
             ) {
-                // The product area is a measured stack - search 54 -> 12 -> tabs 48 -> 8 ->
-                // category 42 -> 16 -> grid - so the gaps are explicit rather than one uniform
-                // spacing applied between all four slots.
                 PosSearchBar(
                     query = query,
                     onQueryChange = { query = it },
@@ -1102,14 +1084,6 @@ fun PosScreen(
                 )
 
                 Spacer(Modifier.height(PosMetrics.SearchToTabsGap))
-
-                PosModeTabs(
-                    labels = listOf("Produk Satuan", "Paket Hemat"),
-                    selectedIndex = productMode,
-                    onSelect = { productMode = it }
-                )
-
-                Spacer(Modifier.height(PosMetrics.TabsToCategoryGap))
 
                 PosCategoryRow(
                     categories = dbCategories,
@@ -1119,18 +1093,7 @@ fun PosScreen(
 
                 Spacer(Modifier.height(PosMetrics.CategoryToGridGap))
 
-                if (productMode == 1) {
-                    // Section 5 requires the second mode tab. There is no bundle/paket data model in
-                    // this release, so it is reported honestly rather than faked. See the gate report.
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text(
-                            text = "Belum ada Paket Hemat",
-                            fontSize = PosType.SectionTitle,
-                            fontWeight = FontWeight.SemiBold,
-                            color = PosPalette.TextPrimary
-                        )
-                    }
-                } else if (dbProducts.isEmpty()) {
+                if (dbProducts.isEmpty()) {
                     // Gate 1.3: the same bespoke title/body/CTA block, now the app's shared empty
                     // state. The action and its callback are unchanged - only the presentation moved.
                     AppEmptyState(

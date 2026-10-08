@@ -323,7 +323,8 @@ private fun ProductsHeader(
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                modifier = Modifier.weight(1f)
             ) {
                 Box(
                     modifier = Modifier
@@ -339,65 +340,63 @@ private fun ProductsHeader(
                         modifier = Modifier.size(22.dp)
                     )
                 }
-                Column {
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = "$productLabel & Stok",
                         style = MaterialTheme.typography.titleMedium.copy(
                             fontWeight = FontWeight.Bold,
-                            fontSize = 16.5.sp,
+                            fontSize = 16.sp,
                             color = AppColors.TextPrimary
-                        )
+                        ),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
-                    Text(
-                        text = "Katalog & manajemen stok",
-                        style = MaterialTheme.typography.bodySmall.copy(
-                            fontSize = 11.5.sp,
-                            color = AppColors.TextSecondary
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text(
+                            text = "Katalog & stok",
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                fontSize = 11.5.sp,
+                                color = AppColors.TextSecondary
+                            ),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
-                    )
+                        if (productCount > 0) {
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = Color(0xFFE8F5E9)
+                            ) {
+                                Text(
+                                    text = "$productCount $productLabel",
+                                    color = AppColors.GreenPrimary,
+                                    fontWeight = FontWeight.SemiBold,
+                                    fontSize = 10.5.sp,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
+                    }
                 }
             }
 
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                if (productCount > 0) {
-                    Surface(
-                        shape = RoundedCornerShape(20.dp),
-                        color = Color(0xFFE8F5E9)
-                    ) {
-                        Text(
-                            text = "$productCount $productLabel",
-                            color = AppColors.GreenPrimary,
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 11.5.sp,
-                            modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp)
-                        )
-                    }
-                }
+            Spacer(Modifier.width(8.dp))
 
-                // WhatsApp Catalog Button
-                Surface(
-                    shape = RoundedCornerShape(10.dp),
-                    color = Color(0xFFE8F5E9),
-                    modifier = Modifier
-                        .size(38.dp)
-                        .testTag("btn_products_catalog"),
-                    onClick = onNavigateToCatalog
-                ) {
-                    Box(
-                        contentAlignment = Alignment.Center,
-                        modifier = Modifier.fillMaxSize()
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Share,
-                            contentDescription = "Katalog WhatsApp",
-                            tint = AppColors.GreenPrimary,
-                            modifier = Modifier.size(19.dp)
-                        )
-                    }
-                }
+            // WhatsApp Catalog Button (Clean icon action >= 48dp touch target)
+            IconButton(
+                onClick = onNavigateToCatalog,
+                modifier = Modifier.testTag("btn_products_catalog")
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Share,
+                    contentDescription = "Katalog WhatsApp",
+                    tint = AppColors.GreenPrimary,
+                    modifier = Modifier.size(22.dp)
+                )
             }
         }
     }

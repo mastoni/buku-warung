@@ -529,7 +529,7 @@ fun LicenseGateScreen(
                                         try {
                                             val intent = Intent(
                                                 Intent.ACTION_VIEW,
-                                                Uri.parse("https://license.skmnetwork.com/beli/buku-warung?utm_source=app_license_gate&utm_medium=in_app&utm_campaign=buku_warung_v020")
+                                                Uri.parse("https://license.skmnetwork.com/beli/buku-warung?utm_source=app_license_gate&utm_medium=in_app&utm_campaign=buku_warung_v021")
                                             )
                                             context.startActivity(intent)
                                         } catch (_: Exception) {}
