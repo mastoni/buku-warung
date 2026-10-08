@@ -1,5 +1,6 @@
 package id.skmnetwork.bukuwarung.ui.cash
 
+import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -9,14 +10,14 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -46,7 +47,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -57,16 +57,16 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import id.skmnetwork.bukuwarung.data.local.entity.CashTransactionEntity
 import id.skmnetwork.bukuwarung.data.preferences.UserSettings
+import id.skmnetwork.bukuwarung.ui.components.AppLoadingState
 import id.skmnetwork.bukuwarung.ui.components.AppTextField
 import id.skmnetwork.bukuwarung.ui.product.ProductViewModel
-import id.skmnetwork.bukuwarung.ui.components.AppLoadingState
 import id.skmnetwork.bukuwarung.ui.theme.AppColors
+import id.skmnetwork.bukuwarung.ui.theme.AppShapes
 import id.skmnetwork.bukuwarung.ui.theme.rememberAppWindowSize
 import id.skmnetwork.bukuwarung.util.formatRupiah
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import android.widget.Toast
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -101,29 +101,31 @@ fun CashScreen(
     // MANUAL TRANSACTION DIALOG
     // ==========================================
     if (showCashDialog) {
+        val isIncome = dialogType == "INCOME"
         AlertDialog(
             onDismissRequest = { if (!isSaving) showCashDialog = false },
             title = {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(
                         modifier = Modifier
-                            .size(34.dp)
+                            .size(36.dp)
                             .clip(CircleShape)
-                            .background(if (dialogType == "INCOME") Color(0xFFE8F5E9) else Color(0xFFFFEBEE)),
+                            .background(if (isIncome) AppColors.SuccessContainer else MaterialTheme.colorScheme.errorContainer),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            imageVector = if (dialogType == "INCOME") Icons.Default.TrendingUp else Icons.Default.TrendingDown,
+                            imageVector = if (isIncome) Icons.Default.TrendingUp else Icons.Default.TrendingDown,
                             contentDescription = null,
-                            tint = if (dialogType == "INCOME") AppColors.GreenPrimary else Color(0xFFD32F2F),
+                            tint = if (isIncome) AppColors.GreenPrimary else MaterialTheme.colorScheme.error,
                             modifier = Modifier.size(20.dp)
                         )
                     }
                     Spacer(Modifier.width(10.dp))
                     Text(
-                        text = if (dialogType == "INCOME") "Tambah Pemasukan" else "Tambah Pengeluaran",
+                        text = if (isIncome) "Tambah Pemasukan" else "Tambah Pengeluaran",
                         fontWeight = FontWeight.Bold,
-                        fontSize = 16.5.sp
+                        fontSize = 16.sp,
+                        color = AppColors.TextPrimary
                     )
                 }
             },
@@ -131,13 +133,13 @@ fun CashScreen(
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     if (dialogError != null) {
                         Surface(
-                            shape = RoundedCornerShape(8.dp),
-                            color = Color(0xFFFFEBEE),
+                            shape = AppShapes.ChipShape,
+                            color = MaterialTheme.colorScheme.errorContainer,
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Text(
                                 text = dialogError!!,
-                                color = Color(0xFFD32F2F),
+                                color = MaterialTheme.colorScheme.onErrorContainer,
                                 fontSize = 12.sp,
                                 modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
                             )
@@ -169,8 +171,6 @@ fun CashScreen(
                     onClick = {
                         if (isSaving) return@Button
                         isSaving = true
-                        // Captured before the write, so the confirmation names what was actually
-                        // recorded even if the dialog state changes while the write is in flight.
                         val recordedType = dialogType
                         val recordedAmount = manualAmount.trim().toLongOrNull() ?: 0L
                         viewModel.addManualCash(
@@ -179,12 +179,6 @@ fun CashScreen(
                             description = manualDescription,
                             onSuccess = {
                                 isSaving = false
-                                // Step 7: the ledger is append-only and never edited, so a
-                                // merchant who taps "Simpan Transaksi" and sees the dialog close
-                                // has no other way to tell a successful record from a cancelled
-                                // one. The balance and list update on their own - this only says
-                                // it happened, using the app's existing transient-acknowledgement
-                                // pattern rather than a new notification system.
                                 Toast.makeText(
                                     context,
                                     if (recordedType == "INCOME") {
@@ -199,23 +193,22 @@ fun CashScreen(
                                 manualDescription = ""
                             },
                             onError = { error ->
-                                // No confirmation here: the dialog stays open and shows the error,
-                                // so a failed write can never be mistaken for a saved one.
                                 isSaving = false
                                 dialogError = error
                             }
                         )
                     },
                     enabled = !isSaving,
-                    shape = RoundedCornerShape(10.dp),
+                    shape = AppShapes.CardShape,
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = if (dialogType == "INCOME") AppColors.GreenPrimary else Color(0xFFD32F2F),
-                        contentColor = Color.White
+                        containerColor = if (isIncome) AppColors.GreenPrimary else MaterialTheme.colorScheme.error,
+                        contentColor = if (isIncome) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onError
                     )
                 ) {
                     Text(
                         text = if (isSaving) "Menyimpan..." else "Simpan Transaksi",
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp
                     )
                 }
             },
@@ -233,7 +226,6 @@ fun CashScreen(
     // ==========================================
     // MAIN CASH SCREEN SCAFFOLD
     // ==========================================
-    // Step 2 (H): do not present placeholder zeros or an empty list as if they were real answers.
     if (isLoading) {
         AppLoadingState()
         return
@@ -251,227 +243,235 @@ fun CashScreen(
                 .padding(padding),
             contentAlignment = Alignment.TopCenter
         ) {
-        Column(
-            modifier = Modifier
-                // Gate 1.7: was fillMaxSize() then widthIn(max = contentMaxWidth) - the fixed width
-                // defeated the cap, so the cash ledger ran full-bleed on tablets.
-                .fillMaxHeight()
-                .widthIn(max = windowSize.contentMaxWidth)
-        ) {
-            // ==========================================
-            // FILTER CHIPS ROW
-            // ==========================================
-            LazyRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(MaterialTheme.colorScheme.surface)
-            ) {
-                items(listOf("Semua", "Pemasukan", "Pengeluaran")) { filterName ->
-                    val isSelected = filterName == selectedFilter
-                    Surface(
-                        shape = RoundedCornerShape(20.dp),
-                        color = if (isSelected) AppColors.GreenPrimary else MaterialTheme.colorScheme.surface,
-                        border = if (isSelected) null else BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                        shadowElevation = if (isSelected) 1.dp else 0.dp,
-                        modifier = Modifier.clickable { selectedFilter = filterName }
-                    ) {
-                        Text(
-                            text = filterName,
-                            color = if (isSelected) Color.White else AppColors.TextSecondary,
-                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                            fontSize = 13.sp,
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 7.dp)
-                        )
-                    }
-                }
-            }
-
-            Spacer(Modifier.height(10.dp))
-
             Column(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 16.dp)
+                    .fillMaxHeight()
+                    .widthIn(max = windowSize.contentMaxWidth)
             ) {
                 // ==========================================
-                // SALDO KAS CARD (PRIMARY FOCAL POINT)
+                // FILTER CHIPS ROW
                 // ==========================================
-                Surface(
-                    shape = RoundedCornerShape(16.dp),
-                    color = MaterialTheme.colorScheme.surface,
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                    shadowElevation = 0.5.dp,
-                    modifier = Modifier.fillMaxWidth()
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(MaterialTheme.colorScheme.surface)
                 ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(18.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                    items(listOf("Semua", "Pemasukan", "Pengeluaran")) { filterName ->
+                        val isSelected = filterName == selectedFilter
+                        Surface(
+                            shape = RoundedCornerShape(20.dp),
+                            color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
+                            border = BorderStroke(
+                                1.dp,
+                                if (isSelected) AppColors.GreenPrimary else MaterialTheme.colorScheme.outlineVariant
+                            ),
+                            shadowElevation = 0.dp,
+                            modifier = Modifier.clickable { selectedFilter = filterName }
+                        ) {
+                            Text(
+                                text = filterName,
+                                color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else AppColors.TextSecondary,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                fontSize = 12.sp,
+                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp)
+                            )
+                        }
+                    }
+                }
+
+                Spacer(Modifier.height(10.dp))
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 16.dp)
+                ) {
+                    // ==========================================
+                    // SALDO KAS CARD (PRIMARY FOCAL POINT)
+                    // ==========================================
+                    Surface(
+                        shape = AppShapes.CardShape,
+                        color = MaterialTheme.colorScheme.surface,
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                        shadowElevation = 0.5.dp,
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        Box(
+                        Row(
                             modifier = Modifier
-                                .size(50.dp)
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(AppColors.GreenPrimary),
-                            contentAlignment = Alignment.Center
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(48.dp)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(AppColors.SuccessContainer),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.AccountBalanceWallet,
+                                    contentDescription = null,
+                                    tint = AppColors.GreenPrimary,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
+
+                            Spacer(Modifier.width(14.dp))
+
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "Saldo Kas",
+                                    style = MaterialTheme.typography.labelMedium.copy(
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        color = AppColors.TextSecondary
+                                    )
+                                )
+                                Spacer(Modifier.height(2.dp))
+                                Text(
+                                    text = formatRupiah(cashBalance ?: 0L),
+                                    style = MaterialTheme.typography.headlineMedium.copy(
+                                        fontSize = 22.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = AppColors.TextPrimary
+                                    )
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(Modifier.height(12.dp))
+
+                    // ==========================================
+                    // PRIMARY ACTION BUTTONS (INCOME / EXPENSE)
+                    // ==========================================
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Button(
+                            onClick = {
+                                dialogType = "INCOME"
+                                manualAmount = ""
+                                manualDescription = ""
+                                dialogError = null
+                                showCashDialog = true
+                            },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = AppColors.GreenPrimary,
+                                contentColor = MaterialTheme.colorScheme.onPrimary
+                            ),
+                            shape = AppShapes.CardShape,
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(48.dp)
                         ) {
                             Icon(
-                                imageVector = Icons.Default.AccountBalanceWallet,
+                                imageVector = Icons.Default.Add,
                                 contentDescription = null,
-                                tint = Color.White,
-                                modifier = Modifier.size(26.dp)
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(Modifier.width(4.dp))
+                            Text(
+                                text = "Pemasukan Kas",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 12.sp,
+                                maxLines = 1
                             )
                         }
 
-                        Spacer(Modifier.width(14.dp))
-
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "Saldo Kas",
-                                style = MaterialTheme.typography.labelMedium.copy(
-                                    fontSize = 12.5.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = AppColors.TextSecondary
-                                )
+                        Button(
+                            onClick = {
+                                dialogType = "EXPENSE"
+                                manualAmount = ""
+                                manualDescription = ""
+                                dialogError = null
+                                showCashDialog = true
+                            },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.error,
+                                contentColor = MaterialTheme.colorScheme.onError
+                            ),
+                            shape = AppShapes.CardShape,
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(48.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Add,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp)
                             )
-                            Spacer(Modifier.height(2.dp))
+                            Spacer(Modifier.width(4.dp))
                             Text(
-                                text = formatRupiah(cashBalance ?: 0L),
-                                style = MaterialTheme.typography.headlineMedium.copy(
-                                    fontSize = 23.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = AppColors.TextPrimary
-                                )
+                                text = "Pengeluaran Kas",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 12.sp,
+                                maxLines = 1
                             )
                         }
                     }
-                }
 
-                Spacer(Modifier.height(12.dp))
+                    Spacer(Modifier.height(16.dp))
 
-                // ==========================================
-                // PRIMARY ACTION BUTTONS (INCOME / EXPENSE)
-                // ==========================================
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    Button(
-                        onClick = {
-                            dialogType = "INCOME"
-                            manualAmount = ""
-                            manualDescription = ""
-                            dialogError = null
-                            showCashDialog = true
-                        },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = AppColors.GreenPrimary,
-                            contentColor = Color.White
-                        ),
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(48.dp)
+                    // ==========================================
+                    // SECTION TITLE: TRANSAKSI TERBARU
+                    // ==========================================
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Add,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(Modifier.width(4.dp))
                         Text(
-                            text = "Pemasukan Kas",
+                            text = "Transaksi Terbaru",
                             fontWeight = FontWeight.Bold,
-                            fontSize = 12.5.sp,
-                            maxLines = 1
-                        )
-                    }
-
-                    Button(
-                        onClick = {
-                            dialogType = "EXPENSE"
-                            manualAmount = ""
-                            manualDescription = ""
-                            dialogError = null
-                            showCashDialog = true
-                        },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFFE53935),
-                            contentColor = Color.White
-                        ),
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(48.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Add,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(Modifier.width(4.dp))
-                        Text(
-                            text = "Pengeluaran Kas",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 12.5.sp,
-                            maxLines = 1
-                        )
-                    }
-                }
-
-                Spacer(Modifier.height(16.dp))
-
-                // ==========================================
-                // SECTION TITLE: TRANSAKSI TERBARU
-                // ==========================================
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "Transaksi Terbaru",
-                        fontWeight = FontWeight.Bold,
-                        style = MaterialTheme.typography.titleMedium.copy(
-                            fontSize = 15.sp,
-                            color = AppColors.TextPrimary
-                        )
-                    )
-                    if (filteredTransactions.isNotEmpty()) {
-                        Text(
-                            text = "${filteredTransactions.size} Transaksi",
-                            style = MaterialTheme.typography.bodySmall.copy(
-                                fontSize = 11.5.sp,
-                                color = AppColors.TextSecondary
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                fontSize = 16.sp,
+                                color = AppColors.TextPrimary
                             )
                         )
+                        if (filteredTransactions.isNotEmpty()) {
+                            Surface(
+                                shape = RoundedCornerShape(20.dp),
+                                color = MaterialTheme.colorScheme.surfaceVariant
+                            ) {
+                                Text(
+                                    text = "${filteredTransactions.size} Transaksi",
+                                    style = MaterialTheme.typography.bodySmall.copy(
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = AppColors.TextSecondary
+                                    ),
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                                )
+                            }
+                        }
                     }
-                }
 
-                Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(8.dp))
 
-                // ==========================================
-                // TRANSACTION MUTATION LIST OR EMPTY STATE
-                // ==========================================
-                if (filteredTransactions.isEmpty()) {
-                    CashEmptyState(selectedFilter = selectedFilter)
-                } else {
-                    LazyColumn(
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                        contentPadding = PaddingValues(bottom = 88.dp),
-                        modifier = Modifier.fillMaxSize()
-                    ) {
-                        items(filteredTransactions, key = { it.id }) { tx ->
-                            CashTransactionCard(tx = tx)
+                    // ==========================================
+                    // TRANSACTION MUTATION LIST OR EMPTY STATE
+                    // ==========================================
+                    if (filteredTransactions.isEmpty()) {
+                        CashEmptyState(selectedFilter = selectedFilter)
+                    } else {
+                        LazyColumn(
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                            contentPadding = PaddingValues(bottom = 88.dp),
+                            modifier = Modifier.fillMaxSize()
+                        ) {
+                            items(filteredTransactions, key = { it.id }) { tx ->
+                                CashTransactionCard(tx = tx)
+                            }
                         }
                     }
                 }
             }
         }
-    }
     }
 }
 
@@ -507,7 +507,7 @@ private fun CashHeader(transactionCount: Int) {
                     Icon(
                         imageVector = Icons.Default.AccountBalanceWallet,
                         contentDescription = null,
-                        tint = Color.White,
+                        tint = MaterialTheme.colorScheme.onPrimary,
                         modifier = Modifier.size(22.dp)
                     )
                 }
@@ -516,14 +516,14 @@ private fun CashHeader(transactionCount: Int) {
                         text = "Uang Kas",
                         style = MaterialTheme.typography.titleMedium.copy(
                             fontWeight = FontWeight.Bold,
-                            fontSize = 16.5.sp,
+                            fontSize = 16.sp,
                             color = AppColors.TextPrimary
                         )
                     )
                     Text(
                         text = "Catat arus kas & saldo usaha",
                         style = MaterialTheme.typography.bodySmall.copy(
-                            fontSize = 11.5.sp,
+                            fontSize = 11.sp,
                             color = AppColors.TextSecondary
                         )
                     )
@@ -532,7 +532,7 @@ private fun CashHeader(transactionCount: Int) {
 
             Surface(
                 shape = RoundedCornerShape(20.dp),
-                color = AppColors.GreenPrimary.copy(alpha = 0.15f)
+                color = AppColors.SuccessContainer
             ) {
                 Text(
                     text = if (transactionCount > 0) "$transactionCount Mutasi" else "Buku Kas",
@@ -563,7 +563,7 @@ private fun CashTransactionCard(tx: CashTransactionEntity) {
     }
 
     Surface(
-        shape = RoundedCornerShape(14.dp),
+        shape = AppShapes.CardShape,
         color = MaterialTheme.colorScheme.surface,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         shadowElevation = 0.5.dp,
@@ -578,15 +578,15 @@ private fun CashTransactionCard(tx: CashTransactionEntity) {
             // Transaction Icon Circle
             Box(
                 modifier = Modifier
-                    .size(42.dp)
+                    .size(40.dp)
                     .clip(CircleShape)
-                    .background(if (isIncome) AppColors.GreenPrimary.copy(alpha = 0.15f) else Color(0xFFD32F2F).copy(alpha = 0.15f)),
+                    .background(if (isIncome) AppColors.SuccessContainer else MaterialTheme.colorScheme.errorContainer),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = if (isIncome) Icons.Default.TrendingUp else Icons.Default.TrendingDown,
                     contentDescription = if (isIncome) "Pemasukan" else "Pengeluaran",
-                    tint = if (isIncome) AppColors.GreenPrimary else Color(0xFFD32F2F),
+                    tint = if (isIncome) AppColors.GreenPrimary else MaterialTheme.colorScheme.error,
                     modifier = Modifier.size(20.dp)
                 )
             }
@@ -611,7 +611,7 @@ private fun CashTransactionCard(tx: CashTransactionEntity) {
                 Text(
                     text = formattedDate,
                     style = MaterialTheme.typography.bodySmall.copy(
-                        fontSize = 11.5.sp,
+                        fontSize = 11.sp,
                         color = AppColors.TextSecondary
                     )
                 )
@@ -622,8 +622,8 @@ private fun CashTransactionCard(tx: CashTransactionEntity) {
                 text = "${if (isIncome) "+ " else "- "}${formatRupiah(tx.amount)}",
                 style = MaterialTheme.typography.bodyMedium.copy(
                     fontWeight = FontWeight.Bold,
-                    fontSize = 14.5.sp,
-                    color = if (isIncome) AppColors.GreenPrimary else Color(0xFFD32F2F)
+                    fontSize = 15.sp,
+                    color = if (isIncome) AppColors.GreenPrimary else AppColors.RedExpense
                 ),
                 modifier = Modifier.padding(start = 8.dp)
             )
@@ -648,16 +648,16 @@ private fun CashEmptyState(selectedFilter: String) {
         ) {
             Box(
                 modifier = Modifier
-                    .size(68.dp)
+                    .size(64.dp)
                     .clip(CircleShape)
-                    .background(AppColors.GreenPrimary.copy(alpha = 0.15f)),
+                    .background(AppColors.SuccessContainer),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = Icons.Default.AccountBalanceWallet,
                     contentDescription = null,
                     tint = AppColors.GreenPrimary,
-                    modifier = Modifier.size(34.dp)
+                    modifier = Modifier.size(32.dp)
                 )
             }
 
@@ -677,7 +677,7 @@ private fun CashEmptyState(selectedFilter: String) {
             Text(
                 text = "Pemasukan dan pengeluaran kas otomatis maupun manual akan tercatat di sini.",
                 style = MaterialTheme.typography.bodySmall.copy(
-                    fontSize = 12.5.sp,
+                    fontSize = 13.sp,
                     color = AppColors.TextSecondary,
                     textAlign = TextAlign.Center
                 ),

@@ -185,7 +185,7 @@ fun PurchaseScreen(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(
                         modifier = Modifier
-                            .size(34.dp)
+                            .size(36.dp)
                             .clip(RoundedCornerShape(8.dp))
                             .background(AppColors.SuccessContainer),
                         contentAlignment = Alignment.Center
@@ -198,7 +198,7 @@ fun PurchaseScreen(
                         )
                     }
                     Spacer(Modifier.width(10.dp))
-                    Text("Pilih $supplierLabel", fontWeight = FontWeight.Bold, fontSize = 16.5.sp)
+                    Text("Pilih $supplierLabel", fontWeight = FontWeight.Bold, fontSize = 16.sp)
                 }
             },
             text = {
@@ -228,7 +228,7 @@ fun PurchaseScreen(
                                 }
 
                                 Surface(
-                                    shape = RoundedCornerShape(12.dp),
+                                    shape = AppShapes.CardShape,
                                     color = if (isSelected) AppColors.SuccessContainer else MaterialTheme.colorScheme.surfaceVariant,
                                     border = BorderStroke(1.dp, if (isSelected) AppColors.GreenPrimary else MaterialTheme.colorScheme.outline),
                                     modifier = Modifier
@@ -297,7 +297,8 @@ fun PurchaseScreen(
             title = {
                 Text(
                     text = "Simpan $purchaseLabel?",
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp
                 )
             },
             text = {
@@ -309,18 +310,20 @@ fun PurchaseScreen(
                         } else {
                             "$purchaseLabel ini akan menambah stok produk secara permanen. " +
                                 "Tindakan ini tidak dapat dibatalkan."
-                        }
+                        },
+                        fontSize = 13.sp
                     )
                     Spacer(Modifier.height(8.dp))
                     Text(
                         text = "Total: ${formatRupiah(totalPurchaseAmount)}",
                         fontWeight = FontWeight.Bold,
+                        fontSize = 15.sp,
                         color = AppColors.GreenDark
                     )
                     Spacer(Modifier.height(4.dp))
                     Text(
                         text = "${purchaseCart.size} produk",
-                        style = MaterialTheme.typography.bodySmall,
+                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
                         color = AppColors.TextSecondary
                     )
                 }
@@ -366,13 +369,14 @@ fun PurchaseScreen(
                 ) {
                     Text(
                         text = if (isSaving) "Menyimpan..." else "Simpan $purchaseLabel",
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp
                     )
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showPurchaseConfirmDialog = false }, enabled = !isSaving) {
-                    Text("Batal")
+                    Text("Batal", fontSize = 13.sp)
                 }
             }
         )
@@ -385,7 +389,7 @@ fun PurchaseScreen(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(
                         modifier = Modifier
-                            .size(34.dp)
+                            .size(36.dp)
                             .clip(CircleShape)
                             .background(AppColors.SuccessContainer),
                         contentAlignment = Alignment.Center
@@ -398,27 +402,26 @@ fun PurchaseScreen(
                         )
                     }
                     Spacer(Modifier.width(10.dp))
-                    Text("$purchaseLabel Berhasil!", fontWeight = FontWeight.Bold, fontSize = 16.5.sp)
+                    Text("$purchaseLabel Berhasil!", fontWeight = FontWeight.Bold, fontSize = 16.sp)
                 }
             },
             text = {
                 Text(
                     "Stok $productLabel telah otomatis bertambah dan status transaksi $purchaseLabel berhasil dicatat.",
-                    fontSize = 13.5.sp,
+                    fontSize = 13.sp,
                     color = AppColors.TextPrimary
                 )
             },
             confirmButton = {
                 Button(
                     onClick = { showSuccessDialog = false },
-                    shape = RoundedCornerShape(10.dp),
+                    shape = AppShapes.CardShape,
                     colors = ButtonDefaults.buttonColors(
                         containerColor = AppColors.GreenPrimary,
-                        // Gate 1.8: was Color.White - 2.28:1 against the dark-theme green.
                         contentColor = MaterialTheme.colorScheme.onPrimary
                     )
                 ) {
-                    Text("Selesai", fontWeight = FontWeight.Bold)
+                    Text("Selesai", fontWeight = FontWeight.Bold, fontSize = 13.sp)
                 }
             }
         )
@@ -613,7 +616,7 @@ fun PurchaseScreen(
                                 Text(
                                     text = currentMonthYear,
                                     fontWeight = FontWeight.SemiBold,
-                                    fontSize = 13.5.sp,
+                                    fontSize = 13.sp,
                                     color = AppColors.TextPrimary
                                 )
                             }
@@ -754,7 +757,7 @@ fun PurchaseScreen(
                                     )
                                     Text(
                                         text = "${purchaseCart.size} jenis $productLabel",
-                                        fontSize = 11.5.sp,
+                                        fontSize = 11.sp,
                                         color = AppColors.TextSecondary
                                     )
                                 }
@@ -921,7 +924,7 @@ fun PurchaseScreen(
                                     Text(
                                         text = if (paymentMethod == "CREDIT") "Simpan $purchaseLabel Kredit" else "Simpan $purchaseLabel Tunai",
                                         fontWeight = FontWeight.Bold,
-                                        fontSize = 14.5.sp
+                                        fontSize = 15.sp
                                     )
                                     Spacer(Modifier.width(8.dp))
                                     Icon(
@@ -1188,7 +1191,7 @@ private fun PurchaseHeader(
                                 text = "$purchaseLabel Baru",
                                 color = if (selectedTab == 0) MaterialTheme.colorScheme.onPrimary else AppColors.TextSecondary,
                                 fontWeight = if (selectedTab == 0) FontWeight.Bold else FontWeight.Medium,
-                                fontSize = 11.5.sp,
+                                fontSize = 12.sp,
                                 maxLines = 1
                             )
                         }
@@ -1220,7 +1223,7 @@ private fun PurchaseHeader(
                                 text = "Pesanan $supplierLabel",
                                 color = if (selectedTab == 1) MaterialTheme.colorScheme.onPrimary else AppColors.TextSecondary,
                                 fontWeight = if (selectedTab == 1) FontWeight.Bold else FontWeight.Medium,
-                                fontSize = 11.5.sp,
+                                fontSize = 12.sp,
                                 maxLines = 1
                             )
                         }
@@ -1252,7 +1255,7 @@ private fun PurchaseHeader(
                                 text = "Riwayat",
                                 color = if (selectedTab == 2) MaterialTheme.colorScheme.onPrimary else AppColors.TextSecondary,
                                 fontWeight = if (selectedTab == 2) FontWeight.Bold else FontWeight.Medium,
-                                fontSize = 11.5.sp,
+                                fontSize = 12.sp,
                                 maxLines = 1
                             )
                         }
@@ -1278,7 +1281,7 @@ private fun PurchaseItemCard(
     val isSelected = quantity > 0
 
     Surface(
-        shape = RoundedCornerShape(14.dp),
+        shape = AppShapes.CardShape,
         color = MaterialTheme.colorScheme.surface,
         border = BorderStroke(1.dp, if (isSelected) AppColors.GreenPrimary.copy(alpha = 0.4f) else AppColors.CardBorderStrong),
         shadowElevation = if (isSelected) 1.dp else 0.5.dp,
@@ -1291,10 +1294,6 @@ private fun PurchaseItemCard(
             verticalAlignment = Alignment.CenterVertically
         ) {
             // Product Image Thumbnail
-            // Gate 1.6: the plate was Color(0xFFF4F7F4), a light-only near-white that did not adapt to
-            // the dark surface - a ~14:1 white block on the purchase row. It now uses the same
-            // surfaceVariant plate as the product list, and the same 16dp card radius, so one product
-            // looks identical wherever it appears.
             Box(
                 modifier = Modifier
                     .size(ProductImageFrameSize)
@@ -1319,7 +1318,7 @@ private fun PurchaseItemCard(
                     text = product.name,
                     style = MaterialTheme.typography.bodyMedium.copy(
                         fontWeight = FontWeight.SemiBold,
-                        fontSize = 14.5.sp,
+                        fontSize = 15.sp,
                         color = AppColors.TextPrimary
                     ),
                     maxLines = 2,
@@ -1349,8 +1348,6 @@ private fun PurchaseItemCard(
                     ) {
                         IconButton(
                             onClick = onDecrease,
-                            // Gate 1.7: was size(26.dp) - the primary quantity control for a purchase
-                            // line. 48dp target, glyph unchanged.
                             modifier = Modifier.size(48.dp)
                         ) {
                             Icon(
@@ -1364,14 +1361,13 @@ private fun PurchaseItemCard(
                         Text(
                             text = formatQuantityValue(quantity),
                             fontWeight = FontWeight.Bold,
-                            fontSize = 13.5.sp,
+                            fontSize = 13.sp,
                             color = if (quantity > 0) AppColors.GreenPrimary else AppColors.TextPrimary,
                             modifier = Modifier.padding(horizontal = 8.dp)
                         )
 
                         IconButton(
                             onClick = onIncrease,
-                            // Gate 1.7: was size(26.dp) - see the decrease button above.
                             modifier = Modifier.size(48.dp)
                         ) {
                             Icon(
@@ -1393,7 +1389,7 @@ private fun PurchaseItemCard(
                 ) {
                     Text(
                         text = "Subtotal",
-                        fontSize = 10.5.sp,
+                        fontSize = 11.sp,
                         color = AppColors.TextSecondary
                     )
                     Text(
@@ -1403,9 +1399,6 @@ private fun PurchaseItemCard(
                         color = AppColors.GreenPrimary
                     )
                     Spacer(Modifier.height(4.dp))
-                    // Step 19: this is a destructive control on a money row, so the tappable area
-                    // is restored to Material's 48dp. The Close icon keeps its own visual size,
-                    // and the onClick semantics, confirmation and cart maths are untouched.
                     IconButton(
                         onClick = onClear,
                         modifier = Modifier.size(48.dp)
@@ -1437,7 +1430,7 @@ private fun PurchaseHistoryCard(
 ) {
     Surface(
         onClick = onClick,
-        shape = RoundedCornerShape(14.dp),
+        shape = AppShapes.CardShape,
         color = MaterialTheme.colorScheme.surface,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         shadowElevation = 0.5.dp,
@@ -1476,7 +1469,7 @@ private fun PurchaseHistoryCard(
                     Text(
                         text = purchase.transactionNumber,
                         fontWeight = FontWeight.Bold,
-                        fontSize = 13.5.sp,
+                        fontSize = 14.sp,
                         color = AppColors.TextPrimary,
                         maxLines = 1,
                         softWrap = false,
@@ -1489,7 +1482,7 @@ private fun PurchaseHistoryCard(
                         Text(
                             text = if (isCredit) debtLabel.uppercase() else "TUNAI",
                             color = if (isCredit) MaterialTheme.colorScheme.error else AppColors.GreenPrimary,
-                            fontSize = 10.5.sp,
+                            fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                         )
@@ -1502,13 +1495,13 @@ private fun PurchaseHistoryCard(
                     text = supplierName,
                     color = AppColors.TextPrimary,
                     fontWeight = FontWeight.Medium,
-                    fontSize = 12.5.sp
+                    fontSize = 13.sp
                 )
 
                 Text(
                     text = dateStr,
                     color = AppColors.TextSecondary,
-                    fontSize = 11.5.sp
+                    fontSize = 11.sp
                 )
             }
 
@@ -1561,7 +1554,7 @@ private fun PurchaseEmptyProductsState(
                 text = "Belum Ada $productLabel Untuk Dibeli",
                 style = MaterialTheme.typography.titleMedium.copy(
                     fontWeight = FontWeight.Bold,
-                    fontSize = 16.5.sp,
+                    fontSize = 16.sp,
                     color = AppColors.TextPrimary
                 )
             )
@@ -1582,10 +1575,9 @@ private fun PurchaseEmptyProductsState(
 
             Button(
                 onClick = onAddProduct,
-                shape = RoundedCornerShape(12.dp),
+                shape = AppShapes.CardShape,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = AppColors.GreenPrimary,
-                    // Gate 1.8: was Color.White - 2.28:1 against the dark-theme green.
                     contentColor = MaterialTheme.colorScheme.onPrimary
                 ),
                 modifier = Modifier.height(48.dp)
@@ -1599,7 +1591,7 @@ private fun PurchaseEmptyProductsState(
                 Text(
                     text = "Tambah $productLabel",
                     fontWeight = FontWeight.Bold,
-                    fontSize = 13.5.sp
+                    fontSize = 13.sp
                 )
             }
         }
@@ -1665,10 +1657,9 @@ private fun PurchaseEmptyHistoryState(
 
             Button(
                 onClick = onNewPurchase,
-                shape = RoundedCornerShape(12.dp),
+                shape = AppShapes.CardShape,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = AppColors.GreenPrimary,
-                    // Gate 1.8: was Color.White - 2.28:1 against the dark-theme green.
                     contentColor = MaterialTheme.colorScheme.onPrimary
                 ),
                 modifier = Modifier.height(48.dp)
@@ -1682,7 +1673,7 @@ private fun PurchaseEmptyHistoryState(
                 Text(
                     text = "$purchaseLabel Baru",
                     fontWeight = FontWeight.Bold,
-                    fontSize = 13.5.sp
+                    fontSize = 13.sp
                 )
             }
         }

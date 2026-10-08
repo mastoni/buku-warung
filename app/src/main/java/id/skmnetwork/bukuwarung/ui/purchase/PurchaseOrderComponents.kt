@@ -95,6 +95,7 @@ import id.skmnetwork.bukuwarung.purchase.PurchaseOrderReceiptFormatter
 import id.skmnetwork.bukuwarung.ui.components.StatusBadge
 import id.skmnetwork.bukuwarung.ui.components.StatusBadgeVariant
 import id.skmnetwork.bukuwarung.ui.theme.AppColors
+import id.skmnetwork.bukuwarung.ui.theme.AppShapes
 import id.skmnetwork.bukuwarung.ui.theme.AppResponsive
 import id.skmnetwork.bukuwarung.util.formatRupiah
 import id.skmnetwork.bukuwarung.util.parseQuantityInput
@@ -176,7 +177,7 @@ fun PurchaseOrderTabContent(
             ) {
                 Icon(Icons.Default.Add, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(16.dp))
                 Spacer(Modifier.width(4.dp))
-                Text("Buat Pesanan", fontSize = 12.5.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.surface)
+                Text("Buat Pesanan", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimary)
             }
         }
 
@@ -213,7 +214,7 @@ fun PurchaseOrderTabContent(
                     )
                     Text(
                         text = "Buat Purchase Order untuk mencatat daftar pesanan ke $supplierLabel sebelum barang diterima.",
-                        fontSize = 12.5.sp,
+                        fontSize = 12.sp,
                         color = AppColors.TextSecondary,
                         textAlign = TextAlign.Center
                     )
@@ -222,7 +223,7 @@ fun PurchaseOrderTabContent(
                         colors = ButtonDefaults.buttonColors(containerColor = AppColors.GreenPrimary),
                         shape = RoundedCornerShape(12.dp)
                     ) {
-                        Text("Buat Pesanan Sekarang", fontWeight = FontWeight.Bold)
+                        Text("Buat Pesanan Sekarang", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimary)
                     }
                 }
             }
@@ -348,7 +349,7 @@ fun PurchaseOrderCard(
     val formattedDate = remember(order.createdAt) { dateFormat.format(Date(order.createdAt)) }
 
     Surface(
-        shape = RoundedCornerShape(14.dp),
+        shape = AppShapes.CardShape,
         color = MaterialTheme.colorScheme.surface,
         border = BorderStroke(1.dp, AppColors.CardBorderStrong),
         shadowElevation = 0.5.dp,
@@ -374,7 +375,7 @@ fun PurchaseOrderCard(
                     )
                     Text(
                         text = formattedDate,
-                        fontSize = 11.5.sp,
+                        fontSize = 11.sp,
                         color = AppColors.TextSecondary
                     )
                 }
@@ -408,7 +409,7 @@ fun PurchaseOrderCard(
                 Column(horizontalAlignment = Alignment.End) {
                     Text(
                         text = "Estimasi Total",
-                        fontSize = 10.5.sp,
+                        fontSize = 11.sp,
                         color = AppColors.TextSecondary
                     )
                     Text(
@@ -493,7 +494,7 @@ fun PurchaseOrderDetailDialog(
                         Text(
                             text = "Detail Pesanan",
                             fontWeight = FontWeight.Bold,
-                            fontSize = 17.sp,
+                            fontSize = 16.sp,
                             color = AppColors.TextPrimary
                         )
                         Text(
@@ -524,7 +525,7 @@ fun PurchaseOrderDetailDialog(
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                Text(text = "$supplierLabel:", fontSize = 11.5.sp, color = AppColors.TextSecondary)
+                                Text(text = "$supplierLabel:", fontSize = 11.sp, color = AppColors.TextSecondary)
                                 Text(text = order.supplierNameSnapshot, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                                 if (!order.supplierPhoneSnapshot.isNullOrBlank()) {
                                     Text(text = "Telp: ${order.supplierPhoneSnapshot}", fontSize = 12.sp, color = AppColors.TextSecondary)
@@ -562,7 +563,7 @@ fun PurchaseOrderDetailDialog(
                                     val qtyStr = PurchaseOrderReceiptFormatter.formatQuantity(item.orderedQuantity, item.unit)
                                     Text(
                                         text = "$qtyStr × ${formatRupiah(item.estimatedPrice)}",
-                                        fontSize = 11.5.sp,
+                                        fontSize = 11.sp,
                                         color = AppColors.TextSecondary
                                     )
                                 }
@@ -607,7 +608,7 @@ Text("Catatan:", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Materia
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Text("Estimasi Total Pesanan", fontWeight = FontWeight.Bold, fontSize = 13.5.sp, color = AppColors.GreenPrimary)
+                                Text("Estimasi Total Pesanan", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = AppColors.GreenPrimary)
                                 Text(formatRupiah(order.totalEstimatedAmount), fontWeight = FontWeight.Bold, fontSize = 16.sp, color = AppColors.GreenPrimary)
                             }
                         }
@@ -695,7 +696,7 @@ Text("Catatan:", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Materia
                             ) {
                                 Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(16.dp))
                                 Spacer(Modifier.width(4.dp))
-                                Text("Edit Draft", fontSize = 12.5.sp, fontWeight = FontWeight.Bold)
+                                Text("Edit Draft", fontSize = 13.sp, fontWeight = FontWeight.Bold)
                             }
 
                             Button(
@@ -706,7 +707,7 @@ Text("Catatan:", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Materia
                             ) {
                                 Icon(Icons.Default.Send, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onPrimary)
                                 Spacer(Modifier.width(4.dp))
-                                Text("Sudah Dipesan", fontSize = 12.5.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.surface)
+                                Text("Sudah Dipesan", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimary)
                             }
                         }
 
@@ -714,7 +715,7 @@ Text("Catatan:", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Materia
                             onClick = { showCancelConfirmDialog = true },
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Text("Batalkan Pesanan", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.SemiBold, fontSize = 12.5.sp)
+                            Text("Batalkan Pesanan", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
                         }
                     } else if (order.status == PurchaseOrderStatus.ORDERED.name) {
                         Button(
@@ -725,14 +726,14 @@ Text("Catatan:", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Materia
                         ) {
                             Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onPrimary)
                             Spacer(Modifier.width(6.dp))
-                            Text("Terima Barang", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.surface)
+                            Text("Terima Barang", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimary)
                         }
 
                         TextButton(
                             onClick = { showCancelConfirmDialog = true },
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Text("Batalkan Pesanan", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.SemiBold, fontSize = 12.5.sp)
+                            Text("Batalkan Pesanan", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
                         }
                     }
 
@@ -838,7 +839,7 @@ Text("Catatan:", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Materia
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text(
                         text = "Konfirmasi penerimaan barang untuk Pesanan #${order.orderNumber}. Tindakan ini akan menyelesaikan pesanan menjadi transaksi pembelian resmi.",
-                        fontSize = 12.5.sp,
+                        fontSize = 12.sp,
                         color = AppColors.TextSecondary
                     )
 
@@ -859,12 +860,12 @@ Text("Catatan:", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Materia
                             }
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                                 Text("Total Pembelian:", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = AppColors.GreenPrimary)
-                                Text(formatRupiah(order.totalEstimatedAmount), fontSize = 13.5.sp, fontWeight = FontWeight.Bold, color = AppColors.GreenPrimary)
+                                Text(formatRupiah(order.totalEstimatedAmount), fontSize = 14.sp, fontWeight = FontWeight.Bold, color = AppColors.GreenPrimary)
                             }
                         }
                     }
 
-                    Text("Pilih Metode Pembayaran:", fontWeight = FontWeight.SemiBold, fontSize = 12.5.sp)
+                    Text("Pilih Metode Pembayaran:", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
 
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Surface(
@@ -932,7 +933,7 @@ Text("Catatan:", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Materia
                     if (isReceiving) {
                         CircularProgressIndicator(modifier = Modifier.size(16.dp), color = MaterialTheme.colorScheme.surface, strokeWidth = 2.dp)
                     } else {
-                        Text("Konfirmasi Terima", fontWeight = FontWeight.Bold)
+                        Text("Konfirmasi Terima", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimary)
                     }
                 }
             },
@@ -1032,7 +1033,7 @@ fun CreateEditPurchaseOrderDialog(
                     Text(
                         text = if (existingOrder != null) "Edit Draft Pesanan" else "Buat Pesanan ($supplierLabel)",
                         fontWeight = FontWeight.Bold,
-                        fontSize = 17.sp,
+                        fontSize = 16.sp,
                         color = AppColors.TextPrimary
                     )
                     // Gate 1.7: was size(28.dp) for the dialog's only close control. The "Tutup"
@@ -1132,7 +1133,7 @@ fun CreateEditPurchaseOrderDialog(
                             ) {
                                 Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(14.dp), tint = MaterialTheme.colorScheme.onPrimary)
                                 Spacer(Modifier.width(4.dp))
-                                Text("Tambah Produk", fontSize = 11.5.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.surface)
+                                Text("Tambah Produk", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimary)
                             }
                         }
                     }
@@ -1153,7 +1154,7 @@ fun CreateEditPurchaseOrderDialog(
                                 ) {
                                     Text(
                                         text = "Belum ada produk ditambahkan ke pesanan.",
-                                        fontSize = 12.5.sp,
+                                        fontSize = 12.sp,
                                         color = AppColors.TextSecondary,
                                         textAlign = TextAlign.Center
                                     )
@@ -1187,7 +1188,7 @@ fun CreateEditPurchaseOrderDialog(
                                         Text(
                                             text = "${index + 1}. ${item.productName}",
                                             fontWeight = FontWeight.Bold,
-                                            fontSize = 13.5.sp,
+                                            fontSize = 14.sp,
                                             modifier = Modifier.weight(1f)
                                         )
                                         IconButton(
@@ -1294,7 +1295,7 @@ fun CreateEditPurchaseOrderDialog(
                                 Text(
                                     text = "Estimasi Total Pesanan",
                                     fontWeight = FontWeight.Bold,
-                                    fontSize = 13.5.sp,
+                                    fontSize = 13.sp,
                                     color = AppColors.GreenPrimary
                                 )
                                 Text(
@@ -1351,7 +1352,7 @@ fun CreateEditPurchaseOrderDialog(
                         colors = ButtonDefaults.buttonColors(containerColor = AppColors.GreenPrimary),
                         shape = RoundedCornerShape(12.dp)
                     ) {
-                        Text("Simpan Draft", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.surface)
+                        Text("Simpan Draft", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimary)
                     }
                 }
             }
@@ -1381,9 +1382,9 @@ fun CreateEditPurchaseOrderDialog(
                                     }
                             ) {
                                 Column(modifier = Modifier.padding(10.dp)) {
-                                    Text(sup.name, fontWeight = FontWeight.Bold, fontSize = 13.5.sp)
+                                    Text(sup.name, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                                     if (!sup.phone.isNullOrBlank()) {
-                                        Text("Telp: ${sup.phone}", fontSize = 11.5.sp, color = AppColors.TextSecondary)
+                                        Text("Telp: ${sup.phone}", fontSize = 11.sp, color = AppColors.TextSecondary)
                                     }
                                 }
                             }
@@ -1494,7 +1495,7 @@ fun ProductPickerForPoDialog(
                                         )
                                         Text(
                                             text = "Harga Beli Standar: ${formatRupiah(prod.purchasePrice)} / ${prod.unit}",
-                                            fontSize = 11.5.sp,
+                                            fontSize = 11.sp,
                                             color = AppColors.TextSecondary
                                         )
                                     }
