@@ -12,6 +12,8 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,42 +24,23 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Assessment
 import androidx.compose.material.icons.filled.Business
-import androidx.compose.material.icons.filled.CloudDownload
-import androidx.compose.material.icons.filled.CloudSync
-import androidx.compose.material.icons.filled.CloudUpload
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Inventory2
-import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.Palette
-import androidx.compose.material.icons.filled.Payment
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.PhotoLibrary
-import androidx.compose.material.icons.filled.PointOfSale
-import androidx.compose.material.icons.filled.QrCode2
-import androidx.compose.material.icons.filled.Receipt
 import androidx.compose.material.icons.filled.Storefront
 import androidx.compose.material.icons.filled.VerifiedUser
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -67,7 +50,6 @@ import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Scaffold
@@ -75,8 +57,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -87,38 +67,36 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import id.skmnetwork.bukuwarung.backup.BackupRestoreManager
-import id.skmnetwork.bukuwarung.data.local.database.AppDatabase
+import id.skmnetwork.bukuwarung.BuildConfig
 import id.skmnetwork.bukuwarung.data.preferences.UserPreferencesRepository
 import id.skmnetwork.bukuwarung.data.preferences.UserSettings
 import id.skmnetwork.bukuwarung.domain.business.BusinessActivity
 import id.skmnetwork.bukuwarung.domain.business.BusinessCategory
-import id.skmnetwork.bukuwarung.domain.business.BusinessType
 import id.skmnetwork.bukuwarung.domain.business.BusinessTaxonomyRegistry
+import id.skmnetwork.bukuwarung.domain.business.BusinessType
 import id.skmnetwork.bukuwarung.domain.tax.TaxApplicability
 import id.skmnetwork.bukuwarung.domain.tax.TaxPriceMode
-import id.skmnetwork.bukuwarung.domain.business.ResolvedBusinessProfile
 import id.skmnetwork.bukuwarung.license.LicenseManager
 import id.skmnetwork.bukuwarung.license.LicensePhase
 import id.skmnetwork.bukuwarung.license.ValidationResult
-import id.skmnetwork.bukuwarung.ui.components.AppCard
-import id.skmnetwork.bukuwarung.ui.components.AppTextField
-import id.skmnetwork.bukuwarung.ui.components.CameraQrisPhotoDialog
-import id.skmnetwork.bukuwarung.ui.components.PrimaryButton
-import id.skmnetwork.bukuwarung.ui.components.SecondaryButton
 import id.skmnetwork.bukuwarung.ui.components.AppErrorBanner
+import id.skmnetwork.bukuwarung.ui.components.AppTextField
 import id.skmnetwork.bukuwarung.ui.components.AppTouchTarget
+import id.skmnetwork.bukuwarung.ui.components.ButtonDestructive
+import id.skmnetwork.bukuwarung.ui.components.ButtonGhost
+import id.skmnetwork.bukuwarung.ui.components.ButtonNeutral
+import id.skmnetwork.bukuwarung.ui.components.ButtonPrimary
+import id.skmnetwork.bukuwarung.ui.components.CameraQrisPhotoDialog
 import id.skmnetwork.bukuwarung.ui.components.SectionCard
 import id.skmnetwork.bukuwarung.ui.components.SectionHeader
 import id.skmnetwork.bukuwarung.ui.components.StatusBadge
@@ -126,6 +104,7 @@ import id.skmnetwork.bukuwarung.ui.components.StatusBadgeVariant
 import id.skmnetwork.bukuwarung.ui.theme.AppColors
 import id.skmnetwork.bukuwarung.ui.theme.AppShapes
 import id.skmnetwork.bukuwarung.ui.theme.AppSpacing
+import id.skmnetwork.bukuwarung.ui.theme.AppTypeScale
 import id.skmnetwork.bukuwarung.ui.theme.rememberAppWindowSize
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
@@ -133,7 +112,6 @@ import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import id.skmnetwork.bukuwarung.BuildConfig
 
 private const val PRIVACY_POLICY_URL = "https://bukuwarung.skmnetwork.com/privacy-policy"
 
@@ -142,13 +120,6 @@ private const val PRIVACY_POLICY_URL = "https://bukuwarung.skmnetwork.com/privac
 fun SettingsScreen(
     /**
      * Gate H.4.2-CODE-FIX.1 - REQUIRED, no default.
-     *
-     * This previously defaulted to null, and the null branch built
-     * `BackupRestoreManager(db, prefsRepo)` with no transport. That selected the
-     * `MockSheetsTransport` default, so the backup screen would report
-     * "Data warung berhasil dicadangkan ke Google Sheets." while writing to a process-local map.
-     * Making the ViewModel mandatory removes the only main-source path that could reach a mock
-     * transport; AppNavigation already supplies the real one built over GoogleSheetsApiTransport.
      */
     backupViewModel: BackupViewModel,
     userPreferencesRepository: UserPreferencesRepository? = null,
@@ -169,7 +140,6 @@ fun SettingsScreen(
     val restoreState by bViewModel.restoreState.collectAsStateWithLifecycle()
 
     val settingsState by prefsRepo.userSettings.collectAsStateWithLifecycle(initialValue = UserSettings())
-    // Gate H.5.1: the status shown to the merchant is the evaluated runtime state, not the stored string.
     val licenseState by licManager.licenseState.collectAsStateWithLifecycle()
     val licenseTier by licManager.licenseTier.collectAsStateWithLifecycle()
 
@@ -180,7 +150,6 @@ fun SettingsScreen(
         )
     }
 
-    // Step 2 (C): business type change after onboarding.
     var showBusinessTypeDialog by remember { mutableStateOf(false) }
     var isSavingBusinessType by remember { mutableStateOf(false) }
     var businessTypeError by remember { mutableStateOf<String?>(null) }
@@ -201,8 +170,8 @@ fun SettingsScreen(
     // 1.5 Pajak / PPN
     var taxEnabled by remember { mutableStateOf(false) }
     var taxRateInput by remember { mutableStateOf("") }
-    var taxPriceMode by remember { mutableStateOf(id.skmnetwork.bukuwarung.domain.tax.TaxPriceMode.EXCLUSIVE.name) }
-    var taxApplicability by remember { mutableStateOf(id.skmnetwork.bukuwarung.domain.tax.TaxApplicability.GLOBAL.name) }
+    var taxPriceMode by remember { mutableStateOf(TaxPriceMode.EXCLUSIVE.name) }
+    var taxApplicability by remember { mutableStateOf(TaxApplicability.GLOBAL.name) }
     var taxRoundingMode by remember { mutableStateOf("HALF_UP") }
 
     // 1. Profil Warung / Usaha
@@ -377,12 +346,14 @@ fun SettingsScreen(
         topBar = {
             Surface(
                 color = MaterialTheme.colorScheme.surface,
-                shadowElevation = 0.5.dp
+                shadowElevation = 0.5.dp,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                modifier = Modifier.fillMaxWidth()
             ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                        .padding(horizontal = 16.dp, vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Box(
@@ -407,7 +378,7 @@ fun SettingsScreen(
                             text = "Pengaturan",
                             style = MaterialTheme.typography.titleMedium.copy(
                                 fontWeight = FontWeight.Bold,
-                                fontSize = 16.sp,
+                                fontSize = 16.5.sp,
                                 color = AppColors.TextPrimary
                             ),
                             maxLines = 1
@@ -415,7 +386,7 @@ fun SettingsScreen(
                         Text(
                             text = "Atur profil dan preferensi usaha",
                             style = MaterialTheme.typography.bodySmall.copy(
-                                fontSize = 11.sp,
+                                fontSize = 11.5.sp,
                                 color = AppColors.TextSecondary
                             ),
                             maxLines = 1
@@ -434,691 +405,638 @@ fun SettingsScreen(
         ) {
             Column(
                 modifier = Modifier
-                    // Gate 1.7: was fillMaxSize() then widthIn(max = contentMaxWidth) - the fixed
-                    // width defeated the cap, so settings ran full-bleed on tablets.
                     .fillMaxHeight()
                     .widthIn(max = windowSize.contentMaxWidth)
                     .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 16.dp, vertical = 10.dp),
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-            // ==========================================
-            // 0. TIPE USAHA & MODEL OPERASIONAL
-            // ==========================================
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                SectionHeader(
-                    title = "TIPE USAHA & MODEL OPERASIONAL",
-                    modifier = Modifier.padding(top = AppSpacing.xs)
-                )
-                SectionCard(
+                // ==========================================
+                // 0. TIPE USAHA & MODEL OPERASIONAL
+                // ==========================================
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    SectionHeader(
+                        title = "TIPE USAHA & MODEL OPERASIONAL",
+                        modifier = Modifier.padding(top = AppSpacing.xs)
+                    )
+                    SectionCard(
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                Column(
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
                             Row(
+                                modifier = Modifier.fillMaxWidth(),
                                 verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                                modifier = Modifier.weight(1f)
+                                horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(40.dp)
-                                        .clip(RoundedCornerShape(10.dp))
-                                        .background(AppColors.GreenLight),
-                                    contentAlignment = Alignment.Center
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                    modifier = Modifier.weight(1f)
                                 ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Business,
-                                        contentDescription = null,
-                                        tint = AppColors.GreenPrimary,
-                                        modifier = Modifier.size(22.dp)
-                                    )
+                                    Box(
+                                        modifier = Modifier
+                                            .size(40.dp)
+                                            .clip(RoundedCornerShape(10.dp))
+                                            .background(MaterialTheme.colorScheme.primaryContainer),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Business,
+                                            contentDescription = null,
+                                            tint = AppColors.GreenPrimary,
+                                            modifier = Modifier.size(22.dp)
+                                        )
+                                    }
+                                    Column {
+                                        Text(
+                                            text = resolvedProfile.businessType.displayName,
+                                            style = MaterialTheme.typography.titleSmall.copy(
+                                                fontWeight = FontWeight.Bold,
+                                                color = AppColors.TextPrimary
+                                            )
+                                        )
+                                        Text(
+                                            text = "Kategori: ${resolvedProfile.businessType.category.displayName}",
+                                            style = MaterialTheme.typography.labelSmall.copy(
+                                                color = AppColors.TextSecondary
+                                            )
+                                        )
+                                    }
                                 }
-                                Column {
+                            }
+
+                            Text(
+                                text = resolvedProfile.businessType.description,
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    color = AppColors.TextSecondary
+                                )
+                            )
+
+                            Spacer(Modifier.height(4.dp))
+                            ButtonNeutral(
+                                text = "Ubah Jenis Usaha",
+                                onClick = { showBusinessTypeDialog = true },
+                                fillMaxWidth = true
+                            )
+
+                            if (resolvedProfile.activities.isNotEmpty()) {
+                                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                     Text(
-                                        text = resolvedProfile.businessType.displayName,
-                                        style = MaterialTheme.typography.titleSmall.copy(
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 14.5.sp,
+                                        text = "Fitur & Aktivitas Operasional Aktif:",
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            fontWeight = FontWeight.SemiBold,
                                             color = AppColors.TextPrimary
                                         )
                                     )
                                     Text(
-                                        text = "Kategori: ${resolvedProfile.businessType.category.displayName}",
-                                        style = MaterialTheme.typography.labelSmall.copy(
-                                            fontSize = 11.sp,
-                                            color = AppColors.TextSecondary
+                                        text = resolvedProfile.activities.joinToString(", ") { it.displayName },
+                                        style = MaterialTheme.typography.bodySmall.copy(
+                                            color = AppColors.GreenDark,
+                                            fontWeight = FontWeight.Medium
                                         )
                                     )
                                 }
                             }
-                        }
 
-                        Text(
-                            text = resolvedProfile.businessType.description,
-                            style = MaterialTheme.typography.bodySmall.copy(
-                                fontSize = 11.5.sp,
-                                color = AppColors.TextSecondary
-                            )
-                        )
-
-                        // Step 2 (C): a merchant who picked the wrong type at setup could previously
-                        // never correct it - the type was only ever written by onboarding or a backup
-                        // restore. Changing it affects labels, units, category presets and the default
-                        // product type for NEW products. It never rewrites existing products, sales,
-                        // purchases or stock history.
-                        Spacer(Modifier.height(8.dp))
-                        SecondaryButton(
-                            text = "Ubah Jenis Usaha",
-                            onClick = { showBusinessTypeDialog = true },
-                            modifier = Modifier.fillMaxWidth()
-                        )
-
-                        if (resolvedProfile.activities.isNotEmpty()) {
-                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                Text(
-                                    text = "Fitur & Aktivitas Operasional Aktif:",
-                                    style = MaterialTheme.typography.labelSmall.copy(
-                                        fontWeight = FontWeight.SemiBold,
-                                        fontSize = 11.sp,
-                                        color = AppColors.TextPrimary
-                                    )
-                                )
-                                Text(
-                                    text = resolvedProfile.activities.joinToString(", ") { it.displayName },
-                                    style = MaterialTheme.typography.bodySmall.copy(
-                                        fontSize = 11.sp,
-                                        color = AppColors.GreenDark,
-                                        fontWeight = FontWeight.Medium
-                                    )
-                                )
-                            }
-                        }
-
-                        Spacer(Modifier.height(2.dp))
-
-                        // Step 12A: the PR-11.1 "business type is locked after onboarding" rule is
-                        // retired, so the lock notice it used to render is gone. Once setup is
-                        // complete the acknowledged "Ubah Jenis Usaha" action above is the single,
-                        // authoritative way to change the business type. Before setup completes the
-                        // full profile editor is still offered, exactly as before.
-                        if (!settingsState.isSetupCompleted) {
-                            OutlinedButton(
-                                onClick = { showBusinessProfileDialog = true },
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(10.dp),
-                                border = BorderStroke(1.dp, AppColors.GreenPrimary)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Edit,
-                                    contentDescription = null,
-                                    tint = AppColors.GreenPrimary,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Spacer(Modifier.width(6.dp))
-                                Text(
+                            if (!settingsState.isSetupCompleted) {
+                                Spacer(Modifier.height(2.dp))
+                                ButtonNeutral(
                                     text = "Ubah Tipe & Model Usaha",
-                                    color = AppColors.GreenPrimary,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 12.5.sp
+                                    onClick = { showBusinessProfileDialog = true },
+                                    leadingIcon = Icons.Default.Edit,
+                                    fillMaxWidth = true
                                 )
                             }
                         }
                     }
                 }
-            }
 
-            // ==========================================
-            // 1. PROFIL USAHA
-            // ==========================================
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                // Gate 1.2: was a hand-inlined 11sp Bold green labelSmall.copy(...). Text and the
-                // interpolated shop label are unchanged; only the presentation now comes from the
-                // shared header.
-                SectionHeader(
-                    title = "PROFIL ${shopLabel.uppercase()}",
-                    modifier = Modifier.padding(top = AppSpacing.xs)
-                )
-                SectionCard(
+                // ==========================================
+                // 1. PROFIL USAHA
+                // ==========================================
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    SectionHeader(
+                        title = "PROFIL ${shopLabel.uppercase()}",
+                        modifier = Modifier.padding(top = AppSpacing.xs)
+                    )
+                    SectionCard(
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                Column(
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            AppTextField(
+                                value = shopNameInput,
+                                onValueChange = { shopNameInput = it },
+                                label = "Nama $shopLabel *"
+                            )
+                            AppTextField(
+                                value = ownerNameInput,
+                                onValueChange = { ownerNameInput = it },
+                                label = "Nama Pemilik"
+                            )
+                            AppTextField(
+                                value = phoneInput,
+                                onValueChange = { phoneInput = it },
+                                label = "Nomor WhatsApp",
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone)
+                            )
+                            AppTextField(
+                                value = addressInput,
+                                onValueChange = { addressInput = it },
+                                label = "Alamat $shopLabel"
+                            )
+                            Spacer(Modifier.height(2.dp))
+                            ButtonPrimary(
+                                text = "Simpan Profil $shopLabel",
+                                onClick = {
+                                    scope.launch {
+                                        prefsRepo.saveShopProfile(
+                                            shopName = shopNameInput,
+                                            ownerName = ownerNameInput,
+                                            phone = phoneInput,
+                                            address = addressInput
+                                        )
+                                        Toast.makeText(context, "Profil $shopLabel berhasil disimpan", Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                            )
+                        }
+                    }
+                }
+
+                // ==========================================
+                // 1.5 PAJAK / PPN
+                // ==========================================
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    SectionHeader(
+                        title = "PAJAK / PPN",
+                        modifier = Modifier.padding(top = AppSpacing.xs)
+                    )
+                    SectionCard(
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        AppTextField(
-                            value = shopNameInput,
-                            onValueChange = { shopNameInput = it },
-                            label = "Nama $shopLabel *"
-                        )
-                        AppTextField(
-                            value = ownerNameInput,
-                            onValueChange = { ownerNameInput = it },
-                            label = "Nama Pemilik"
-                        )
-                        AppTextField(
-                            value = phoneInput,
-                            onValueChange = { phoneInput = it },
-                            label = "Nomor WhatsApp",
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone)
-                        )
-                        AppTextField(
-                            value = addressInput,
-                            onValueChange = { addressInput = it },
-                            label = "Alamat $shopLabel"
-                        )
-                        Spacer(Modifier.height(2.dp))
-                        PrimaryButton(
-                            text = "Simpan Profil $shopLabel",
-                            onClick = {
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            SettingSwitchRow("Aktifkan Pajak / PPN", taxEnabled) {
+                                taxEnabled = it
                                 scope.launch {
-                                    prefsRepo.saveShopProfile(
-                                        shopName = shopNameInput,
-                                        ownerName = ownerNameInput,
-                                        phone = phoneInput,
-                                        address = addressInput
-                                    )
-                                    Toast.makeText(context, "Profil $shopLabel berhasil disimpan", Toast.LENGTH_SHORT).show()
+                                    prefsRepo.setTaxEnabled(it)
                                 }
                             }
-                        )
-                    }
-                }
-            }
-
-            // ==========================================
-            // 1.5 PAJAK / PPN
-            // ==========================================
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                SectionHeader(
-                    title = "PAJAK / PPN",
-                    modifier = Modifier.padding(top = AppSpacing.xs)
-                )
-                SectionCard(
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                Column(
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        SettingSwitchRow("Aktifkan Pajak / PPN", taxEnabled) {
-                            taxEnabled = it
-                            scope.launch {
-                                prefsRepo.setTaxEnabled(it)
+                            if (taxEnabled) {
+                                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                                AppTextField(
+                                    value = taxRateInput,
+                                    onValueChange = { taxRateInput = it },
+                                    label = "Tarif PPN (%)",
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                                )
+                                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                                Text(
+                                    text = "Mode Harga: ${if (taxPriceMode == TaxPriceMode.EXCLUSIVE.name) "Exclusive (PPN ditambah)" else "Inclusive (PPN sudah termasuk)"}",
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .heightIn(min = AppTouchTarget)
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier
+                                            .clip(AppShapes.ChipShape)
+                                            .clickable {
+                                                taxPriceMode = TaxPriceMode.EXCLUSIVE.name
+                                                scope.launch {
+                                                    prefsRepo.updateTaxSettings(
+                                                        enabled = taxEnabled,
+                                                        rate = taxRateInput.toDoubleOrNull() ?: 0.0,
+                                                        priceMode = TaxPriceMode.EXCLUSIVE,
+                                                        applicability = TaxApplicability.GLOBAL,
+                                                        roundingMode = taxRoundingMode
+                                                    )
+                                                }
+                                            }
+                                            .padding(vertical = 4.dp, horizontal = 4.dp)
+                                    ) {
+                                        RadioButton(
+                                            selected = taxPriceMode == TaxPriceMode.EXCLUSIVE.name,
+                                            onClick = {
+                                                taxPriceMode = TaxPriceMode.EXCLUSIVE.name
+                                                scope.launch {
+                                                    prefsRepo.updateTaxSettings(
+                                                        enabled = taxEnabled,
+                                                        rate = taxRateInput.toDoubleOrNull() ?: 0.0,
+                                                        priceMode = TaxPriceMode.EXCLUSIVE,
+                                                        applicability = TaxApplicability.GLOBAL,
+                                                        roundingMode = taxRoundingMode
+                                                    )
+                                                }
+                                            },
+                                            colors = RadioButtonDefaults.colors(selectedColor = AppColors.GreenPrimary)
+                                        )
+                                        Text("Exclusive", modifier = Modifier.padding(start = 4.dp), style = MaterialTheme.typography.bodyMedium)
+                                    }
+                                    Spacer(Modifier.width(16.dp))
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier
+                                            .clip(AppShapes.ChipShape)
+                                            .clickable {
+                                                taxPriceMode = TaxPriceMode.INCLUSIVE.name
+                                                scope.launch {
+                                                    prefsRepo.updateTaxSettings(
+                                                        enabled = taxEnabled,
+                                                        rate = taxRateInput.toDoubleOrNull() ?: 0.0,
+                                                        priceMode = TaxPriceMode.INCLUSIVE,
+                                                        applicability = TaxApplicability.GLOBAL,
+                                                        roundingMode = taxRoundingMode
+                                                    )
+                                                }
+                                            }
+                                            .padding(vertical = 4.dp, horizontal = 4.dp)
+                                    ) {
+                                        RadioButton(
+                                            selected = taxPriceMode == TaxPriceMode.INCLUSIVE.name,
+                                            onClick = {
+                                                taxPriceMode = TaxPriceMode.INCLUSIVE.name
+                                                scope.launch {
+                                                    prefsRepo.updateTaxSettings(
+                                                        enabled = taxEnabled,
+                                                        rate = taxRateInput.toDoubleOrNull() ?: 0.0,
+                                                        priceMode = TaxPriceMode.INCLUSIVE,
+                                                        applicability = TaxApplicability.GLOBAL,
+                                                        roundingMode = taxRoundingMode
+                                                    )
+                                                }
+                                            },
+                                            colors = RadioButtonDefaults.colors(selectedColor = AppColors.GreenPrimary)
+                                        )
+                                        Text("Inclusive", modifier = Modifier.padding(start = 4.dp), style = MaterialTheme.typography.bodyMedium)
+                                    }
+                                }
                             }
                         }
-                        if (taxEnabled) {
-                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                            AppTextField(
-                                value = taxRateInput,
-                                onValueChange = { taxRateInput = it },
-                                label = "Tarif PPN (%)",
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
-                            )
-                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                            Text(
-                                text = "Mode Harga: ${if (taxPriceMode == id.skmnetwork.bukuwarung.domain.tax.TaxPriceMode.EXCLUSIVE.name) "Exclusive (PPN ditambah)" else "Inclusive (PPN sudah termasuk)"}",
-                                style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp)
-                            )
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                RadioButton(
-                                    selected = taxPriceMode == id.skmnetwork.bukuwarung.domain.tax.TaxPriceMode.EXCLUSIVE.name,
-                                    onClick = {
-                                        taxPriceMode = id.skmnetwork.bukuwarung.domain.tax.TaxPriceMode.EXCLUSIVE.name
-                                        scope.launch {
-                                            prefsRepo.updateTaxSettings(
-                                                enabled = taxEnabled,
-                                                rate = taxRateInput.toDoubleOrNull() ?: 0.0,
-                                                priceMode = id.skmnetwork.bukuwarung.domain.tax.TaxPriceMode.EXCLUSIVE,
-                                                applicability = id.skmnetwork.bukuwarung.domain.tax.TaxApplicability.GLOBAL,
-                                                roundingMode = taxRoundingMode
-                                            )
-                                        }
-                                    }
-                                )
-                                Text("Exclusive", modifier = Modifier.padding(start = 4.dp))
-                                Spacer(Modifier.width(16.dp))
-                                RadioButton(
-                                    selected = taxPriceMode == id.skmnetwork.bukuwarung.domain.tax.TaxPriceMode.INCLUSIVE.name,
-                                    onClick = {
-                                        taxPriceMode = id.skmnetwork.bukuwarung.domain.tax.TaxPriceMode.INCLUSIVE.name
-                                        scope.launch {
-                                            prefsRepo.updateTaxSettings(
-                                                enabled = taxEnabled,
-                                                rate = taxRateInput.toDoubleOrNull() ?: 0.0,
-                                                priceMode = id.skmnetwork.bukuwarung.domain.tax.TaxPriceMode.INCLUSIVE,
-                                                applicability = id.skmnetwork.bukuwarung.domain.tax.TaxApplicability.GLOBAL,
-                                                roundingMode = taxRoundingMode
-                                            )
-                                        }
-                                    }
-                                )
-                                Text("Inclusive", modifier = Modifier.padding(start = 4.dp))
-                            }
-                        }
                     }
                 }
-            }
 
-            // ==========================================
-            // 2. PENJUALAN & KASIR (POS)
-            // ==========================================
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                SectionHeader(
+                // ==========================================
+                // 2. PENJUALAN & KASIR (POS)
+                // ==========================================
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    SectionHeader(
                         title = "${transactionLabel.uppercase()} & KASIR",
                         modifier = Modifier.padding(top = AppSpacing.xs)
                     )
-                SectionCard(
+                    SectionCard(
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                Column(
-                        verticalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        SettingSwitchRow("Tampilkan Foto $productLabel di Kasir", showProductImage) {
-                            showProductImage = it
-                            scope.launch {
-                                prefsRepo.updatePosSettings(showProductImage, showStock, showBarcode, confirmCheckout)
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            SettingSwitchRow("Tampilkan Foto $productLabel di Kasir", showProductImage) {
+                                showProductImage = it
+                                scope.launch {
+                                    prefsRepo.updatePosSettings(showProductImage, showStock, showBarcode, confirmCheckout)
+                                }
                             }
-                        }
-                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                        SettingSwitchRow("Tampilkan Jumlah $stockLabel di Kasir", showStock) {
-                            showStock = it
-                            scope.launch {
-                                prefsRepo.updatePosSettings(showProductImage, showStock, showBarcode, confirmCheckout)
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                            SettingSwitchRow("Tampilkan Jumlah $stockLabel di Kasir", showStock) {
+                                showStock = it
+                                scope.launch {
+                                    prefsRepo.updatePosSettings(showProductImage, showStock, showBarcode, confirmCheckout)
+                                }
                             }
-                        }
-                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                        SettingSwitchRow("Tampilkan Tombol Scan Barcode", showBarcode) {
-                            showBarcode = it
-                            scope.launch {
-                                prefsRepo.updatePosSettings(showProductImage, showStock, showBarcode, confirmCheckout)
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                            SettingSwitchRow("Tampilkan Tombol Scan Barcode", showBarcode) {
+                                showBarcode = it
+                                scope.launch {
+                                    prefsRepo.updatePosSettings(showProductImage, showStock, showBarcode, confirmCheckout)
+                                }
                             }
-                        }
-                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                        SettingSwitchRow("Konfirmasi Sebelum Selesai Transaksi", confirmCheckout) {
-                            confirmCheckout = it
-                            scope.launch {
-                                prefsRepo.updatePosSettings(showProductImage, showStock, showBarcode, confirmCheckout)
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                            SettingSwitchRow("Konfirmasi Sebelum Selesai Transaksi", confirmCheckout) {
+                                confirmCheckout = it
+                                scope.launch {
+                                    prefsRepo.updatePosSettings(showProductImage, showStock, showBarcode, confirmCheckout)
+                                }
                             }
                         }
                     }
                 }
-            }
 
-            // ==========================================
-            // 3. METODE PEMBAYARAN
-            // ==========================================
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                SectionHeader(
+                // ==========================================
+                // 3. METODE PEMBAYARAN
+                // ==========================================
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    SectionHeader(
                         title = "METODE PEMBAYARAN",
                         modifier = Modifier.padding(top = AppSpacing.xs)
                     )
-                SectionCard(
+                    SectionCard(
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                Column(
-                        verticalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        SettingSwitchRow("Terima Pembayaran Tunai (Cash)", cashEnabled) {
-                            cashEnabled = it
-                            scope.launch {
-                                prefsRepo.updatePaymentSettings(
-                                    cashEnabled = cashEnabled,
-                                    qrisEnabled = qrisEnabled,
-                                    creditEnabled = creditEnabled,
-                                    cashReceivedEnabled = cashReceivedEnabled,
-                                    qrisConfirmationRequired = qrisConfirmationRequired
-                                )
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            SettingSwitchRow("Terima Pembayaran Tunai (Cash)", cashEnabled) {
+                                cashEnabled = it
+                                scope.launch {
+                                    prefsRepo.updatePaymentSettings(
+                                        cashEnabled = cashEnabled,
+                                        qrisEnabled = qrisEnabled,
+                                        creditEnabled = creditEnabled,
+                                        cashReceivedEnabled = cashReceivedEnabled,
+                                        qrisConfirmationRequired = qrisConfirmationRequired
+                                    )
+                                }
                             }
-                        }
-                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                        SettingSwitchRow("Terima Pembayaran QRIS", qrisEnabled) {
-                            qrisEnabled = it
-                            scope.launch {
-                                prefsRepo.updatePaymentSettings(
-                                    cashEnabled = cashEnabled,
-                                    qrisEnabled = qrisEnabled,
-                                    creditEnabled = creditEnabled,
-                                    cashReceivedEnabled = cashReceivedEnabled,
-                                    qrisConfirmationRequired = qrisConfirmationRequired
-                                )
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                            SettingSwitchRow("Terima Pembayaran QRIS", qrisEnabled) {
+                                qrisEnabled = it
+                                scope.launch {
+                                    prefsRepo.updatePaymentSettings(
+                                        cashEnabled = cashEnabled,
+                                        qrisEnabled = qrisEnabled,
+                                        creditEnabled = creditEnabled,
+                                        cashReceivedEnabled = cashReceivedEnabled,
+                                        qrisConfirmationRequired = qrisConfirmationRequired
+                                    )
+                                }
                             }
-                        }
-                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                        SettingSwitchRow("Terima Pembayaran $debtLabel", creditEnabled) {
-                            creditEnabled = it
-                            scope.launch {
-                                prefsRepo.updatePaymentSettings(
-                                    cashEnabled = cashEnabled,
-                                    qrisEnabled = qrisEnabled,
-                                    creditEnabled = creditEnabled,
-                                    cashReceivedEnabled = cashReceivedEnabled,
-                                    qrisConfirmationRequired = qrisConfirmationRequired
-                                )
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                            SettingSwitchRow("Terima Pembayaran $debtLabel", creditEnabled) {
+                                creditEnabled = it
+                                scope.launch {
+                                    prefsRepo.updatePaymentSettings(
+                                        cashEnabled = cashEnabled,
+                                        qrisEnabled = qrisEnabled,
+                                        creditEnabled = creditEnabled,
+                                        cashReceivedEnabled = cashReceivedEnabled,
+                                        qrisConfirmationRequired = qrisConfirmationRequired
+                                    )
+                                }
                             }
-                        }
-                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                        SettingSwitchRow("Hitung Uang Diterima & Kembalian (Cash)", cashReceivedEnabled) {
-                            cashReceivedEnabled = it
-                            scope.launch {
-                                prefsRepo.updatePaymentSettings(
-                                    cashEnabled = cashEnabled,
-                                    qrisEnabled = qrisEnabled,
-                                    creditEnabled = creditEnabled,
-                                    cashReceivedEnabled = cashReceivedEnabled,
-                                    qrisConfirmationRequired = qrisConfirmationRequired
-                                )
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                            SettingSwitchRow("Hitung Uang Diterima & Kembalian (Cash)", cashReceivedEnabled) {
+                                cashReceivedEnabled = it
+                                scope.launch {
+                                    prefsRepo.updatePaymentSettings(
+                                        cashEnabled = cashEnabled,
+                                        qrisEnabled = qrisEnabled,
+                                        creditEnabled = creditEnabled,
+                                        cashReceivedEnabled = cashReceivedEnabled,
+                                        qrisConfirmationRequired = qrisConfirmationRequired
+                                    )
+                                }
                             }
-                        }
-                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                        SettingSwitchRow("Wajib Konfirmasi Sukses QRIS", qrisConfirmationRequired) {
-                            qrisConfirmationRequired = it
-                            scope.launch {
-                                prefsRepo.updatePaymentSettings(
-                                    cashEnabled = cashEnabled,
-                                    qrisEnabled = qrisEnabled,
-                                    creditEnabled = creditEnabled,
-                                    cashReceivedEnabled = cashReceivedEnabled,
-                                    qrisConfirmationRequired = qrisConfirmationRequired
-                                )
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                            SettingSwitchRow("Wajib Konfirmasi Sukses QRIS", qrisConfirmationRequired) {
+                                qrisConfirmationRequired = it
+                                scope.launch {
+                                    prefsRepo.updatePaymentSettings(
+                                        cashEnabled = cashEnabled,
+                                        qrisEnabled = qrisEnabled,
+                                        creditEnabled = creditEnabled,
+                                        cashReceivedEnabled = cashReceivedEnabled,
+                                        qrisConfirmationRequired = qrisConfirmationRequired
+                                    )
+                                }
                             }
                         }
                     }
                 }
-            }
 
-            // ==========================================
-            // 4. QRIS WARUNG / USAHA
-            // ==========================================
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                SectionHeader(
+                // ==========================================
+                // 4. QRIS WARUNG / USAHA
+                // ==========================================
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    SectionHeader(
                         title = "QRIS STATIS ${shopLabel.uppercase()}",
                         modifier = Modifier.padding(top = AppSpacing.xs)
                     )
-                SectionCard(
+                    SectionCard(
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                Column(
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        val qrisBitmap = remember(settingsState.qrisImagePath) {
-                            if (settingsState.qrisImagePath.isNotBlank()) {
-                                try {
-                                    val file = File(settingsState.qrisImagePath)
-                                    if (file.exists() && file.length() > 0) {
-                                        BitmapFactory.decodeFile(file.absolutePath)
-                                    } else null
-                                } catch (e: Exception) {
-                                    null
-                                }
-                            } else null
-                        }
-
-                        val isConfigured = qrisBitmap != null
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
-                            Text(
-                                text = "Status QRIS Merchant",
-                                fontWeight = FontWeight.Bold,
-                                style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.5.sp, color = AppColors.TextPrimary)
-                            )
-                            // Gate 1.4: this was a hand-rolled status badge - a 12dp-radius Surface
-                            // with its own container/border/padding literals and an 11sp label. It is
-                            // now the app's StatusBadge, so the QRIS setup state uses the same
-                            // geometry and the same semantic colours as every other status in the app.
-                            StatusBadge(
-                                label = if (isConfigured) "Sudah Diatur" else "Belum Diatur",
-                                variant = if (isConfigured) StatusBadgeVariant.Success else StatusBadgeVariant.Warning
-                            )
-                        }
+                            val qrisBitmap = remember(settingsState.qrisImagePath) {
+                                if (settingsState.qrisImagePath.isNotBlank()) {
+                                    try {
+                                        val file = File(settingsState.qrisImagePath)
+                                        if (file.exists() && file.length() > 0) {
+                                            BitmapFactory.decodeFile(file.absolutePath)
+                                        } else null
+                                    } catch (e: Exception) {
+                                        null
+                                    }
+                                } else null
+                            }
 
-                        if (isConfigured) {
-                            Text(
-                                text = "QRIS resmi $shopLabel Anda aktif dan akan ditampilkan saat checkout QRIS di kasir.",
-                                style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.5.sp),
-                                color = AppColors.TextSecondary
-                            )
+                            val isConfigured = qrisBitmap != null
 
-                            // QRIS Image Preview Card
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clip(RoundedCornerShape(10.dp))
-                                    .background(MaterialTheme.colorScheme.surface)
-                                    .border(1.dp, AppColors.CardBorderStrong, RoundedCornerShape(10.dp))
-                                    .padding(8.dp),
-                                contentAlignment = Alignment.Center
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Image(
-                                    bitmap = qrisBitmap!!.asImageBitmap(),
-                                    contentDescription = "Preview QRIS $shopLabel",
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .heightIn(max = 200.dp),
-                                    contentScale = ContentScale.Fit
+                                Text(
+                                    text = "Status QRIS Merchant",
+                                    fontWeight = FontWeight.Bold,
+                                    style = MaterialTheme.typography.bodyMedium.copy(color = AppColors.TextPrimary)
+                                )
+                                StatusBadge(
+                                    label = if (isConfigured) "Sudah Diatur" else "Belum Diatur",
+                                    variant = if (isConfigured) StatusBadgeVariant.Success else StatusBadgeVariant.Warning
                                 )
                             }
 
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                OutlinedButton(
-                                    onClick = { showQrisChoiceDialog = true },
-                                    modifier = Modifier.weight(1f),
-                                    shape = RoundedCornerShape(10.dp)
-                                ) {
-                                    Text("Ganti QRIS", fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                                }
-                                OutlinedButton(
-                                    onClick = { showDeleteQrisConfirmDialog = true },
-                                    modifier = Modifier.weight(1f),
-                                    shape = RoundedCornerShape(10.dp),
-                                    colors = ButtonDefaults.outlinedButtonColors(contentColor = AppColors.RedExpense)
-                                ) {
-                                    Text("Hapus QRIS", fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                                }
-                            }
-                        } else {
-                            Text(
-                                text = "Unggah atau foto QRIS resmi merchant Anda agar pelanggan dapat memindai langsung dari aplikasi kasir.",
-                                style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.5.sp),
-                                color = AppColors.TextSecondary
-                            )
+                            if (isConfigured) {
+                                Text(
+                                    text = "QRIS resmi $shopLabel Anda aktif dan akan ditampilkan saat checkout QRIS di kasir.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = AppColors.TextSecondary
+                                )
 
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                Button(
-                                    onClick = { showQrisCameraDialog = true },
-                                    modifier = Modifier.weight(1f),
-                                    colors = ButtonDefaults.buttonColors(containerColor = AppColors.GreenPrimary),
-                                    shape = RoundedCornerShape(10.dp)
+                                // QRIS Image Preview Card
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(AppShapes.CardShape)
+                                        .background(MaterialTheme.colorScheme.surface)
+                                        .border(1.dp, MaterialTheme.colorScheme.outlineVariant, AppShapes.CardShape)
+                                        .padding(8.dp),
+                                    contentAlignment = Alignment.Center
                                 ) {
-                                    Icon(Icons.Default.PhotoCamera, contentDescription = null, modifier = Modifier.size(16.dp))
-                                    Spacer(Modifier.width(4.dp))
-                                    Text("Ambil Foto", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                    Image(
+                                        bitmap = qrisBitmap!!.asImageBitmap(),
+                                        contentDescription = "Preview QRIS $shopLabel",
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .heightIn(max = 200.dp),
+                                        contentScale = ContentScale.Fit
+                                    )
                                 }
-                                OutlinedButton(
-                                    onClick = { qrisImagePickerLauncher.launch("image/*") },
-                                    modifier = Modifier.weight(1f),
-                                    shape = RoundedCornerShape(10.dp)
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
-                                    Icon(Icons.Default.PhotoLibrary, contentDescription = null, modifier = Modifier.size(16.dp))
-                                    Spacer(Modifier.width(4.dp))
-                                    Text("Pilih Galeri", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                    ButtonNeutral(
+                                        text = "Ganti QRIS",
+                                        onClick = { showQrisChoiceDialog = true },
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    ButtonNeutral(
+                                        text = "Hapus QRIS",
+                                        onClick = { showDeleteQrisConfirmDialog = true },
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                }
+                            } else {
+                                Text(
+                                    text = "Unggah atau foto QRIS resmi merchant Anda agar pelanggan dapat memindai langsung dari aplikasi kasir.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = AppColors.TextSecondary
+                                )
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    ButtonPrimary(
+                                        text = "Ambil Foto",
+                                        onClick = { showQrisCameraDialog = true },
+                                        leadingIcon = Icons.Default.PhotoCamera,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    ButtonNeutral(
+                                        text = "Pilih Galeri",
+                                        onClick = { qrisImagePickerLauncher.launch("image/*") },
+                                        leadingIcon = Icons.Default.PhotoLibrary,
+                                        modifier = Modifier.weight(1f)
+                                    )
                                 }
                             }
                         }
                     }
                 }
-            }
 
-            // ==========================================
-            // 5. STOK & PERINGATAN
-            // ==========================================
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                SectionHeader(
+                // ==========================================
+                // 5. STOK & PERINGATAN
+                // ==========================================
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    SectionHeader(
                         title = "${stockLabel.uppercase()} & PERINGATAN",
                         modifier = Modifier.padding(top = AppSpacing.xs)
                     )
-                SectionCard(
+                    SectionCard(
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                Column(
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        SettingSwitchRow("Peringatan $productLabel Hampir Habis", lowStockAlertEnabled) {
-                            lowStockAlertEnabled = it
-                            scope.launch {
-                                prefsRepo.updateStockSettings(
-                                    lowStockAlertEnabled = lowStockAlertEnabled,
-                                    defaultLowStockLimit = lowStockLimitInput.toIntOrNull() ?: 2,
-                                    allowNegativeStock = false
-                                )
-                            }
-                        }
-                        AppTextField(
-                            value = lowStockLimitInput,
-                            onValueChange = {
-                                lowStockLimitInput = it
-                                val limit = it.toIntOrNull() ?: 2
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            SettingSwitchRow("Peringatan $productLabel Hampir Habis", lowStockAlertEnabled) {
+                                lowStockAlertEnabled = it
                                 scope.launch {
                                     prefsRepo.updateStockSettings(
                                         lowStockAlertEnabled = lowStockAlertEnabled,
-                                        defaultLowStockLimit = limit,
+                                        defaultLowStockLimit = lowStockLimitInput.toIntOrNull() ?: 2,
                                         allowNegativeStock = false
                                     )
                                 }
-                            },
-                            label = "Batas Default $stockLabel Menipis $productLabel Baru",
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
-                        )
+                            }
+                            AppTextField(
+                                value = lowStockLimitInput,
+                                onValueChange = {
+                                    lowStockLimitInput = it
+                                    val limit = it.toIntOrNull() ?: 2
+                                    scope.launch {
+                                        prefsRepo.updateStockSettings(
+                                            lowStockAlertEnabled = lowStockAlertEnabled,
+                                            defaultLowStockLimit = limit,
+                                            allowNegativeStock = false
+                                        )
+                                    }
+                                },
+                                label = "Batas Default $stockLabel Menipis $productLabel Baru",
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                            )
+                        }
                     }
                 }
-            }
 
-            // ==========================================
-            // 6. STRUK & PRINTER THERMAL
-            // ==========================================
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                SectionHeader(
+                // ==========================================
+                // 6. STRUK & PRINTER THERMAL
+                // ==========================================
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    SectionHeader(
                         title = "PRINTER & ${receiptLabel.uppercase()}",
                         modifier = Modifier.padding(top = AppSpacing.xs)
                     )
-                SectionCard(
+                    SectionCard(
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                Column(
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        // Card status & tombol konfigurasi printer thermal
-                        Surface(
-                            shape = RoundedCornerShape(12.dp),
-                            color = MaterialTheme.colorScheme.surfaceVariant,
-                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                            modifier = Modifier.fillMaxWidth()
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                modifier = Modifier.padding(12.dp)
+                            Surface(
+                                shape = AppShapes.CardShape,
+                                color = MaterialTheme.colorScheme.surfaceVariant,
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                                modifier = Modifier.fillMaxWidth()
                             ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = "Printer $receiptLabel (Thermal)",
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 13.5.sp,
-                                        color = AppColors.TextPrimary
-                                    )
-                                    Text(
-                                        text = when {
-                                            activePrinterService.isConnected -> "Terhubung (${settingsState.printerDeviceName.ifBlank { settingsState.printerAddress }})"
-                                            settingsState.printerType != "NONE" && settingsState.printerAddress.isNotBlank() -> "Tersimpan: ${settingsState.printerDeviceName.ifBlank { settingsState.printerAddress }} (Tidak terhubung)"
-                                            else -> "Belum dikonfigurasi"
-                                        },
-                                        fontSize = 11.5.sp,
-                                        color = when {
-                                            activePrinterService.isConnected -> AppColors.GreenPrimary
-                                            settingsState.printerType != "NONE" && settingsState.printerAddress.isNotBlank() -> AppColors.TextSecondary
-                                            else -> AppColors.RedExpense
-                                        }
-                                    )
-                                    if (settingsState.printerType != "NONE" && settingsState.printerAddress.isNotBlank()) {
-                                        Text(
-                                            text = "${settingsState.printerType} | Lebar: ${settingsState.printerPaperWidth}",
-                                            fontSize = 11.sp,
-                                            color = AppColors.TextSecondary
-                                        )
-                                    }
-                                }
-                                Spacer(Modifier.width(8.dp))
-                                Button(
-                                    onClick = { showPrinterSettingsDialog = true },
-                                    colors = ButtonDefaults.buttonColors(containerColor = AppColors.GreenPrimary),
-                                    shape = RoundedCornerShape(10.dp)
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    modifier = Modifier.padding(12.dp)
                                 ) {
-                                    Text("Atur Printer", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = "Printer $receiptLabel (Thermal)",
+                                            fontWeight = FontWeight.Bold,
+                                            style = MaterialTheme.typography.bodyMedium.copy(color = AppColors.TextPrimary)
+                                        )
+                                        Text(
+                                            text = when {
+                                                activePrinterService.isConnected -> "Terhubung (${settingsState.printerDeviceName.ifBlank { settingsState.printerAddress }})"
+                                                settingsState.printerType != "NONE" && settingsState.printerAddress.isNotBlank() -> "Tersimpan: ${settingsState.printerDeviceName.ifBlank { settingsState.printerAddress }} (Tidak terhubung)"
+                                                else -> "Belum dikonfigurasi"
+                                            },
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = when {
+                                                activePrinterService.isConnected -> AppColors.GreenPrimary
+                                                settingsState.printerType != "NONE" && settingsState.printerAddress.isNotBlank() -> AppColors.TextSecondary
+                                                else -> AppColors.RedExpense
+                                            }
+                                        )
+                                        if (settingsState.printerType != "NONE" && settingsState.printerAddress.isNotBlank()) {
+                                            Text(
+                                                text = "${settingsState.printerType} | Lebar: ${settingsState.printerPaperWidth}",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = AppColors.TextSecondary
+                                            )
+                                        }
+                                    }
+                                    Spacer(Modifier.width(8.dp))
+                                    ButtonPrimary(
+                                        text = "Atur Printer",
+                                        onClick = { showPrinterSettingsDialog = true },
+                                        fillMaxWidth = false
+                                    )
                                 }
                             }
-                        }
 
-                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
-                        SettingSwitchRow("Tampilkan Nama $shopLabel di $receiptLabel", showShopNameOnReceipt) {
-                            showShopNameOnReceipt = it
-                            scope.launch {
-                                prefsRepo.updateReceiptSettings(
-                                    showShopName = showShopNameOnReceipt,
-                                    showAddress = showAddressOnReceipt,
-                                    showPhone = showPhoneOnReceipt,
-                                    showPaymentMethod = showPaymentMethodOnReceipt,
-                                    showChange = showChangeOnReceipt,
-                                    footerText = receiptFooterTextInput
-                                )
-                            }
-                        }
-                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                        SettingSwitchRow("Tampilkan Alamat di $receiptLabel", showAddressOnReceipt) {
-                            showAddressOnReceipt = it
-                            scope.launch {
-                                prefsRepo.updateReceiptSettings(
-                                    showShopName = showShopNameOnReceipt,
-                                    showAddress = showAddressOnReceipt,
-                                    showPhone = showPhoneOnReceipt,
-                                    showPaymentMethod = showPaymentMethodOnReceipt,
-                                    showChange = showChangeOnReceipt,
-                                    footerText = receiptFooterTextInput
-                                )
-                            }
-                        }
-                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                        SettingSwitchRow("Tampilkan Nomor HP di $receiptLabel", showPhoneOnReceipt) {
-                            showPhoneOnReceipt = it
-                            scope.launch {
-                                prefsRepo.updateReceiptSettings(
-                                    showShopName = showShopNameOnReceipt,
-                                    showAddress = showAddressOnReceipt,
-                                    showPhone = showPhoneOnReceipt,
-                                    showPaymentMethod = showPaymentMethodOnReceipt,
-                                    showChange = showChangeOnReceipt,
-                                    footerText = receiptFooterTextInput
-                                )
-                            }
-                        }
-                        AppTextField(
-                            value = receiptFooterTextInput,
-                            onValueChange = {
-                                receiptFooterTextInput = it
+                            SettingSwitchRow("Tampilkan Nama $shopLabel di $receiptLabel", showShopNameOnReceipt) {
+                                showShopNameOnReceipt = it
                                 scope.launch {
                                     prefsRepo.updateReceiptSettings(
                                         showShopName = showShopNameOnReceipt,
@@ -1126,1113 +1044,1144 @@ fun SettingsScreen(
                                         showPhone = showPhoneOnReceipt,
                                         showPaymentMethod = showPaymentMethodOnReceipt,
                                         showChange = showChangeOnReceipt,
-                                        footerText = it
+                                        footerText = receiptFooterTextInput
                                     )
                                 }
-                            },
-                            label = "Teks Catatan Kaki $receiptLabel"
-                        )
+                            }
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                            SettingSwitchRow("Tampilkan Alamat di $receiptLabel", showAddressOnReceipt) {
+                                showAddressOnReceipt = it
+                                scope.launch {
+                                    prefsRepo.updateReceiptSettings(
+                                        showShopName = showShopNameOnReceipt,
+                                        showAddress = showAddressOnReceipt,
+                                        showPhone = showPhoneOnReceipt,
+                                        showPaymentMethod = showPaymentMethodOnReceipt,
+                                        showChange = showChangeOnReceipt,
+                                        footerText = receiptFooterTextInput
+                                    )
+                                }
+                            }
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                            SettingSwitchRow("Tampilkan Nomor HP di $receiptLabel", showPhoneOnReceipt) {
+                                showPhoneOnReceipt = it
+                                scope.launch {
+                                    prefsRepo.updateReceiptSettings(
+                                        showShopName = showShopNameOnReceipt,
+                                        showAddress = showAddressOnReceipt,
+                                        showPhone = showPhoneOnReceipt,
+                                        showPaymentMethod = showPaymentMethodOnReceipt,
+                                        showChange = showChangeOnReceipt,
+                                        footerText = receiptFooterTextInput
+                                    )
+                                }
+                            }
+                            AppTextField(
+                                value = receiptFooterTextInput,
+                                onValueChange = {
+                                    receiptFooterTextInput = it
+                                    scope.launch {
+                                        prefsRepo.updateReceiptSettings(
+                                            showShopName = showShopNameOnReceipt,
+                                            showAddress = showAddressOnReceipt,
+                                            showPhone = showPhoneOnReceipt,
+                                            showPaymentMethod = showPaymentMethodOnReceipt,
+                                            showChange = showChangeOnReceipt,
+                                            footerText = it
+                                        )
+                                    }
+                                },
+                                label = "Teks Catatan Kaki $receiptLabel"
+                            )
+                        }
                     }
                 }
-            }
 
-            // ==========================================
-            // 7. NOTIFIKASI
-            // ==========================================
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                SectionHeader(
+                // ==========================================
+                // 7. NOTIFIKASI
+                // ==========================================
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    SectionHeader(
                         title = "NOTIFIKASI & PENGINGAT",
                         modifier = Modifier.padding(top = AppSpacing.xs)
                     )
-                SectionCard(
+                    SectionCard(
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                Column(
-                        verticalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        SettingSwitchRow("Notifikasi $stockLabel Menipis", lowStockNotificationEnabled) {
-                            lowStockNotificationEnabled = it
-                            scope.launch {
-                                prefsRepo.updateNotificationSettings(
-                                    lowStockNotificationEnabled = lowStockNotificationEnabled,
-                                    debtReminderEnabled = debtReminderEnabled
-                                )
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            SettingSwitchRow("Notifikasi $stockLabel Menipis", lowStockNotificationEnabled) {
+                                lowStockNotificationEnabled = it
+                                scope.launch {
+                                    prefsRepo.updateNotificationSettings(
+                                        lowStockNotificationEnabled = lowStockNotificationEnabled,
+                                        debtReminderEnabled = debtReminderEnabled
+                                    )
+                                }
                             }
-                        }
-                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                        SettingSwitchRow("Pengingat Jatuh Tempo $debtLabel", debtReminderEnabled) {
-                            debtReminderEnabled = it
-                            scope.launch {
-                                prefsRepo.updateNotificationSettings(
-                                    lowStockNotificationEnabled = lowStockNotificationEnabled,
-                                    debtReminderEnabled = debtReminderEnabled
-                                )
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                            SettingSwitchRow("Pengingat Jatuh Tempo $debtLabel", debtReminderEnabled) {
+                                debtReminderEnabled = it
+                                scope.launch {
+                                    prefsRepo.updateNotificationSettings(
+                                        lowStockNotificationEnabled = lowStockNotificationEnabled,
+                                        debtReminderEnabled = debtReminderEnabled
+                                    )
+                                }
                             }
                         }
                     }
                 }
-            }
 
-            // ==========================================
-            // 8. KEAMANAN & PIN
-            // ==========================================
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                SectionHeader(
+                // ==========================================
+                // 8. KEAMANAN & PIN
+                // ==========================================
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    SectionHeader(
                         title = "KEAMANAN & PIN PEMILIK",
                         modifier = Modifier.padding(top = AppSpacing.xs)
                     )
-                SectionCard(
+                    SectionCard(
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                Column(
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        SettingSwitchRow("Kunci Aplikasi dengan PIN", settingsState.pinEnabled) { isChecked ->
-                            if (isChecked && !settingsState.hasPinSet) {
-                                showSetPinDialog = true
-                            } else {
-                                scope.launch {
-                                    prefsRepo.setPinEnabled(isChecked)
-                                }
-                            }
-                        }
-
-                        if (settingsState.hasPinSet) {
-                            Text(
-                                text = "Status: PIN Terpasang (disimpan sebagai hash dengan salt)",
-                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.5.sp),
-                                color = AppColors.GreenPrimary,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                OutlinedButton(
-                                    onClick = { showSetPinDialog = true },
-                                    modifier = Modifier.weight(1f),
-                                    shape = RoundedCornerShape(10.dp)
-                                ) {
-                                    Text("Ganti PIN", fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                                }
-                                OutlinedButton(
-                                    onClick = {
-                                        scope.launch {
-                                            prefsRepo.clearPin()
-                                            Toast.makeText(context, "PIN pemilik dinonaktifkan", Toast.LENGTH_SHORT).show()
-                                        }
-                                    },
-                                    modifier = Modifier.weight(1f),
-                                    shape = RoundedCornerShape(10.dp),
-                                    colors = ButtonDefaults.outlinedButtonColors(contentColor = AppColors.RedExpense)
-                                ) {
-                                    Text("Hapus PIN", fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                                }
-                            }
-                        } else {
-                            Text(
-                                text = "PIN belum dibuat. Aktifkan saklar untuk membuat PIN 4 angka.",
-                                style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.5.sp),
-                                color = AppColors.TextSecondary
-                            )
-                        }
-                    }
-                }
-            }
-
-            // ==========================================
-            // 9. CADANGAN & PEMULIHAN (GOOGLE SHEETS)
-            // ==========================================
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                SectionHeader(
-                        title = "CADANGAN & PEMULIHAN",
-                        modifier = Modifier.padding(top = AppSpacing.xs)
-                    )
-                SectionCard(
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                Column(
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        Text(
-                            text = "Amankan data $shopLabel Anda di Google Sheets.",
-                            style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp),
-                            fontWeight = FontWeight.SemiBold,
-                            color = AppColors.TextPrimary
-                        )
-                        Text(
-                            text = "Backup bersifat opsional dan MANUAL. Pencadangan hanya berjalan saat Anda menekan \"Cadangkan Sekarang\", bukan otomatis. Data yang ikut disalin mencakup $productLabel, $customerLabel, supplier, transaksi penjualan dan pembelian, kas, hutang piutang, hutang supplier, serta catatan bebas pada kolom keterangan. Spreadsheet dibuat di Google Drive akun Google Anda sendiri. PIN dan kode lisensi tidak pernah disertakan.",
-                            style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.5.sp),
-                            color = AppColors.TextSecondary
-                        )
-
-                        // 1. Akun Google Box
-                        Surface(
-                            shape = RoundedCornerShape(12.dp),
-                            color = MaterialTheme.colorScheme.surfaceVariant,
-                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                            modifier = Modifier.fillMaxWidth()
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
-                            Column(
-                                modifier = Modifier.padding(10.dp),
-                                verticalArrangement = Arrangement.spacedBy(6.dp)
-                            ) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text(
-                                        text = "Akun Google",
-                                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
-                                        fontWeight = FontWeight.Bold,
-                                        color = AppColors.TextPrimary
-                                    )
-                                    when (val authState = googleAuthState) {
-                                        is id.skmnetwork.bukuwarung.backup.transport.GoogleAuthConnectionState.Connected -> {
-                                            Text(
-                                                text = "🟢 Terhubung",
-                                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
-                                                fontWeight = FontWeight.Bold,
-                                                color = AppColors.GreenPrimary
-                                            )
-                                        }
-                                        is id.skmnetwork.bukuwarung.backup.transport.GoogleAuthConnectionState.Authorizing -> {
-                                            Text(
-                                                text = "⏳ Menghubungkan...",
-                                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
-                                                fontWeight = FontWeight.Medium,
-                                                color = AppColors.GreenDark
-                                            )
-                                        }
-                                        is id.skmnetwork.bukuwarung.backup.transport.GoogleAuthConnectionState.AuthorizationRequired -> {
-                                            Text(
-                                                text = "🟡 Perlu Otorisasi Ulang",
-                                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
-                                                fontWeight = FontWeight.Bold,
-                                                color = AppColors.OrangeWarning
-                                            )
-                                        }
-                                        else -> {
-                                            Text(
-                                                text = "⚪ Belum terhubung",
-                                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
-                                                color = AppColors.TextSecondary
-                                            )
-                                        }
-                                    }
-                                }
-
-                                when (val authState = googleAuthState) {
-                                    is id.skmnetwork.bukuwarung.backup.transport.GoogleAuthConnectionState.Connected -> {
-                                        Text(
-                                            text = authState.email,
-                                            style = MaterialTheme.typography.bodyMedium.copy(fontSize = 12.5.sp),
-                                            fontWeight = FontWeight.Medium,
-                                            color = AppColors.TextPrimary
-                                        )
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                        ) {
-                                            OutlinedButton(
-                                                onClick = { launchGoogleAccountPicker() },
-                                                modifier = Modifier.weight(1f),
-                                                shape = RoundedCornerShape(10.dp)
-                                            ) {
-                                                Text("Ganti Akun", style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.5.sp, fontWeight = FontWeight.Bold))
-                                            }
-                                            OutlinedButton(
-                                                onClick = { showDisconnectGoogleDialog = true },
-                                                modifier = Modifier.weight(1f),
-                                                shape = RoundedCornerShape(10.dp),
-                                                colors = ButtonDefaults.outlinedButtonColors(contentColor = AppColors.RedExpense)
-                                            ) {
-                                                Text("Putuskan", style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.5.sp, fontWeight = FontWeight.Bold))
-                                            }
-                                        }
-                                    }
-                                    is id.skmnetwork.bukuwarung.backup.transport.GoogleAuthConnectionState.Authorizing -> {
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                            modifier = Modifier.padding(vertical = 4.dp)
-                                        ) {
-                                            CircularProgressIndicator(
-                                                modifier = Modifier.size(14.dp),
-                                                strokeWidth = 2.dp,
-                                                color = AppColors.GreenPrimary
-                                            )
-                                            Text(
-                                                text = "Memverifikasi otorisasi akun Google...",
-                                                style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.5.sp),
-                                                color = AppColors.TextSecondary
-                                            )
-                                        }
-                                    }
-                                    is id.skmnetwork.bukuwarung.backup.transport.GoogleAuthConnectionState.AuthorizationRequired -> {
-                                        Text(
-                                            text = "Akun: ${authState.email}\nIzin akses Google Sheets / Drive perlu diperbarui.",
-                                            style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.5.sp),
-                                            color = AppColors.TextSecondary
-                                        )
-                                        PrimaryButton(
-                                            text = "Hubungkan Kembali",
-                                            onClick = {
-                                                try {
-                                                    val intentSenderRequest = androidx.activity.result.IntentSenderRequest.Builder(
-                                                        authState.resolutionIntent.intentSender
-                                                    ).build()
-                                                    authorizationResolutionLauncher.launch(intentSenderRequest)
-                                                } catch (_: Exception) {
-                                                    bViewModel.initiateAccountAuthorization(authState.email)
-                                                }
-                                            }
-                                        )
-                                    }
-                                    is id.skmnetwork.bukuwarung.backup.transport.GoogleAuthConnectionState.Error -> {
-                                        Text(
-                                            text = authState.message,
-                                            style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.5.sp),
-                                            color = AppColors.RedExpense
-                                        )
-                                        PrimaryButton(
-                                            text = "Hubungkan Akun Google",
-                                            onClick = { launchGoogleAccountPicker() }
-                                        )
-                                    }
-                                    is id.skmnetwork.bukuwarung.backup.transport.GoogleAuthConnectionState.Disconnected -> {
-                                        Text(
-                                            text = "Hubungkan akun Google untuk menyimpan cadangan data warung Anda.",
-                                            style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.5.sp),
-                                            color = AppColors.TextSecondary
-                                        )
-                                        PrimaryButton(
-                                            text = "Hubungkan Akun Google",
-                                            onClick = { launchGoogleAccountPicker() }
-                                        )
-                                    }
-                                }
-                            }
-                        }
-
-                        // 2. Spreadsheet Cadangan Box
-                        if (settingsState.googleAccountEmail.isNotBlank()) {
-                            Surface(
-                                shape = RoundedCornerShape(12.dp),
-                                color = MaterialTheme.colorScheme.surfaceVariant,
-                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Column(
-                                    modifier = Modifier.padding(10.dp),
-                                    verticalArrangement = Arrangement.spacedBy(6.dp)
-                                ) {
-                                    val sheetTitle = settingsState.backupSpreadsheetName.ifBlank {
-                                        "Buku Warung - " + settingsState.shopName.ifBlank { "Warung Saya" }
-                                    }
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Text(
-                                            text = "Spreadsheet Cadangan",
-                                            style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
-                                            fontWeight = FontWeight.Bold,
-                                            color = AppColors.TextPrimary
-                                        )
-                                        if (settingsState.backupSpreadsheetId.isNotBlank()) {
-                                            Text(
-                                                text = "Tersimpan",
-                                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
-                                                fontWeight = FontWeight.Medium,
-                                                color = AppColors.GreenDark
-                                            )
-                                        }
-                                    }
-
-                                    Text(
-                                        text = "📊 $sheetTitle",
-                                        style = MaterialTheme.typography.bodyMedium.copy(fontSize = 12.5.sp),
-                                        fontWeight = FontWeight.Medium,
-                                        color = AppColors.TextPrimary
-                                    )
-
-                                    if (settingsState.backupSpreadsheetId.isNotBlank()) {
-                                        OutlinedButton(
-                                            onClick = {
-                                                try {
-                                                    val uri = Uri.parse(bViewModel.getSpreadsheetWebUrl(settingsState.backupSpreadsheetId))
-                                                    val intent = Intent(Intent.ACTION_VIEW, uri)
-                                                    context.startActivity(intent)
-                                                } catch (e: Exception) {
-                                                    Toast.makeText(context, "Tidak dapat membuka browser", Toast.LENGTH_SHORT).show()
-                                                }
-                                            },
-                                            shape = RoundedCornerShape(10.dp),
-                                            modifier = Modifier.fillMaxWidth()
-                                        ) {
-                                            Text("Buka Spreadsheet ↗", fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                                        }
-                                    }
-
-                                    val lastBackupText = if (settingsState.lastBackupTimestamp <= 0L) {
-                                        "Belum pernah dicadangkan"
-                                    } else {
-                                        val sdf = SimpleDateFormat("dd MMM yyyy, HH:mm", Locale("id", "ID"))
-                                        sdf.format(Date(settingsState.lastBackupTimestamp))
-                                    }
-
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween
-                                    ) {
-                                        Text(
-                                            text = "Cadangan Terakhir:",
-                                            style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.5.sp),
-                                            color = AppColors.TextSecondary
-                                        )
-                                        Text(
-                                            text = lastBackupText,
-                                            style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.5.sp),
-                                            fontWeight = FontWeight.Bold,
-                                            color = if (settingsState.lastBackupTimestamp > 0L) AppColors.GreenPrimary else AppColors.TextPrimary
-                                        )
-                                    }
-                                }
-                            }
-                        }
-
-                        // Operation state banners
-                        when (val state = backupState) {
-                            is BackupOpState.Loading -> {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                    modifier = Modifier.padding(vertical = 4.dp)
-                                ) {
-                                    CircularProgressIndicator(
-                                        modifier = Modifier.size(16.dp),
-                                        strokeWidth = 2.dp,
-                                        color = AppColors.GreenPrimary
-                                    )
-                                    Text(
-                                        text = "Sedang mencadangkan data ke Google Sheets...",
-                                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.5.sp),
-                                        color = AppColors.GreenPrimary
-                                    )
-                                }
-                            }
-                            is BackupOpState.Success -> {
-                                Surface(
-                                    shape = RoundedCornerShape(10.dp),
-                                    color = AppColors.SuccessContainer,
-                                    border = BorderStroke(1.dp, AppColors.Success),
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    Text(
-                                        text = state.message,
-                                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.5.sp),
-                                        color = AppColors.OnSuccessContainer,
-                                        modifier = Modifier.padding(10.dp)
-                                    )
-                                }
-                            }
-                            is BackupOpState.Error -> {
-                                AppErrorBanner(message = state.message)
-                            }
-                            else -> {}
-                        }
-
-                        when (val state = restoreState) {
-                            is RestoreOpState.Loading -> {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                    modifier = Modifier.padding(vertical = 4.dp)
-                                ) {
-                                    CircularProgressIndicator(
-                                        modifier = Modifier.size(16.dp),
-                                        strokeWidth = 2.dp,
-                                        color = AppColors.GreenPrimary
-                                    )
-                                    Text(
-                                        text = "Sedang memulihkan data dari Google Sheets...",
-                                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.5.sp),
-                                        color = AppColors.GreenPrimary
-                                    )
-                                }
-                            }
-                            is RestoreOpState.Success -> {
-                                Surface(
-                                    shape = RoundedCornerShape(10.dp),
-                                    color = AppColors.SuccessContainer,
-                                    border = BorderStroke(1.dp, AppColors.Success),
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    Text(
-                                        text = state.message,
-                                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.5.sp),
-                                        color = AppColors.OnSuccessContainer,
-                                        modifier = Modifier.padding(10.dp)
-                                    )
-                                }
-                            }
-                            is RestoreOpState.Error -> {
-                                AppErrorBanner(message = state.message)
-                            }
-                            else -> {}
-                        }
-
-                        val isBusy = backupState is BackupOpState.Loading || restoreState is RestoreOpState.Loading
-
-                        PrimaryButton(
-                            text = if (backupState is BackupOpState.Loading) "Mencadangkan..." else "Cadangkan Sekarang",
-                            enabled = !isBusy,
-                            onClick = {
-                                bViewModel.resetRestoreState()
-                                if (settingsState.googleAccountEmail.isBlank()) {
-                                    launchGoogleAccountPicker()
+                            SettingSwitchRow("Kunci Aplikasi dengan PIN", settingsState.pinEnabled) { isChecked ->
+                                if (isChecked && !settingsState.hasPinSet) {
+                                    showSetPinDialog = true
                                 } else {
-                                    bViewModel.performBackup()
-                                }
-                            }
-                        )
-
-                        OutlinedButton(
-                            onClick = {
-                                bViewModel.resetBackupState()
-                                if (settingsState.googleAccountEmail.isBlank()) {
-                                    launchGoogleAccountPicker()
-                                } else {
-                                    showRestoreConfirmDialog = true
-                                }
-                            },
-                            enabled = !isBusy,
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(10.dp)
-                        ) {
-                            Text(
-                                text = if (restoreState is RestoreOpState.Loading) "Memulihkan..." else "Pulihkan Data",
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 13.sp
-                            )
-                        }
-                    }
-                }
-            }
-
-            // ==========================================
-            // 10. LISENSI APLIKASI
-            // ==========================================
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                SectionHeader(
-                        title = "LISENSI APLIKASI",
-                        modifier = Modifier.padding(top = AppSpacing.xs)
-                    )
-                Surface(
-                    shape = RoundedCornerShape(14.dp),
-                    color = if (licenseState.grantsAccess) AppColors.SuccessContainer else AppColors.WarningContainer,
-                    border = BorderStroke(1.dp, if (licenseState.grantsAccess) AppColors.Success else AppColors.OrangeWarning),
-                    shadowElevation = 0.5.dp,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(
-                        modifier = Modifier.padding(14.dp),
-                        verticalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Text(
-                            text = licenseTier.label,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 13.5.sp,
-                            color = if (licenseState.grantsAccess) AppColors.OnSuccessContainer else AppColors.OnWarningContainer
-                        )
-                        Text(
-                            text = "Status Lisensi: " + when (licenseState.phase) {
-                                LicensePhase.FRESH_ACTIVE -> "AKTIF"
-                                LicensePhase.STALE_ACTIVE -> "Aktif (perlu koneksi)"
-                                LicensePhase.TRANSIENT_ERROR -> "Tidak dapat menghubungi server (status lokal tetap berlaku)"
-                                LicensePhase.UNLICENSED -> "Belum Aktif (UNLICENSED)"
-                                LicensePhase.BLOCKED -> "Diblokir (${licenseState.blockReason})"
-                                LicensePhase.CHECKING -> "Memeriksa..."
-                            },
-                            style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.5.sp),
-                            color = AppColors.TextSecondary
-                        )
-                        Text(
-                            text = "Model: Sekali Bayar Offline-First (Tanpa Langganan)",
-                            style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.5.sp),
-                            color = AppColors.TextSecondary
-                        )
-                        Spacer(Modifier.height(4.dp))
-                        PrimaryButton(
-                            text = if (isCheckingLicense) "Memverifikasi..." else "Periksa / Pulihkan Lisensi",
-                            enabled = !isCheckingLicense,
-                            onClick = {
-                                scope.launch {
-                                    isCheckingLicense = true
-                                    try {
-                                        // Gate H.5.1: validateOnline already publishes the resulting
-                                        // state, so no follow-up local refresh is needed (and
-                                        // re-refreshing here used to wipe the transient reason away).
-                                        val result = licManager.validateOnline()
-                                        val message = when (result) {
-                                            is ValidationResult.Valid -> "Lisensi valid dan aktif"
-                                            is ValidationResult.CredentialUnavailable ->
-                                                result.message
-                                            // Gate H.5.1: no verdict was obtained. The licence is NOT
-                                            // deactivated and the stored code is kept.
-                                            is ValidationResult.Transient ->
-                                                "Tidak dapat menghubungi server lisensi. Status lokal dan kode lisensi Anda tetap tersimpan."
-                                            is ValidationResult.EmailMismatch -> result.message
-                                            is ValidationResult.DeviceMismatch -> result.message
-                                            is ValidationResult.Revoked -> result.message
-                                            is ValidationResult.Invalid -> result.message
-                                        }
-                                        Toast.makeText(context, message, Toast.LENGTH_LONG).show()
-                                    } catch (e: CancellationException) {
-                                        // Structured concurrency: rethrow, never converted into a
-                                        // user-visible "error" that we then swallow.
-                                        throw e
-                                    } catch (_: Exception) {
-                                        // Gate H.5.3 (H.5.2-P1-1): nothing may leave this button
-                                        // permanently disabled. The licence state is untouched.
-                                        Toast.makeText(
-                                            context,
-                                            "Gagal memeriksa lisensi. Silakan coba lagi.",
-                                            Toast.LENGTH_LONG
-                                        ).show()
-                                    } finally {
-                                        isCheckingLicense = false
+                                    scope.launch {
+                                        prefsRepo.setPinEnabled(isChecked)
                                     }
                                 }
                             }
-                        )
-                    }
-                }
-            }
 
-            // ==========================================
-            // 11. TAMPILAN & TEMA (THEME)
-            // ==========================================
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                // Gate 1.4: the last hand-inlined header. It used colorScheme.primary directly while
-                // the other 13 used AppColors.GreenPrimary - the same colour reached by two different
-                // paths, which is why this card also carried a different border treatment and read as
-                // a seam in the middle of one scroll list.
-                SectionHeader(
-                    title = "TAMPILAN & TEMA",
-                    modifier = Modifier.padding(top = AppSpacing.xs)
-                )
-                Surface(
-                    shape = RoundedCornerShape(14.dp),
-                    color = MaterialTheme.colorScheme.surface,
-                    border = BorderStroke(1.dp, AppColors.CardBorderStrong),
-                    shadowElevation = 0.5.dp,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(
-                        modifier = Modifier.padding(14.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        Text(
-                            text = "Tema Tampilan Aplikasi",
-                            style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.5.sp),
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            text = "Pilih tema warna yang nyaman untuk operasional kasir & pembukuan.",
-                            style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.5.sp),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-
-                        val currentTheme = settingsState.themeMode
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            listOf(
-                                Triple("LIGHT", "☀ Terang", "Terang"),
-                                Triple("DARK", "🌙 Gelap", "Gelap"),
-                                Triple("SYSTEM", "⚙ Sistem", "Sistem")
-                            ).forEach { (mode, label, _) ->
-                                val selected = currentTheme == mode
-                                Surface(
-                                    shape = RoundedCornerShape(10.dp),
-                                    color = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
-                                    border = BorderStroke(
-                                        1.dp,
-                                        if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
-                                    ),
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .clickable {
-                                            scope.launch {
-                                                prefsRepo.updateAppearanceSettings(
-                                                    themeMode = mode,
-                                                    productViewMode = settingsState.productViewMode
-                                                )
-                                            }
-                                        }
-                                ) {
-                                    Column(
-                                        modifier = Modifier.padding(vertical = 10.dp, horizontal = 4.dp),
-                                        horizontalAlignment = Alignment.CenterHorizontally,
-                                        verticalArrangement = Arrangement.spacedBy(2.dp)
-                                    ) {
-                                        Text(
-                                            text = label,
-                                            fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
-                                            fontSize = 12.5.sp,
-                                            color = if (selected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            // ==========================================
-            // 12. TENTANG APLIKASI
-            // ==========================================
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                SectionHeader(
-                        title = "TENTANG APLIKASI",
-                        modifier = Modifier.padding(top = AppSpacing.xs)
-                    )
-                SectionCard(
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                Column(
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Text(
-                            text = "Buku Warung v${BuildConfig.VERSION_NAME}",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 13.5.sp,
-                            color = AppColors.TextPrimary
-                        )
-                        Text(
-                            text = "Aplikasi kasir dan pembukuan sederhana untuk usaha kecil.",
-                            style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.5.sp),
-                            color = AppColors.TextSecondary
-                        )
-                        Text(
-                            text = "Data operasional usaha terutama disimpan secara lokal di perangkat. Data tertentu untuk lisensi, pembelian, dan dukungan dapat diproses oleh SKMNetwork.",
-                            style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.5.sp),
-                            color = AppColors.TextSecondary
-                        )
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier
-                                .padding(top = 6.dp)
-                                .clip(RoundedCornerShape(10.dp))
-                                .clickable {
-                                    val privacyUri = Uri.parse(PRIVACY_POLICY_URL)
-                                    runCatching {
-                                        context.startActivity(
-                                            Intent(Intent.ACTION_VIEW, privacyUri)
-                                        )
-                                    }.onFailure {
-                                        Toast.makeText(
-                                            context,
-                                            "Tidak dapat membuka browser. Alamat: $PRIVACY_POLICY_URL",
-                                            Toast.LENGTH_LONG
-                                        ).show()
-                                    }
-                                }
-                                .padding(vertical = 6.dp, horizontal = 4.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.VerifiedUser,
-                                contentDescription = null,
-                                tint = AppColors.GreenPrimary,
-                                modifier = Modifier.size(14.dp)
-                            )
-                            Spacer(Modifier.width(8.dp))
-                            Column {
+                            if (settingsState.hasPinSet) {
                                 Text(
-                                    text = "Kebijakan Privasi",
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 12.sp,
-                                    color = AppColors.GreenPrimary
+                                    text = "Status: PIN Terpasang (disimpan sebagai hash dengan salt)",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = AppColors.GreenPrimary,
+                                    fontWeight = FontWeight.SemiBold
                                 )
+                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    ButtonNeutral(
+                                        text = "Ganti PIN",
+                                        onClick = { showSetPinDialog = true },
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    ButtonNeutral(
+                                        text = "Hapus PIN",
+                                        onClick = {
+                                            scope.launch {
+                                                prefsRepo.clearPin()
+                                                Toast.makeText(context, "PIN pemilik dinonaktifkan", Toast.LENGTH_SHORT).show()
+                                            }
+                                        },
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                }
+                            } else {
                                 Text(
-                                    text = PRIVACY_POLICY_URL,
-                                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 10.sp),
+                                    text = "PIN belum dibuat. Aktifkan saklar untuk membuat PIN 4 angka.",
+                                    style = MaterialTheme.typography.bodySmall,
                                     color = AppColors.TextSecondary
                                 )
                             }
                         }
                     }
                 }
-            }
 
-            Spacer(Modifier.height(16.dp))
+                // ==========================================
+                // 9. CADANGAN & PEMULIHAN (GOOGLE SHEETS)
+                // ==========================================
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    SectionHeader(
+                        title = "CADANGAN & PEMULIHAN",
+                        modifier = Modifier.padding(top = AppSpacing.xs)
+                    )
+                    SectionCard(
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Text(
+                                text = "Amankan data $shopLabel Anda di Google Sheets.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = AppColors.TextPrimary
+                            )
+                            Text(
+                                text = "Backup bersifat opsional dan MANUAL. Pencadangan hanya berjalan saat Anda menekan \"Cadangkan Sekarang\", bukan otomatis. Data yang ikut disalin mencakup $productLabel, $customerLabel, supplier, transaksi penjualan dan pembelian, kas, hutang piutang, hutang supplier, serta catatan bebas pada kolom keterangan. Spreadsheet dibuat di Google Drive akun Google Anda sendiri. PIN dan kode lisensi tidak pernah disertakan.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = AppColors.TextSecondary
+                            )
+
+                            // 1. Akun Google Box
+                            Surface(
+                                shape = AppShapes.CardShape,
+                                color = MaterialTheme.colorScheme.surfaceVariant,
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(12.dp),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = "Akun Google",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            fontWeight = FontWeight.Bold,
+                                            color = AppColors.TextPrimary
+                                        )
+                                        when (val authState = googleAuthState) {
+                                            is id.skmnetwork.bukuwarung.backup.transport.GoogleAuthConnectionState.Connected -> {
+                                                Text(
+                                                    text = "🟢 Terhubung",
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = AppColors.GreenPrimary
+                                                )
+                                            }
+                                            is id.skmnetwork.bukuwarung.backup.transport.GoogleAuthConnectionState.Authorizing -> {
+                                                Text(
+                                                    text = "⏳ Menghubungkan...",
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    fontWeight = FontWeight.Medium,
+                                                    color = AppColors.GreenDark
+                                                )
+                                            }
+                                            is id.skmnetwork.bukuwarung.backup.transport.GoogleAuthConnectionState.AuthorizationRequired -> {
+                                                Text(
+                                                    text = "🟡 Perlu Otorisasi Ulang",
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = AppColors.OrangeWarning
+                                                )
+                                            }
+                                            else -> {
+                                                Text(
+                                                    text = "⚪ Belum terhubung",
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = AppColors.TextSecondary
+                                                )
+                                            }
+                                        }
+                                    }
+
+                                    when (val authState = googleAuthState) {
+                                        is id.skmnetwork.bukuwarung.backup.transport.GoogleAuthConnectionState.Connected -> {
+                                            Text(
+                                                text = authState.email,
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                fontWeight = FontWeight.Medium,
+                                                color = AppColors.TextPrimary
+                                            )
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                            ) {
+                                                ButtonNeutral(
+                                                    text = "Ganti Akun",
+                                                    onClick = { launchGoogleAccountPicker() },
+                                                    modifier = Modifier.weight(1f)
+                                                )
+                                                ButtonNeutral(
+                                                    text = "Putuskan",
+                                                    onClick = { showDisconnectGoogleDialog = true },
+                                                    modifier = Modifier.weight(1f)
+                                                )
+                                            }
+                                        }
+                                        is id.skmnetwork.bukuwarung.backup.transport.GoogleAuthConnectionState.Authorizing -> {
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                                modifier = Modifier.padding(vertical = 4.dp)
+                                            ) {
+                                                CircularProgressIndicator(
+                                                    modifier = Modifier.size(16.dp),
+                                                    strokeWidth = 2.dp,
+                                                    color = AppColors.GreenPrimary
+                                                )
+                                                Text(
+                                                    text = "Memverifikasi otorisasi akun Google...",
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = AppColors.TextSecondary
+                                                )
+                                            }
+                                        }
+                                        is id.skmnetwork.bukuwarung.backup.transport.GoogleAuthConnectionState.AuthorizationRequired -> {
+                                            Text(
+                                                text = "Akun: ${authState.email}\nIzin akses Google Sheets / Drive perlu diperbarui.",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = AppColors.TextSecondary
+                                            )
+                                            ButtonPrimary(
+                                                text = "Hubungkan Kembali",
+                                                onClick = {
+                                                    try {
+                                                        val intentSenderRequest = androidx.activity.result.IntentSenderRequest.Builder(
+                                                            authState.resolutionIntent.intentSender
+                                                        ).build()
+                                                        authorizationResolutionLauncher.launch(intentSenderRequest)
+                                                    } catch (_: Exception) {
+                                                        bViewModel.initiateAccountAuthorization(authState.email)
+                                                    }
+                                                }
+                                            )
+                                        }
+                                        is id.skmnetwork.bukuwarung.backup.transport.GoogleAuthConnectionState.Error -> {
+                                            Text(
+                                                text = authState.message,
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = AppColors.RedExpense
+                                            )
+                                            ButtonPrimary(
+                                                text = "Hubungkan Akun Google",
+                                                onClick = { launchGoogleAccountPicker() }
+                                            )
+                                        }
+                                        is id.skmnetwork.bukuwarung.backup.transport.GoogleAuthConnectionState.Disconnected -> {
+                                            Text(
+                                                text = "Hubungkan akun Google untuk menyimpan cadangan data warung Anda.",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = AppColors.TextSecondary
+                                            )
+                                            ButtonPrimary(
+                                                text = "Hubungkan Akun Google",
+                                                onClick = { launchGoogleAccountPicker() }
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+
+                            // 2. Spreadsheet Cadangan Box
+                            if (settingsState.googleAccountEmail.isNotBlank()) {
+                                Surface(
+                                    shape = AppShapes.CardShape,
+                                    color = MaterialTheme.colorScheme.surfaceVariant,
+                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Column(
+                                        modifier = Modifier.padding(12.dp),
+                                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        val sheetTitle = settingsState.backupSpreadsheetName.ifBlank {
+                                            "Buku Warung - " + settingsState.shopName.ifBlank { "Warung Saya" }
+                                        }
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(
+                                                text = "Spreadsheet Cadangan",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                fontWeight = FontWeight.Bold,
+                                                color = AppColors.TextPrimary
+                                            )
+                                            if (settingsState.backupSpreadsheetId.isNotBlank()) {
+                                                Text(
+                                                    text = "Tersimpan",
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    fontWeight = FontWeight.Medium,
+                                                    color = AppColors.GreenDark
+                                                )
+                                            }
+                                        }
+
+                                        Text(
+                                            text = "📊 $sheetTitle",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontWeight = FontWeight.Medium,
+                                            color = AppColors.TextPrimary
+                                        )
+
+                                        if (settingsState.backupSpreadsheetId.isNotBlank()) {
+                                            ButtonNeutral(
+                                                text = "Buka Spreadsheet ↗",
+                                                onClick = {
+                                                    try {
+                                                        val uri = Uri.parse(bViewModel.getSpreadsheetWebUrl(settingsState.backupSpreadsheetId))
+                                                        val intent = Intent(Intent.ACTION_VIEW, uri)
+                                                        context.startActivity(intent)
+                                                    } catch (e: Exception) {
+                                                        Toast.makeText(context, "Tidak dapat membuka browser", Toast.LENGTH_SHORT).show()
+                                                    }
+                                                },
+                                                fillMaxWidth = true
+                                            )
+                                        }
+
+                                        val lastBackupText = if (settingsState.lastBackupTimestamp <= 0L) {
+                                            "Belum pernah dicadangkan"
+                                        } else {
+                                            val sdf = SimpleDateFormat("dd MMM yyyy, HH:mm", Locale("id", "ID"))
+                                            sdf.format(Date(settingsState.lastBackupTimestamp))
+                                        }
+
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween
+                                        ) {
+                                            Text(
+                                                text = "Cadangan Terakhir:",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = AppColors.TextSecondary
+                                            )
+                                            Text(
+                                                text = lastBackupText,
+                                                style = MaterialTheme.typography.bodySmall,
+                                                fontWeight = FontWeight.Bold,
+                                                color = if (settingsState.lastBackupTimestamp > 0L) AppColors.GreenPrimary else AppColors.TextPrimary
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Operation state banners
+                            when (val state = backupState) {
+                                is BackupOpState.Loading -> {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                        modifier = Modifier.padding(vertical = 4.dp)
+                                    ) {
+                                        CircularProgressIndicator(
+                                            modifier = Modifier.size(16.dp),
+                                            strokeWidth = 2.dp,
+                                            color = AppColors.GreenPrimary
+                                        )
+                                        Text(
+                                            text = "Sedang mencadangkan data ke Google Sheets...",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = AppColors.GreenPrimary
+                                        )
+                                    }
+                                }
+                                is BackupOpState.Success -> {
+                                    Surface(
+                                        shape = AppShapes.CardShape,
+                                        color = AppColors.SuccessContainer,
+                                        border = BorderStroke(1.dp, AppColors.Success),
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Text(
+                                            text = state.message,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = AppColors.OnSuccessContainer,
+                                            modifier = Modifier.padding(12.dp)
+                                        )
+                                    }
+                                }
+                                is BackupOpState.Error -> {
+                                    AppErrorBanner(message = state.message)
+                                }
+                                else -> {}
+                            }
+
+                            when (val state = restoreState) {
+                                is RestoreOpState.Loading -> {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                        modifier = Modifier.padding(vertical = 4.dp)
+                                    ) {
+                                        CircularProgressIndicator(
+                                            modifier = Modifier.size(16.dp),
+                                            strokeWidth = 2.dp,
+                                            color = AppColors.GreenPrimary
+                                        )
+                                        Text(
+                                            text = "Sedang memulihkan data dari Google Sheets...",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = AppColors.GreenPrimary
+                                        )
+                                    }
+                                }
+                                is RestoreOpState.Success -> {
+                                    Surface(
+                                        shape = AppShapes.CardShape,
+                                        color = AppColors.SuccessContainer,
+                                        border = BorderStroke(1.dp, AppColors.Success),
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Text(
+                                            text = state.message,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = AppColors.OnSuccessContainer,
+                                            modifier = Modifier.padding(12.dp)
+                                        )
+                                    }
+                                }
+                                is RestoreOpState.Error -> {
+                                    AppErrorBanner(message = state.message)
+                                }
+                                else -> {}
+                            }
+
+                            val isBusy = backupState is BackupOpState.Loading || restoreState is RestoreOpState.Loading
+
+                            ButtonPrimary(
+                                text = if (backupState is BackupOpState.Loading) "Mencadangkan..." else "Cadangkan Sekarang",
+                                enabled = !isBusy,
+                                onClick = {
+                                    bViewModel.resetRestoreState()
+                                    if (settingsState.googleAccountEmail.isBlank()) {
+                                        launchGoogleAccountPicker()
+                                    } else {
+                                        bViewModel.performBackup()
+                                    }
+                                }
+                            )
+
+                            ButtonNeutral(
+                                text = if (restoreState is RestoreOpState.Loading) "Memulihkan..." else "Pulihkan Data",
+                                onClick = {
+                                    bViewModel.resetBackupState()
+                                    if (settingsState.googleAccountEmail.isBlank()) {
+                                        launchGoogleAccountPicker()
+                                    } else {
+                                        showRestoreConfirmDialog = true
+                                    }
+                                },
+                                enabled = !isBusy,
+                                fillMaxWidth = true
+                            )
+                        }
+                    }
+                }
+
+                // ==========================================
+                // 10. LISENSI APLIKASI
+                // ==========================================
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    SectionHeader(
+                        title = "LISENSI APLIKASI",
+                        modifier = Modifier.padding(top = AppSpacing.xs)
+                    )
+                    Surface(
+                        shape = AppShapes.CardShape,
+                        color = if (licenseState.grantsAccess) AppColors.SuccessContainer else AppColors.WarningContainer,
+                        border = BorderStroke(1.dp, if (licenseState.grantsAccess) AppColors.Success else AppColors.OrangeWarning),
+                        shadowElevation = 0.5.dp,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(14.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                text = licenseTier.label,
+                                fontWeight = FontWeight.Bold,
+                                style = MaterialTheme.typography.titleSmall,
+                                color = if (licenseState.grantsAccess) AppColors.OnSuccessContainer else AppColors.OnWarningContainer
+                            )
+                            Text(
+                                text = "Status Lisensi: " + when (licenseState.phase) {
+                                    LicensePhase.FRESH_ACTIVE -> "AKTIF"
+                                    LicensePhase.STALE_ACTIVE -> "Aktif (perlu koneksi)"
+                                    LicensePhase.TRANSIENT_ERROR -> "Tidak dapat menghubungi server (status lokal tetap berlaku)"
+                                    LicensePhase.UNLICENSED -> "Belum Aktif (UNLICENSED)"
+                                    LicensePhase.BLOCKED -> "Diblokir (${licenseState.blockReason})"
+                                    LicensePhase.CHECKING -> "Memeriksa..."
+                                },
+                                style = MaterialTheme.typography.bodySmall,
+                                color = AppColors.TextSecondary
+                            )
+                            Text(
+                                text = "Model: Sekali Bayar Offline-First (Tanpa Langganan)",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = AppColors.TextSecondary
+                            )
+                            Spacer(Modifier.height(4.dp))
+                            ButtonPrimary(
+                                text = if (isCheckingLicense) "Memverifikasi..." else "Periksa / Pulihkan Lisensi",
+                                enabled = !isCheckingLicense,
+                                onClick = {
+                                    scope.launch {
+                                        isCheckingLicense = true
+                                        try {
+                                            val result = licManager.validateOnline()
+                                            val message = when (result) {
+                                                is ValidationResult.Valid -> "Lisensi valid dan aktif"
+                                                is ValidationResult.CredentialUnavailable -> result.message
+                                                is ValidationResult.Transient ->
+                                                    "Tidak dapat menghubungi server lisensi. Status lokal dan kode lisensi Anda tetap tersimpan."
+                                                is ValidationResult.EmailMismatch -> result.message
+                                                is ValidationResult.DeviceMismatch -> result.message
+                                                is ValidationResult.Revoked -> result.message
+                                                is ValidationResult.Invalid -> result.message
+                                            }
+                                            Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+                                        } catch (e: CancellationException) {
+                                            throw e
+                                        } catch (_: Exception) {
+                                            Toast.makeText(
+                                                context,
+                                                "Gagal memeriksa lisensi. Silakan coba lagi.",
+                                                Toast.LENGTH_LONG
+                                            ).show()
+                                        } finally {
+                                            isCheckingLicense = false
+                                        }
+                                    }
+                                }
+                            )
+                        }
+                    }
+                }
+
+                // ==========================================
+                // 11. TAMPILAN & TEMA (THEME)
+                // ==========================================
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    SectionHeader(
+                        title = "TAMPILAN & TEMA",
+                        modifier = Modifier.padding(top = AppSpacing.xs)
+                    )
+                    SectionCard(
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Text(
+                                text = "Tema Tampilan Aplikasi",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "Pilih tema warna yang nyaman untuk operasional kasir & pembukuan.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+
+                            val currentTheme = settingsState.themeMode
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                listOf(
+                                    Triple("LIGHT", "☀ Terang", "Terang"),
+                                    Triple("DARK", "🌙 Gelap", "Gelap"),
+                                    Triple("SYSTEM", "⚙ Sistem", "Sistem")
+                                ).forEach { (mode, label, _) ->
+                                    val selected = currentTheme == mode
+                                    Surface(
+                                        shape = AppShapes.ChipShape,
+                                        color = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
+                                        border = BorderStroke(
+                                            1.dp,
+                                            if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant
+                                        ),
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .heightIn(min = AppTouchTarget)
+                                            .clip(AppShapes.ChipShape)
+                                            .clickable {
+                                                scope.launch {
+                                                    prefsRepo.updateAppearanceSettings(
+                                                        themeMode = mode,
+                                                        productViewMode = settingsState.productViewMode
+                                                    )
+                                                }
+                                            }
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxSize()
+                                                .padding(horizontal = 4.dp),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text(
+                                                text = label,
+                                                fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                                                style = MaterialTheme.typography.labelLarge,
+                                                color = if (selected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // ==========================================
+                // 12. TENTANG APLIKASI
+                // ==========================================
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    SectionHeader(
+                        title = "TENTANG APLIKASI",
+                        modifier = Modifier.padding(top = AppSpacing.xs)
+                    )
+                    SectionCard(
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Text(
+                                text = "Buku Warung v${BuildConfig.VERSION_NAME}",
+                                fontWeight = FontWeight.Bold,
+                                style = MaterialTheme.typography.titleSmall,
+                                color = AppColors.TextPrimary
+                            )
+                            Text(
+                                text = "Aplikasi kasir dan pembukuan sederhana untuk usaha kecil.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = AppColors.TextSecondary
+                            )
+                            Text(
+                                text = "Data operasional usaha terutama disimpan secara lokal di perangkat. Data tertentu untuk lisensi, pembelian, dan dukungan dapat diproses oleh SKMNetwork.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = AppColors.TextSecondary
+                            )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier
+                                    .padding(top = 6.dp)
+                                    .clip(AppShapes.ChipShape)
+                                    .clickable {
+                                        val privacyUri = Uri.parse(PRIVACY_POLICY_URL)
+                                        runCatching {
+                                            context.startActivity(
+                                                Intent(Intent.ACTION_VIEW, privacyUri)
+                                            )
+                                        }.onFailure {
+                                            Toast.makeText(
+                                                context,
+                                                "Tidak dapat membuka browser. Alamat: $PRIVACY_POLICY_URL",
+                                                Toast.LENGTH_LONG
+                                            ).show()
+                                        }
+                                    }
+                                    .padding(vertical = 8.dp, horizontal = 6.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.VerifiedUser,
+                                    contentDescription = null,
+                                    tint = AppColors.GreenPrimary,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(Modifier.width(8.dp))
+                                Column {
+                                    Text(
+                                        text = "Kebijakan Privasi",
+                                        fontWeight = FontWeight.Bold,
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = AppColors.GreenPrimary
+                                    )
+                                    Text(
+                                        text = PRIVACY_POLICY_URL,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = AppColors.TextSecondary
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Spacer(Modifier.height(88.dp))
+            }
         }
     }
 
-        // Set / Change PIN Dialog
-        if (showSetPinDialog) {
-            AlertDialog(
-                onDismissRequest = {
-                    showSetPinDialog = false
-                    newPinInput = ""
-                    confirmPinInput = ""
-                    pinDialogError = null
-                },
-                title = { Text("Buat PIN Pemilik (4 Angka)", fontWeight = FontWeight.Bold) },
-                text = {
-                    Column(verticalArrangement = Arrangement.spacedBy(AppSpacing.sm)) {
-                        Text(
-                            "PIN digunakan untuk mengamankan akses kasir & pembukuan.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = AppColors.TextSecondary
-                        )
+    // Set / Change PIN Dialog
+    if (showSetPinDialog) {
+        AlertDialog(
+            onDismissRequest = {
+                showSetPinDialog = false
+                newPinInput = ""
+                confirmPinInput = ""
+                pinDialogError = null
+            },
+            shape = AppShapes.CardShape,
+            containerColor = MaterialTheme.colorScheme.surface,
+            title = { Text("Buat PIN Pemilik (4 Angka)", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)) },
+            text = {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(AppSpacing.sm)
+                ) {
+                    Text(
+                        "PIN digunakan untuk mengamankan akses kasir & pembukuan.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = AppColors.TextSecondary
+                    )
 
-                        if (pinDialogError != null) {
-                            Text(pinDialogError!!, color = AppColors.RedExpense, style = MaterialTheme.typography.bodySmall)
-                        }
-
-                        AppTextField(
-                            value = newPinInput,
-                            onValueChange = { if (it.length <= 4 && it.all { c -> c.isDigit() }) newPinInput = it },
-                            label = "PIN Baru (4 Digit)",
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword)
-                        )
-
-                        AppTextField(
-                            value = confirmPinInput,
-                            onValueChange = { if (it.length <= 4 && it.all { c -> c.isDigit() }) confirmPinInput = it },
-                            label = "Konfirmasi PIN Baru",
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword)
-                        )
+                    if (pinDialogError != null) {
+                        AppErrorBanner(message = pinDialogError!!)
                     }
-                },
-                confirmButton = {
-                    Button(
-                        onClick = {
-                            if (newPinInput.length != 4) {
-                                pinDialogError = "PIN harus 4 angka"
-                            } else if (newPinInput != confirmPinInput) {
-                                pinDialogError = "Konfirmasi PIN tidak cocok"
-                            } else {
-                                scope.launch {
-                                    prefsRepo.setOwnerPin(newPinInput)
-                                    showSetPinDialog = false
-                                    newPinInput = ""
-                                    confirmPinInput = ""
-                                    pinDialogError = null
-                                    Toast.makeText(context, "PIN pemilik berhasil disimpan aman", Toast.LENGTH_SHORT).show()
-                                }
+
+                    AppTextField(
+                        value = newPinInput,
+                        onValueChange = { if (it.length <= 4 && it.all { c -> c.isDigit() }) newPinInput = it },
+                        label = "PIN Baru (4 Digit)",
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword)
+                    )
+
+                    AppTextField(
+                        value = confirmPinInput,
+                        onValueChange = { if (it.length <= 4 && it.all { c -> c.isDigit() }) confirmPinInput = it },
+                        label = "Konfirmasi PIN Baru",
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword)
+                    )
+                }
+            },
+            confirmButton = {
+                ButtonPrimary(
+                    text = "Simpan PIN",
+                    onClick = {
+                        if (newPinInput.length != 4) {
+                            pinDialogError = "PIN harus 4 angka"
+                        } else if (newPinInput != confirmPinInput) {
+                            pinDialogError = "Konfirmasi PIN tidak cocok"
+                        } else {
+                            scope.launch {
+                                prefsRepo.setOwnerPin(newPinInput)
+                                showSetPinDialog = false
+                                newPinInput = ""
+                                confirmPinInput = ""
+                                pinDialogError = null
+                                Toast.makeText(context, "PIN pemilik berhasil disimpan aman", Toast.LENGTH_SHORT).show()
                             }
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = AppColors.GreenPrimary)
-                    ) {
-                        Text("Simpan PIN")
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = {
+                        }
+                    },
+                    fillMaxWidth = false
+                )
+            },
+            dismissButton = {
+                ButtonGhost(
+                    text = "Batal",
+                    onClick = {
                         showSetPinDialog = false
                         newPinInput = ""
                         confirmPinInput = ""
                         pinDialogError = null
-                    }) {
-                        Text("Batal")
                     }
-                }
-            )
-        }
-
-        if (showPrinterSettingsDialog) {
-            PrinterSettingsDialog(
-                userSettings = settingsState,
-                userPreferencesRepository = prefsRepo,
-                printerService = activePrinterService,
-                onDismiss = { showPrinterSettingsDialog = false }
-            )
-        }
-
-        if (showRestoreConfirmDialog) {
-            val lastBackupFormatted = if (settingsState.lastBackupTimestamp <= 0L) {
-                "Belum ada data cadangan"
-            } else {
-                val sdf = SimpleDateFormat("dd MMM yyyy, HH:mm", Locale("id", "ID"))
-                sdf.format(Date(settingsState.lastBackupTimestamp))
+                )
             }
-            val sheetTitle = settingsState.backupSpreadsheetName.ifBlank {
-                "Buku Warung - " + settingsState.shopName.ifBlank { "Warung Saya" }
+        )
+    }
+
+    if (showPrinterSettingsDialog) {
+        PrinterSettingsDialog(
+            userSettings = settingsState,
+            userPreferencesRepository = prefsRepo,
+            printerService = activePrinterService,
+            onDismiss = { showPrinterSettingsDialog = false }
+        )
+    }
+
+    if (showRestoreConfirmDialog) {
+        val lastBackupFormatted = if (settingsState.lastBackupTimestamp <= 0L) {
+            "Belum ada data cadangan"
+        } else {
+            val sdf = SimpleDateFormat("dd MMM yyyy, HH:mm", Locale("id", "ID"))
+            sdf.format(Date(settingsState.lastBackupTimestamp))
+        }
+        val sheetTitle = settingsState.backupSpreadsheetName.ifBlank {
+            "Buku Warung - " + settingsState.shopName.ifBlank { "Warung Saya" }
+        }
+
+        AlertDialog(
+            onDismissRequest = { showRestoreConfirmDialog = false },
+            shape = AppShapes.CardShape,
+            containerColor = MaterialTheme.colorScheme.surface,
+            title = { Text("Pulihkan Data Cadangan?", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)) },
+            text = {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(AppSpacing.xs)
+                ) {
+                    Text("Sumber Cadangan:", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodySmall)
+                    Text("• Akun: ${settingsState.googleAccountEmail}", style = MaterialTheme.typography.bodySmall)
+                    Text("• Spreadsheet: $sheetTitle", style = MaterialTheme.typography.bodySmall)
+                    Text("• Cadangan: $lastBackupFormatted", style = MaterialTheme.typography.bodySmall)
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        "PERINGATAN: Pemulihan akan mengganti seluruh data transaksi, produk, dan kas di perangkat ini dengan data dari cadangan Google Sheets.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = AppColors.RedExpense,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            },
+            confirmButton = {
+                ButtonPrimary(
+                    text = "Pulihkan",
+                    onClick = {
+                        showRestoreConfirmDialog = false
+                        bViewModel.performRestore()
+                    },
+                    fillMaxWidth = false
+                )
+            },
+            dismissButton = {
+                ButtonGhost(
+                    text = "Batal",
+                    onClick = { showRestoreConfirmDialog = false }
+                )
             }
+        )
+    }
 
-            AlertDialog(
-                onDismissRequest = { showRestoreConfirmDialog = false },
-                title = { Text("Pulihkan Data Cadangan?", fontWeight = FontWeight.Bold) },
-                text = {
-                    Column(verticalArrangement = Arrangement.spacedBy(AppSpacing.xs)) {
-                        Text("Sumber Cadangan:", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodySmall)
-                        Text("• Akun: ${settingsState.googleAccountEmail}", style = MaterialTheme.typography.bodySmall)
-                        Text("• Spreadsheet: $sheetTitle", style = MaterialTheme.typography.bodySmall)
-                        Text("• Cadangan: $lastBackupFormatted", style = MaterialTheme.typography.bodySmall)
-                        Spacer(Modifier.height(4.dp))
-                        Text(
-                            "PERINGATAN: Pemulihan akan mengganti seluruh data transaksi, produk, dan kas di perangkat ini dengan data dari cadangan Google Sheets.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = AppColors.RedExpense,
-                            fontWeight = FontWeight.Medium
-                        )
-                    }
-                },
-                confirmButton = {
-                    Button(
-                        onClick = {
-                            showRestoreConfirmDialog = false
-                            bViewModel.performRestore()
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = AppColors.GreenPrimary)
-                    ) {
-                        Text("Pulihkan")
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showRestoreConfirmDialog = false }) {
-                        Text("Batal")
-                    }
-                }
-            )
-        }
+    if (showDisconnectGoogleDialog) {
+        AlertDialog(
+            onDismissRequest = { showDisconnectGoogleDialog = false },
+            shape = AppShapes.CardShape,
+            containerColor = MaterialTheme.colorScheme.surface,
+            title = { Text("Putuskan Akun Google?", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)) },
+            text = {
+                Text(
+                    "Koneksi ke akun ${settingsState.googleAccountEmail} dan spreadsheet cadangan akan diputus. Seluruh data transaksi, kas, dan produk di perangkat ini tetap aman dan tidak akan terhapus.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = AppColors.TextPrimary
+                )
+            },
+            confirmButton = {
+                ButtonDestructive(
+                    text = "Putuskan",
+                    onClick = {
+                        showDisconnectGoogleDialog = false
+                        bViewModel.disconnectGoogleAccount()
+                        Toast.makeText(context, "Akun Google berhasil diputuskan", Toast.LENGTH_SHORT).show()
+                    },
+                    fillMaxWidth = false
+                )
+            },
+            dismissButton = {
+                ButtonGhost(
+                    text = "Batal",
+                    onClick = { showDisconnectGoogleDialog = false }
+                )
+            }
+        )
+    }
 
-        if (showDisconnectGoogleDialog) {
-            AlertDialog(
-                onDismissRequest = { showDisconnectGoogleDialog = false },
-                title = { Text("Putuskan Akun Google?", fontWeight = FontWeight.Bold) },
-                text = {
+    if (showManualEmailDialog) {
+        AlertDialog(
+            onDismissRequest = { showManualEmailDialog = false },
+            shape = AppShapes.CardShape,
+            containerColor = MaterialTheme.colorScheme.surface,
+            title = { Text("Hubungkan Akun Google", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)) },
+            text = {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(AppSpacing.xs)
+                ) {
                     Text(
-                        "Koneksi ke akun ${settingsState.googleAccountEmail} dan spreadsheet cadangan akan diputus. Seluruh data transaksi, kas, dan produk di perangkat ini tetap aman dan tidak akan terhapus.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = AppColors.TextPrimary
+                        "Masukkan email akun Google untuk pencadangan warung:",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = AppColors.TextSecondary
                     )
-                },
-                confirmButton = {
-                    Button(
-                        onClick = {
-                            showDisconnectGoogleDialog = false
-                            bViewModel.disconnectGoogleAccount()
-                            Toast.makeText(context, "Akun Google berhasil diputuskan", Toast.LENGTH_SHORT).show()
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = AppColors.RedExpense)
-                    ) {
-                        Text("Putuskan", fontWeight = FontWeight.Bold)
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showDisconnectGoogleDialog = false }) {
-                        Text("Batal")
-                    }
-                }
-            )
-        }
-
-        if (showManualEmailDialog) {
-            AlertDialog(
-                onDismissRequest = { showManualEmailDialog = false },
-                title = { Text("Hubungkan Akun Google", fontWeight = FontWeight.Bold) },
-                text = {
-                    Column(verticalArrangement = Arrangement.spacedBy(AppSpacing.xs)) {
-                        Text(
-                            "Masukkan email akun Google untuk pencadangan warung:",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = AppColors.TextSecondary
-                        )
-                        AppTextField(
-                            value = manualEmailInput,
-                            onValueChange = { manualEmailInput = it },
-                            label = "Email Google (nama@gmail.com)"
-                        )
-                    }
-                },
-                confirmButton = {
-                    Button(
-                        onClick = {
-                            val email = manualEmailInput.trim()
-                            if (email.contains("@") && email.contains(".")) {
-                                showManualEmailDialog = false
-                                bViewModel.connectGoogleAccount(email)
-                                Toast.makeText(context, "Akun Google terhubung: $email", Toast.LENGTH_SHORT).show()
-                            } else {
-                                Toast.makeText(context, "Format email tidak valid", Toast.LENGTH_SHORT).show()
-                            }
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = AppColors.GreenPrimary)
-                    ) {
-                        Text("Simpan")
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showManualEmailDialog = false }) {
-                        Text("Batal")
-                    }
-                }
-            )
-        }
-
-        if (showQrisCameraDialog) {
-            CameraQrisPhotoDialog(
-                onDismiss = { showQrisCameraDialog = false },
-                onPhotoCaptured = { photoPath ->
-                    showQrisCameraDialog = false
-                    val file = File(photoPath)
-                    if (file.exists() && file.length() > 0) {
-                        scope.launch {
-                            val bitmap = BitmapFactory.decodeFile(photoPath)
-                            if (bitmap != null) {
-                                val result = prefsRepo.saveQrisImageBitmap(bitmap)
-                                if (result.isSuccess) {
-                                    file.delete()
-                                    Toast.makeText(context, "Foto QRIS warung berhasil disimpan", Toast.LENGTH_SHORT).show()
-                                } else {
-                                    Toast.makeText(context, result.exceptionOrNull()?.localizedMessage ?: "Gagal menyimpan QRIS", Toast.LENGTH_LONG).show()
-                                }
-                            } else {
-                                Toast.makeText(context, "QRIS tidak dapat digunakan. Pastikan foto QRIS terlihat jelas dan tidak terpotong.", Toast.LENGTH_LONG).show()
-                            }
-                        }
-                    }
-                }
-            )
-        }
-
-        if (showQrisChoiceDialog) {
-            AlertDialog(
-                onDismissRequest = { showQrisChoiceDialog = false },
-                title = { Text("Ganti QRIS Warung", fontWeight = FontWeight.Bold) },
-                text = {
-                    Text(
-                        "Pilih sumber foto QRIS resmi merchant Anda:",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = AppColors.TextPrimary
+                    AppTextField(
+                        value = manualEmailInput,
+                        onValueChange = { manualEmailInput = it },
+                        label = "Email Google (nama@gmail.com)"
                     )
-                },
-                confirmButton = {
-                    Button(
-                        onClick = {
-                            showQrisChoiceDialog = false
-                            showQrisCameraDialog = true
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = AppColors.GreenPrimary)
-                    ) {
-                        Icon(Icons.Default.PhotoCamera, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(Modifier.width(4.dp))
-                        Text("Ambil Foto")
-                    }
-                },
-                dismissButton = {
-                    OutlinedButton(
-                        onClick = {
-                            showQrisChoiceDialog = false
-                            qrisImagePickerLauncher.launch("image/*")
-                        }
-                    ) {
-                        Icon(Icons.Default.PhotoLibrary, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(Modifier.width(4.dp))
-                        Text("Dari Galeri")
-                    }
                 }
-            )
-        }
+            },
+            confirmButton = {
+                ButtonPrimary(
+                    text = "Simpan",
+                    onClick = {
+                        val email = manualEmailInput.trim()
+                        if (email.contains("@") && email.contains(".")) {
+                            showManualEmailDialog = false
+                            bViewModel.connectGoogleAccount(email)
+                            Toast.makeText(context, "Akun Google terhubung: $email", Toast.LENGTH_SHORT).show()
+                        } else {
+                            Toast.makeText(context, "Format email tidak valid", Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                    fillMaxWidth = false
+                )
+            },
+            dismissButton = {
+                ButtonGhost(
+                    text = "Batal",
+                    onClick = { showManualEmailDialog = false }
+                )
+            }
+        )
+    }
 
-        if (showBusinessTypeDialog) {
-            BusinessTypeDialog(
-                currentBusinessType = settingsState.primaryBusinessType,
-                isSaving = isSavingBusinessType,
-                errorText = businessTypeError,
-                onDismiss = {
-                    showBusinessTypeDialog = false
-                    businessTypeError = null
-                },
-                onSave = { newType, seededActivities ->
-                    isSavingBusinessType = true
-                    businessTypeError = null
+    if (showQrisCameraDialog) {
+        CameraQrisPhotoDialog(
+            onDismiss = { showQrisCameraDialog = false },
+            onPhotoCaptured = { photoPath ->
+                showQrisCameraDialog = false
+                val file = File(photoPath)
+                if (file.exists() && file.length() > 0) {
                     scope.launch {
-                        // Step 2 (C): only the preference is rewritten. Existing merchant-selected
-                        // secondary activities are kept, and nothing about existing data changes.
-                        val merged = mergeSecondaryActivities(
-                            current = settingsState.secondaryActivities,
-                            seededForNewType = seededActivities
-                        )
-                        try {
-                            prefsRepo.updateBusinessProfile(
-                                primaryType = newType.id,
-                                secondaryActivities = merged,
-                                version = settingsState.profileVersion
-                            )
-                            isSavingBusinessType = false
-                            showBusinessTypeDialog = false
-                            Toast.makeText(
-                                context,
-                                "Jenis usaha diubah ke ${newType.displayName}",
-                                Toast.LENGTH_LONG
-                            ).show()
-                        } catch (e: Exception) {
-                            isSavingBusinessType = false
-                            businessTypeError = e.localizedMessage ?: "Gagal menyimpan jenis usaha"
+                        val bitmap = BitmapFactory.decodeFile(photoPath)
+                        if (bitmap != null) {
+                            val result = prefsRepo.saveQrisImageBitmap(bitmap)
+                            if (result.isSuccess) {
+                                file.delete()
+                                Toast.makeText(context, "Foto QRIS warung berhasil disimpan", Toast.LENGTH_SHORT).show()
+                            } else {
+                                Toast.makeText(context, result.exceptionOrNull()?.localizedMessage ?: "Gagal menyimpan QRIS", Toast.LENGTH_LONG).show()
+                            }
+                        } else {
+                            Toast.makeText(context, "QRIS tidak dapat digunakan. Pastikan foto QRIS terlihat jelas dan tidak terpotong.", Toast.LENGTH_LONG).show()
                         }
                     }
                 }
-            )
-        }
+            }
+        )
+    }
 
-        if (showDeleteQrisConfirmDialog) {
-            AlertDialog(
-                onDismissRequest = { showDeleteQrisConfirmDialog = false },
-                title = { Text("Hapus QRIS Warung?", fontWeight = FontWeight.Bold) },
-                text = {
-                    Text(
-                        "Foto QRIS warung akan dihapus dari aplikasi. Pelanggan tidak dapat memindai QRIS sampai Anda mengunggah QRIS baru.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = AppColors.TextPrimary
+    if (showQrisChoiceDialog) {
+        AlertDialog(
+            onDismissRequest = { showQrisChoiceDialog = false },
+            shape = AppShapes.CardShape,
+            containerColor = MaterialTheme.colorScheme.surface,
+            title = { Text("Ganti QRIS Warung", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)) },
+            text = {
+                Text(
+                    "Pilih sumber foto QRIS resmi merchant Anda:",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = AppColors.TextPrimary
+                )
+            },
+            confirmButton = {
+                ButtonPrimary(
+                    text = "Ambil Foto",
+                    onClick = {
+                        showQrisChoiceDialog = false
+                        showQrisCameraDialog = true
+                    },
+                    leadingIcon = Icons.Default.PhotoCamera,
+                    fillMaxWidth = false
+                )
+            },
+            dismissButton = {
+                ButtonNeutral(
+                    text = "Dari Galeri",
+                    onClick = {
+                        showQrisChoiceDialog = false
+                        qrisImagePickerLauncher.launch("image/*")
+                    },
+                    leadingIcon = Icons.Default.PhotoLibrary,
+                    fillMaxWidth = false
+                )
+            }
+        )
+    }
+
+    if (showBusinessTypeDialog) {
+        BusinessTypeDialog(
+            currentBusinessType = settingsState.primaryBusinessType,
+            isSaving = isSavingBusinessType,
+            errorText = businessTypeError,
+            onDismiss = {
+                showBusinessTypeDialog = false
+                businessTypeError = null
+            },
+            onSave = { newType, seededActivities ->
+                isSavingBusinessType = true
+                businessTypeError = null
+                scope.launch {
+                    val merged = mergeSecondaryActivities(
+                        current = settingsState.secondaryActivities,
+                        seededForNewType = seededActivities
                     )
-                },
-                confirmButton = {
-                    Button(
-                        onClick = {
-                            showDeleteQrisConfirmDialog = false
-                            scope.launch {
-                                prefsRepo.deleteQrisImage()
-                                Toast.makeText(context, "QRIS warung berhasil dihapus", Toast.LENGTH_SHORT).show()
-                            }
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = AppColors.RedExpense)
-                    ) {
-                        Text("Hapus", fontWeight = FontWeight.Bold)
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showDeleteQrisConfirmDialog = false }) {
-                        Text("Batal")
-                    }
-                }
-            )
-        }
-
-        if (showBusinessProfileDialog) {
-            ChangeBusinessProfileDialog(
-                currentPrimaryType = settingsState.primaryBusinessType,
-                currentSecondaryActivities = settingsState.secondaryActivities,
-                onDismiss = { showBusinessProfileDialog = false },
-                onSave = { selectedType, selectedActivities ->
-                    showBusinessProfileDialog = false
-                    scope.launch {
+                    try {
                         prefsRepo.updateBusinessProfile(
-                            primaryType = selectedType.id,
-                            secondaryActivities = selectedActivities.map { it.id }.toSet()
+                            primaryType = newType.id,
+                            secondaryActivities = merged,
+                            version = settingsState.profileVersion
                         )
-                        Toast.makeText(context, "Tipe usaha diperbarui: ${selectedType.displayName}", Toast.LENGTH_SHORT).show()
+                        isSavingBusinessType = false
+                        showBusinessTypeDialog = false
+                        Toast.makeText(
+                            context,
+                            "Jenis usaha diubah ke ${newType.displayName}",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    } catch (e: Exception) {
+                        isSavingBusinessType = false
+                        businessTypeError = e.localizedMessage ?: "Gagal menyimpan jenis usaha"
                     }
                 }
-            )
-        }
+            }
+        )
+    }
+
+    if (showDeleteQrisConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteQrisConfirmDialog = false },
+            shape = AppShapes.CardShape,
+            containerColor = MaterialTheme.colorScheme.surface,
+            title = { Text("Hapus QRIS Warung?", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)) },
+            text = {
+                Text(
+                    "Foto QRIS warung akan dihapus dari aplikasi. Pelanggan tidak dapat memindai QRIS sampai Anda mengunggah QRIS baru.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = AppColors.TextPrimary
+                )
+            },
+            confirmButton = {
+                ButtonDestructive(
+                    text = "Hapus",
+                    onClick = {
+                        showDeleteQrisConfirmDialog = false
+                        scope.launch {
+                            prefsRepo.deleteQrisImage()
+                            Toast.makeText(context, "QRIS warung berhasil dihapus", Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                    fillMaxWidth = false
+                )
+            },
+            dismissButton = {
+                ButtonGhost(
+                    text = "Batal",
+                    onClick = { showDeleteQrisConfirmDialog = false }
+                )
+            }
+        )
+    }
+
+    if (showBusinessProfileDialog) {
+        ChangeBusinessProfileDialog(
+            currentPrimaryType = settingsState.primaryBusinessType,
+            currentSecondaryActivities = settingsState.secondaryActivities,
+            onDismiss = { showBusinessProfileDialog = false },
+            onSave = { selectedType, selectedActivities ->
+                showBusinessProfileDialog = false
+                scope.launch {
+                    prefsRepo.updateBusinessProfile(
+                        primaryType = selectedType.id,
+                        secondaryActivities = selectedActivities.map { it.id }.toSet()
+                    )
+                    Toast.makeText(context, "Tipe usaha diperbarui: ${selectedType.displayName}", Toast.LENGTH_SHORT).show()
+                }
+            }
+        )
     }
 }
 
@@ -2271,7 +2220,7 @@ private fun ChangeBusinessProfileDialog(
         properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
         Surface(
-            shape = RoundedCornerShape(16.dp),
+            shape = AppShapes.CardShape,
             color = MaterialTheme.colorScheme.surface,
             modifier = Modifier
                 .fillMaxWidth(0.95f)
@@ -2290,15 +2239,13 @@ private fun ChangeBusinessProfileDialog(
                             text = "Ubah Tipe & Model Usaha",
                             style = MaterialTheme.typography.titleMedium.copy(
                                 fontWeight = FontWeight.Bold,
-                                color = AppColors.TextPrimary,
-                                fontSize = 16.sp
+                                color = AppColors.TextPrimary
                             )
                         )
                         Text(
                             text = "Sesuaikan terminologi & model operasional",
                             style = MaterialTheme.typography.bodySmall.copy(
-                                color = AppColors.TextSecondary,
-                                fontSize = 11.5.sp
+                                color = AppColors.TextSecondary
                             )
                         )
                     }
@@ -2320,7 +2267,6 @@ private fun ChangeBusinessProfileDialog(
                             style = MaterialTheme.typography.labelSmall.copy(
                                 fontWeight = FontWeight.Bold,
                                 color = AppColors.GreenPrimary,
-                                fontSize = 10.5.sp,
                                 letterSpacing = 0.5.sp
                             )
                         )
@@ -2333,7 +2279,7 @@ private fun ChangeBusinessProfileDialog(
                             FilterChip(
                                 selected = selectedCategory == null,
                                 onClick = { selectedCategory = null },
-                                label = { Text("Semua (19)", fontSize = 11.sp) },
+                                label = { Text("Semua (19)") },
                                 colors = FilterChipDefaults.filterChipColors(
                                     selectedContainerColor = AppColors.GreenPrimary,
                                     selectedLabelColor = MaterialTheme.colorScheme.onPrimary
@@ -2343,7 +2289,7 @@ private fun ChangeBusinessProfileDialog(
                                 FilterChip(
                                     selected = selectedCategory == cat,
                                     onClick = { selectedCategory = cat },
-                                    label = { Text(cat.displayName, fontSize = 11.sp) },
+                                    label = { Text(cat.displayName) },
                                     colors = FilterChipDefaults.filterChipColors(
                                         selectedContainerColor = AppColors.GreenPrimary,
                                         selectedLabelColor = MaterialTheme.colorScheme.onPrimary
@@ -2360,7 +2306,6 @@ private fun ChangeBusinessProfileDialog(
                             style = MaterialTheme.typography.labelSmall.copy(
                                 fontWeight = FontWeight.Bold,
                                 color = AppColors.GreenPrimary,
-                                fontSize = 10.5.sp,
                                 letterSpacing = 0.5.sp
                             )
                         )
@@ -2368,7 +2313,7 @@ private fun ChangeBusinessProfileDialog(
                         availableTypes.forEach { type ->
                             val isSelected = selectedType == type
                             Surface(
-                                shape = RoundedCornerShape(10.dp),
+                                shape = AppShapes.CardShape,
                                 color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
                                 border = BorderStroke(
                                     1.dp,
@@ -2376,9 +2321,9 @@ private fun ChangeBusinessProfileDialog(
                                 ),
                                 modifier = Modifier
                                     .fillMaxWidth()
+                                    .clip(AppShapes.CardShape)
                                     .clickable {
                                         selectedType = type
-                                        // Auto-load preset default activities when switching primary type
                                         val preset = BusinessTaxonomyRegistry.getPreset(type)
                                         selectedActivities = preset.defaultActivities
                                     }
@@ -2404,12 +2349,12 @@ private fun ChangeBusinessProfileDialog(
                                         Text(
                                             text = type.displayName,
                                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold,
-                                            fontSize = 13.sp,
+                                            style = MaterialTheme.typography.bodyMedium,
                                             color = if (isSelected) AppColors.GreenDark else AppColors.TextPrimary
                                         )
                                         Text(
                                             text = type.description,
-                                            fontSize = 11.sp,
+                                            style = MaterialTheme.typography.bodySmall,
                                             color = AppColors.TextSecondary
                                         )
                                     }
@@ -2427,29 +2372,27 @@ private fun ChangeBusinessProfileDialog(
                             style = MaterialTheme.typography.labelSmall.copy(
                                 fontWeight = FontWeight.Bold,
                                 color = AppColors.GreenPrimary,
-                                fontSize = 10.5.sp,
                                 letterSpacing = 0.5.sp
                             )
                         )
                         Text(
                             text = "Pilih aktivitas operasional yang dijalankan bisnis Anda:",
-                            style = MaterialTheme.typography.bodySmall.copy(
-                                fontSize = 11.sp,
-                                color = AppColors.TextSecondary
-                            )
+                            style = MaterialTheme.typography.bodySmall,
+                            color = AppColors.TextSecondary
                         )
 
                         BusinessActivity.entries.forEach { activity ->
                             val isChecked = selectedActivities.contains(activity)
                             Surface(
-                                shape = RoundedCornerShape(8.dp),
+                                shape = AppShapes.ChipShape,
                                 color = if (isChecked) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
                                 border = BorderStroke(
-                                    0.5.dp,
-                                    if (isChecked) AppColors.GreenPrimary else AppColors.CardBorderStrong
+                                    1.dp,
+                                    if (isChecked) AppColors.GreenPrimary else MaterialTheme.colorScheme.outlineVariant
                                 ),
                                 modifier = Modifier
                                     .fillMaxWidth()
+                                    .clip(AppShapes.ChipShape)
                                     .clickable {
                                         selectedActivities = if (isChecked) {
                                             selectedActivities - activity
@@ -2459,7 +2402,7 @@ private fun ChangeBusinessProfileDialog(
                                     }
                             ) {
                                 Row(
-                                    modifier = Modifier.padding(8.dp),
+                                    modifier = Modifier.padding(10.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Checkbox(
@@ -2481,12 +2424,12 @@ private fun ChangeBusinessProfileDialog(
                                         Text(
                                             text = activity.displayName,
                                             fontWeight = if (isChecked) FontWeight.SemiBold else FontWeight.Normal,
-                                            fontSize = 12.sp,
+                                            style = MaterialTheme.typography.bodyMedium,
                                             color = AppColors.TextPrimary
                                         )
                                         Text(
                                             text = activity.description,
-                                            fontSize = 10.5.sp,
+                                            style = MaterialTheme.typography.labelSmall,
                                             color = AppColors.TextSecondary
                                         )
                                     }
@@ -2503,61 +2446,35 @@ private fun ChangeBusinessProfileDialog(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    OutlinedButton(
+                    ButtonNeutral(
+                        text = "Batal",
                         onClick = onDismiss,
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(10.dp)
-                    ) {
-                        Text("Batal", fontSize = 12.5.sp)
-                    }
-                    Button(
-                        onClick = {
-                            onSave(selectedType, selectedActivities)
-                        },
-                        modifier = Modifier.weight(1.5f),
-                        shape = RoundedCornerShape(10.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = AppColors.GreenPrimary)
-                    ) {
-                        Text("Simpan Tipe Usaha", fontWeight = FontWeight.Bold, fontSize = 12.5.sp)
-                    }
+                        modifier = Modifier.weight(1f)
+                    )
+                    ButtonPrimary(
+                        text = "Simpan Tipe Usaha",
+                        onClick = { onSave(selectedType, selectedActivities) },
+                        modifier = Modifier.weight(1.5f)
+                    )
                 }
             }
         }
     }
 }
 
-/**
- * Gate 1.2 removed this file's private `SectionHeader(icon, title)`.
- *
- * It had ZERO call sites - verified by symbol count across the whole of app/src/main, where the only
- * other match is the shared `SectionHeader` in ui/components/FoundationComponents.kt. It had been
- * dead since it was introduced, and it is the reason the audit found a conflict: it styled the
- * header with stock `titleMedium` (22sp before Gate 1.1, 18sp after), while the 17 headers actually
- * in this screen were all hand-inlined at 11sp. So the one implementation that existed was louder
- * than every real usage and none of the real usages used it.
- */
 @Composable
 private fun SettingSwitchRow(
     label: String,
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit
 ) {
-    // Gate 1.4, two fixes on the one row implementation this file shares across all 17 switches:
-    //
-    // 1. TOUCH TARGET. The Row had no minimum height and the label Text was not clickable, so the
-    //    48dp Switch was the only target and tapping the words did nothing - even though the row is
-    //    visually one control. The row is now >= AppTouchTarget tall and toggles on tap, which is
-    //    the pattern BusinessTypeDialog already uses for its acknowledgement row.
-    //
-    // 2. COLOUR COMPLETENESS. Only checkedThumbColor/checkedTrackColor were overridden, so the
-    //    UNCHECKED thumb and track fell back to baseline Material3 - a neutral that belongs to
-    //    neither Buku Warung palette - because Theme.kt does not set surfaceContainerHighest. All
-    //    four roles are now specified.
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .heightIn(min = AppTouchTarget)
-            .clickable { onCheckedChange(!checked) },
+            .clip(AppShapes.ChipShape)
+            .clickable { onCheckedChange(!checked) }
+            .padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
