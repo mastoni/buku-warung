@@ -7,16 +7,19 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -37,15 +40,11 @@ import androidx.compose.material.icons.filled.Receipt
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -68,6 +67,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import id.skmnetwork.bukuwarung.data.local.dao.TopProductSummary
 import id.skmnetwork.bukuwarung.data.preferences.UserPreferencesRepository
 import id.skmnetwork.bukuwarung.data.preferences.UserSettings
+import id.skmnetwork.bukuwarung.domain.business.BusinessTaxonomyRegistry
 import id.skmnetwork.bukuwarung.pdf.PdfReportGenerator
 import id.skmnetwork.bukuwarung.pdf.PdfShareManager
 import id.skmnetwork.bukuwarung.pdf.reports.BusinessSummaryPdfBuilder
@@ -76,13 +76,20 @@ import id.skmnetwork.bukuwarung.pdf.reports.DebtReportMode
 import id.skmnetwork.bukuwarung.pdf.reports.ProductReportPdfBuilder
 import id.skmnetwork.bukuwarung.pdf.reports.PurchaseReportPdfBuilder
 import id.skmnetwork.bukuwarung.pdf.reports.SalesReportPdfBuilder
-import id.skmnetwork.bukuwarung.util.formatQuantityValue
+import id.skmnetwork.bukuwarung.ui.components.AppCard
 import id.skmnetwork.bukuwarung.ui.components.AppLoadingState
+import id.skmnetwork.bukuwarung.ui.components.AppTouchTarget
+import id.skmnetwork.bukuwarung.ui.components.ButtonGhost
+import id.skmnetwork.bukuwarung.ui.components.ButtonNeutral
+import id.skmnetwork.bukuwarung.ui.components.ButtonPrimary
+import id.skmnetwork.bukuwarung.ui.components.FilterChipRow
 import id.skmnetwork.bukuwarung.ui.theme.AppColors
+import id.skmnetwork.bukuwarung.ui.theme.AppShapes
 import id.skmnetwork.bukuwarung.ui.theme.AppSpacing
+import id.skmnetwork.bukuwarung.ui.theme.AppTypeScale
 import id.skmnetwork.bukuwarung.ui.theme.rememberAppWindowSize
+import id.skmnetwork.bukuwarung.util.formatQuantityValue
 import id.skmnetwork.bukuwarung.util.formatRupiah
-import id.skmnetwork.bukuwarung.domain.business.BusinessTaxonomyRegistry
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.io.File
@@ -295,7 +302,7 @@ fun ReportsScreen(
 
     val hasPeriodTransactions = salesCount > 0 || purchaseCount > 0 || (cashIncomeTotal ?: 0L) > 0L || (cashExpenseTotal ?: 0L) > 0L
 
-    // Step 2 (H): a report page full of 0L placeholders reads as real data. Wait for the first value.
+    // Wait for the first value
     if (isLoading) {
         AppLoadingState()
         return
@@ -303,15 +310,10 @@ fun ReportsScreen(
 
     Scaffold(
         topBar = {
-            Surface(
-                color = MaterialTheme.colorScheme.surface,
-                shadowElevation = 0.5.dp
-            ) {
-                ReportsTopHeader(
-                    isGeneratingPdf = isGeneratingPdf,
-                    onExportPdf = { showReportTypeDialog = true }
-                )
-            }
+            ReportsTopHeader(
+                isGeneratingPdf = isGeneratingPdf,
+                onExportPdf = { showReportTypeDialog = true }
+            )
         },
         containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
@@ -323,404 +325,371 @@ fun ReportsScreen(
         ) {
             LazyColumn(
                 modifier = Modifier
-                    // Gate 1.7: was fillMaxSize() then widthIn(max = contentMaxWidth).
-                    // fillMaxSize fixes the incoming width, so widthIn could not narrow it and the
-                    // report ran full-bleed on every tablet width. fillMaxHeight keeps the full-height
-                    // behaviour and lets the cap apply; the enclosing Box centres with TopCenter.
                     .fillMaxHeight()
-                    .widthIn(max = windowSize.contentMaxWidth)
-                    .padding(horizontal = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp)
+                    .widthIn(max = windowSize.contentMaxWidth),
+                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 88.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-            // ==========================================
-            // PERIOD FILTER CHIPS
-            // ==========================================
-            item {
-                Spacer(Modifier.height(2.dp))
-                LazyRow(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    items(ReportPeriod.entries.toTypedArray()) { period ->
-                        val isSelected = period == selectedPeriod
-                        Surface(
-                            shape = RoundedCornerShape(20.dp),
-                            color = if (isSelected) AppColors.GreenPrimary else MaterialTheme.colorScheme.surface,
-                            border = BorderStroke(
-                                1.dp,
-                                if (isSelected) AppColors.GreenPrimary else MaterialTheme.colorScheme.outlineVariant
-                            ),
-                            modifier = Modifier.clickable { reportViewModel.selectPeriod(period) }
-                        ) {
-                            Text(
-                                text = period.label,
-                                color = if (isSelected) Color.White else AppColors.TextPrimary,
-                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                fontSize = 13.sp,
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 5.dp)
+                // ==========================================
+                // PERIOD FILTER CHIPS
+                // ==========================================
+                item {
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        items(ReportPeriod.entries.toTypedArray()) { period ->
+                            val isSelected = period == selectedPeriod
+                            FilterChipRow(
+                                label = period.label,
+                                selected = isSelected,
+                                onClick = { reportViewModel.selectPeriod(period) },
+                                height = 40.dp
                             )
                         }
                     }
                 }
-            }
 
-            // Empty state notice banner if no activity in this period
-            if (!hasPeriodTransactions) {
-                item {
-                    Surface(
-                        shape = RoundedCornerShape(14.dp),
-                        color = MaterialTheme.colorScheme.surfaceVariant,
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(10.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                // Empty state notice banner if no activity in this period
+                if (!hasPeriodTransactions) {
+                    item {
+                        Surface(
+                            shape = AppShapes.CardShape,
+                            color = MaterialTheme.colorScheme.surfaceVariant,
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                            modifier = Modifier.fillMaxWidth()
                         ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(34.dp)
-                                    .clip(CircleShape)
-                                    .background(AppColors.GreenPrimary.copy(alpha = 0.15f)),
-                                contentAlignment = Alignment.Center
+                            Row(
+                                modifier = Modifier.padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(36.dp)
+                                        .clip(CircleShape)
+                                        .background(AppColors.GreenPrimary.copy(alpha = 0.15f)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Info,
+                                        contentDescription = null,
+                                        tint = AppColors.GreenPrimary,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                                Spacer(Modifier.width(12.dp))
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = "Belum Ada Transaksi Periode Ini",
+                                        style = MaterialTheme.typography.titleSmall.copy(
+                                            fontWeight = FontWeight.Bold,
+                                            color = AppColors.TextPrimary
+                                        )
+                                    )
+                                    Text(
+                                        text = "Data laba rugi dan ringkasan aktivitas masih kosong untuk periode yang dipilih.",
+                                        style = MaterialTheme.typography.bodySmall.copy(
+                                            color = AppColors.TextSecondary
+                                        )
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // ==============================================================
+                // SECTION 1: LABA RUGI SEDERHANA (MAIN FOCAL POINT CARD)
+                // ==============================================================
+                item {
+                    AppCard(modifier = Modifier.fillMaxWidth()) {
+                        Column(Modifier.padding(14.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(
-                                    imageVector = Icons.Default.Info,
+                                    imageVector = Icons.AutoMirrored.Filled.TrendingUp,
                                     contentDescription = null,
                                     tint = AppColors.GreenPrimary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(Modifier.width(8.dp))
+                                Text(
+                                    text = "Laba Rugi Sederhana",
+                                    style = MaterialTheme.typography.titleMedium.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 15.sp,
+                                        color = AppColors.TextPrimary
+                                    )
+                                )
+                            }
+
+                            Spacer(Modifier.height(10.dp))
+
+                            // 1. Penjualan Bersih
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    "$transactionLabel Bersih",
+                                    style = MaterialTheme.typography.bodyMedium.copy(
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = AppColors.TextPrimary
+                                    )
+                                )
+                                Spacer(Modifier.weight(1f))
+                                Text(
+                                    formatRupiah(netSalesTotal),
+                                    style = MaterialTheme.typography.bodyLarge.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        color = AppColors.GreenDark
+                                    )
+                                )
+                            }
+
+                            Spacer(Modifier.height(6.dp))
+
+                            // 2. HPP / Modal Barang Terjual
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    "HPP / Modal $productLabel Terjual",
+                                    style = MaterialTheme.typography.bodySmall.copy(
+                                        color = AppColors.TextSecondary
+                                    )
+                                )
+                                Spacer(Modifier.weight(1f))
+                                Text(
+                                    "-${formatRupiah(netCogsTotal)}",
+                                    style = MaterialTheme.typography.bodyMedium.copy(
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = AppColors.TextSecondary
+                                    )
+                                )
+                            }
+
+                            Spacer(Modifier.height(6.dp))
+
+                            // 3. Laba Kotor
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    "Laba Kotor",
+                                    style = MaterialTheme.typography.bodyMedium.copy(
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = AppColors.TextPrimary
+                                    )
+                                )
+                                Spacer(Modifier.weight(1f))
+                                Text(
+                                    formatRupiah(grossProfitTotal),
+                                    style = MaterialTheme.typography.bodyMedium.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (grossProfitTotal >= 0) AppColors.GreenPrimary else AppColors.RedExpense
+                                    )
+                                )
+                            }
+
+                            Spacer(Modifier.height(6.dp))
+
+                            // 4. Pengeluaran Operasional
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    "Pengeluaran Operasional",
+                                    style = MaterialTheme.typography.bodySmall.copy(
+                                        color = AppColors.TextSecondary
+                                    )
+                                )
+                                Spacer(Modifier.weight(1f))
+                                Text(
+                                    "-${formatRupiah(opExpenseVal)}",
+                                    style = MaterialTheme.typography.bodyMedium.copy(
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = if (opExpenseVal > 0) AppColors.RedExpense else AppColors.TextSecondary
+                                    )
+                                )
+                            }
+
+                            HorizontalDivider(
+                                modifier = Modifier.padding(vertical = 8.dp),
+                                color = MaterialTheme.colorScheme.outlineVariant
+                            )
+
+                            // 5. Laba Bersih
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(Modifier.weight(1f)) {
+                                    Text(
+                                        "Laba Bersih",
+                                        style = MaterialTheme.typography.titleMedium.copy(
+                                            fontWeight = FontWeight.Bold,
+                                            color = AppColors.TextPrimary
+                                        )
+                                    )
+                                    Text(
+                                        "Laba Kotor - Operasional",
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            color = AppColors.TextSecondary
+                                        )
+                                    )
+                                }
+                                Text(
+                                    formatRupiah(netProfitTotal),
+                                    style = MaterialTheme.typography.titleLarge.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (netProfitTotal >= 0) AppColors.GreenPrimary else AppColors.RedExpense
+                                    )
+                                )
+                            }
+
+                            Spacer(Modifier.height(6.dp))
+
+                            // Expandable Trigger: Rincian Laba
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(AppShapes.ButtonShape)
+                                    .clickable { isRincianLabaExpanded = !isRincianLabaExpanded }
+                                    .padding(vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center
+                            ) {
+                                Text(
+                                    text = if (isRincianLabaExpanded) "Sembunyikan Rincian Laba" else "Lihat Rincian Laba",
+                                    style = MaterialTheme.typography.labelMedium.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        color = AppColors.GreenDark
+                                    )
+                                )
+                                Spacer(Modifier.width(4.dp))
+                                Icon(
+                                    imageVector = if (isRincianLabaExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                                    contentDescription = null,
+                                    tint = AppColors.GreenDark,
                                     modifier = Modifier.size(18.dp)
                                 )
                             }
-                            Spacer(Modifier.width(10.dp))
-                            Column {
-                                Text(
-                                    text = "Belum Ada Transaksi Periode Ini",
-                                    style = MaterialTheme.typography.titleSmall.copy(
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 13.sp,
-                                        color = AppColors.TextPrimary
-                                    )
-                                )
-                                Text(
-                                    text = "Data laba rugi dan ringkasan aktivitas masih kosong untuk periode yang dipilih.",
-                                    style = MaterialTheme.typography.bodySmall.copy(
-                                        fontSize = 11.sp,
-                                        color = AppColors.TextSecondary
-                                    )
-                                )
-                            }
-                        }
-                    }
-                }
-            }
 
-            // ==============================================================
-            // SECTION 1: LABA RUGI SEDERHANA (MAIN FOCAL POINT CARD)
-            // ==============================================================
-            item {
-                Surface(
-                    shape = RoundedCornerShape(14.dp),
-                    color = MaterialTheme.colorScheme.surface,
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                    shadowElevation = 0.5.dp,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(Modifier.padding(12.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.TrendingUp,
-                                contentDescription = null,
-                                tint = AppColors.GreenPrimary,
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Spacer(Modifier.width(6.dp))
-                            Text(
-                                text = "Laba Rugi Sederhana",
-                                style = MaterialTheme.typography.titleMedium.copy(
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 14.5.sp,
-                                    color = AppColors.TextPrimary
-                                )
-                            )
-                        }
-
-                        Spacer(Modifier.height(8.dp))
-
-                        // 1. Penjualan Bersih
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                "$transactionLabel Bersih",
-                                style = MaterialTheme.typography.bodyMedium.copy(
-                                    fontWeight = FontWeight.SemiBold,
-                                    fontSize = 13.sp,
-                                    color = AppColors.TextPrimary
-                                )
-                            )
-                            Spacer(Modifier.weight(1f))
-                            Text(
-                                formatRupiah(netSalesTotal),
-                                style = MaterialTheme.typography.bodyLarge.copy(
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 14.5.sp,
-                                    color = AppColors.GreenDark
-                                )
-                            )
-                        }
-
-                        Spacer(Modifier.height(4.dp))
-
-                        // 2. HPP / Modal Barang Terjual
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                "HPP / Modal $productLabel Terjual",
-                                style = MaterialTheme.typography.bodyMedium.copy(
-                                    fontSize = 12.sp,
-                                    color = AppColors.TextSecondary
-                                )
-                            )
-                            Spacer(Modifier.weight(1f))
-                            Text(
-                                "-${formatRupiah(netCogsTotal)}",
-                                style = MaterialTheme.typography.bodyMedium.copy(
-                                    fontWeight = FontWeight.SemiBold,
-                                    fontSize = 12.5.sp,
-                                    color = AppColors.TextSecondary
-                                )
-                            )
-                        }
-
-                        Spacer(Modifier.height(4.dp))
-
-                        // 3. Laba Kotor
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                "Laba Kotor",
-                                style = MaterialTheme.typography.bodyMedium.copy(
-                                    fontWeight = FontWeight.SemiBold,
-                                    fontSize = 13.sp,
-                                    color = AppColors.TextPrimary
-                                )
-                            )
-                            Spacer(Modifier.weight(1f))
-                            Text(
-                                formatRupiah(grossProfitTotal),
-                                style = MaterialTheme.typography.bodyMedium.copy(
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 13.sp,
-                                    color = if (grossProfitTotal >= 0) AppColors.GreenPrimary else AppColors.RedExpense
-                                )
-                            )
-                        }
-
-                        Spacer(Modifier.height(4.dp))
-
-                        // 4. Pengeluaran Operasional
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                "Pengeluaran Operasional",
-                                style = MaterialTheme.typography.bodyMedium.copy(
-                                    fontSize = 12.sp,
-                                    color = AppColors.TextSecondary
-                                )
-                            )
-                            Spacer(Modifier.weight(1f))
-                            Text(
-                                "-${formatRupiah(opExpenseVal)}",
-                                style = MaterialTheme.typography.bodyMedium.copy(
-                                    fontWeight = FontWeight.SemiBold,
-                                    fontSize = 12.5.sp,
-                                    color = if (opExpenseVal > 0) AppColors.RedExpense else AppColors.TextSecondary
-                                )
-                            )
-                        }
-
-                        HorizontalDivider(Modifier.padding(vertical = 6.dp), color = MaterialTheme.colorScheme.outlineVariant)
-
-                        // 5. Laba Bersih
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column(Modifier.weight(1f)) {
-                                Text(
-                                    "Laba Bersih",
-                                    style = MaterialTheme.typography.titleSmall.copy(
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 13.5.sp,
-                                        color = AppColors.TextPrimary
-                                    )
-                                )
-                                Text(
-                                    "Laba Kotor - Operasional",
-                                    style = MaterialTheme.typography.labelSmall.copy(
-                                        fontSize = 10.sp,
-                                        color = AppColors.TextSecondary
-                                    )
-                                )
-                            }
-                            Text(
-                                formatRupiah(netProfitTotal),
-                                style = MaterialTheme.typography.titleLarge.copy(
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 16.5.sp,
-                                    color = if (netProfitTotal >= 0) AppColors.GreenPrimary else AppColors.RedExpense
-                                )
-                            )
-                        }
-
-                        Spacer(Modifier.height(4.dp))
-
-                        // Expandable Trigger: Rincian Laba
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { isRincianLabaExpanded = !isRincianLabaExpanded }
-                                .padding(vertical = 2.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Center
-                        ) {
-                            Text(
-                                text = if (isRincianLabaExpanded) "Sembunyikan Rincian Laba" else "Lihat Rincian Laba",
-                                style = MaterialTheme.typography.labelMedium.copy(
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 12.sp,
-                                    color = AppColors.GreenDark
-                                )
-                            )
-                            Spacer(Modifier.width(4.dp))
-                            Icon(
-                                imageVector = if (isRincianLabaExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                                contentDescription = null,
-                                tint = AppColors.GreenDark,
-                                modifier = Modifier.size(16.dp)
-                            )
-                        }
-
-                        AnimatedVisibility(visible = isRincianLabaExpanded) {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(top = 8.dp),
-                                verticalArrangement = Arrangement.spacedBy(6.dp)
-                            ) {
-                                Surface(
-                                    shape = RoundedCornerShape(12.dp),
-                                    color = MaterialTheme.colorScheme.surfaceVariant,
-                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                                    modifier = Modifier.fillMaxWidth()
+                            AnimatedVisibility(visible = isRincianLabaExpanded) {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(top = 8.dp),
+                                    verticalArrangement = Arrangement.spacedBy(6.dp)
                                 ) {
-                                    Column(
-                                        modifier = Modifier.padding(12.dp),
-                                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                                    Surface(
+                                        shape = AppShapes.CardShape,
+                                        color = MaterialTheme.colorScheme.surfaceVariant,
+                                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                                        modifier = Modifier.fillMaxWidth()
                                     ) {
-                                        Text(
-                                            "Rincian Laba",
-                                            fontWeight = FontWeight.Bold,
-                                            style = MaterialTheme.typography.labelLarge.copy(fontSize = 13.sp, color = AppColors.TextPrimary)
-                                        )
+                                        Column(
+                                            modifier = Modifier.padding(12.dp),
+                                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                                        ) {
+                                            Text(
+                                                "Rincian Laba",
+                                                fontWeight = FontWeight.Bold,
+                                                style = MaterialTheme.typography.labelLarge.copy(color = AppColors.TextPrimary)
+                                            )
 
-                                        Spacer(Modifier.height(2.dp))
+                                            Spacer(Modifier.height(2.dp))
 
-                                        // Penjualan Bruto
-                                        Row(Modifier.fillMaxWidth()) {
-                                            Text("$transactionLabel Bruto", style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp), modifier = Modifier.weight(1f))
-                                            Text(formatRupiah(grossSalesVal), style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp, fontWeight = FontWeight.SemiBold))
-                                        }
+                                            // Penjualan Bruto
+                                            Row(Modifier.fillMaxWidth()) {
+                                                Text("$transactionLabel Bruto", style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
+                                                Text(formatRupiah(grossSalesVal), style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold))
+                                            }
 
-                                        // Retur Penjualan
-                                        Row(Modifier.fillMaxWidth()) {
-                                            Column(modifier = Modifier.weight(1f)) {
-                                                Text("Retur $transactionLabel", style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp, color = AppColors.RedExpense))
-                                                if (salesReturnCount > 0) {
-                                                    Text("$salesReturnCount kali retur", style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.5.sp, color = AppColors.TextSecondary))
+                                            // Retur Penjualan
+                                            Row(Modifier.fillMaxWidth()) {
+                                                Column(modifier = Modifier.weight(1f)) {
+                                                    Text("Retur $transactionLabel", style = MaterialTheme.typography.bodySmall.copy(color = AppColors.RedExpense))
+                                                    if (salesReturnCount > 0) {
+                                                        Text("$salesReturnCount kali retur", style = MaterialTheme.typography.labelSmall.copy(color = AppColors.TextSecondary))
+                                                    }
                                                 }
-                                            }
-                                            Text(
-                                                if (salesReturnVal > 0) "-${formatRupiah(salesReturnVal)}" else formatRupiah(0L),
-                                                style = MaterialTheme.typography.bodySmall.copy(
-                                                    fontSize = 12.sp,
-                                                    fontWeight = FontWeight.SemiBold,
-                                                    color = if (salesReturnVal > 0) AppColors.RedExpense else AppColors.TextPrimary
+                                                Text(
+                                                    if (salesReturnVal > 0) "-${formatRupiah(salesReturnVal)}" else formatRupiah(0L),
+                                                    style = MaterialTheme.typography.bodySmall.copy(
+                                                        fontWeight = FontWeight.SemiBold,
+                                                        color = if (salesReturnVal > 0) AppColors.RedExpense else AppColors.TextPrimary
+                                                    )
                                                 )
-                                            )
-                                        }
-
-                                        HorizontalDivider(Modifier.padding(vertical = 2.dp), color = MaterialTheme.colorScheme.outlineVariant)
-
-                                        // Penjualan Bersih
-                                        Row(Modifier.fillMaxWidth()) {
-                                            Text("$transactionLabel Bersih", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp), modifier = Modifier.weight(1f))
-                                            Text(formatRupiah(netSalesTotal), fontWeight = FontWeight.Bold, color = AppColors.GreenDark, style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp))
-                                        }
-
-                                        Spacer(Modifier.height(2.dp))
-
-                                        // HPP / Modal Barang Terjual
-                                        Row(Modifier.fillMaxWidth()) {
-                                            Column(modifier = Modifier.weight(1f)) {
-                                                Text("HPP / Modal $productLabel Terjual", style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp, color = AppColors.TextSecondary))
-                                                Text("HPP $transactionLabel - HPP Retur", style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.5.sp, color = AppColors.TextSecondary))
                                             }
-                                            Text(
-                                                if (netCogsTotal > 0) "-${formatRupiah(netCogsTotal)}" else formatRupiah(0L),
-                                                style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                                            )
-                                        }
 
-                                        HorizontalDivider(Modifier.padding(vertical = 2.dp), color = MaterialTheme.colorScheme.outlineVariant)
+                                            HorizontalDivider(Modifier.padding(vertical = 2.dp), color = MaterialTheme.colorScheme.outlineVariant)
 
-                                        // Laba Kotor
-                                        Row(Modifier.fillMaxWidth()) {
-                                            Text("Laba Kotor", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp), modifier = Modifier.weight(1f))
-                                            Text(
-                                                formatRupiah(grossProfitTotal),
-                                                fontWeight = FontWeight.Bold,
-                                                color = if (grossProfitTotal >= 0) AppColors.GreenPrimary else AppColors.RedExpense,
-                                                style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp)
-                                            )
-                                        }
-
-                                        Spacer(Modifier.height(2.dp))
-
-                                        // Pengeluaran Operasional
-                                        Row(Modifier.fillMaxWidth()) {
-                                            Column(modifier = Modifier.weight(1f)) {
-                                                Text("Pengeluaran Operasional", style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp, color = AppColors.TextSecondary))
-                                                Text("Beban listrik, sewa, gaji, operasional", style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.5.sp, color = AppColors.TextSecondary))
+                                            // Penjualan Bersih
+                                            Row(Modifier.fillMaxWidth()) {
+                                                Text("$transactionLabel Bersih", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
+                                                Text(formatRupiah(netSalesTotal), fontWeight = FontWeight.Bold, color = AppColors.GreenDark, style = MaterialTheme.typography.bodySmall)
                                             }
-                                            Text(
-                                                if (opExpenseVal > 0) "-${formatRupiah(opExpenseVal)}" else formatRupiah(0L),
-                                                style = MaterialTheme.typography.bodySmall.copy(
-                                                    fontSize = 12.sp,
-                                                    fontWeight = FontWeight.SemiBold,
-                                                    color = if (opExpenseVal > 0) AppColors.RedExpense else AppColors.TextPrimary
+
+                                            Spacer(Modifier.height(2.dp))
+
+                                            // HPP / Modal Barang Terjual
+                                            Row(Modifier.fillMaxWidth()) {
+                                                Column(modifier = Modifier.weight(1f)) {
+                                                    Text("HPP / Modal $productLabel Terjual", style = MaterialTheme.typography.bodySmall.copy(color = AppColors.TextSecondary))
+                                                    Text("HPP $transactionLabel - HPP Retur", style = MaterialTheme.typography.labelSmall.copy(color = AppColors.TextSecondary))
+                                                }
+                                                Text(
+                                                    if (netCogsTotal > 0) "-${formatRupiah(netCogsTotal)}" else formatRupiah(0L),
+                                                    style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold)
                                                 )
-                                            )
-                                        }
+                                            }
 
-                                        HorizontalDivider(Modifier.padding(vertical = 2.dp), color = MaterialTheme.colorScheme.outlineVariant)
+                                            HorizontalDivider(Modifier.padding(vertical = 2.dp), color = MaterialTheme.colorScheme.outlineVariant)
 
-                                        // Laba Bersih
-                                        Row(Modifier.fillMaxWidth()) {
-                                            Text("Laba Bersih", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium.copy(fontSize = 12.5.sp), modifier = Modifier.weight(1f))
-                                            Text(
-                                                formatRupiah(netProfitTotal),
-                                                fontWeight = FontWeight.Bold,
-                                                color = if (netProfitTotal >= 0) AppColors.GreenPrimary else AppColors.RedExpense,
-                                                style = MaterialTheme.typography.bodyMedium.copy(fontSize = 12.5.sp)
-                                            )
+                                            // Laba Kotor
+                                            Row(Modifier.fillMaxWidth()) {
+                                                Text("Laba Kotor", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
+                                                Text(
+                                                    formatRupiah(grossProfitTotal),
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = if (grossProfitTotal >= 0) AppColors.GreenPrimary else AppColors.RedExpense,
+                                                    style = MaterialTheme.typography.bodySmall
+                                                )
+                                            }
+
+                                            Spacer(Modifier.height(2.dp))
+
+                                            // Pengeluaran Operasional
+                                            Row(Modifier.fillMaxWidth()) {
+                                                Column(modifier = Modifier.weight(1f)) {
+                                                    Text("Pengeluaran Operasional", style = MaterialTheme.typography.bodySmall.copy(color = AppColors.TextSecondary))
+                                                    Text("Beban listrik, sewa, gaji, operasional", style = MaterialTheme.typography.labelSmall.copy(color = AppColors.TextSecondary))
+                                                }
+                                                Text(
+                                                    if (opExpenseVal > 0) "-${formatRupiah(opExpenseVal)}" else formatRupiah(0L),
+                                                    style = MaterialTheme.typography.bodySmall.copy(
+                                                        fontWeight = FontWeight.SemiBold,
+                                                        color = if (opExpenseVal > 0) AppColors.RedExpense else AppColors.TextPrimary
+                                                    )
+                                                )
+                                            }
+
+                                            HorizontalDivider(Modifier.padding(vertical = 2.dp), color = MaterialTheme.colorScheme.outlineVariant)
+
+                                            // Laba Bersih
+                                            Row(Modifier.fillMaxWidth()) {
+                                                Text("Laba Bersih", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+                                                Text(
+                                                    formatRupiah(netProfitTotal),
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = if (netProfitTotal >= 0) AppColors.GreenPrimary else AppColors.RedExpense,
+                                                    style = MaterialTheme.typography.bodyMedium
+                                                )
+                                            }
                                         }
                                     }
                                 }
@@ -728,374 +697,292 @@ fun ReportsScreen(
                         }
                     }
                 }
-            }
 
-            // ==============================================================
-            // SECTION 2: POSISI KEUANGAN (FINANCIAL POSITION)
-            // ==============================================================
-            item {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Default.AccountBalanceWallet,
-                        contentDescription = null,
-                        tint = AppColors.BlueCash,
-                        modifier = Modifier.size(18.dp)
+                // ==============================================================
+                // SECTION 2: POSISI KEUANGAN (FINANCIAL POSITION)
+                // ==============================================================
+                item {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.AccountBalanceWallet,
+                            contentDescription = null,
+                            tint = AppColors.BlueCash,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            text = "Posisi Keuangan",
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 15.sp,
+                                color = AppColors.TextPrimary
+                            )
+                        )
+                    }
+
+                    Spacer(Modifier.height(6.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        // Saldo Kas
+                        AppCard(modifier = Modifier.weight(1f)) {
+                            Column(Modifier.padding(12.dp)) {
+                                Text("Saldo Kas", style = MaterialTheme.typography.labelSmall.copy(color = AppColors.TextSecondary))
+                                Spacer(Modifier.height(4.dp))
+                                Text(
+                                    formatRupiah(currentCashBalance ?: 0L),
+                                    style = MaterialTheme.typography.bodyMedium.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        color = AppColors.GreenDark
+                                    )
+                                )
+                            }
+                        }
+
+                        // Nilai Stok Modal
+                        AppCard(modifier = Modifier.weight(1f)) {
+                            Column(Modifier.padding(12.dp)) {
+                                Text("Nilai $stockLabel Modal", style = MaterialTheme.typography.labelSmall.copy(color = AppColors.TextSecondary))
+                                Spacer(Modifier.height(4.dp))
+                                Text(
+                                    formatRupiah(totalStockValue ?: 0L),
+                                    style = MaterialTheme.typography.bodyMedium.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        color = AppColors.TextPrimary
+                                    )
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(Modifier.height(8.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        // Piutang Pelanggan
+                        AppCard(modifier = Modifier.weight(1f)) {
+                            Column(Modifier.padding(12.dp)) {
+                                Text("Piutang $customerLabel", style = MaterialTheme.typography.labelSmall.copy(color = AppColors.TextSecondary))
+                                Spacer(Modifier.height(4.dp))
+                                Text(
+                                    formatRupiah(totalOutstandingDebt ?: 0L),
+                                    style = MaterialTheme.typography.bodyMedium.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        color = if ((totalOutstandingDebt ?: 0L) > 0) AppColors.RedExpense else AppColors.TextPrimary
+                                    )
+                                )
+                            }
+                        }
+
+                        // Hutang Supplier
+                        AppCard(modifier = Modifier.weight(1f)) {
+                            Column(Modifier.padding(12.dp)) {
+                                Text("$debtLabel $supplierLabel", style = MaterialTheme.typography.labelSmall.copy(color = AppColors.TextSecondary))
+                                Spacer(Modifier.height(4.dp))
+                                Text(
+                                    formatRupiah(totalOutstandingPayable ?: 0L),
+                                    style = MaterialTheme.typography.bodyMedium.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        color = if ((totalOutstandingPayable ?: 0L) > 0) AppColors.RedExpense else AppColors.TextPrimary
+                                    )
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(Modifier.height(8.dp))
+
+                    ButtonNeutral(
+                        text = "Cetak PDF Piutang Aktif",
+                        onClick = { generateCustomerDebtReportPdf(DebtReportMode.CURRENT_OUTSTANDING) },
+                        leadingIcon = Icons.Default.Description,
+                        fillMaxWidth = true
                     )
-                    Spacer(Modifier.width(6.dp))
+                }
+
+                // ==============================================================
+                // SECTION 3: AKTIVITAS TRANSAKSI (PENJUALAN, PEMBELIAN, KAS)
+                // ==============================================================
+                item {
                     Text(
-                        text = "Posisi Keuangan",
+                        text = "Aktivitas Transaksi (${selectedPeriod.label})",
                         style = MaterialTheme.typography.titleMedium.copy(
                             fontWeight = FontWeight.Bold,
-                            fontSize = 14.5.sp,
+                            fontSize = 15.sp,
                             color = AppColors.TextPrimary
                         )
                     )
-                }
+                    Spacer(Modifier.height(6.dp))
 
-                Spacer(Modifier.height(5.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    // Saldo Kas
-                    Surface(
-                        shape = RoundedCornerShape(12.dp),
-                        color = MaterialTheme.colorScheme.surfaceVariant,
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Column(Modifier.padding(10.dp)) {
-                            Text("Saldo Kas", style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp, color = AppColors.TextSecondary))
-                            Spacer(Modifier.height(3.dp))
-                            Text(
-                                formatRupiah(currentCashBalance ?: 0L),
-                                style = MaterialTheme.typography.bodyMedium.copy(
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 13.5.sp,
-                                    color = AppColors.GreenDark
-                                )
-                            )
-                        }
-                    }
-
-                    // Nilai Stok Modal
-                    Surface(
-                        shape = RoundedCornerShape(12.dp),
-                        color = MaterialTheme.colorScheme.surfaceVariant,
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Column(Modifier.padding(10.dp)) {
-                            Text("Nilai $stockLabel Modal", style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp, color = AppColors.TextSecondary))
-                            Spacer(Modifier.height(3.dp))
-                            Text(
-                                formatRupiah(totalStockValue ?: 0L),
-                                style = MaterialTheme.typography.bodyMedium.copy(
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 13.5.sp,
-                                    color = AppColors.TextPrimary
-                                )
-                            )
-                        }
-                    }
-                }
-
-                Spacer(Modifier.height(8.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    // Piutang Pelanggan
-                    Surface(
-                        shape = RoundedCornerShape(12.dp),
-                        color = MaterialTheme.colorScheme.surfaceVariant,
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Column(Modifier.padding(10.dp)) {
-                            Text("Piutang $customerLabel", style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp, color = AppColors.TextSecondary))
-                            Spacer(Modifier.height(3.dp))
-                            Text(
-                                formatRupiah(totalOutstandingDebt ?: 0L),
-                                style = MaterialTheme.typography.bodyMedium.copy(
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 13.5.sp,
-                                    color = if ((totalOutstandingDebt ?: 0L) > 0) AppColors.RedExpense else AppColors.TextPrimary
-                                )
-                            )
-                        }
-                    }
-
-                    // Hutang Supplier
-                    Surface(
-                        shape = RoundedCornerShape(12.dp),
-                        color = MaterialTheme.colorScheme.surfaceVariant,
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Column(Modifier.padding(10.dp)) {
-                            Text("$debtLabel $supplierLabel", style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp, color = AppColors.TextSecondary))
-                            Spacer(Modifier.height(3.dp))
-                            Text(
-                                formatRupiah(totalOutstandingPayable ?: 0L),
-                                style = MaterialTheme.typography.bodyMedium.copy(
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 13.5.sp,
-                                    color = if ((totalOutstandingPayable ?: 0L) > 0) AppColors.RedExpense else AppColors.TextPrimary
-                                )
-                            )
-                        }
-                    }
-                }
-
-                Spacer(Modifier.height(8.dp))
-
-                OutlinedButton(
-                    onClick = { generateCustomerDebtReportPdf(DebtReportMode.CURRENT_OUTSTANDING) },
-                    shape = RoundedCornerShape(10.dp),
-                    border = BorderStroke(1.dp, AppColors.GreenPrimary),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = AppColors.GreenPrimary),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(38.dp)
-                ) {
-                    Icon(Icons.Default.Description, null, modifier = Modifier.size(15.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text("Cetak PDF Piutang Aktif", fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
-                }
-            }
-
-            // ==============================================================
-            // SECTION 3: AKTIVITAS TRANSAKSI (PENJUALAN, PEMBELIAN, KAS)
-            // ==============================================================
-            item {
-                Text(
-                    text = "Aktivitas Transaksi (${selectedPeriod.label})",
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 15.sp,
-                        color = AppColors.TextPrimary
-                    )
-                )
-                Spacer(Modifier.height(4.dp))
-
-                // Detail Penjualan Card
-                Surface(
-                    shape = RoundedCornerShape(14.dp),
-                    color = MaterialTheme.colorScheme.surfaceVariant,
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                    shadowElevation = 0.5.dp,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(Modifier.padding(14.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(
-                                modifier = Modifier
-                                    .size(32.dp)
-                                    .clip(CircleShape)
-                                    .background(AppColors.GreenPrimary.copy(alpha = 0.15f)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(Icons.Default.Receipt, null, tint = AppColors.GreenPrimary, modifier = Modifier.size(16.dp))
+                    // Detail Penjualan Card
+                    AppCard(modifier = Modifier.fillMaxWidth()) {
+                        Column(Modifier.padding(14.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(34.dp)
+                                        .clip(CircleShape)
+                                        .background(AppColors.GreenPrimary.copy(alpha = 0.15f)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(Icons.Default.Receipt, null, tint = AppColors.GreenPrimary, modifier = Modifier.size(18.dp))
+                                }
+                                Spacer(Modifier.width(10.dp))
+                                Text("Aktivitas $transactionLabel", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelLarge)
+                                Spacer(Modifier.weight(1f))
+                                Text(formatRupiah(grossSalesVal), fontWeight = FontWeight.Bold, color = AppColors.GreenPrimary, style = MaterialTheme.typography.bodyLarge)
                             }
-                            Spacer(Modifier.width(10.dp))
-                            Text("Aktivitas $transactionLabel", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelLarge.copy(fontSize = 13.5.sp))
-                            Spacer(Modifier.weight(1f))
-                            Text(formatRupiah(grossSalesVal), fontWeight = FontWeight.Bold, color = AppColors.GreenPrimary, fontSize = 14.sp)
-                        }
-                        Spacer(Modifier.height(10.dp))
-                        Row {
-                            Text("$transactionLabel: $salesCount kali", style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp, color = AppColors.TextSecondary), modifier = Modifier.weight(1f))
-                            val soldQty = itemsSoldTotal ?: 0.0
-                            val qtyText = if (soldQty % 1.0 == 0.0) "${soldQty.toInt()} pcs" else "$soldQty pcs"
-                            Text("$productLabel Terjual: $qtyText", style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp, color = AppColors.TextSecondary))
-                        }
-                        Spacer(Modifier.height(4.dp))
-                        Row {
-                            Text("Tunai: ${formatRupiah(cashSales)}", style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp, color = AppColors.GreenDark), modifier = Modifier.weight(1f))
-                            Text("$debtLabel: ${formatRupiah(creditSales)}", style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp, color = AppColors.RedExpense))
-                        }
-                        if (qrisSales > 0L) {
-                            Spacer(Modifier.height(4.dp))
-                            Text("QRIS: ${formatRupiah(qrisSales)}", style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp, color = AppColors.TextSecondary))
-                        }
-                        if (salesReturnVal > 0L) {
-                            Spacer(Modifier.height(4.dp))
-                            Text("Retur: -${formatRupiah(salesReturnVal)} ($salesReturnCount transaksi)", style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp, color = AppColors.RedExpense))
-                        }
-                        Spacer(Modifier.height(12.dp))
-                        OutlinedButton(
-                            onClick = { generateSalesReportPdf() },
-                            shape = RoundedCornerShape(10.dp),
-                            border = BorderStroke(1.dp, AppColors.GreenPrimary),
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = AppColors.GreenPrimary),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(40.dp)
-                        ) {
-                            Icon(Icons.Default.Description, null, modifier = Modifier.size(16.dp))
-                            Spacer(Modifier.width(6.dp))
-                            Text("Cetak PDF Laporan $transactionLabel", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.labelMedium)
-                        }
-                    }
-                }
-            }
-
-            // Detail Pembelian / Kulakan Card
-            item {
-                Surface(
-                    shape = RoundedCornerShape(14.dp),
-                    color = MaterialTheme.colorScheme.surfaceVariant,
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                    shadowElevation = 0.5.dp,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(Modifier.padding(14.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(
-                                modifier = Modifier
-                                    .size(32.dp)
-                                    .clip(CircleShape)
-                                    .background(AppColors.RedExpense.copy(alpha = 0.15f)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(Icons.Default.ShoppingCart, null, tint = AppColors.RedExpense, modifier = Modifier.size(16.dp))
+                            Spacer(Modifier.height(10.dp))
+                            Row {
+                                Text("$transactionLabel: $salesCount kali", style = MaterialTheme.typography.bodySmall.copy(color = AppColors.TextSecondary), modifier = Modifier.weight(1f))
+                                val soldQty = itemsSoldTotal ?: 0.0
+                                val qtyText = if (soldQty % 1.0 == 0.0) "${soldQty.toInt()} pcs" else "$soldQty pcs"
+                                Text("$productLabel Terjual: $qtyText", style = MaterialTheme.typography.bodySmall.copy(color = AppColors.TextSecondary))
                             }
-                            Spacer(Modifier.width(10.dp))
-                            Text("Aktivitas $purchaseLabel", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelLarge.copy(fontSize = 13.5.sp))
-                            Spacer(Modifier.weight(1f))
-                            Text(formatRupiah(purchaseTotal ?: 0L), fontWeight = FontWeight.Bold, color = AppColors.RedExpense, fontSize = 14.sp)
-                        }
-                        Spacer(Modifier.height(10.dp))
-                        Row {
-                            Text("Transaksi: $purchaseCount kali", style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp, color = AppColors.TextSecondary), modifier = Modifier.weight(1f))
-                            val purchasedQty = itemsPurchasedTotal ?: 0.0
-                            val qtyText = if (purchasedQty % 1.0 == 0.0) "${purchasedQty.toInt()} pcs" else "$purchasedQty pcs"
-                            Text("$productLabel Dibeli: $qtyText", style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp, color = AppColors.TextSecondary))
-                        }
-                        Spacer(Modifier.height(12.dp))
-                        OutlinedButton(
-                            onClick = { generatePurchaseReportPdf() },
-                            shape = RoundedCornerShape(10.dp),
-                            border = BorderStroke(1.dp, AppColors.RedExpense),
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = AppColors.RedExpense),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(40.dp)
-                        ) {
-                            Icon(Icons.Default.ShoppingCart, null, modifier = Modifier.size(16.dp))
-                            Spacer(Modifier.width(6.dp))
-                            Text("Cetak PDF Laporan $purchaseLabel", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.labelMedium)
-                        }
-                    }
-                }
-            }
-
-            // Detail Pergerakan Kas Card
-            item {
-                Surface(
-                    shape = RoundedCornerShape(14.dp),
-                    color = MaterialTheme.colorScheme.surfaceVariant,
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                    shadowElevation = 0.5.dp,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(Modifier.padding(14.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("Pergerakan Kas Periode Ini", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelLarge.copy(fontSize = 13.5.sp, color = AppColors.TextPrimary))
-                            Spacer(Modifier.weight(1f))
-                            Text(
-                                formatRupiah(netCashMovement),
-                                style = MaterialTheme.typography.bodyMedium.copy(
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 14.sp,
-                                    color = if (netCashMovement >= 0) AppColors.GreenPrimary else AppColors.RedExpense
-                                )
+                            Spacer(Modifier.height(4.dp))
+                            Row {
+                                Text("Tunai: ${formatRupiah(cashSales)}", style = MaterialTheme.typography.bodySmall.copy(color = AppColors.GreenDark), modifier = Modifier.weight(1f))
+                                Text("$debtLabel: ${formatRupiah(creditSales)}", style = MaterialTheme.typography.bodySmall.copy(color = AppColors.RedExpense))
+                            }
+                            if (qrisSales > 0L) {
+                                Spacer(Modifier.height(4.dp))
+                                Text("QRIS: ${formatRupiah(qrisSales)}", style = MaterialTheme.typography.bodySmall.copy(color = AppColors.TextSecondary))
+                            }
+                            if (salesReturnVal > 0L) {
+                                Spacer(Modifier.height(4.dp))
+                                Text("Retur: -${formatRupiah(salesReturnVal)} ($salesReturnCount transaksi)", style = MaterialTheme.typography.bodySmall.copy(color = AppColors.RedExpense))
+                            }
+                            Spacer(Modifier.height(12.dp))
+                            ButtonNeutral(
+                                text = "Cetak PDF Laporan $transactionLabel",
+                                onClick = { generateSalesReportPdf() },
+                                leadingIcon = Icons.Default.Description,
+                                fillMaxWidth = true
                             )
                         }
-                        Spacer(Modifier.height(8.dp))
-                        Row {
-                            Text("Pemasukan Kas: ${formatRupiah(cashIncomeTotal ?: 0L)}", style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp, color = AppColors.GreenDark), modifier = Modifier.weight(1f))
-                            Text("Pengeluaran Kas: ${formatRupiah(cashExpenseTotal ?: 0L)}", style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp, color = AppColors.RedExpense))
+                    }
+                }
+
+                // Detail Pembelian / Kulakan Card
+                item {
+                    AppCard(modifier = Modifier.fillMaxWidth()) {
+                        Column(Modifier.padding(14.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(34.dp)
+                                        .clip(CircleShape)
+                                        .background(AppColors.RedExpense.copy(alpha = 0.15f)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(Icons.Default.ShoppingCart, null, tint = AppColors.RedExpense, modifier = Modifier.size(18.dp))
+                                }
+                                Spacer(Modifier.width(10.dp))
+                                Text("Aktivitas $purchaseLabel", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelLarge)
+                                Spacer(Modifier.weight(1f))
+                                Text(formatRupiah(purchaseTotal ?: 0L), fontWeight = FontWeight.Bold, color = AppColors.RedExpense, style = MaterialTheme.typography.bodyLarge)
+                            }
+                            Spacer(Modifier.height(10.dp))
+                            Row {
+                                Text("Transaksi: $purchaseCount kali", style = MaterialTheme.typography.bodySmall.copy(color = AppColors.TextSecondary), modifier = Modifier.weight(1f))
+                                val purchasedQty = itemsPurchasedTotal ?: 0.0
+                                val qtyText = if (purchasedQty % 1.0 == 0.0) "${purchasedQty.toInt()} pcs" else "$purchasedQty pcs"
+                                Text("$productLabel Dibeli: $qtyText", style = MaterialTheme.typography.bodySmall.copy(color = AppColors.TextSecondary))
+                            }
+                            Spacer(Modifier.height(12.dp))
+                            ButtonNeutral(
+                                text = "Cetak PDF Laporan $purchaseLabel",
+                                onClick = { generatePurchaseReportPdf() },
+                                leadingIcon = Icons.Default.ShoppingCart,
+                                fillMaxWidth = true
+                            )
                         }
                     }
                 }
-            }
 
-            // ==============================================================
-            // SECTION 4: PRODUK TERLARIS
-            // ==============================================================
-            item {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Default.Star,
-                        contentDescription = null,
-                        tint = AppColors.OrangeWarning,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    Text("$productLabel Terlaris", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold, fontSize = 15.sp, color = AppColors.TextPrimary))
-                }
-                Spacer(Modifier.height(4.dp))
-
-                Surface(
-                    shape = RoundedCornerShape(14.dp),
-                    color = MaterialTheme.colorScheme.surfaceVariant,
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                    shadowElevation = 0.5.dp,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(Modifier.padding(14.dp)) {
-                        if (topSellingProducts.isEmpty()) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 12.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
+                // Detail Pergerakan Kas Card
+                item {
+                    AppCard(modifier = Modifier.fillMaxWidth()) {
+                        Column(Modifier.padding(14.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text("Pergerakan Kas Periode Ini", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelLarge.copy(color = AppColors.TextPrimary))
+                                Spacer(Modifier.weight(1f))
                                 Text(
-                                    text = "Belum ada ${productLabel.lowercase()} terjual pada periode ini.",
-                                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp, color = AppColors.TextSecondary)
+                                    formatRupiah(netCashMovement),
+                                    style = MaterialTheme.typography.bodyMedium.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (netCashMovement >= 0) AppColors.GreenPrimary else AppColors.RedExpense
+                                    )
                                 )
                             }
-                        } else {
-                            topSellingProducts.forEachIndexed { index, product ->
-                                TopProductItemRow(
-                                    rank = index + 1,
-                                    item = product
-                                )
-                                if (index < topSellingProducts.size - 1) {
-                                    HorizontalDivider(
-                                        modifier = Modifier.padding(vertical = 6.dp),
-                                        color = MaterialTheme.colorScheme.outlineVariant
+                            Spacer(Modifier.height(8.dp))
+                            Row {
+                                Text("Pemasukan Kas: ${formatRupiah(cashIncomeTotal ?: 0L)}", style = MaterialTheme.typography.bodySmall.copy(color = AppColors.GreenDark), modifier = Modifier.weight(1f))
+                                Text("Pengeluaran Kas: ${formatRupiah(cashExpenseTotal ?: 0L)}", style = MaterialTheme.typography.bodySmall.copy(color = AppColors.RedExpense))
+                            }
+                        }
+                    }
+                }
+
+                // ==============================================================
+                // SECTION 4: PRODUK TERLARIS
+                // ==============================================================
+                item {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.Star,
+                            contentDescription = null,
+                            tint = AppColors.OrangeWarning,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text("$productLabel Terlaris", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold, fontSize = 15.sp, color = AppColors.TextPrimary))
+                    }
+                    Spacer(Modifier.height(6.dp))
+
+                    AppCard(modifier = Modifier.fillMaxWidth()) {
+                        Column(Modifier.padding(14.dp)) {
+                            if (topSellingProducts.isEmpty()) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 12.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = "Belum ada ${productLabel.lowercase()} terjual pada periode ini.",
+                                        style = MaterialTheme.typography.bodySmall.copy(color = AppColors.TextSecondary)
                                     )
                                 }
+                            } else {
+                                topSellingProducts.forEachIndexed { index, product ->
+                                    TopProductItemRow(
+                                        rank = index + 1,
+                                        item = product
+                                    )
+                                    if (index < topSellingProducts.size - 1) {
+                                        HorizontalDivider(
+                                            modifier = Modifier.padding(vertical = 6.dp),
+                                            color = MaterialTheme.colorScheme.outlineVariant
+                                        )
+                                    }
+                                }
                             }
-                        }
-                        Spacer(Modifier.height(10.dp))
-                        OutlinedButton(
-                            onClick = { generateProductReportPdf() },
-                            shape = RoundedCornerShape(10.dp),
-                            border = BorderStroke(1.dp, AppColors.GreenPrimary),
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = AppColors.GreenPrimary),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(40.dp)
-                        ) {
-                            Icon(Icons.Default.Inventory2, null, modifier = Modifier.size(16.dp))
-                            Spacer(Modifier.width(6.dp))
-                            Text("Cetak PDF Laporan $productLabel", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.labelMedium)
+                            Spacer(Modifier.height(12.dp))
+                            ButtonNeutral(
+                                text = "Cetak PDF Laporan $productLabel",
+                                onClick = { generateProductReportPdf() },
+                                leadingIcon = Icons.Default.Inventory2,
+                                fillMaxWidth = true
+                            )
                         }
                     }
                 }
             }
-
-            item {
-                Spacer(Modifier.height(16.dp))
-            }
-        }
         }
     }
 
@@ -1105,7 +992,7 @@ fun ReportsScreen(
     if (showReportTypeDialog) {
         AlertDialog(
             onDismissRequest = { showReportTypeDialog = false },
-            shape = RoundedCornerShape(16.dp),
+            shape = AppShapes.CardShape,
             containerColor = MaterialTheme.colorScheme.surface,
             title = {
                 Text(
@@ -1124,7 +1011,7 @@ fun ReportsScreen(
                 ) {
                     Text(
                         text = "Pilih jenis laporan yang ingin dicetak untuk periode ${selectedPeriod.label}:",
-                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp, color = AppColors.TextSecondary)
+                        style = MaterialTheme.typography.bodySmall.copy(color = AppColors.TextSecondary)
                     )
                     Spacer(Modifier.height(4.dp))
 
@@ -1191,9 +1078,10 @@ fun ReportsScreen(
             },
             confirmButton = {
                 TextButton(
-                    onClick = { showReportTypeDialog = false }
+                    onClick = { showReportTypeDialog = false },
+                    modifier = Modifier.defaultMinSize(minHeight = AppTouchTarget)
                 ) {
-                    Text("Batal", color = AppColors.TextSecondary, fontSize = 13.sp)
+                    Text("Batal", color = AppColors.TextSecondary, style = AppTypeScale.Button)
                 }
             }
         )
@@ -1206,14 +1094,11 @@ fun ReportsScreen(
         val file = generatedPdfFile!!
         AlertDialog(
             onDismissRequest = { showPdfSuccessDialog = false },
-            shape = RoundedCornerShape(16.dp),
+            shape = AppShapes.CardShape,
             containerColor = MaterialTheme.colorScheme.surface,
             icon = {
                 Surface(
                     shape = CircleShape,
-                    // Gate 1.8: was Color(0xFFE8F5E9), a light-only tint that became a ~13:1
-                    // white disc on the dark success dialog. SuccessContainer is the app's own
-                    // token for this and inverts with the theme.
                     color = AppColors.SuccessContainer,
                     modifier = Modifier.size(48.dp)
                 ) {
@@ -1241,46 +1126,38 @@ fun ReportsScreen(
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(
                         text = "Laporan $currentPdfTitle periode ${selectedPeriod.label} berhasil dibuat dan disimpan di memori aplikasi.",
-                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.5.sp, color = AppColors.TextSecondary)
+                        style = MaterialTheme.typography.bodySmall.copy(color = AppColors.TextSecondary)
                     )
                     Spacer(Modifier.height(2.dp))
                     Text(
                         text = file.name,
                         style = MaterialTheme.typography.labelSmall.copy(
                             fontWeight = FontWeight.SemiBold,
-                            fontSize = 11.sp,
                             color = AppColors.TextPrimary
                         )
                     )
                 }
             },
             confirmButton = {
-                Button(
+                ButtonPrimary(
+                    text = "Bagikan PDF",
                     onClick = {
                         val shareIntent = PdfShareManager.createSharePdfIntent(context, file, "Bagikan Laporan $currentPdfTitle")
                         context.startActivity(shareIntent)
                     },
-                    shape = RoundedCornerShape(10.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = AppColors.GreenPrimary)
-                ) {
-                    Icon(Icons.Default.Share, null, modifier = Modifier.size(16.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text("Bagikan PDF", fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                }
+                    leadingIcon = Icons.Default.Share,
+                    fillMaxWidth = false
+                )
             },
             dismissButton = {
-                OutlinedButton(
+                ButtonNeutral(
+                    text = "Buka PDF",
                     onClick = {
                         val viewIntent = PdfShareManager.createViewPdfIntent(context, file)
                         context.startActivity(viewIntent)
                     },
-                    // Gate 1.8: was Color(0xFFE0E0E0) - a Material grey400 that belongs to neither
-                    // Buku Warung palette. CardBorderStrong is the app's own hairline step.
-                    shape = RoundedCornerShape(10.dp),
-                    border = BorderStroke(1.dp, AppColors.CardBorderStrong)
-                ) {
-                    Text("Buka PDF", fontSize = 13.sp)
-                }
+                    fillMaxWidth = false
+                )
             }
         )
     }
@@ -1291,18 +1168,16 @@ fun ReportsScreen(
     if (pdfErrorMessage != null) {
         AlertDialog(
             onDismissRequest = { pdfErrorMessage = null },
-            shape = RoundedCornerShape(16.dp),
+            shape = AppShapes.CardShape,
             containerColor = MaterialTheme.colorScheme.surface,
             title = { Text("Gagal Membuat PDF", fontWeight = FontWeight.Bold, fontSize = 17.sp, color = AppColors.TextPrimary) },
-            text = { Text(pdfErrorMessage ?: "", style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp, color = AppColors.TextSecondary)) },
+            text = { Text(pdfErrorMessage ?: "", style = MaterialTheme.typography.bodyMedium.copy(color = AppColors.TextSecondary)) },
             confirmButton = {
-                Button(
+                ButtonPrimary(
+                    text = "Tutup",
                     onClick = { pdfErrorMessage = null },
-                    shape = RoundedCornerShape(10.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = AppColors.GreenPrimary)
-                ) {
-                    Text("Tutup", fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                }
+                    fillMaxWidth = false
+                )
             }
         )
     }
@@ -1316,88 +1191,101 @@ private fun ReportsTopHeader(
     isGeneratingPdf: Boolean,
     onExportPdf: () -> Unit
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
+    Surface(
+        color = MaterialTheme.colorScheme.surface,
+        shadowElevation = 0.5.dp,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        modifier = Modifier.fillMaxWidth()
     ) {
-        Box(
+        Row(
             modifier = Modifier
-                .size(38.dp)
-                .clip(RoundedCornerShape(10.dp))
-                .background(AppColors.GreenPrimary),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = Icons.Default.Assessment,
-                contentDescription = null,
-                tint = Color.White,
-                modifier = Modifier.size(20.dp)
-            )
-        }
-
-        Spacer(Modifier.width(10.dp))
-
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = "Laporan & Laba",
-                style = MaterialTheme.typography.titleMedium.copy(
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 16.sp,
-                    color = AppColors.TextPrimary
-                ),
-                maxLines = 1
-            )
-            Text(
-                text = "Pantau laba rugi usaha",
-                style = MaterialTheme.typography.bodySmall.copy(
-                    fontSize = 11.sp,
-                    color = AppColors.TextSecondary
-                ),
-                maxLines = 1
-            )
-        }
-
-        Spacer(Modifier.width(8.dp))
-
-        Surface(
-            shape = RoundedCornerShape(10.dp),
-            color = AppColors.GreenPrimary.copy(alpha = 0.15f),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-            modifier = Modifier.clickable(enabled = !isGeneratingPdf, onClick = onExportPdf)
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
             Row(
-                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                modifier = Modifier.weight(1f, fill = false),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                if (isGeneratingPdf) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(14.dp),
-                        color = AppColors.GreenPrimary,
-                        strokeWidth = 2.dp
-                    )
-                    Spacer(Modifier.width(6.dp))
-                    Text(
-                        text = "Membuat...",
-                        color = AppColors.GreenPrimary,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 11.5.sp
-                    )
-                } else {
+                Box(
+                    modifier = Modifier
+                        .size(38.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(AppColors.GreenPrimary),
+                    contentAlignment = Alignment.Center
+                ) {
                     Icon(
-                        imageVector = Icons.Default.Description,
+                        imageVector = Icons.Default.Assessment,
                         contentDescription = null,
-                        tint = AppColors.GreenPrimary,
-                        modifier = Modifier.size(15.dp)
+                        tint = MaterialTheme.colorScheme.onPrimary,
+                        modifier = Modifier.size(20.dp)
                     )
-                    Spacer(Modifier.width(4.dp))
+                }
+
+                Spacer(Modifier.width(10.dp))
+
+                Column {
                     Text(
-                        text = "Cetak PDF",
-                        color = AppColors.GreenPrimary,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 11.5.sp
+                        text = "Laporan & Laba",
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 16.5.sp,
+                            color = AppColors.TextPrimary
+                        ),
+                        maxLines = 1
                     )
+                    Text(
+                        text = "Pantau laba rugi usaha",
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            fontSize = 11.5.sp,
+                            color = AppColors.TextSecondary
+                        ),
+                        maxLines = 1
+                    )
+                }
+            }
+
+            Spacer(Modifier.width(8.dp))
+
+            Surface(
+                shape = AppShapes.ChipShape,
+                color = MaterialTheme.colorScheme.primaryContainer,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary),
+                modifier = Modifier
+                    .defaultMinSize(minHeight = 40.dp)
+                    .clip(AppShapes.ChipShape)
+                    .clickable(enabled = !isGeneratingPdf, onClick = onExportPdf)
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    if (isGeneratingPdf) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            strokeWidth = 2.dp
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            text = "Membuat...",
+                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold)
+                        )
+                    } else {
+                        Icon(
+                            imageVector = Icons.Default.Description,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            text = "Cetak PDF",
+                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold)
+                        )
+                    }
                 }
             }
         }
@@ -1415,20 +1303,22 @@ private fun ReportChooserItem(
     onClick: () -> Unit
 ) {
     Surface(
-        shape = RoundedCornerShape(10.dp),
+        shape = AppShapes.CardShape,
         color = MaterialTheme.colorScheme.surfaceVariant,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         modifier = Modifier
             .fillMaxWidth()
+            .heightIn(min = AppTouchTarget)
+            .clip(AppShapes.CardShape)
             .clickable(onClick = onClick)
     ) {
         Row(
-            modifier = Modifier.padding(10.dp),
+            modifier = Modifier.padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
                 modifier = Modifier
-                    .size(34.dp)
+                    .size(36.dp)
                     .clip(CircleShape)
                     .background(AppColors.GreenPrimary.copy(alpha = 0.15f)),
                 contentAlignment = Alignment.Center
@@ -1437,23 +1327,21 @@ private fun ReportChooserItem(
                     imageVector = icon,
                     contentDescription = null,
                     tint = AppColors.GreenPrimary,
-                    modifier = Modifier.size(18.dp)
+                    modifier = Modifier.size(20.dp)
                 )
             }
-            Spacer(Modifier.width(10.dp))
+            Spacer(Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = title,
                     style = MaterialTheme.typography.bodyMedium.copy(
                         fontWeight = FontWeight.Bold,
-                        fontSize = 13.sp,
                         color = AppColors.TextPrimary
                     )
                 )
                 Text(
                     text = subtitle,
                     style = MaterialTheme.typography.labelSmall.copy(
-                        fontSize = 10.5.sp,
                         color = AppColors.TextSecondary
                     )
                 )
@@ -1475,18 +1363,13 @@ private fun TopProductItemRow(
     ) {
         Surface(
             shape = CircleShape,
-            // Gate 1.8: the rank disc was four hardcoded colours, three of which (gold #FFD700,
-            // silver #C0C0C0, bronze #CD7F32) are decorative literals in no theme, and the fourth
-            // (#F0F4F0) is a near-white that disappeared against the dark surface. The top three
-            // keep their medal colours deliberately - they encode rank, not state - but the
-            // fallback now uses the theme's surfaceVariant so an unranked row is visible in dark.
             color = when (rank) {
                 1 -> Color(0xFFFFD700)
                 2 -> Color(0xFFC0C0C0)
                 3 -> Color(0xFFCD7F32)
                 else -> MaterialTheme.colorScheme.surfaceVariant
             },
-            modifier = Modifier.size(24.dp)
+            modifier = Modifier.size(26.dp)
         ) {
             Box(contentAlignment = Alignment.Center) {
                 Text(
@@ -1503,7 +1386,6 @@ private fun TopProductItemRow(
                 text = item.productName,
                 style = MaterialTheme.typography.bodyMedium.copy(
                     fontWeight = FontWeight.SemiBold,
-                    fontSize = 13.5.sp,
                     color = AppColors.TextPrimary
                 )
             )
@@ -1511,7 +1393,6 @@ private fun TopProductItemRow(
             Text(
                 text = "Terjual: $qtyText",
                 style = MaterialTheme.typography.bodySmall.copy(
-                    fontSize = 11.5.sp,
                     color = AppColors.TextSecondary
                 )
             )
@@ -1520,7 +1401,6 @@ private fun TopProductItemRow(
             text = formatRupiah(item.totalRevenue),
             style = MaterialTheme.typography.bodyMedium.copy(
                 fontWeight = FontWeight.Bold,
-                fontSize = 13.5.sp,
                 color = AppColors.GreenPrimary
             )
         )
