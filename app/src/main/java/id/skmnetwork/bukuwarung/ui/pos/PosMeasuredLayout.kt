@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -56,6 +57,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import id.skmnetwork.bukuwarung.data.local.entity.CategoryEntity
@@ -494,47 +498,52 @@ fun MeasuredProductCard(
             BorderStroke(PosMetrics.SearchBorderWidth, PosPalette.CardBorder)
         },
         modifier = modifier
-            .heightIn(min = PosMetrics.ProductCardMinHeight)
+            .fillMaxWidth()
             .alpha(contentAlpha)
     ) {
         Column(
-            modifier = Modifier.padding(PosMetrics.ProductCardPadding),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(PosMetrics.ProductCardPadding),
             verticalArrangement = Arrangement.spacedBy(PosMetrics.ProductCardInnerGap)
         ) {
-            // TOP - stock badge
-            Surface(
-                shape = PosMetrics.ChipShape,
-                color = if (isOutOfStock) PosPalette.DestructiveContainer else PosPalette.ProductAreaBackground,
-                modifier = Modifier.heightIn(min = PosMetrics.ProductBadgeHeight)
-            ) {
-                Text(
-                    text = if (isOutOfStock) "Habis" else "${terminologyStockLabel(isStockable)}: ${formatQuantityValue(product.stock)}",
-                    fontSize = PosType.ProductCode,
-                    fontWeight = FontWeight.Medium,
-                    color = if (isOutOfStock) PosPalette.OnDestructiveContainer else PosPalette.TextSecondary,
-                    maxLines = 1,
-                    modifier = Modifier.padding(horizontal = PosMetrics.RadiusSmall, vertical = 2.dp)
-                )
-            }
-
-            // CENTER - image zone. ProductImageThumbnail already exists for the product form and
-            // the catalogue, reads product.imageUri, and falls back to the same Inventory2 icon when
-            // a product has no photo, so the POS reuses it instead of hardcoding a placeholder.
+            // TOP - Consistent ~1:1 Image frame with clean overlaid stock badge
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(PosMetrics.ProductImageZoneHeight)
-                    .background(PosPalette.ProductAreaBackground, PosMetrics.CtaShape),
+                    .aspectRatio(1.15f)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(PosPalette.ProductAreaBackground),
                 contentAlignment = Alignment.Center
             ) {
                 ProductImageThumbnail(
                     imageUri = product.imageUri,
                     tint = PosPalette.TextSecondary,
-                    modifier = Modifier.size(PosMetrics.ProductImageZoneHeight)
+                    contentScale = ContentScale.Crop,
+                    placeholderIconSize = 36.dp,
+                    modifier = Modifier.fillMaxSize()
                 )
+
+                // Stock badge overlaid at top-start
+                Surface(
+                    shape = PosMetrics.ChipShape,
+                    color = if (isOutOfStock) PosPalette.DestructiveContainer else PosPalette.Surface.copy(alpha = 0.92f),
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .padding(6.dp)
+                ) {
+                    Text(
+                        text = if (isOutOfStock) "Habis" else "${terminologyStockLabel(isStockable)}: ${formatQuantityValue(product.stock)}",
+                        fontSize = PosType.ProductCode,
+                        fontWeight = FontWeight.Medium,
+                        color = if (isOutOfStock) PosPalette.OnDestructiveContainer else PosPalette.TextPrimary,
+                        maxLines = 1,
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                    )
+                }
             }
 
-            // BOTTOM - name, code, price, add control
+            // Product name (max 2 lines)
             Text(
                 text = product.name,
                 fontSize = PosType.ProductName,
@@ -543,6 +552,7 @@ fun MeasuredProductCard(
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
             )
+
             if (!productCode.isNullOrBlank()) {
                 Text(
                     text = productCode,
@@ -552,28 +562,22 @@ fun MeasuredProductCard(
                     overflow = TextOverflow.Ellipsis
                 )
             }
-            Text(
-                text = formatRupiah(product.sellingPrice),
-                fontSize = PosType.ProductPrice,
-                fontWeight = FontWeight.SemiBold,
-                color = PosPalette.PrimaryText
-            )
 
-            Spacer(Modifier.weight(1f))
-
-            Box(
+            // Price and Add Action row
+            Row(
                 modifier = Modifier.fillMaxWidth(),
-                contentAlignment = Alignment.CenterEnd
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                if (isSelected) {
-                    // SELECTED - the card shows a quantity control instead of the add button.
-                    PosQuantityControl(
-                        quantity = cartQuantity,
-                        onIncrement = onIncrement,
-                        onDecrement = onDecrement,
-                        enabled = !isOutOfStock
-                    )
-                } else {
+                Text(
+                    text = formatRupiah(product.sellingPrice),
+                    fontSize = PosType.ProductPrice,
+                    fontWeight = FontWeight.SemiBold,
+                    color = PosPalette.PrimaryText,
+                    modifier = Modifier.weight(1f, fill = false)
+                )
+
+                if (!isSelected) {
                     // 36dp visual diameter on a 48dp touch target.
                     Box(
                         modifier = Modifier.size(PosMetrics.ProductAddTouchTarget),
@@ -596,6 +600,21 @@ fun MeasuredProductCard(
                             }
                         }
                     }
+                }
+            }
+
+            if (isSelected) {
+                // SELECTED - the card shows quantity control when item is in cart.
+                Box(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentAlignment = Alignment.CenterEnd
+                ) {
+                    PosQuantityControl(
+                        quantity = cartQuantity,
+                        onIncrement = onIncrement,
+                        onDecrement = onDecrement,
+                        enabled = !isOutOfStock
+                    )
                 }
             }
         }

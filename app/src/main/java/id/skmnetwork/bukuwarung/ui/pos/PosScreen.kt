@@ -1106,7 +1106,7 @@ fun PosScreen(
                     )
                 } else {
                     LazyVerticalGrid(
-                        columns = GridCells.Fixed(productGridColumns),
+                        columns = GridCells.Adaptive(minSize = 140.dp),
                         horizontalArrangement = Arrangement.spacedBy(PosMetrics.ProductGridHorizontalGap),
                         verticalArrangement = Arrangement.spacedBy(PosMetrics.ProductGridVerticalGap),
                         modifier = Modifier.fillMaxSize()
