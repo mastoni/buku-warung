@@ -15,13 +15,21 @@ import java.util.UUID
             parentColumns = ["id"],
             childColumns = ["sale_item_id"],
             onDelete = ForeignKey.CASCADE
+        ),
+        ForeignKey(
+            entity = CustomerEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["customer_id"],
+            onDelete = ForeignKey.SET_NULL
         )
     ],
     indices = [
         Index(value = ["uuid"], unique = true),
+        Index(value = ["business_id"]),
         Index(value = ["sale_item_id"]),
-        Index(value = ["status"]),
-        Index(value = ["business_id"])
+        Index(value = ["customer_id"]),
+        Index(value = ["transaction_number"]),
+        Index(value = ["status"])
     ]
 )
 data class DigitalTransactionEntity(
@@ -34,8 +42,17 @@ data class DigitalTransactionEntity(
     @ColumnInfo(name = "business_id")
     val businessId: String = "LEGACY_BUSINESS",
 
+    @ColumnInfo(name = "transaction_number")
+    val transactionNumber: String? = null,
+
     @ColumnInfo(name = "sale_item_id")
-    val saleItemId: Long,
+    val saleItemId: Long? = null,
+
+    @ColumnInfo(name = "customer_id")
+    val customerId: Long? = null,
+
+    @ColumnInfo(name = "payment_method")
+    val paymentMethod: String = "CASH",
 
     @ColumnInfo(name = "provider_id")
     val providerId: String,
@@ -51,6 +68,9 @@ data class DigitalTransactionEntity(
 
     @ColumnInfo(name = "actual_purchase_price")
     val actualPurchasePrice: Long,
+
+    @ColumnInfo(name = "admin_fee")
+    val adminFee: Long = 0L,
 
     @ColumnInfo(name = "status")
     val status: String = DigitalTransactionStatus.DRAFT.name,

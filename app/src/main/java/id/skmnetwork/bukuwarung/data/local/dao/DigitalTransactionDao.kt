@@ -24,10 +24,19 @@ interface DigitalTransactionDao {
     @Query("SELECT * FROM digital_transactions WHERE sale_item_id IN (:saleItemIds) AND business_id = :businessId")
     suspend fun getBySaleItemIds(saleItemIds: List<Long>, businessId: String): List<DigitalTransactionEntity>
 
-    @Query("SELECT * FROM digital_transactions WHERE business_id = :businessId")
+    @Query("SELECT * FROM digital_transactions WHERE business_id = :businessId ORDER BY created_at DESC")
     fun getByBusinessId(businessId: String): Flow<List<DigitalTransactionEntity>>
 
-    @Query("SELECT * FROM digital_transactions WHERE status = :status AND business_id = :businessId")
+    @Query("SELECT * FROM digital_transactions WHERE sale_item_id IS NULL AND business_id = :businessId ORDER BY created_at DESC")
+    fun getStandaloneTransactions(businessId: String): Flow<List<DigitalTransactionEntity>>
+
+    @Query("SELECT * FROM digital_transactions WHERE transaction_number = :transactionNumber AND business_id = :businessId LIMIT 1")
+    suspend fun getByTransactionNumber(transactionNumber: String, businessId: String): DigitalTransactionEntity?
+
+    @Query("SELECT * FROM digital_transactions WHERE customer_id = :customerId AND business_id = :businessId ORDER BY created_at DESC")
+    fun getByCustomerId(customerId: Long, businessId: String): Flow<List<DigitalTransactionEntity>>
+
+    @Query("SELECT * FROM digital_transactions WHERE status = :status AND business_id = :businessId ORDER BY created_at DESC")
     fun getByStatus(status: String, businessId: String): Flow<List<DigitalTransactionEntity>>
 
     @Query("SELECT * FROM digital_transactions WHERE uuid = :uuid AND business_id = :businessId")

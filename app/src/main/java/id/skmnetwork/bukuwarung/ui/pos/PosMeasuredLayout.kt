@@ -25,6 +25,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.Menu
@@ -164,7 +165,8 @@ fun PosTopBar(
     onMenuClick: () -> Unit,
     onHistoryClick: () -> Unit,
     onSettingsClick: () -> Unit,
-    showMenuAction: Boolean
+    showMenuAction: Boolean,
+    subtitle: String? = null
 ) {
     Surface(
         color = PosPalette.Primary,
@@ -199,15 +201,28 @@ fun PosTopBar(
                 }
                 Spacer(Modifier.width(PosMetrics.TopBarTitleGap))
             }
-            Text(
-                text = title,
-                fontSize = PosType.AppTitle,
-                fontWeight = FontWeight.SemiBold,
-                color = PosPalette.OnPrimary,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f, fill = false)
-            )
+            Column(
+                modifier = Modifier.weight(1f, fill = false),
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    text = title,
+                    fontSize = PosType.AppTitle,
+                    fontWeight = FontWeight.SemiBold,
+                    color = PosPalette.OnPrimary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                if (!subtitle.isNullOrBlank()) {
+                    Text(
+                        text = subtitle,
+                        fontSize = PosType.Helper,
+                        color = PosPalette.OnPrimary.copy(alpha = 0.85f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
             Spacer(Modifier.weight(1f))
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -624,6 +639,293 @@ fun MeasuredProductCard(
 private fun terminologyStockLabel(isStockable: Boolean): String = if (isStockable) "Stok" else "—"
 
 // =====================================================================================
+// 12B. COUNTER_HYBRID ROW - High-density SKU table/list view for hardware, pharmacy & electronics
+// =====================================================================================
+
+@Composable
+fun PosCounterHybridRow(
+    product: ProductEntity,
+    productCode: String?,
+    cartQuantity: Double,
+    isStockable: Boolean,
+    isOutOfStock: Boolean,
+    stockLabel: String,
+    onAddClick: () -> Unit,
+    onIncrement: () -> Unit,
+    onDecrement: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val isSelected = cartQuantity > 0.0
+    val contentAlpha = if (isOutOfStock) 0.45f else 1f
+
+    Surface(
+        shape = PosMetrics.CardShape,
+        color = PosPalette.Surface,
+        border = if (isSelected) {
+            BorderStroke(PosMetrics.ProductSelectedBorder, PosPalette.Primary)
+        } else {
+            BorderStroke(PosMetrics.SearchBorderWidth, PosPalette.CardBorder)
+        },
+        modifier = modifier
+            .fillMaxWidth()
+            .alpha(contentAlpha)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = PosMetrics.SearchPadding, vertical = PosMetrics.RadiusSmall),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(end = PosMetrics.RadiusSmall),
+                verticalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Text(
+                        text = product.name,
+                        fontSize = PosType.ProductName,
+                        fontWeight = FontWeight.SemiBold,
+                        color = PosPalette.TextPrimary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false)
+                    )
+                    if (!product.unit.isNullOrBlank()) {
+                        Surface(
+                            shape = PosMetrics.ChipShape,
+                            color = PosPalette.ProductAreaBackground,
+                            border = BorderStroke(PosMetrics.SearchBorderWidth, PosPalette.CardBorder)
+                        ) {
+                            Text(
+                                text = product.unit,
+                                fontSize = PosType.ProductCode,
+                                color = PosPalette.TextSecondary,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
+                }
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    if (!productCode.isNullOrBlank()) {
+                        Text(
+                            text = productCode,
+                            fontSize = PosType.ProductCode,
+                            color = PosPalette.TextSecondary
+                        )
+                    }
+                    Text(
+                        text = if (isOutOfStock) "Habis" else "$stockLabel: ${formatQuantityValue(product.stock)}",
+                        fontSize = PosType.ProductCode,
+                        fontWeight = FontWeight.Medium,
+                        color = if (isOutOfStock) PosPalette.Destructive else PosPalette.TextSecondary
+                    )
+                }
+            }
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = formatRupiah(product.sellingPrice),
+                    fontSize = PosType.ProductPrice,
+                    fontWeight = FontWeight.SemiBold,
+                    color = PosPalette.PrimaryText
+                )
+
+                if (isSelected) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(PosMetrics.ProductAddTouchTarget)
+                                .clickable { onDecrement() },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Surface(
+                                shape = PosMetrics.CtaShape,
+                                color = PosPalette.ProductAreaBackground,
+                                border = BorderStroke(PosMetrics.SearchBorderWidth, PosPalette.CardBorder),
+                                modifier = Modifier.size(32.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = Icons.Default.Remove,
+                                        contentDescription = "Kurang",
+                                        tint = PosPalette.TextPrimary,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
+                            }
+                        }
+
+                        Text(
+                            text = formatQuantityValue(cartQuantity),
+                            fontSize = PosType.CartProduct,
+                            fontWeight = FontWeight.Bold,
+                            color = PosPalette.TextPrimary
+                        )
+
+                        Box(
+                            modifier = Modifier
+                                .size(PosMetrics.ProductAddTouchTarget)
+                                .clickable(enabled = !isOutOfStock) { onIncrement() },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Surface(
+                                shape = PosMetrics.CtaShape,
+                                color = PosPalette.Primary,
+                                modifier = Modifier.size(32.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = Icons.Default.Add,
+                                        contentDescription = "Tambah",
+                                        tint = PosPalette.OnPrimary,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .size(PosMetrics.ProductAddTouchTarget)
+                            .clickable(enabled = !isOutOfStock) { onAddClick() },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Surface(
+                            shape = PosMetrics.CtaShape,
+                            color = if (isOutOfStock) PosPalette.Border else PosPalette.Primary,
+                            modifier = Modifier.size(36.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.Default.Add,
+                                    contentDescription = "Tambah",
+                                    tint = PosPalette.OnPrimary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// =====================================================================================
+// 12C. DIGITAL_OPERATOR - Denomination Card for PPOB, Pulsa, and Tokens
+// =====================================================================================
+
+@Composable
+fun PosDigitalDenomCard(
+    name: String,
+    category: String,
+    sellingPrice: Long,
+    purchasePrice: Long,
+    adminFee: Long = 0L,
+    description: String = "",
+    isSelected: Boolean = false,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val margin = (sellingPrice + adminFee) - purchasePrice
+
+    Surface(
+        onClick = onClick,
+        shape = PosMetrics.CardShape,
+        color = if (isSelected) PosPalette.Primary.copy(alpha = 0.08f) else PosPalette.Surface,
+        border = if (isSelected) {
+            BorderStroke(PosMetrics.ProductSelectedBorder, PosPalette.Primary)
+        } else {
+            BorderStroke(PosMetrics.SearchBorderWidth, PosPalette.CardBorder)
+        },
+        modifier = modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(PosMetrics.RadiusSmall),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = name,
+                    fontSize = PosType.ProductName,
+                    fontWeight = FontWeight.SemiBold,
+                    color = PosPalette.TextPrimary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false)
+                )
+                if (isSelected) {
+                    Icon(
+                        imageVector = Icons.Default.CheckCircle,
+                        contentDescription = "Terpilih",
+                        tint = PosPalette.Primary,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            }
+
+            Text(
+                text = formatRupiah(sellingPrice + adminFee),
+                fontSize = PosType.ProductPrice,
+                fontWeight = FontWeight.Bold,
+                color = PosPalette.PrimaryText
+            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Modal: ${formatRupiah(purchasePrice)}",
+                    fontSize = PosType.ProductCode,
+                    color = PosPalette.TextSecondary
+                )
+                Text(
+                    text = "Komisi: +${formatRupiah(margin)}",
+                    fontSize = PosType.ProductCode,
+                    fontWeight = FontWeight.Medium,
+                    color = PosPalette.Primary
+                )
+            }
+
+            if (description.isNotBlank()) {
+                Text(
+                    text = description,
+                    fontSize = PosType.ProductCode,
+                    color = PosPalette.TextSecondary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+    }
+}
+
+// =====================================================================================
 // 13. CART QUANTITY CONTROL - 112 x 56, minimum 48dp touch targets, never 22/26dp
 // =====================================================================================
 
@@ -943,10 +1245,10 @@ fun PosPaymentCta(
 
 @Composable
 fun PosCartSummary(
-    discountLabel: String,
-    discountValue: String,
-    subtotalLabel: String?,
-    subtotalValue: String?,
+    discountLabel: String? = null,
+    discountValue: String? = null,
+    subtotalLabel: String? = null,
+    subtotalValue: String? = null,
     totalLabel: String,
     totalValue: String,
     modifier: Modifier = Modifier
@@ -955,11 +1257,11 @@ fun PosCartSummary(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(PosMetrics.RadiusSmall)
     ) {
-        if (discountLabel != null) {
+        if (discountLabel != null && discountValue != null) {
             PosSummaryRow(label = discountLabel, value = discountValue)
         }
-        if (subtotalLabel != null) {
-            PosSummaryRow(label = subtotalLabel, value = subtotalValue.orEmpty())
+        if (subtotalLabel != null && subtotalValue != null) {
+            PosSummaryRow(label = subtotalLabel, value = subtotalValue)
         }
         Box(
             modifier = Modifier
@@ -1159,7 +1461,7 @@ fun PosPhoneCartDialog(
  * control the product categories already are, just applied to sales.
  */
 @Composable
-private fun PosFilterChipRow(
+fun PosFilterChipRow(
     labels: List<String>,
     selectedIndex: Int,
     onSelect: (Int) -> Unit,

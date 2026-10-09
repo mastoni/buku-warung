@@ -279,7 +279,7 @@ fun SaleDetailDialog(
                                                 Spacer(modifier = Modifier.height(4.dp))
                                                 OutlinedButton(
                                                     onClick = {
-                                                        viewModel.checkDigitalStatus(digitalTx.saleItemId) { updated ->
+                                                        viewModel.checkDigitalStatus(item.id) { updated ->
                                                             if (updated != null) {
                                                                 statusCheckKey++
                                                             }

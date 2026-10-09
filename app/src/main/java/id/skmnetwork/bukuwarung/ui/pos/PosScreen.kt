@@ -94,6 +94,7 @@ import id.skmnetwork.bukuwarung.domain.checkout.CartLine
 import id.skmnetwork.bukuwarung.data.preferences.UserSettings
 import id.skmnetwork.bukuwarung.domain.business.BusinessCapability
 import id.skmnetwork.bukuwarung.domain.business.BusinessTaxonomyRegistry
+import id.skmnetwork.bukuwarung.domain.business.PosContextFamily
 import id.skmnetwork.bukuwarung.domain.business.ResolvedBusinessProfile
 import id.skmnetwork.bukuwarung.domain.discount.DiscountCalculator
 import id.skmnetwork.bukuwarung.domain.discount.DiscountInput
@@ -114,6 +115,11 @@ import id.skmnetwork.bukuwarung.ui.theme.AppSpacing
 import id.skmnetwork.bukuwarung.ui.theme.rememberAppWindowSize
 import id.skmnetwork.bukuwarung.util.formatQuantityValue
 import id.skmnetwork.bukuwarung.util.formatRupiah
+import id.skmnetwork.bukuwarung.data.local.entity.DigitalTransactionEntity
+import id.skmnetwork.bukuwarung.data.local.entity.DigitalTransactionStatus
+import id.skmnetwork.bukuwarung.data.repository.DigitalTransactionRepository
+import id.skmnetwork.bukuwarung.domain.business.DigitalProductCatalog
+import id.skmnetwork.bukuwarung.domain.business.DigitalProductItem
 import id.skmnetwork.bukuwarung.domain.money.MoneyCalculator
 import id.skmnetwork.bukuwarung.domain.tax.TaxSettings
 import id.skmnetwork.bukuwarung.domain.tax.TaxPriceMode
@@ -129,6 +135,7 @@ fun PosScreen(
     customerViewModel: CustomerViewModel,
     userSettings: UserSettings = UserSettings(),
     printerService: id.skmnetwork.bukuwarung.printer.PrinterService? = null,
+    digitalTransactionRepository: DigitalTransactionRepository? = null,
     onNavigateToAddProduct: () -> Unit = {},
     onNavigateToSettings: () -> Unit = {},
     onOpenNavigation: () -> Unit = {}
@@ -140,6 +147,12 @@ fun PosScreen(
         )
     }
     val terminology = resolvedProfile.terminology
+    val posContextFamily = remember(resolvedProfile.businessType, resolvedProfile.operatingMode) {
+        PosContextFamily.fromBusinessType(
+            businessType = resolvedProfile.businessType,
+            operatingMode = resolvedProfile.operatingMode
+        )
+    }
 
     val dbProducts by viewModel.products.collectAsStateWithLifecycle()
     val dbCategories by viewModel.categories.collectAsStateWithLifecycle()
@@ -267,6 +280,68 @@ fun PosScreen(
     var selectedCustomerForCredit by remember { mutableStateOf<CustomerEntity?>(null) }
     var showCustomerPickerSheet by remember { mutableStateOf(false) }
     var showPosScannerDialog by remember { mutableStateOf(false) }
+
+    var digitalDestinationNumber by remember { mutableStateOf("") }
+    var selectedDigitalProduct by remember { mutableStateOf<DigitalProductItem?>(null) }
+    var selectedDigitalCategory by remember { mutableStateOf("ALL") }
+    var isSubmittingDigital by remember { mutableStateOf(false) }
+    var lastDigitalTransaction by remember { mutableStateOf<DigitalTransactionEntity?>(null) }
+    var showDigitalResultDialog by remember { mutableStateOf(false) }
+    var isCheckingDigitalStatus by remember { mutableStateOf(false) }
+
+    val detectedDigitalProvider = remember(digitalDestinationNumber) {
+        DigitalProductCatalog.detectProvider(digitalDestinationNumber)
+    }
+
+    val filteredDigitalProducts = remember(detectedDigitalProvider, selectedDigitalCategory) {
+        DigitalProductCatalog.PRESET_ITEMS.filter { item ->
+            val matchesCategory = selectedDigitalCategory == "ALL" || item.category.equals(selectedDigitalCategory, ignoreCase = true)
+            val matchesProvider = detectedDigitalProvider == null || item.providerId.equals(detectedDigitalProvider, ignoreCase = true)
+            matchesCategory && matchesProvider
+        }
+    }
+
+    fun processStandaloneDigitalCheckout() {
+        val dest = digitalDestinationNumber.trim()
+        if (dest.isBlank()) {
+            Toast.makeText(context, "Masukkan nomor tujuan / No Meter", Toast.LENGTH_SHORT).show()
+            return
+        }
+        val product = selectedDigitalProduct
+        if (product == null) {
+            Toast.makeText(context, "Pilih nominal produk digital", Toast.LENGTH_SHORT).show()
+            return
+        }
+        if (isSubmittingDigital) return
+        isSubmittingDigital = true
+        scope.launch {
+            try {
+                val repo = digitalTransactionRepository
+                if (repo != null) {
+                    val draftId = repo.createStandaloneDraft(
+                        providerId = product.providerId,
+                        providerProductCode = product.code,
+                        destinationNumber = dest,
+                        sellingPrice = product.sellingPrice,
+                        actualPurchasePrice = product.purchasePrice,
+                        adminFee = product.adminFee,
+                        paymentMethod = "CASH"
+                    )
+                    val submitted = repo.submitDraft(draftId)
+                    lastDigitalTransaction = submitted
+                    showDigitalResultDialog = true
+                    selectedDigitalProduct = null
+                    digitalDestinationNumber = ""
+                } else {
+                    Toast.makeText(context, "Repository digital belum diinisialisasi", Toast.LENGTH_SHORT).show()
+                }
+            } catch (e: Exception) {
+                Toast.makeText(context, "Gagal memproses: ${e.localizedMessage ?: "Terjadi kesalahan"}", Toast.LENGTH_SHORT).show()
+            } finally {
+                isSubmittingDigital = false
+            }
+        }
+    }
 
     val filteredProducts = dbProducts.filter { product ->
         val matchesQuery = product.name.contains(query, ignoreCase = true) ||
@@ -1029,6 +1104,177 @@ fun PosScreen(
         )
     }
 
+    if (showDigitalResultDialog && lastDigitalTransaction != null) {
+        val tx = lastDigitalTransaction!!
+        val isSuccess = tx.status == DigitalTransactionStatus.SUCCESS.name
+        val isPending = tx.status == DigitalTransactionStatus.PENDING.name
+        val isFailed = tx.status == DigitalTransactionStatus.FAILED.name
+        val isUnknown = tx.status == DigitalTransactionStatus.UNKNOWN.name
+
+        val statusColor = when (tx.status) {
+            DigitalTransactionStatus.SUCCESS.name -> AppColors.GreenPrimary
+            DigitalTransactionStatus.PENDING.name -> Color(0xFFE65100)
+            DigitalTransactionStatus.FAILED.name -> AppColors.RedExpense
+            else -> AppColors.TextSecondary
+        }
+
+        val statusLabel = when (tx.status) {
+            DigitalTransactionStatus.SUCCESS.name -> "TRANSAKSI BERHASIL"
+            DigitalTransactionStatus.PENDING.name -> "SEDANG DIPROSES (PENDING)"
+            DigitalTransactionStatus.FAILED.name -> "TRANSAKSI GAGAL"
+            DigitalTransactionStatus.UNKNOWN.name -> "STATUS TIDAK DIKETAHUI"
+            else -> "STATUS: ${tx.status}"
+        }
+
+        AlertDialog(
+            onDismissRequest = {
+                if (!isCheckingDigitalStatus) showDigitalResultDialog = false
+            },
+            modifier = if (windowSize.isCompact) Modifier.fillMaxWidth() else Modifier.width(520.dp),
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = if (isSuccess) Icons.Default.CheckCircle else Icons.Default.Receipt,
+                        contentDescription = null,
+                        tint = statusColor,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        text = "STATUS TRANSAKSI DIGITAL",
+                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                }
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(AppSpacing.sm)) {
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = statusColor.copy(alpha = 0.12f),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = statusLabel,
+                            fontWeight = FontWeight.Bold,
+                            color = statusColor,
+                            fontSize = 14.sp,
+                            modifier = Modifier.padding(12.dp)
+                        )
+                    }
+
+                    Surface(
+                        shape = AppShapes.CardShape,
+                        color = AppColors.SurfaceGray,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(AppSpacing.sm),
+                            verticalArrangement = Arrangement.spacedBy(AppSpacing.xs)
+                        ) {
+                            Row(modifier = Modifier.fillMaxWidth()) {
+                                Text("No Transaksi", style = MaterialTheme.typography.bodySmall, color = AppColors.TextSecondary)
+                                Spacer(Modifier.weight(1f))
+                                Text(tx.transactionNumber ?: "-", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.bodySmall)
+                            }
+                            Row(modifier = Modifier.fillMaxWidth()) {
+                                Text("Tujuan / No Meter", style = MaterialTheme.typography.bodySmall, color = AppColors.TextSecondary)
+                                Spacer(Modifier.weight(1f))
+                                Text(tx.destinationNumber, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodySmall)
+                            }
+                            Row(modifier = Modifier.fillMaxWidth()) {
+                                Text("Provider / Produk", style = MaterialTheme.typography.bodySmall, color = AppColors.TextSecondary)
+                                Spacer(Modifier.weight(1f))
+                                Text("${tx.providerId} (${tx.providerProductCode})", style = MaterialTheme.typography.bodySmall)
+                            }
+                            HorizontalDivider(color = PosPalette.Border.copy(alpha = 0.5f))
+                            Row(modifier = Modifier.fillMaxWidth()) {
+                                Text("Harga Jual", style = MaterialTheme.typography.bodySmall, color = AppColors.TextSecondary)
+                                Spacer(Modifier.weight(1f))
+                                Text(formatRupiah(tx.sellingPrice), style = MaterialTheme.typography.bodySmall)
+                            }
+                            if (tx.adminFee > 0) {
+                                Row(modifier = Modifier.fillMaxWidth()) {
+                                    Text("Biaya Admin", style = MaterialTheme.typography.bodySmall, color = AppColors.TextSecondary)
+                                    Spacer(Modifier.weight(1f))
+                                    Text(formatRupiah(tx.adminFee), style = MaterialTheme.typography.bodySmall)
+                                }
+                            }
+                            Row(modifier = Modifier.fillMaxWidth()) {
+                                Text("TOTAL DIBAYAR", fontWeight = FontWeight.Bold)
+                                Spacer(Modifier.weight(1f))
+                                Text(formatRupiah(tx.sellingPrice + tx.adminFee), fontWeight = FontWeight.Bold, color = AppColors.GreenPrimary)
+                            }
+                        }
+                    }
+
+                    if (!tx.snToken.isNullOrBlank()) {
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = AppColors.GreenLight,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(modifier = Modifier.padding(12.dp)) {
+                                Text("TOKEN / SN:", fontWeight = FontWeight.Bold, fontSize = 11.sp, color = AppColors.GreenDark)
+                                Text(tx.snToken!!, fontWeight = FontWeight.Bold, fontSize = 16.sp, color = AppColors.GreenPrimary)
+                            }
+                        }
+                    }
+
+                    if (!tx.failureReason.isNullOrBlank()) {
+                        Text(
+                            text = "Catatan Provider: ${tx.failureReason}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = AppColors.TextSecondary
+                        )
+                    }
+
+                    Text(
+                        text = "Catatan: Transaksi ini dieksekusi melalui mock adapter lokal v17. Tidak ada saldo riil yang didebit.",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = AppColors.TextSecondary
+                    )
+                }
+            },
+            confirmButton = {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(AppSpacing.xs),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    if (isPending || isUnknown) {
+                        OutlinedButton(
+                            onClick = {
+                                if (digitalTransactionRepository != null && !isCheckingDigitalStatus) {
+                                    isCheckingDigitalStatus = true
+                                    scope.launch {
+                                        try {
+                                            val refreshed = digitalTransactionRepository.checkStatus(tx.id)
+                                            lastDigitalTransaction = refreshed
+                                            Toast.makeText(context, "Status terbaru: ${refreshed.status}", Toast.LENGTH_SHORT).show()
+                                        } catch (e: Exception) {
+                                            Toast.makeText(context, "Gagal memeriksa status: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
+                                        } finally {
+                                            isCheckingDigitalStatus = false
+                                        }
+                                    }
+                                }
+                            },
+                            enabled = !isCheckingDigitalStatus
+                        ) {
+                            Text(if (isCheckingDigitalStatus) "Memeriksa..." else "Cek Status", fontWeight = FontWeight.Bold)
+                        }
+                    }
+                    Button(
+                        onClick = { showDigitalResultDialog = false },
+                        colors = ButtonDefaults.buttonColors(containerColor = AppColors.GreenPrimary)
+                    ) {
+                        Text("TUTUP", fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        )
+    }
+
     Scaffold(
         topBar = {
             PosTopBar(
@@ -1036,7 +1282,8 @@ fun PosScreen(
                 showMenuAction = !windowSize.isCompact,
                 onMenuClick = onOpenNavigation,
                 onHistoryClick = { selectedTab = 1 },
-                onSettingsClick = onNavigateToSettings
+                onSettingsClick = onNavigateToSettings,
+                subtitle = resolvedProfile.businessType.displayName
             )
         },
         containerColor = PosPalette.ProductAreaBackground
@@ -1077,64 +1324,186 @@ fun PosScreen(
                         bottom = PosMetrics.ContentPaddingBottom
                     )
             ) {
-                PosSearchBar(
-                    query = query,
-                    onQueryChange = { query = it },
-                    onScanClick = { showPosScannerDialog = true }
-                )
-
-                Spacer(Modifier.height(PosMetrics.SearchToTabsGap))
-
-                PosCategoryRow(
-                    categories = dbCategories,
-                    selectedCategoryId = selectedCategoryId,
-                    onSelect = { selectedCategoryId = it }
-                )
-
-                Spacer(Modifier.height(PosMetrics.CategoryToGridGap))
-
-                if (dbProducts.isEmpty()) {
-                    // Gate 1.3: the same bespoke title/body/CTA block, now the app's shared empty
-                    // state. The action and its callback are unchanged - only the presentation moved.
-                    AppEmptyState(
-                        icon = Icons.Default.Inventory2,
-                        title = "Belum ada ${terminology.productLabel.lowercase()} jualan",
-                        description = "Tambahkan ${terminology.productLabel.lowercase()} untuk mulai berjualan",
-                        actionText = "+ Tambah ${terminology.productLabel}",
-                        onActionClick = onNavigateToAddProduct,
-                        modifier = Modifier.fillMaxSize()
+                if (posContextFamily == PosContextFamily.DIGITAL_OPERATOR) {
+                    // DIGITAL_OPERATOR: Destination input, detected provider, category chips & denomination grid
+                    OutlinedTextField(
+                        value = digitalDestinationNumber,
+                        onValueChange = { digitalDestinationNumber = it },
+                        label = { Text("Nomor HP / No Meter PLN / ID Pelanggan") },
+                        placeholder = { Text("Contoh: 08123456789 / 14123456789") },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                        trailingIcon = {
+                            if (detectedDigitalProvider != null) {
+                                Surface(
+                                    shape = PosMetrics.ChipShape,
+                                    color = PosPalette.Primary.copy(alpha = 0.15f),
+                                    modifier = Modifier.padding(end = 8.dp)
+                                ) {
+                                    Text(
+                                        text = detectedDigitalProvider,
+                                        fontSize = PosType.ProductCode,
+                                        fontWeight = FontWeight.Bold,
+                                        color = PosPalette.Primary,
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                    )
+                                }
+                            }
+                        },
+                        shape = PosMetrics.CtaShape,
+                        modifier = Modifier.fillMaxWidth()
                     )
-                } else {
+
+                    Spacer(Modifier.height(PosMetrics.SearchToTabsGap))
+
+                    val digitalCategories = listOf("ALL", "PULSA", "DATA", "PLN", "EWALLET")
+                    PosFilterChipRow(
+                        labels = digitalCategories.map { if (it == "ALL") "Semua" else it },
+                        selectedIndex = digitalCategories.indexOf(selectedDigitalCategory).coerceAtLeast(0),
+                        onSelect = { index -> selectedDigitalCategory = digitalCategories[index] }
+                    )
+
+                    Spacer(Modifier.height(PosMetrics.CategoryToGridGap))
+
+                    Surface(
+                        shape = PosMetrics.CardShape,
+                        color = AppColors.SurfaceGray,
+                        border = BorderStroke(1.dp, PosPalette.Border),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Receipt,
+                                contentDescription = null,
+                                tint = AppColors.TextSecondary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                text = "Mode Simulasi: Mock Provider v17 (Transaksi lokal/pengujian)",
+                                fontSize = PosType.ProductCode,
+                                color = AppColors.TextSecondary
+                            )
+                        }
+                    }
+
+                    Spacer(Modifier.height(PosMetrics.RadiusSmall))
+
                     LazyVerticalGrid(
-                        columns = GridCells.Adaptive(minSize = 140.dp),
+                        columns = GridCells.Adaptive(minSize = 150.dp),
                         horizontalArrangement = Arrangement.spacedBy(PosMetrics.ProductGridHorizontalGap),
                         verticalArrangement = Arrangement.spacedBy(PosMetrics.ProductGridVerticalGap),
                         modifier = Modifier.fillMaxSize()
                     ) {
-                        items(filteredProducts, key = { it.id }) { product ->
-                            val lineIndex = cart.indexOfFirst { it.product.id == product.id }
-                            val cartQuantity = if (lineIndex >= 0) cart[lineIndex].quantity else 0.0
-                            val stockable = product.itemType == ItemType.PHYSICAL.name ||
-                                    product.itemType == ItemType.FUEL.name
-                            MeasuredProductCard(
-                                product = product,
-                                productCode = product.barcode,
-                                cartQuantity = cartQuantity,
-                                isStockable = stockable,
-                                isOutOfStock = stockable && product.stock <= 0.0,
-                                onAddClick = { addProductToCart(product) },
-                                onIncrement = { addProductToCart(product) },
-                                onDecrement = {
-                                    if (lineIndex >= 0) {
-                                        val current = cart[lineIndex]
-                                        if (current.quantity - 1.0 <= 0.0) {
-                                            cart.removeAt(lineIndex)
-                                        } else {
-                                            cart[lineIndex] = current.copy(quantity = current.quantity - 1.0)
-                                        }
-                                    }
+                        items(filteredDigitalProducts, key = { it.code }) { item ->
+                            val isSelected = selectedDigitalProduct?.code == item.code
+                            PosDigitalDenomCard(
+                                name = item.name,
+                                category = item.category,
+                                sellingPrice = item.sellingPrice,
+                                purchasePrice = item.purchasePrice,
+                                adminFee = item.adminFee,
+                                description = item.description,
+                                isSelected = isSelected,
+                                onClick = {
+                                    selectedDigitalProduct = if (isSelected) null else item
                                 }
                             )
+                        }
+                    }
+                } else {
+                    PosSearchBar(
+                        query = query,
+                        onQueryChange = { query = it },
+                        onScanClick = { showPosScannerDialog = true }
+                    )
+
+                    Spacer(Modifier.height(PosMetrics.SearchToTabsGap))
+
+                    PosCategoryRow(
+                        categories = dbCategories,
+                        selectedCategoryId = selectedCategoryId,
+                        onSelect = { selectedCategoryId = it }
+                    )
+
+                    Spacer(Modifier.height(PosMetrics.CategoryToGridGap))
+
+                    if (dbProducts.isEmpty()) {
+                        AppEmptyState(
+                            icon = Icons.Default.Inventory2,
+                            title = "Belum ada ${terminology.productLabel.lowercase()} jualan",
+                            description = "Tambahkan ${terminology.productLabel.lowercase()} untuk mulai berjualan",
+                            actionText = "+ Tambah ${terminology.productLabel}",
+                            onActionClick = onNavigateToAddProduct,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    } else if (posContextFamily == PosContextFamily.COUNTER_HYBRID) {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            verticalArrangement = Arrangement.spacedBy(PosMetrics.RadiusSmall)
+                        ) {
+                            items(filteredProducts, key = { it.id }) { product ->
+                                val lineIndex = cart.indexOfFirst { it.product.id == product.id }
+                                val cartQuantity = if (lineIndex >= 0) cart[lineIndex].quantity else 0.0
+                                val stockable = product.itemType == ItemType.PHYSICAL.name ||
+                                        product.itemType == ItemType.FUEL.name
+                                PosCounterHybridRow(
+                                    product = product,
+                                    productCode = product.barcode,
+                                    cartQuantity = cartQuantity,
+                                    isStockable = stockable,
+                                    isOutOfStock = stockable && product.stock <= 0.0,
+                                    stockLabel = terminology.stockLabel,
+                                    onAddClick = { addProductToCart(product) },
+                                    onIncrement = { addProductToCart(product) },
+                                    onDecrement = {
+                                        if (lineIndex >= 0) {
+                                            val current = cart[lineIndex]
+                                            if (current.quantity - 1.0 <= 0.0) {
+                                                cart.removeAt(lineIndex)
+                                            } else {
+                                                cart[lineIndex] = current.copy(quantity = current.quantity - 1.0)
+                                            }
+                                        }
+                                    }
+                                )
+                            }
+                        }
+                    } else {
+                        LazyVerticalGrid(
+                            columns = GridCells.Adaptive(minSize = 140.dp),
+                            horizontalArrangement = Arrangement.spacedBy(PosMetrics.ProductGridHorizontalGap),
+                            verticalArrangement = Arrangement.spacedBy(PosMetrics.ProductGridVerticalGap),
+                            modifier = Modifier.fillMaxSize()
+                        ) {
+                            items(filteredProducts, key = { it.id }) { product ->
+                                val lineIndex = cart.indexOfFirst { it.product.id == product.id }
+                                val cartQuantity = if (lineIndex >= 0) cart[lineIndex].quantity else 0.0
+                                val stockable = product.itemType == ItemType.PHYSICAL.name ||
+                                        product.itemType == ItemType.FUEL.name
+                                MeasuredProductCard(
+                                    product = product,
+                                    productCode = product.barcode,
+                                    cartQuantity = cartQuantity,
+                                    isStockable = stockable,
+                                    isOutOfStock = stockable && product.stock <= 0.0,
+                                    onAddClick = { addProductToCart(product) },
+                                    onIncrement = { addProductToCart(product) },
+                                    onDecrement = {
+                                        if (lineIndex >= 0) {
+                                            val current = cart[lineIndex]
+                                            if (current.quantity - 1.0 <= 0.0) {
+                                                cart.removeAt(lineIndex)
+                                            } else {
+                                                cart[lineIndex] = current.copy(quantity = current.quantity - 1.0)
+                                            }
+                                        }
+                                    }
+                                )
+                            }
                         }
                     }
                 }
@@ -1155,13 +1524,96 @@ fun PosScreen(
 
             Spacer(Modifier.height(PosMetrics.PrimaryColumnGap))
 
-            // Cart items
-            if (cart.isEmpty()) {
-                // Gate 1.3: was a single centred sentence, "Keranjang masih kosong", at 12sp - the
-                // emptiest possible empty state on the busiest screen in the app. AppEmptyState is
-                // the app's existing treatment (icon, title, helper line). It is given NO action:
-                // there is nothing to restore, and inventing one would change navigation semantics.
-                // The visual direction the merchant gets is the product grid to the left.
+            if (posContextFamily == PosContextFamily.DIGITAL_OPERATOR) {
+                if (selectedDigitalProduct == null) {
+                    AppEmptyState(
+                        icon = Icons.Default.ShoppingCart,
+                        title = "Pilih Produk Digital",
+                        description = "Masukkan nomor tujuan dan pilih nominal pulsa atau token PLN untuk diproses.",
+                        modifier = Modifier.weight(1f)
+                    )
+                } else {
+                    val prod = selectedDigitalProduct!!
+                    val totalToPay = prod.sellingPrice + prod.adminFee
+                    val profitMargin = totalToPay - prod.purchasePrice
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(PosMetrics.CartItemGap)
+                    ) {
+                        Surface(
+                            shape = PosMetrics.CardShape,
+                            color = PosPalette.Surface,
+                            border = BorderStroke(PosMetrics.ProductSelectedBorder, PosPalette.Primary),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(PosMetrics.RadiusSmall),
+                                verticalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = prod.name,
+                                        fontSize = PosType.CartProduct,
+                                        fontWeight = FontWeight.Bold,
+                                        color = PosPalette.TextPrimary
+                                    )
+                                    Icon(
+                                        imageVector = Icons.Default.Delete,
+                                        contentDescription = "Hapus",
+                                        tint = PosPalette.Destructive,
+                                        modifier = Modifier
+                                            .size(PosMetrics.ProductAddTouchTarget)
+                                            .clickable { selectedDigitalProduct = null }
+                                    )
+                                }
+                                Text(
+                                    text = "Tujuan: ${digitalDestinationNumber.ifBlank { "(Belum diisi)" }}",
+                                    fontSize = PosType.Helper,
+                                    color = if (digitalDestinationNumber.isBlank()) PosPalette.Destructive else PosPalette.TextPrimary,
+                                    fontWeight = FontWeight.Medium
+                                )
+                                HorizontalDivider(color = PosPalette.Border.copy(alpha = 0.5f))
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text("Harga Jual", fontSize = PosType.Helper, color = PosPalette.TextSecondary)
+                                    Text(formatRupiah(prod.sellingPrice), fontSize = PosType.Helper, fontWeight = FontWeight.SemiBold)
+                                }
+                                if (prod.adminFee > 0) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Text("Biaya Admin", fontSize = PosType.Helper, color = PosPalette.TextSecondary)
+                                        Text(formatRupiah(prod.adminFee), fontSize = PosType.Helper, fontWeight = FontWeight.SemiBold)
+                                    }
+                                }
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text("Modal Provider", fontSize = PosType.Helper, color = PosPalette.TextSecondary)
+                                    Text(formatRupiah(prod.purchasePrice), fontSize = PosType.Helper, color = PosPalette.TextSecondary)
+                                }
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text("Margin Keuntungan", fontSize = PosType.Helper, color = PosPalette.Primary, fontWeight = FontWeight.Bold)
+                                    Text("+${formatRupiah(profitMargin)}", fontSize = PosType.Helper, color = PosPalette.Primary, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        }
+                    }
+                }
+            } else if (cart.isEmpty()) {
                 AppEmptyState(
                     icon = Icons.Default.ShoppingCart,
                     title = "Keranjang masih kosong",
@@ -1199,10 +1651,6 @@ fun PosScreen(
                                 Icon(
                                     imageVector = Icons.Default.Delete,
                                     contentDescription = "Hapus",
-                                    // Gate 1.3: this removes a line and there is no undo, so it is
-                                    // destructive and says so. It was `TextSecondary`, which made it
-                                    // read as a caption. The 48dp touch target is unchanged and was
-                                    // already correct.
                                     tint = PosPalette.Destructive,
                                     modifier = Modifier
                                         .size(PosMetrics.ProductAddTouchTarget)
@@ -1222,9 +1670,6 @@ fun PosScreen(
                                 enabled = line.product.itemType == ItemType.SERVICE.name ||
                                         line.product.itemType == ItemType.DIGITAL.name ||
                                         line.quantity < line.product.stock,
-                                // Step 5: precise entry for stockable goods, which is where a
-                                // merchant sells by weight or volume and the stepper alone would
-                                // mean pressing "+" a dozen times for 1.25.
                                 productName = line.product.name,
                                 unit = line.product.unit,
                                 maxQuantity = if (isStockableCartLine(line.product)) {
@@ -1234,9 +1679,6 @@ fun PosScreen(
                                 },
                                 onQuantityInput = if (isStockableCartLine(line.product)) {
                                     { precise ->
-                                        // The same rules the stepper obeys: an emptied line is
-                                        // removed, and a value above the remaining stock is
-                                        // refused. No rounding, no truncation.
                                         if (precise <= 0.0) {
                                             cart.removeAt(index)
                                         } else if (precise <= line.product.stock) {
@@ -1273,12 +1715,16 @@ fun PosScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "Keranjang Belanja",
+                        text = if (posContextFamily == PosContextFamily.DIGITAL_OPERATOR) "Transaksi Digital" else "Keranjang Belanja",
                         fontSize = PosType.SectionTitle,
                         fontWeight = FontWeight.SemiBold,
                         color = PosPalette.TextPrimary
                     )
-                    if (cart.isNotEmpty()) {
+                    if (posContextFamily == PosContextFamily.DIGITAL_OPERATOR) {
+                        if (selectedDigitalProduct != null) {
+                            PosCartClearAction(onClick = { selectedDigitalProduct = null })
+                        }
+                    } else if (cart.isNotEmpty()) {
                         PosCartClearAction(onClick = { showClearCartDialog = true })
                     }
                 }
@@ -1287,65 +1733,94 @@ fun PosScreen(
 
                 Spacer(Modifier.height(PosMetrics.PrimaryColumnGap))
 
-                // 14. Summary, always in the same place regardless of the item count
-                PosCartSummary(
-                    discountLabel = "Diskon",
-                    discountValue = "-${formatRupiah(discountAmount)}",
-                    subtotalLabel = if (taxSettings.enabled) "Total incl. PPN" else null,
-                    subtotalValue = if (taxSettings.enabled) formatRupiah(grandTotal) else null,
-                    totalLabel = "Total",
-                    totalValue = formatRupiah(grandTotal)
-                )
+                if (posContextFamily == PosContextFamily.DIGITAL_OPERATOR) {
+                    val digitalTotal = (selectedDigitalProduct?.sellingPrice ?: 0L) + (selectedDigitalProduct?.adminFee ?: 0L)
+                    PosCartSummary(
+                        discountLabel = null,
+                        discountValue = null,
+                        subtotalLabel = if (selectedDigitalProduct?.adminFee ?: 0L > 0) "Biaya Admin" else null,
+                        subtotalValue = if (selectedDigitalProduct?.adminFee ?: 0L > 0) formatRupiah(selectedDigitalProduct?.adminFee ?: 0L) else null,
+                        totalLabel = "Total Tagihan",
+                        totalValue = formatRupiah(digitalTotal)
+                    )
 
-                // Discount stays editable; only the visible sizing follows the contract.
-                OutlinedTextField(
-                    value = discountInputText,
-                    onValueChange = { discountInputText = it },
-                    label = { Text("Diskon", fontSize = PosType.Helper) },
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    textStyle = MaterialTheme.typography.bodyMedium,
-                    shape = PosMetrics.CtaShape,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(PosMetrics.SearchHeight)
-                )
+                    Spacer(Modifier.height(PosMetrics.RadiusSmall))
 
-                Spacer(Modifier.height(PosMetrics.RadiusSmall))
+                    PosPaymentCta(
+                        label = if (isSubmittingDigital) "MEMPROSES..." else "LANJUT PEMBAYARAN",
+                        enabled = selectedDigitalProduct != null && digitalDestinationNumber.isNotBlank() && !isSubmittingDigital,
+                        onClick = { processStandaloneDigitalCheckout() }
+                    )
+                } else {
+                    // 14. Summary, always in the same place regardless of the item count
+                    PosCartSummary(
+                        discountLabel = "Diskon",
+                        discountValue = "-${formatRupiah(discountAmount)}",
+                        subtotalLabel = if (taxSettings.enabled) "Total incl. PPN" else null,
+                        subtotalValue = if (taxSettings.enabled) formatRupiah(grandTotal) else null,
+                        totalLabel = "Total",
+                        totalValue = formatRupiah(grandTotal)
+                    )
 
-                // 15. Primary CTA
-                PosPaymentCta(
-                    label = "LANJUT PEMBAYARAN",
-                    enabled = cart.isNotEmpty() && !isCheckingOut,
-                    onClick = {
-                        if (hasMissingProviderDestination) {
-                            Toast.makeText(context, "Isi nomor tujuan produk digital", Toast.LENGTH_SHORT).show()
-                            return@PosPaymentCta
+                    OutlinedTextField(
+                        value = discountInputText,
+                        onValueChange = { discountInputText = it },
+                        label = { Text("Diskon", fontSize = PosType.Helper) },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        textStyle = MaterialTheme.typography.bodyMedium,
+                        shape = PosMetrics.CtaShape,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(PosMetrics.SearchHeight)
+                    )
+
+                    Spacer(Modifier.height(PosMetrics.RadiusSmall))
+
+                    // 15. Primary CTA
+                    PosPaymentCta(
+                        label = "LANJUT PEMBAYARAN",
+                        enabled = cart.isNotEmpty() && !isCheckingOut,
+                        onClick = {
+                            if (hasMissingProviderDestination) {
+                                Toast.makeText(context, "Isi nomor tujuan produk digital", Toast.LENGTH_SHORT).show()
+                                return@PosPaymentCta
+                            }
+                            if (cart.any { isProvider(it.product) } && !isInternetAvailable()) {
+                                Toast.makeText(
+                                    context,
+                                    "Transaksi produk digital membutuhkan internet. Sambungkan internet lalu coba lagi.",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                                return@PosPaymentCta
+                            }
+                            showPaymentSelectorDialog = true
                         }
-                        if (cart.any { isProvider(it.product) } && !isInternetAvailable()) {
-                            Toast.makeText(
-                                context,
-                                "Transaksi produk digital membutuhkan internet. Sambungkan internet lalu coba lagi.",
-                                Toast.LENGTH_SHORT
-                            ).show()
-                            return@PosPaymentCta
-                        }
-                        showPaymentSelectorDialog = true
-                    }
-                )
+                    )
+                }
             }
         }
 
         if (windowSize.isCompact) {
-            // PHONE - no permanent cart panel. The bottom bar carries the count, the total and the
-            // same CTA, and opens the same cart body the tablet shows permanently.
             Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding)
             ) {
                 Box(modifier = Modifier.weight(1f)) { productPane() }
-                if (cart.isNotEmpty()) {
+                if (posContextFamily == PosContextFamily.DIGITAL_OPERATOR) {
+                    if (selectedDigitalProduct != null) {
+                        val digitalTotal = selectedDigitalProduct!!.sellingPrice + selectedDigitalProduct!!.adminFee
+                        PosBottomCartBar(
+                            itemCountLabel = "1 Transaksi Digital",
+                            totalValue = formatRupiah(digitalTotal),
+                            ctaLabel = if (isSubmittingDigital) "PROSES..." else "BAYAR",
+                            ctaEnabled = digitalDestinationNumber.isNotBlank() && !isSubmittingDigital,
+                            onBarClick = { showPhoneCartDialog = true },
+                            onCtaClick = { processStandaloneDigitalCheckout() }
+                        )
+                    }
+                } else if (cart.isNotEmpty()) {
                     PosBottomCartBar(
                         itemCountLabel = "$totalItemCount ${terminology.productLabel.lowercase()}",
                         totalValue = formatRupiah(grandTotal),
@@ -1357,7 +1832,6 @@ fun PosScreen(
                 }
             }
         } else {
-            // TABLET - 66.6 / 33.4 split over the full screen width.
             PosTabletSplit(
                 modifier = Modifier
                     .fillMaxSize()
@@ -1367,30 +1841,49 @@ fun PosScreen(
             )
         }
 
-        // PHONE cart detail: the same cart body the tablet shows permanently, hosted on demand.
-        // It lives here rather than after the Scaffold so it shares the cartBody composable.
         if (showPhoneCartDialog) {
-            PosPhoneCartDialog(
-                cartSummaryLabel = "Keranjang Belanja",
-                discountValue = "-${formatRupiah(discountAmount)}",
-                subtotalLabel = if (taxSettings.enabled) "Total incl. PPN" else null,
-                subtotalValue = if (taxSettings.enabled) formatRupiah(grandTotal) else null,
-                totalLabel = "Total",
-                totalValue = formatRupiah(grandTotal),
-                cartContent = { cartBody() },
-                onClearClick = { showClearCartDialog = true },
-                ctaLabel = "LANJUT PEMBAYARAN",
-                ctaEnabled = cart.isNotEmpty() && !isCheckingOut,
-                onCtaClick = {
-                    if (hasMissingProviderDestination) {
-                        Toast.makeText(context, "Isi nomor tujuan produk digital", Toast.LENGTH_SHORT).show()
-                        return@PosPhoneCartDialog
-                    }
-                    showPhoneCartDialog = false
-                    showPaymentSelectorDialog = true
-                },
-                onDismiss = { showPhoneCartDialog = false }
-            )
+            if (posContextFamily == PosContextFamily.DIGITAL_OPERATOR) {
+                val digitalTotal = (selectedDigitalProduct?.sellingPrice ?: 0L) + (selectedDigitalProduct?.adminFee ?: 0L)
+                PosPhoneCartDialog(
+                    cartSummaryLabel = "Transaksi Digital",
+                    discountValue = "-Rp 0",
+                    subtotalLabel = null,
+                    subtotalValue = null,
+                    totalLabel = "Total Tagihan",
+                    totalValue = formatRupiah(digitalTotal),
+                    cartContent = { cartBody() },
+                    onClearClick = { selectedDigitalProduct = null; showPhoneCartDialog = false },
+                    ctaLabel = "LANJUT PEMBAYARAN",
+                    ctaEnabled = selectedDigitalProduct != null && digitalDestinationNumber.isNotBlank() && !isSubmittingDigital,
+                    onCtaClick = {
+                        showPhoneCartDialog = false
+                        processStandaloneDigitalCheckout()
+                    },
+                    onDismiss = { showPhoneCartDialog = false }
+                )
+            } else {
+                PosPhoneCartDialog(
+                    cartSummaryLabel = "Keranjang Belanja",
+                    discountValue = "-${formatRupiah(discountAmount)}",
+                    subtotalLabel = if (taxSettings.enabled) "Total incl. PPN" else null,
+                    subtotalValue = if (taxSettings.enabled) formatRupiah(grandTotal) else null,
+                    totalLabel = "Total",
+                    totalValue = formatRupiah(grandTotal),
+                    cartContent = { cartBody() },
+                    onClearClick = { showClearCartDialog = true },
+                    ctaLabel = "LANJUT PEMBAYARAN",
+                    ctaEnabled = cart.isNotEmpty() && !isCheckingOut,
+                    onCtaClick = {
+                        if (hasMissingProviderDestination) {
+                            Toast.makeText(context, "Isi nomor tujuan produk digital", Toast.LENGTH_SHORT).show()
+                            return@PosPhoneCartDialog
+                        }
+                        showPhoneCartDialog = false
+                        showPaymentSelectorDialog = true
+                    },
+                    onDismiss = { showPhoneCartDialog = false }
+                )
+            }
         }
     }
 }

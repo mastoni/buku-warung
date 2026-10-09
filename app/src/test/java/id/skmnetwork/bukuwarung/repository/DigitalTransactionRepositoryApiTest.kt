@@ -248,4 +248,13 @@ private class FakeDigitalTransactionDao : DigitalTransactionDao {
 
     override fun getByBusinessId(businessId: String): Flow<List<DigitalTransactionEntity>> =
         flow { emit(store.values.filter { it.businessId == businessId }) }
+
+    override fun getStandaloneTransactions(businessId: String): Flow<List<DigitalTransactionEntity>> =
+        flow { emit(store.values.filter { it.saleItemId == null && it.businessId == businessId }) }
+
+    override suspend fun getByTransactionNumber(transactionNumber: String, businessId: String): DigitalTransactionEntity? =
+        store.values.find { it.transactionNumber == transactionNumber && it.businessId == businessId }
+
+    override fun getByCustomerId(customerId: Long, businessId: String): Flow<List<DigitalTransactionEntity>> =
+        flow { emit(store.values.filter { it.customerId == customerId && it.businessId == businessId }) }
 }

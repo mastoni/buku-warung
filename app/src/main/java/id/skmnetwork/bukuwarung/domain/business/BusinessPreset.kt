@@ -35,7 +35,8 @@ data class ResolvedBusinessProfile(
     val preferredUnits: List<String>,
     val defaultCategories: List<String>,
     /** Step 2 (F) - see [BusinessPreset.suggestedItemType]. */
-    val suggestedItemType: ItemType = ItemType.PHYSICAL
+    val suggestedItemType: ItemType = ItemType.PHYSICAL,
+    val operatingMode: OperatingMode = OperatingModeResolver.resolve(businessType, activities)
 ) {
     fun hasCapability(capability: BusinessCapability): Boolean = capabilities.contains(capability)
     fun hasActivity(activity: BusinessActivity): Boolean = activities.contains(activity)

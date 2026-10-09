@@ -465,6 +465,7 @@ private fun ActiveTenantApp(
                     customerViewModel = customerViewModel,
                     userSettings = userSettings,
                     printerService = printerService,
+                    digitalTransactionRepository = digitalTransactionRepository,
                     onNavigateToAddProduct = {
                         navigateToAddProduct(fromScreen = AppScreen.POS)
                     },

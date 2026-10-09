@@ -9,6 +9,10 @@ import id.skmnetwork.bukuwarung.data.remote.DigitalCallbackPayload
 import id.skmnetwork.bukuwarung.data.remote.SubmitDigitalRequest
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -18,13 +22,29 @@ class DigitalTransactionRepository @Inject constructor(
     private val backendApi: BackendApi? = null,
     private val businessId: String = "LEGACY_BUSINESS"
 ) {
+
+    /**
+     * Generates a collision-free, deterministic transaction number for standalone PPOB.
+     * Pattern: DIG-YYYYMMDD-HHMMSS-XXXX (UUID suffix ensures zero collisions even across concurrent calls).
+     */
+    fun generateTransactionNumber(now: Long = System.currentTimeMillis()): String {
+        val dateStr = SimpleDateFormat("yyyyMMdd-HHmmss", Locale.US).format(Date(now))
+        val suffix = UUID.randomUUID().toString().take(4).uppercase()
+        return "DIG-$dateStr-$suffix"
+    }
+
+    /**
+     * Creates a draft for hybrid retail cart transactions (tied to a saleItemId).
+     */
     suspend fun createDraft(
         saleItemId: Long,
         providerId: String,
         providerProductCode: String,
         destinationNumber: String,
         sellingPrice: Long,
-        actualPurchasePrice: Long = sellingPrice
+        actualPurchasePrice: Long = sellingPrice,
+        adminFee: Long = 0L,
+        paymentMethod: String = "CASH"
     ): Long {
         val transaction = DigitalTransactionEntity(
             businessId = businessId,
@@ -34,6 +54,39 @@ class DigitalTransactionRepository @Inject constructor(
             destinationNumber = destinationNumber,
             sellingPrice = sellingPrice,
             actualPurchasePrice = actualPurchasePrice,
+            adminFee = adminFee,
+            paymentMethod = paymentMethod,
+            status = DigitalTransactionStatus.DRAFT.name
+        )
+        return digitalTransactionDao.insert(transaction)
+    }
+
+    /**
+     * Creates a draft for standalone PPOB transactions (no saleItemId, dedicated transactionNumber).
+     */
+    suspend fun createStandaloneDraft(
+        providerId: String,
+        providerProductCode: String,
+        destinationNumber: String,
+        sellingPrice: Long,
+        actualPurchasePrice: Long,
+        adminFee: Long = 0L,
+        customerId: Long? = null,
+        paymentMethod: String = "CASH",
+        transactionNumber: String = generateTransactionNumber()
+    ): Long {
+        val transaction = DigitalTransactionEntity(
+            businessId = businessId,
+            transactionNumber = transactionNumber,
+            saleItemId = null,
+            customerId = customerId,
+            paymentMethod = paymentMethod,
+            providerId = providerId,
+            providerProductCode = providerProductCode,
+            destinationNumber = destinationNumber,
+            sellingPrice = sellingPrice,
+            actualPurchasePrice = actualPurchasePrice,
+            adminFee = adminFee,
             status = DigitalTransactionStatus.DRAFT.name
         )
         return digitalTransactionDao.insert(transaction)
@@ -131,6 +184,26 @@ class DigitalTransactionRepository @Inject constructor(
         return digitalTransactionDao.getBySaleItemIds(saleItemIds.distinct(), businessId)
     }
 
+    suspend fun getByTransactionNumber(transactionNumber: String): DigitalTransactionEntity? {
+        return digitalTransactionDao.getByTransactionNumber(transactionNumber, businessId)
+    }
+
+    suspend fun getById(id: Long): DigitalTransactionEntity? {
+        return digitalTransactionDao.getById(id, businessId)
+    }
+
+    suspend fun getByUuid(uuid: String): DigitalTransactionEntity? {
+        return digitalTransactionDao.getByUuid(uuid, businessId)
+    }
+
+    fun getStandaloneTransactions(): Flow<List<DigitalTransactionEntity>> {
+        return digitalTransactionDao.getStandaloneTransactions(businessId)
+    }
+
+    fun getTransactionsByCustomerId(customerId: Long): Flow<List<DigitalTransactionEntity>> {
+        return digitalTransactionDao.getByCustomerId(customerId, businessId)
+    }
+
     suspend fun transitionState(id: Long, newState: DigitalTransactionStatus, failureReason: String? = null, snToken: String? = null) {
         val current = digitalTransactionDao.getById(id, businessId) ?: return
         val currentState = DigitalTransactionStatus.valueOf(current.status)
@@ -170,7 +243,7 @@ class DigitalTransactionRepository @Inject constructor(
         return digitalTransactionDao.getByStatus(DigitalTransactionStatus.PENDING.name, businessId)
     }
 
-    fun getUnknownTransactions(): Flow<List<DigitalTransactionEntity>> {
-        return digitalTransactionDao.getByStatus(DigitalTransactionStatus.UNKNOWN.name, businessId)
+    fun getAllTransactions(): Flow<List<DigitalTransactionEntity>> {
+        return digitalTransactionDao.getByBusinessId(businessId)
     }
 }

@@ -752,6 +752,67 @@ val MIGRATION_15_16 = object : Migration(15, 16) {
     }
 }
 
+val MIGRATION_16_17 = object : Migration(16, 17) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        // 1. Create temporary new table with Room v17 schema
+        db.execSQL("""
+            CREATE TABLE IF NOT EXISTS `digital_transactions_new` (
+                `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                `uuid` TEXT NOT NULL,
+                `business_id` TEXT NOT NULL,
+                `transaction_number` TEXT,
+                `sale_item_id` INTEGER,
+                `customer_id` INTEGER,
+                `payment_method` TEXT NOT NULL,
+                `provider_id` TEXT NOT NULL,
+                `provider_product_code` TEXT NOT NULL,
+                `destination_number` TEXT NOT NULL,
+                `selling_price` INTEGER NOT NULL,
+                `actual_purchase_price` INTEGER NOT NULL,
+                `admin_fee` INTEGER NOT NULL,
+                `status` TEXT NOT NULL,
+                `provider_reference_id` TEXT,
+                `sn_token` TEXT,
+                `failure_reason` TEXT,
+                `created_at` INTEGER NOT NULL,
+                `updated_at` INTEGER NOT NULL,
+                FOREIGN KEY(`sale_item_id`) REFERENCES `sale_items`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE,
+                FOREIGN KEY(`customer_id`) REFERENCES `customers`(`id`) ON UPDATE NO ACTION ON DELETE SET NULL
+            )
+        """.trimIndent())
+
+        // 2. Copy all legacy records from v16
+        db.execSQL("""
+            INSERT INTO `digital_transactions_new` (
+                `id`, `uuid`, `business_id`, `transaction_number`, `sale_item_id`, `customer_id`,
+                `payment_method`, `provider_id`, `provider_product_code`, `destination_number`,
+                `selling_price`, `actual_purchase_price`, `admin_fee`, `status`,
+                `provider_reference_id`, `sn_token`, `failure_reason`, `created_at`, `updated_at`
+            )
+            SELECT 
+                `id`, `uuid`, `business_id`, NULL, `sale_item_id`, NULL,
+                'CASH', `provider_id`, `provider_product_code`, `destination_number`,
+                `selling_price`, `actual_purchase_price`, 0, `status`,
+                `provider_reference_id`, `sn_token`, `failure_reason`, `created_at`, `updated_at`
+            FROM `digital_transactions`
+        """.trimIndent())
+
+        // 3. Drop old table
+        db.execSQL("DROP TABLE `digital_transactions`")
+
+        // 4. Rename temporary table to definitive name
+        db.execSQL("ALTER TABLE `digital_transactions_new` RENAME TO `digital_transactions`")
+
+        // 5. Recreate all indices
+        db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_digital_transactions_uuid` ON `digital_transactions` (`uuid`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_digital_transactions_business_id` ON `digital_transactions` (`business_id`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_digital_transactions_sale_item_id` ON `digital_transactions` (`sale_item_id`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_digital_transactions_customer_id` ON `digital_transactions` (`customer_id`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_digital_transactions_transaction_number` ON `digital_transactions` (`transaction_number`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_digital_transactions_status` ON `digital_transactions` (`status`)")
+    }
+}
+
 @Database(
     entities = [
         CategoryEntity::class,
@@ -775,7 +836,7 @@ val MIGRATION_15_16 = object : Migration(15, 16) {
         PurchaseOrderEntity::class,
         PurchaseOrderItemEntity::class
     ],
-    version = 16,
+    version = 17,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -821,7 +882,8 @@ abstract class AppDatabase : RoomDatabase() {
                         MIGRATION_12_13,
                         MIGRATION_13_14,
                         MIGRATION_14_15,
-                        MIGRATION_15_16
+                        MIGRATION_15_16,
+                        MIGRATION_16_17
                     )
                     .build()
                 INSTANCE = instance
