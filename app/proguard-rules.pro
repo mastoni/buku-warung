@@ -1,5 +1,8 @@
 # Buku Warung release rules.
 
+-keepattributes SourceFile,LineNumberTable
+-renamesourcefileattribute SourceFile
+
 # Room Database Keep Rules
 -keep class id.skmnetwork.bukuwarung.data.local.entity.** { *; }
 -keep class id.skmnetwork.bukuwarung.data.local.dao.** { *; }

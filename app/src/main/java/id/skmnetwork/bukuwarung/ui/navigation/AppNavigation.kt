@@ -3,9 +3,9 @@ package id.skmnetwork.bukuwarung.ui.navigation
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Assessment
@@ -571,9 +571,10 @@ private fun ActiveTenantApp(
                     onSelect = onNavSelect
                 )
             },
+            contentWindowInsets = WindowInsets(0, 0, 0, 0),
             containerColor = MaterialTheme.colorScheme.background
         ) { padding ->
-            content(Modifier.fillMaxSize().padding(padding))
+            content(Modifier.fillMaxSize().padding(bottom = padding.calculateBottomPadding()))
         }
     } else if (screen == AppScreen.POS) {
         // POS on tablet: the full screen goes to the POS, navigation lives in the overlay drawer.
@@ -620,7 +621,6 @@ private fun BottomNav(
     onSelect: (AppScreen) -> Unit
 ) {
     NavigationBar(
-        modifier = Modifier.navigationBarsPadding(),
         containerColor = MaterialTheme.colorScheme.surface
     ) {
         val items = listOf(

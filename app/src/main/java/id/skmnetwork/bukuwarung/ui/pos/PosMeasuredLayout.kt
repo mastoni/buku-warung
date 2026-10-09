@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
@@ -170,13 +171,13 @@ fun PosTopBar(
 ) {
     Surface(
         color = PosPalette.Primary,
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(PosMetrics.TopBarHeight)
+        modifier = Modifier.fillMaxWidth()
     ) {
         Row(
             modifier = Modifier
-                .fillMaxSize()
+                .fillMaxWidth()
+                .statusBarsPadding()
+                .height(PosMetrics.TopBarHeight)
                 .padding(horizontal = PosMetrics.TopBarPadding),
             verticalAlignment = Alignment.CenterVertically
         ) {

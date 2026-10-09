@@ -129,7 +129,8 @@ android {
             ownerTestBypassBuildTypes += "debug"
         }
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             buildConfigField("boolean", "ENABLE_OWNER_TEST", "false")
             buildConfigField("String", "LICENSE_SERVER_URL", "\"$releaseLicenseServerUrl\"")
             // Applied unconditionally: a release variant must never be produced unsigned.

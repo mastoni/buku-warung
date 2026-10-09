@@ -3,6 +3,7 @@ package id.skmnetwork.bukuwarung
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -15,6 +16,7 @@ import id.skmnetwork.bukuwarung.ui.theme.BwSystemBars
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
         val prefsRepo = UserPreferencesRepository(applicationContext)
         setContent {
             val userSettings by prefsRepo.userSettings.collectAsState(initial = UserSettings())
