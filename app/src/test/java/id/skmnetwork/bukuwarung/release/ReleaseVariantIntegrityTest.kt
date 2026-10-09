@@ -50,8 +50,8 @@ class ReleaseVariantIntegrityTest {
     @Test
     fun releaseApplicationIdAndVersionAreUnchanged() {
         assertEquals("id.skmnetwork.bukuwarung", BuildConfig.APPLICATION_ID)
-        assertEquals("0.2.1", BuildConfig.VERSION_NAME)
-        assertEquals(5, BuildConfig.VERSION_CODE)
+        assertEquals("0.2.2", BuildConfig.VERSION_NAME)
+        assertEquals(6, BuildConfig.VERSION_CODE)
     }
 
     @Test
