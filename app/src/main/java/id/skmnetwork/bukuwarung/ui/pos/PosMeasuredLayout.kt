@@ -926,6 +926,181 @@ fun PosDigitalDenomCard(
 }
 
 // =====================================================================================
+// 12D. SERVICE_QUEUE - Service and Parts Queue Row
+// =====================================================================================
+
+@Composable
+fun PosServiceQueueRow(
+    product: ProductEntity,
+    productCode: String?,
+    cartQuantity: Double,
+    isService: Boolean,
+    isOutOfStock: Boolean,
+    stockLabel: String,
+    onAddClick: () -> Unit,
+    onIncrement: () -> Unit,
+    onDecrement: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val isSelected = cartQuantity > 0
+    val contentAlpha = if (isOutOfStock && !isService) 0.45f else 1f
+
+    Surface(
+        shape = PosMetrics.CardShape,
+        color = PosPalette.Surface,
+        border = if (isSelected) {
+            BorderStroke(PosMetrics.ProductSelectedBorder, PosPalette.Primary)
+        } else {
+            BorderStroke(PosMetrics.SearchBorderWidth, PosPalette.CardBorder)
+        },
+        modifier = modifier
+            .fillMaxWidth()
+            .alpha(contentAlpha)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(PosMetrics.RadiusSmall),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Surface(
+                        shape = PosMetrics.ChipShape,
+                        color = if (isService) PosPalette.Primary.copy(alpha = 0.12f) else PosPalette.ProductAreaBackground,
+                        border = BorderStroke(1.dp, if (isService) PosPalette.Primary.copy(alpha = 0.3f) else PosPalette.Border)
+                    ) {
+                        Text(
+                            text = if (isService) "JASA" else "SUKU CADANG",
+                            fontSize = PosType.ProductCode,
+                            fontWeight = FontWeight.Bold,
+                            color = if (isService) PosPalette.Primary else PosPalette.TextSecondary,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
+                    }
+
+                    Text(
+                        text = product.name,
+                        fontSize = PosType.ProductName,
+                        fontWeight = FontWeight.SemiBold,
+                        color = PosPalette.TextPrimary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = formatRupiah(product.sellingPrice),
+                        fontSize = PosType.ProductPrice,
+                        fontWeight = FontWeight.Bold,
+                        color = PosPalette.PrimaryText
+                    )
+                    if (!isService) {
+                        Text(
+                            text = if (isOutOfStock) "Habis" else "$stockLabel: ${formatQuantityValue(product.stock)}",
+                            fontSize = PosType.ProductCode,
+                            color = if (isOutOfStock) PosPalette.Destructive else PosPalette.TextSecondary
+                        )
+                    }
+                }
+            }
+
+            if (isSelected) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(PosMetrics.ProductAddTouchTarget)
+                            .clickable { onDecrement() },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Surface(
+                            shape = PosMetrics.CtaShape,
+                            color = PosPalette.ProductAreaBackground,
+                            border = BorderStroke(PosMetrics.SearchBorderWidth, PosPalette.CardBorder),
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.Default.Remove,
+                                    contentDescription = "Kurang",
+                                    tint = PosPalette.TextPrimary,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
+                    }
+
+                    Text(
+                        text = formatQuantityValue(cartQuantity),
+                        fontSize = PosType.CartProduct,
+                        fontWeight = FontWeight.Bold,
+                        color = PosPalette.TextPrimary
+                    )
+
+                    Box(
+                        modifier = Modifier
+                            .size(PosMetrics.ProductAddTouchTarget)
+                            .clickable(enabled = isService || !isOutOfStock) { onIncrement() },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Surface(
+                            shape = PosMetrics.CtaShape,
+                            color = PosPalette.Primary,
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.Default.Add,
+                                    contentDescription = "Tambah",
+                                    tint = PosPalette.OnPrimary,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+            } else {
+                Box(
+                    modifier = Modifier
+                        .size(PosMetrics.ProductAddTouchTarget)
+                        .clickable(enabled = isService || !isOutOfStock) { onAddClick() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Surface(
+                        shape = PosMetrics.CtaShape,
+                        color = if (isOutOfStock && !isService) PosPalette.Border else PosPalette.Primary,
+                        modifier = Modifier.size(36.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Default.Add,
+                                contentDescription = "Tambah",
+                                tint = PosPalette.OnPrimary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// =====================================================================================
 // 13. CART QUANTITY CONTROL - 112 x 56, minimum 48dp touch targets, never 22/26dp
 // =====================================================================================
 

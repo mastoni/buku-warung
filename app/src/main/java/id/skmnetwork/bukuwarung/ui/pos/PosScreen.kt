@@ -288,6 +288,7 @@ fun PosScreen(
     var lastDigitalTransaction by remember { mutableStateOf<DigitalTransactionEntity?>(null) }
     var showDigitalResultDialog by remember { mutableStateOf(false) }
     var isCheckingDigitalStatus by remember { mutableStateOf(false) }
+    var serviceTypeFilter by remember { mutableStateOf("ALL") } // "ALL", "SERVICE", "PARTS"
 
     val detectedDigitalProvider = remember(digitalDestinationNumber) {
         DigitalProductCatalog.detectProvider(digitalDestinationNumber)
@@ -298,6 +299,21 @@ fun PosScreen(
             val matchesCategory = selectedDigitalCategory == "ALL" || item.category.equals(selectedDigitalCategory, ignoreCase = true)
             val matchesProvider = detectedDigitalProvider == null || item.providerId.equals(detectedDigitalProvider, ignoreCase = true)
             matchesCategory && matchesProvider
+        }
+    }
+
+    val filteredProducts = dbProducts.filter { product ->
+        val matchesQuery = product.name.contains(query, ignoreCase = true) ||
+                (product.barcode != null && product.barcode.contains(query, ignoreCase = true))
+        val matchesCategory = selectedCategoryId == null || product.categoryId == selectedCategoryId
+        matchesQuery && matchesCategory
+    }
+
+    val serviceFilteredProducts = remember(filteredProducts, serviceTypeFilter) {
+        when (serviceTypeFilter) {
+            "SERVICE" -> filteredProducts.filter { it.itemType == ItemType.SERVICE.name }
+            "PARTS" -> filteredProducts.filter { it.itemType != ItemType.SERVICE.name }
+            else -> filteredProducts
         }
     }
 
@@ -341,13 +357,6 @@ fun PosScreen(
                 isSubmittingDigital = false
             }
         }
-    }
-
-    val filteredProducts = dbProducts.filter { product ->
-        val matchesQuery = product.name.contains(query, ignoreCase = true) ||
-                (product.barcode != null && product.barcode.contains(query, ignoreCase = true))
-        val matchesCategory = selectedCategoryId == null || product.categoryId == selectedCategoryId
-        matchesQuery && matchesCategory
     }
 
     val customerNamesById = remember(customers) {
@@ -1414,6 +1423,96 @@ fun PosScreen(
                             )
                         }
                     }
+                } else if (posContextFamily == PosContextFamily.SERVICE_QUEUE) {
+                    // SERVICE_QUEUE: Intake, service items, and spare parts workspace
+                    PosSearchBar(
+                        query = query,
+                        onQueryChange = { query = it },
+                        onScanClick = { showPosScannerDialog = true }
+                    )
+
+                    Spacer(Modifier.height(PosMetrics.SearchToTabsGap))
+
+                    val serviceFilters = listOf("ALL", "SERVICE", "PARTS")
+                    val serviceFilterLabels = listOf("Semua Item", "Layanan / Jasa", "Suku Cadang / Material")
+                    PosFilterChipRow(
+                        labels = serviceFilterLabels,
+                        selectedIndex = serviceFilters.indexOf(serviceTypeFilter).coerceAtLeast(0),
+                        onSelect = { index -> serviceTypeFilter = serviceFilters[index] }
+                    )
+
+                    Spacer(Modifier.height(PosMetrics.CategoryToGridGap))
+
+                    Surface(
+                        shape = PosMetrics.CardShape,
+                        color = AppColors.SurfaceGray,
+                        border = BorderStroke(1.dp, PosPalette.Border),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.PointOfSale,
+                                contentDescription = null,
+                                tint = AppColors.GreenPrimary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                text = "Layanan & Pengerjaan: ${resolvedProfile.businessType.displayName} (Faktur Jasa Langsung)",
+                                fontSize = PosType.ProductCode,
+                                color = AppColors.TextSecondary
+                            )
+                        }
+                    }
+
+                    Spacer(Modifier.height(PosMetrics.RadiusSmall))
+
+                    if (serviceFilteredProducts.isEmpty()) {
+                        AppEmptyState(
+                            icon = Icons.Default.Inventory2,
+                            title = "Belum ada layanan atau suku cadang",
+                            description = "Tambahkan layanan jasa atau barang fisik untuk ${resolvedProfile.businessType.displayName.lowercase()}.",
+                            actionText = "+ Tambah ${terminology.productLabel}",
+                            onActionClick = onNavigateToAddProduct,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    } else {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            verticalArrangement = Arrangement.spacedBy(PosMetrics.RadiusSmall)
+                        ) {
+                            items(serviceFilteredProducts, key = { it.id }) { product ->
+                                val lineIndex = cart.indexOfFirst { it.product.id == product.id }
+                                val cartQuantity = if (lineIndex >= 0) cart[lineIndex].quantity else 0.0
+                                val isService = product.itemType == ItemType.SERVICE.name
+                                val isOutOfStock = !isService && product.stock <= 0.0
+
+                                PosServiceQueueRow(
+                                    product = product,
+                                    productCode = product.barcode,
+                                    cartQuantity = cartQuantity,
+                                    isService = isService,
+                                    isOutOfStock = isOutOfStock,
+                                    stockLabel = terminology.stockLabel,
+                                    onAddClick = { addProductToCart(product) },
+                                    onIncrement = { addProductToCart(product) },
+                                    onDecrement = {
+                                        if (lineIndex >= 0) {
+                                            val current = cart[lineIndex]
+                                            if (current.quantity - 1.0 <= 0.0) {
+                                                cart.removeAt(lineIndex)
+                                            } else {
+                                                cart[lineIndex] = current.copy(quantity = current.quantity - 1.0)
+                                            }
+                                        }
+                                    }
+                                )
+                            }
+                        }
+                    }
                 } else {
                     PosSearchBar(
                         query = query,
@@ -1715,7 +1814,11 @@ fun PosScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = if (posContextFamily == PosContextFamily.DIGITAL_OPERATOR) "Transaksi Digital" else "Keranjang Belanja",
+                        text = when (posContextFamily) {
+                            PosContextFamily.DIGITAL_OPERATOR -> "Transaksi Digital"
+                            PosContextFamily.SERVICE_QUEUE -> "Faktur Jasa & Servis"
+                            else -> "Keranjang Belanja"
+                        },
                         fontSize = PosType.SectionTitle,
                         fontWeight = FontWeight.SemiBold,
                         color = PosPalette.TextPrimary
