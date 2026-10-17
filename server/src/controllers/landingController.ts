@@ -8,6 +8,7 @@ import {
 import { LandingTrackRequest } from '../types/index.js';
 import { validateUtm, validateFunnelEvent, ALLOWED_UTM_PARAMS } from '../utils/attribution.js';
 import { adminAuthMiddleware } from '../middleware/auth.js';
+import { MetaCapiService } from '../services/metaCapiService.js';
 
 export async function registerLandingRoutes(fastify: FastifyInstance) {
   const attributionService = new AttributionService();
@@ -95,7 +96,7 @@ export async function registerLandingRoutes(fastify: FastifyInstance) {
     }
   );
 
-  const ALLOWED_FIELDS = new Set(['eventType', 'leadToken', 'installationId', ...ALLOWED_UTM_PARAMS]);
+  const ALLOWED_FIELDS = new Set(['eventType', 'leadToken', 'installationId', 'eventId', ...ALLOWED_UTM_PARAMS]);
 
   const LANDING_TRACK_SCHEMA = {
     type: 'object',
@@ -108,6 +109,7 @@ export async function registerLandingRoutes(fastify: FastifyInstance) {
         maxLength: 36,
         pattern: '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
       },
+      eventId: { type: 'string', minLength: 1, maxLength: 128 },
       utm_source: { type: 'string', maxLength: 100 },
       utm_medium: { type: 'string', maxLength: 100 },
       utm_campaign: { type: 'string', maxLength: 100 },
@@ -150,6 +152,19 @@ export async function registerLandingRoutes(fastify: FastifyInstance) {
         });
       }
 
+      if (body.eventId !== undefined && body.eventId !== null && body.eventId !== '') {
+        const eventIdStr = String(body.eventId);
+        if (!/^[a-zA-Z0-9_\-.:]{1,128}$/.test(eventIdStr)) {
+          return reply.status(400).send({
+            success: false,
+            error: {
+              code: 'INVALID_EVENT_ID',
+              message: 'Invalid eventId format.'
+            }
+          });
+        }
+      }
+
       for (const param of ALLOWED_UTM_PARAMS) {
         const value = body[param];
         if (value !== undefined && value !== null && value !== '' && !validateUtm(String(value))) {
@@ -172,6 +187,7 @@ export async function registerLandingRoutes(fastify: FastifyInstance) {
             eventType,
             leadToken: body.leadToken as string | undefined,
             installationId: body.installationId as string | undefined,
+            eventId: body.eventId as string | undefined,
             utm_source: body.utm_source as string | undefined,
             utm_medium: body.utm_medium as string | undefined,
             utm_campaign: body.utm_campaign as string | undefined,
@@ -188,6 +204,18 @@ export async function registerLandingRoutes(fastify: FastifyInstance) {
               code: 'TRACKING_FAILED',
               message: 'Failed to record landing track event.'
             }
+          });
+        }
+
+        // Trigger Meta Conversions API (CAPI) PageView event (fail-safe & non-blocking)
+        // Uses the exact event_id passed from client browser to guarantee deduplication.
+        if (eventType === 'PAGE_VIEW' && body.eventId) {
+          const metaCapi = new MetaCapiService();
+          metaCapi.sendPageView(body.eventId as string, {
+            ip: ipAddress,
+            userAgent
+          }).catch(() => {
+            // Never block or fail landing tracking response
           });
         }
 

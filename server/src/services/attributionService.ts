@@ -149,8 +149,8 @@ export class AttributionService {
       .run(
         token,
         eventType,
-        JSON.stringify(
-          ALLOWED_UTM_PARAMS.reduce(
+        JSON.stringify({
+          ...ALLOWED_UTM_PARAMS.reduce(
             (acc, param) => {
               const value = utmParams[param];
               if (value && validateUtm(value)) {
@@ -159,8 +159,9 @@ export class AttributionService {
               return acc;
             },
             {} as Record<string, string>
-          )
-        ),
+          ),
+          ...(payload.eventId ? { eventId: payload.eventId } : {})
+        }),
         ipAddress ? hashIpAddress(ipAddress) : null,
         sanitizeUserAgent(userAgent) || null,
         now,
@@ -171,7 +172,8 @@ export class AttributionService {
       success: true,
       data: {
         leadToken: token,
-        action
+        action,
+        ...(payload.eventId ? { eventId: payload.eventId } : {})
       }
     };
   }
@@ -258,6 +260,8 @@ export class AttributionService {
       'PAGE_VIEW',
       'VIEW_PRODUCT',
       'VIEW_PRICE',
+      'CLICK_BUY',
+      'INITIATE_CHECKOUT',
       'CLICK_WHATSAPP',
       'LEAD_CREATED'
     ];
@@ -462,7 +466,26 @@ export class AttributionService {
     //                       (e.g. a browser-side download event vs an app-side installation).
     //                       rate is null; eventRatio is still reported and labelled as a ratio.
     const conversions = [
-      // PATH A: Sales-Assisted Conversions
+      // PATH A1: Direct Web Checkout Funnel
+      {
+        from: 'PAGE_VIEW', to: 'CLICK_BUY',
+        numerator: marketingCounts['CLICK_BUY'],
+        denominator: marketingCounts['PAGE_VIEW'],
+        cohortLinked: false
+      },
+      {
+        from: 'CLICK_BUY', to: 'INITIATE_CHECKOUT',
+        numerator: marketingCounts['INITIATE_CHECKOUT'],
+        denominator: marketingCounts['CLICK_BUY'],
+        cohortLinked: false
+      },
+      {
+        from: 'INITIATE_CHECKOUT', to: 'ORDER_CREATED',
+        numerator: orderCreatedCount.count,
+        denominator: marketingCounts['INITIATE_CHECKOUT'],
+        cohortLinked: false
+      },
+      // PATH A2: Sales-Assisted Conversions (WhatsApp Consultation)
       {
         from: 'PAGE_VIEW', to: 'CLICK_WHATSAPP',
         numerator: marketingCounts['CLICK_WHATSAPP'],

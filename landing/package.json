@@ -9,7 +9,7 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "generate:pdf": "node ../server/node_modules/tsx/dist/cli.mjs scripts/generatePdfManual.ts",
-    "test": "node ../server/node_modules/vitest/vitest.mjs run"
+    "test": "node ../server/node_modules/vitest/vitest.mjs run --exclude \"**/.kilo/**\""
   },
   "dependencies": {
     "lucide-react": "^0.475.0",

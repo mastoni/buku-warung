@@ -156,6 +156,7 @@ export interface LandingTrackRequest {
   eventType: string;
   leadToken?: string;
   installationId?: string;
+  eventId?: string;
   utm_source?: string;
   utm_medium?: string;
   utm_campaign?: string;
@@ -167,6 +168,7 @@ export interface LandingTrackResponse {
   data: {
     leadToken: string;
     action: 'created' | 'matched' | 'updated';
+    eventId?: string;
   };
 }
 

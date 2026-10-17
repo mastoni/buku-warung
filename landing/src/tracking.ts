@@ -1,8 +1,11 @@
+import { trackPixelPageView, trackPixelViewContent, trackPixelInitiateCheckout, generatePageViewEventId } from './metaPixel';
+
 const TRACKING_ENDPOINT = 'https://license.skmnetwork.com/v1/landing/track';
 
 const LEAD_TOKEN_KEY = 'lw_lead_token';
 const UTM_KEY = 'lw_utm';
 const PAGE_VIEWED_KEY = 'lw_pv_done';
+const PAGE_VIEW_EVENT_ID_KEY = 'lw_pv_event_id';
 const VIEW_PRODUCT_KEY = 'lw_vp_done';
 const VIEW_PRICE_KEY = 'lw_vpr_done';
 const CTA_THROTTLE_PREFIX = 'lw_cta_';
@@ -21,7 +24,8 @@ export const TEST_CAMPAIGN_UTM = {
 } as const;
 
 function getUtmFromUrl(): Record<string, string> {
-  const params = new URLSearchParams(window.location.search);
+  const searchStr = typeof window !== 'undefined' && window.location?.search ? window.location.search : '';
+  const params = new URLSearchParams(searchStr);
   const utm: Record<string, string> = {};
   for (const param of UTM_PARAM_NAMES) {
     const value = params.get(param);
@@ -71,7 +75,8 @@ async function sendTrackEvent(
           key === 'utm_source' ||
           key === 'utm_medium' ||
           key === 'utm_campaign' ||
-          key === 'utm_content'
+          key === 'utm_content' ||
+          key === 'eventId'
         ) {
           payload[key] = value;
         }
@@ -95,21 +100,32 @@ async function sendTrackEvent(
   }
 }
 
-export function trackPageView(): void {
-  if (sessionStorage.getItem(PAGE_VIEWED_KEY)) return;
+export function trackPageView(): string | null {
+  if (sessionStorage.getItem(PAGE_VIEWED_KEY)) {
+    return sessionStorage.getItem(PAGE_VIEW_EVENT_ID_KEY) || null;
+  }
+  const eventId = generatePageViewEventId();
   sessionStorage.setItem(PAGE_VIEWED_KEY, '1');
-  sendTrackEvent('PAGE_VIEW');
+  sessionStorage.setItem(PAGE_VIEW_EVENT_ID_KEY, eventId);
+  const leadToken = sessionStorage.getItem(LEAD_TOKEN_KEY) || undefined;
+  trackPixelPageView(leadToken, eventId);
+  sendTrackEvent('PAGE_VIEW', { eventId });
+  return eventId;
 }
 
 export function trackViewProduct(): void {
   if (sessionStorage.getItem(VIEW_PRODUCT_KEY)) return;
   sessionStorage.setItem(VIEW_PRODUCT_KEY, '1');
+  const leadToken = sessionStorage.getItem(LEAD_TOKEN_KEY) || undefined;
+  trackPixelViewContent('Buku Warung POS', leadToken);
   sendTrackEvent('VIEW_PRODUCT');
 }
 
 export function trackViewPrice(): void {
   if (sessionStorage.getItem(VIEW_PRICE_KEY)) return;
   sessionStorage.setItem(VIEW_PRICE_KEY, '1');
+  const leadToken = sessionStorage.getItem(LEAD_TOKEN_KEY) || undefined;
+  trackPixelViewContent('Buku Warung Lisensi Rp139.000', leadToken);
   sendTrackEvent('VIEW_PRICE');
 }
 
@@ -128,6 +144,8 @@ export function trackBuyClick(ctaLocation: string): void {
   const last = sessionStorage.getItem(throttleKey);
   if (last && now - parseInt(last, 10) < 1000) return;
   sessionStorage.setItem(throttleKey, now.toString());
+  const leadToken = sessionStorage.getItem(LEAD_TOKEN_KEY) || undefined;
+  trackPixelInitiateCheckout(leadToken);
   sendTrackEvent('CLICK_BUY');
 }
 
