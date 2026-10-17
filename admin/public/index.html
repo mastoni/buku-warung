@@ -465,12 +465,12 @@
               <div class="form-row">
                 <div class="form-group">
                   <label for="pricingNormalPriceInput">Harga Normal (Rp)</label>
-                  <input type="number" id="pricingNormalPriceInput" required min="1000" step="1000" placeholder="100000">
+                  <input type="number" id="pricingNormalPriceInput" required min="1000" step="1000" placeholder="139000">
                   <small class="text-muted">Harga dasar ketika promo nonaktif / kadaluarsa.</small>
                 </div>
                 <div class="form-group">
                   <label for="pricingPromoPriceInput">Harga Promo (Rp)</label>
-                  <input type="number" id="pricingPromoPriceInput" required min="1000" step="1000" placeholder="50000">
+                  <input type="number" id="pricingPromoPriceInput" required min="1000" step="1000" placeholder="89000">
                   <small class="text-muted">Harga diskon saat promo aktif (&le; Harga Normal).</small>
                 </div>
               </div>
@@ -924,7 +924,7 @@
           <div class="qris-display-card">
             <div class="qris-card-header">
               <span class="qris-badge">QRIS RESMI</span>
-              <span class="font-bold">KIOS KIARA — Rp50.000</span>
+              <span id="detailQrisHeaderAmount" class="font-bold">KIOS KIARA</span>
             </div>
             <div class="qris-body">
               <div class="qris-image-container">
@@ -938,9 +938,9 @@
                 <div><strong>Merchant:</strong> KIOS KIARA</div>
                 <div><strong>NMID:</strong> <span class="mono-text font-bold">ID1026512762125</span></div>
                 <div><strong>Terminal:</strong> A01</div>
-                <div><strong>Nominal:</strong> <span class="text-success font-bold">Rp50.000</span></div>
+                <div><strong>Nominal:</strong> <span id="detailQrisSpecAmount" class="text-success font-bold">-</span></div>
                 <div class="qris-instruction-text mt-2">
-                  Scan menggunakan mobile banking atau e-wallet.
+                  Scan menggunakan mobile banking atau e-wallet. Masukkan nominal pembayaran sesuai tagihan order.
                 </div>
                 <div class="qris-admin-warning">
                   ⚠️ <strong>SOP:</strong> Admin tetap harus mengecek mutasi transaksi masuk pada aplikasi/merchant QRIS sebelum menekan <strong>Verifikasi Pembayaran</strong>.
@@ -992,7 +992,7 @@
             <div><strong>Customer:</strong> <span id="verifyPayCustName"></span></div>
             <div><strong>Order Code:</strong> <span id="verifyPayOrderCode" class="mono-text"></span></div>
             <div><strong>Owner Email:</strong> <span id="verifyPayEmail"></span></div>
-            <div><strong>Nominal:</strong> <span id="verifyPayAmount" class="text-success font-bold">Rp50.000</span></div>
+            <div><strong>Nominal:</strong> <span id="verifyPayAmount" class="text-success font-bold">-</span></div>
           </div>
         </div>
 
@@ -1000,7 +1000,7 @@
         <div class="qris-display-card mb-3">
           <div class="qris-card-header">
             <span class="qris-badge">QRIS RESMI</span>
-            <span class="font-bold">QRIS — KIOS KIARA (Rp50.000)</span>
+            <span id="verifyQrisHeaderAmount" class="font-bold">QRIS — KIOS KIARA</span>
           </div>
           <div class="qris-body">
             <div class="qris-image-container">
@@ -1014,9 +1014,9 @@
               <div><strong>Merchant:</strong> KIOS KIARA</div>
               <div><strong>NMID:</strong> <span class="mono-text font-bold">ID1026512762125</span></div>
               <div><strong>Terminal:</strong> A01</div>
-              <div><strong>Nominal:</strong> <span class="text-success font-bold">Rp50.000</span></div>
+              <div><strong>Nominal:</strong> <span id="verifyQrisSpecAmount" class="text-success font-bold">-</span></div>
               <p class="qris-instruction-text mt-2">
-                Scan menggunakan mobile banking atau e-wallet.
+                Scan menggunakan mobile banking atau e-wallet. Masukkan nominal pembayaran sesuai tagihan order.
               </p>
               <div class="qris-admin-warning">
                 ⚠️ <strong>PENTING:</strong> Admin tetap harus mengecek transaksi masuk pada aplikasi/merchant QRIS sebelum menekan <strong>Konfirmasi Pembayaran</strong>.

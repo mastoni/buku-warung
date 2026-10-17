@@ -8,6 +8,7 @@ let currentFilter = 'ALL';
 let currentOrderFilter = 'ALL';
 let activeCreatedCode = '';
 let activeDeliveryOrder = null;
+let currentDetailOrder = null;
 
 // DOM Elements
 const loginSection = document.getElementById('loginSection');
@@ -959,14 +960,17 @@ async function openOrderDetail(id) {
     const license = data.license;
     const devices = data.devices || [];
 
-    document.getElementById('detailOrderCodeHeader').textContent = `(${order.order_code})`;
-    document.getElementById('detailCustomerName').textContent = order.customer_name;
-    document.getElementById('detailCustomerWhatsapp').textContent = order.customer_whatsapp;
-    document.getElementById('detailOwnerEmail').textContent = order.owner_email;
+    currentDetailOrder = order;
+
+    const orderCode = order.order_code || order.order_number || order.orderCode || (order.id ? `#${order.id}` : '-');
+    document.getElementById('detailOrderCodeHeader').textContent = orderCode && orderCode !== '-' ? `(${orderCode})` : '';
+    document.getElementById('detailCustomerName').textContent = order.customer_name || '-';
+    document.getElementById('detailCustomerWhatsapp').textContent = order.customer_whatsapp || '-';
+    document.getElementById('detailOwnerEmail').textContent = order.owner_email || '-';
     document.getElementById('detailOrderNotes').textContent = order.notes || '-';
 
-    document.getElementById('detailOrderCode').textContent = order.order_code;
-    document.getElementById('detailOrderProduct').textContent = order.product;
+    document.getElementById('detailOrderCode').textContent = orderCode;
+    document.getElementById('detailOrderProduct').textContent = order.product || 'BUKU_WARUNG';
     document.getElementById('detailOrderAmount').textContent = `Rp ${formatNumber(order.amount)}`;
     document.getElementById('detailOrderStatusBadge').innerHTML = renderOrderStatusBadge(order.status);
     document.getElementById('detailOrderCreatedAt').textContent = formatDate(order.created_at);
@@ -979,7 +983,7 @@ async function openOrderDetail(id) {
     document.getElementById('detailPaymentVerifiedBy').textContent = order.verified_by || '-';
     document.getElementById('detailPaymentNotes').textContent = order.notes || '-';
 
-    // Show/hide QRIS section in order detail
+    // Show/hide QRIS section in order detail and update dynamic amounts
     const qrisSection = document.getElementById('detailQrisSection');
     if (qrisSection) {
       if (!order.payment_method || order.payment_method.toUpperCase().includes('QRIS') || order.payment_status === 'UNPAID') {
@@ -987,6 +991,14 @@ async function openOrderDetail(id) {
       } else {
         qrisSection.classList.add('hidden');
       }
+    }
+    const detailQrisHeaderAmount = document.getElementById('detailQrisHeaderAmount');
+    if (detailQrisHeaderAmount) {
+      detailQrisHeaderAmount.textContent = `KIOS KIARA — Rp ${formatNumber(order.amount)}`;
+    }
+    const detailQrisSpecAmount = document.getElementById('detailQrisSpecAmount');
+    if (detailQrisSpecAmount) {
+      detailQrisSpecAmount.textContent = `Rp ${formatNumber(order.amount)}`;
     }
 
     if (license) {
@@ -1098,14 +1110,27 @@ async function openOrderDetail(id) {
 }
 
 function openVerifyPaymentModal(orderId) {
-  const order = cachedOrders.find((o) => o.id === orderId);
+  const order = cachedOrders.find((o) => o.id === orderId) || (currentDetailOrder && currentDetailOrder.id === orderId ? currentDetailOrder : null);
   if (!order) return;
 
+  currentDetailOrder = order;
+  const orderCode = order.order_code || order.order_number || order.orderCode || (order.id ? `#${order.id}` : '-');
+
   document.getElementById('verifyPayOrderId').value = order.id;
-  document.getElementById('verifyPayCustName').textContent = order.customer_name;
-  document.getElementById('verifyPayOrderCode').textContent = order.order_code;
-  document.getElementById('verifyPayEmail').textContent = order.owner_email;
+  document.getElementById('verifyPayCustName').textContent = order.customer_name || '-';
+  document.getElementById('verifyPayOrderCode').textContent = orderCode;
+  document.getElementById('verifyPayEmail').textContent = order.owner_email || '-';
   document.getElementById('verifyPayAmount').textContent = `Rp ${formatNumber(order.amount)}`;
+
+  const verifyQrisHeaderAmount = document.getElementById('verifyQrisHeaderAmount');
+  if (verifyQrisHeaderAmount) {
+    verifyQrisHeaderAmount.textContent = `QRIS — KIOS KIARA (Rp ${formatNumber(order.amount)})`;
+  }
+  const verifyQrisSpecAmount = document.getElementById('verifyQrisSpecAmount');
+  if (verifyQrisSpecAmount) {
+    verifyQrisSpecAmount.textContent = `Rp ${formatNumber(order.amount)}`;
+  }
+
   const methodSelect = document.getElementById('verifyPaymentMethod');
   if (methodSelect) {
     methodSelect.value = (order.payment_method && order.payment_method.toUpperCase().includes('TRANSFER')) ? 'Transfer Bank' : 'QRIS';
@@ -1117,15 +1142,22 @@ function openVerifyPaymentModal(orderId) {
 }
 
 function copyQrisPaymentInstruction() {
-  const text = `Halo, untuk pembelian Buku Warung v0.1.0 sebesar Rp50.000, silakan lakukan pembayaran melalui QRIS Kios Kiara.
+  const order = currentDetailOrder;
+  const amountStr = order && order.amount ? `Rp ${formatNumber(order.amount)}` : 'sesuai total tagihan pesanan Anda';
+  const orderCodeStr = order ? (order.order_code || order.order_number || order.orderCode || '') : '';
+  const orderInfo = orderCodeStr ? ` (${orderCodeStr})` : '';
+
+  const text = `Halo, untuk pembelian lisensi Buku Warung${orderInfo} sebesar ${amountStr}, silakan lakukan pembayaran melalui QRIS Kios Kiara:
 
 Merchant: KIOS KIARA
 NMID: ID1026512762125
-Nominal: Rp50.000
+Nominal: ${amountStr}
 
-Setelah pembayaran berhasil, Admin akan melakukan pengecekan transaksi terlebih dahulu.
+Scan kode QRIS resmi menggunakan mobile banking atau e-wallet Anda dan pastikan nominal yang dibayarkan sesuai (${amountStr}).
 
-Setelah pembayaran terverifikasi, kami akan membuat License Code dan mengirimkan APK Buku Warung beserta panduan aktivasi.`;
+Setelah pembayaran berhasil, Admin akan melakukan pengecekan mutasi transaksi masuk pada merchant QRIS sebelum menerbitkan lisensi resmi.
+
+Setelah pembayaran terverifikasi, kami akan membuat License Code dan mengirimkan file APK Buku Warung beserta panduan aktivasinya.`;
 
   navigator.clipboard.writeText(text).then(() => {
     showToast('Pesan instruksi QRIS berhasil disalin ke clipboard.');
@@ -1174,13 +1206,15 @@ async function handleVerifyPayment(e) {
 }
 
 function handleGenerateLicenseForOrder(orderId, customerName, ownerEmail) {
+  const order = cachedOrders.find((o) => o.id === orderId) || (currentDetailOrder && currentDetailOrder.id === orderId ? currentDetailOrder : null);
+  const amountText = order && order.amount ? `Rp ${formatNumber(order.amount)}` : 'PAID';
   const modal = document.getElementById('confirmModal');
   document.getElementById('confirmTitle').textContent = `Generate License untuk Order #${orderId}`;
   document.getElementById('confirmMessage').innerHTML = `
-    Konfirmasi generate lisensi produksi Buku Warung v0.1.0 untuk:<br><br>
+    Konfirmasi generate lisensi produksi Buku Warung untuk:<br><br>
     <strong>Customer:</strong> ${escapeHtml(customerName)}<br>
     <strong>Owner Email:</strong> ${escapeHtml(ownerEmail)}<br>
-    <strong>Nominal:</strong> Rp50.000 (PAID)<br><br>
+    <strong>Nominal:</strong> ${amountText} (PAID)<br><br>
     <small class="text-muted">License akan dibuat menggunakan License Server resmi dan ditautkan ke pesanan ini.</small>
   `;
   document.getElementById('confirmReasonGroup').classList.add('hidden');

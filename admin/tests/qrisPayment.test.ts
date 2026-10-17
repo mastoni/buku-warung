@@ -195,4 +195,103 @@ describe('Buku Warung C.13 — QRIS Semi-Manual Payment Integration', () => {
     expect(json.data.paymentStatus).toBe('PAID');
     expect(json.data.paymentMethod).toBe('Transfer Bank BCA');
   });
+
+  it('7. Promo price Rp89.000 produces order with amount Rp89.000 and valid order_code (no undefined)', async () => {
+    // Set promotion: Normal Rp139.000, Promo Rp89.000
+    const now = Date.now();
+    const promoRes = await adminApp.inject({
+      method: 'PUT',
+      url: '/api/promotions/BUKU_WARUNG',
+      headers: {
+        cookie: sessionCookie,
+        'content-type': 'application/json'
+      },
+      payload: {
+        name: 'Promo Terbatas Rp89k',
+        enabled: 1,
+        normalPrice: 139000,
+        promoPrice: 89000,
+        startsAt: now - 60000,
+        expiresAt: now + 86400000,
+        timezone: 'Asia/Jakarta'
+      }
+    });
+    expect(promoRes.statusCode).toBe(200);
+
+    // Create order while promo active
+    const createRes = await adminApp.inject({
+      method: 'POST',
+      url: '/api/orders',
+      headers: {
+        cookie: sessionCookie,
+        'content-type': 'application/json'
+      },
+      payload: {
+        customerName: 'Warung Bu Siti',
+        customerWhatsapp: '081299881122',
+        ownerEmail: 'siti@warung.com'
+      }
+    });
+    expect(createRes.statusCode).toBe(201);
+    const createJson = createRes.json();
+    expect(createJson.data.amount).toBe(89000);
+    expect(createJson.data.orderCode).toBeDefined();
+    expect(createJson.data.order_code).toBe(createJson.data.orderCode);
+
+    const promoOrderId = createJson.data.id;
+
+    // Fetch order detail
+    const detailRes = await adminApp.inject({
+      method: 'GET',
+      url: `/api/orders/${promoOrderId}`,
+      headers: { cookie: sessionCookie }
+    });
+    expect(detailRes.statusCode).toBe(200);
+    const detailJson = detailRes.json();
+    expect(detailJson.data.order.amount).toBe(89000);
+    expect(detailJson.data.order.order_code).toBe(createJson.data.orderCode);
+    expect(detailJson.data.order.order_code).not.toBe('undefined');
+  });
+
+  it('8. When promo is disabled, new orders resolve to normal price Rp139.000', async () => {
+    const promoRes = await adminApp.inject({
+      method: 'PUT',
+      url: '/api/promotions/BUKU_WARUNG',
+      headers: {
+        cookie: sessionCookie,
+        'content-type': 'application/json'
+      },
+      payload: {
+        enabled: 0
+      }
+    });
+    expect(promoRes.statusCode).toBe(200);
+
+    const createRes = await adminApp.inject({
+      method: 'POST',
+      url: '/api/orders',
+      headers: {
+        cookie: sessionCookie,
+        'content-type': 'application/json'
+      },
+      payload: {
+        customerName: 'Toko Sumber Rezeki',
+        customerWhatsapp: '081388776655',
+        ownerEmail: 'rezeki@warung.com'
+      }
+    });
+    expect(createRes.statusCode).toBe(201);
+    const createJson = createRes.json();
+    expect(createJson.data.amount).toBe(139000);
+  });
+
+  it('9. Historical orders maintain their immutable price snapshot', async () => {
+    const origOrderRes = await adminApp.inject({
+      method: 'GET',
+      url: `/api/orders/${qrisOrderId}`,
+      headers: { cookie: sessionCookie }
+    });
+    expect(origOrderRes.statusCode).toBe(200);
+    expect(origOrderRes.json().data.order.amount).toBe(50000);
+  });
 });

@@ -109,6 +109,9 @@ describe('Buku Warung Sales & Order Management Admin BFF (C.10.1)', () => {
     const body = JSON.parse(res.body);
     expect(body.success).toBe(true);
     expect(body.data.order.id).toBe(testOrderId);
+    expect(body.data.order.order_code).toBe(testOrderCode);
+    expect(body.data.order.order_number).toBe(testOrderCode);
+    expect(body.data.order.order_code).not.toBe('undefined');
     expect(body.data.order.customer_name).toBe('Budi Santoso');
     expect(body.data.order.owner_email).toBe('budi.santoso@warung.com');
   });
@@ -262,5 +265,29 @@ describe('Buku Warung Sales & Order Management Admin BFF (C.10.1)', () => {
     // The superseded blanket message must be gone.
     expect(appJs).not.toContain('(Kode lisensi historis tidak tersimpan)');
     expect(appJs).not.toContain('[Hubungi Admin untuk Kode Lisensi]');
+  });
+
+  it('14. Order details and verify payment UI contain dynamic elements without hardcoded Rp50.000 QRIS', () => {
+    const htmlPath = path.resolve(__dirname, '../public/index.html');
+    const html = fs.readFileSync(htmlPath, 'utf8');
+
+    expect(html).not.toContain('KIOS KIARA — Rp50.000');
+    expect(html).not.toContain('QRIS — KIOS KIARA (Rp50.000)');
+    expect(html).toContain('id="detailQrisHeaderAmount"');
+    expect(html).toContain('id="detailQrisSpecAmount"');
+    expect(html).toContain('id="verifyQrisHeaderAmount"');
+    expect(html).toContain('id="verifyQrisSpecAmount"');
+    expect(html).toContain('id="verifyPayAmount"');
+  });
+
+  it('15. Frontend app.js dynamically formats order amounts and provides safe fallback for order codes', () => {
+    const appJsPath = path.resolve(__dirname, '../public/app.js');
+    const appJs = fs.readFileSync(appJsPath, 'utf8');
+
+    expect(appJs).toContain('detailQrisHeaderAmount');
+    expect(appJs).toContain('verifyQrisHeaderAmount');
+    expect(appJs).toContain('detailOrderCodeHeader');
+    expect(appJs).not.toContain('Buku Warung v0.1.0 sebesar Rp50.000');
+    expect(appJs).toContain('currentDetailOrder');
   });
 });

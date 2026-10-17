@@ -1,6 +1,7 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { AdminService } from '../services/adminService.js';
 import { PricingService } from '../services/pricingService.js';
+import { MetaCapiService } from '../services/metaCapiService.js';
 import {
   getTestCampaignState,
   listTesters,
@@ -188,6 +189,7 @@ export async function registerAdminRoutes(fastify: FastifyInstance) {
       orderId: order.id,
       orderNumber: order.order_number,
       orderCode: order.order_number,
+      order_code: order.order_number,
       customerName: order.customer_name,
       customerContact: order.customer_contact,
       ownerEmail: order.owner_email,
@@ -241,12 +243,17 @@ export async function registerAdminRoutes(fastify: FastifyInstance) {
     },
     async (request: FastifyRequest<{ Body: CreateOrderRequest & { customerWhatsapp?: string } }>, reply: FastifyReply) => {
       const body = request.body || ({} as any);
+      let orderAmount = body.amount;
+      if (typeof orderAmount !== 'number' || isNaN(orderAmount) || orderAmount <= 0) {
+        const pricing = pricingService.resolvePrice(body.product || 'BUKU_WARUNG', Date.now());
+        orderAmount = pricing.effectivePrice;
+      }
       const payload: CreateOrderRequest = {
         customerName: body.customerName,
         customerContact: body.customerContact || body.customerWhatsapp || '',
         ownerEmail: body.ownerEmail,
         product: body.product || 'BUKU_WARUNG',
-        amount: body.amount || 50000,
+        amount: orderAmount,
         notes: body.notes,
         leadToken: body.leadToken || undefined,
         utm_source: body.utm_source || undefined,
@@ -336,6 +343,18 @@ export async function registerAdminRoutes(fastify: FastifyInstance) {
       const result = adminService.verifyOrderPayment(id, request.body || {}, 'ADMIN_API');
       if (!result.success) {
         return reply.status(400).send(result);
+      }
+
+      // Trigger Meta Conversions API (CAPI) Purchase event (fail-safe & non-blocking)
+      // Strictly triggered only after backend confirms payment_status === 'PAID'.
+      if (result.data && result.data.payment_status === 'PAID') {
+        const metaCapi = new MetaCapiService();
+        metaCapi.sendPurchase(result.data, {
+          ip: request.ip,
+          userAgent: typeof request.headers['user-agent'] === 'string' ? request.headers['user-agent'] : undefined
+        }).catch(() => {
+          // Never block or fail admin response
+        });
       }
 
       return reply.status(200).send({
